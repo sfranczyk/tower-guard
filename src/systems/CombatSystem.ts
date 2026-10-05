@@ -16,7 +16,7 @@ import {
 } from '../config';
 import type { SoundId } from '../audio/SoundManager';
 import Arrow from '../objects/Arrow';
-import { launchSpeed } from '../data/projectiles';
+import { bowSpeed } from '../data/projectiles';
 import type Bowman from '../objects/Bowman';
 import type Enemy from '../objects/Enemy';
 import { TOWER_HEIGHT } from '../objects/Tower';
@@ -180,7 +180,7 @@ export class CombatSystem {
       enemy.relaxBow(deltaMs);
       this.archerAim.delete(enemy);
     } else {
-      const speed = launchSpeed('normal', ENEMY_ARROW_POWER);
+      const speed = bowSpeed(ENEMY_ARROW_POWER);
       const cached = this.archerAim.get(enemy);
       let angle = cached?.angle;
       if (!cached || cached.ageMs >= ARCHER_AIM_REFRESH_MS) {

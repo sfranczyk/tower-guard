@@ -77,8 +77,9 @@ src/
   `rendering/armor.ts`, drawn on the same skeleton so every animation still works.
 - **Arrow flight** uses `systems/ballistics.ts` (gravity + quadratic drag `ARROW_DRAG`). The trajectory
   preview simulates with the same functions, so any flight change goes there to keep both in sync.
-  Each projectile type has a mass and head drag in `data/projectiles.ts`: launch speed ∝ 1/√mass and
-  drag ∝ dragMultiplier/mass. Piercing is light (fast, flat, long) and explosive is heavy (short high arc).
+  Each projectile type has a mass, head drag and speed multiplier in `data/projectiles.ts`: launch speed
+  ∝ speedMultiplier/√mass and drag ∝ dragMultiplier/mass. Gravity is the same for every type (keep it so).
+  Enemy archers shoot at the plain `bowSpeed`, so player arrow tuning doesn't change them. Piercing is light (fast, flat, long) and explosive is heavy (short high arc).
 - **Enemy archers** (`EnemyType 'archer'`): `CombatSystem.updateArcher` walks them into
   `ENEMY_ARCHER_RANGE`, aims with `solveLaunchAngle` (same ballistics as the player, cached ~250 ms) and
   fires hostile arrows (`Arrow.hostile`) through the `enemyShot` event. Hostile arrows hit the bowman, or

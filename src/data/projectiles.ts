@@ -11,19 +11,26 @@ export interface ProjectilePhysics {
   mass: number;
   /** Relative drag of the head/shape (1 = normal broadhead). */
   dragMultiplier: number;
+  /** Extra launch speed tuning on top of the mass rule (1 = none). */
+  speedMultiplier: number;
 }
 
 export const PROJECTILE_PHYSICS: Readonly<Record<ProjectileType, ProjectilePhysics>> = {
-  normal: { mass: 1, dragMultiplier: 1 },
-  // Light, slim bodkin point: launches at 120% speed (mass 1/1.2²), flat and carries furthest.
-  piercing: { mass: 1 / 1.2 ** 2, dragMultiplier: 0.7 },
+  normal: { mass: 1, dragMultiplier: 1, speedMultiplier: 1.1 },
+  // Light, slim bodkin point: 120% of the normal arrow's speed (mass 1/1.2²), flat and carries furthest.
+  piercing: { mass: 1 / 1.2 ** 2, dragMultiplier: 0.665, speedMultiplier: 1.1 },
   // Heavy charge with a bulky head: slow, short high arc.
-  explosive: { mass: 1.8, dragMultiplier: 1.6 },
+  explosive: { mass: 1.8, dragMultiplier: 1.6, speedMultiplier: 1 },
 };
 
-/** Launch speed (px/s) for a projectile at a draw power of 0..1. */
-export const launchSpeed = (type: ProjectileType, power: number): number =>
-  ((ARROW_BASE_SPEED + power * ARROW_FORCE_SPEED) * ARROW_SPEED_FACTOR) / Math.sqrt(PROJECTILE_PHYSICS[type].mass);
+/** Speed (px/s) the bow gives a mass-1 arrow at a draw power of 0..1 (enemy archers shoot with this). */
+export const bowSpeed = (power: number): number => (ARROW_BASE_SPEED + power * ARROW_FORCE_SPEED) * ARROW_SPEED_FACTOR;
+
+/** Launch speed (px/s) of the player's projectile at a draw power of 0..1. */
+export const launchSpeed = (type: ProjectileType, power: number): number => {
+  const { mass, speedMultiplier } = PROJECTILE_PHYSICS[type];
+  return (bowSpeed(power) * speedMultiplier) / Math.sqrt(mass);
+};
 
 /** Flight parameters for a projectile under the given gravity. */
 export const flightParams = (type: ProjectileType, gravity: number): FlightParams => {

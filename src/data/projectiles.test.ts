@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { simulateTrajectory } from '../systems/ballistics';
 import type { ProjectileType } from '../types';
-import { PROJECTILE_PHYSICS, flightParams, launchSpeed } from './projectiles';
+import { bowSpeed, flightParams, launchSpeed } from './projectiles';
 
 const GRAVITY = 700;
 const WORLD = { groundY: 490, minX: -1e6, maxX: 1e6 };
@@ -25,8 +25,9 @@ describe('projectile physics', () => {
     expect(launchSpeed('piercing', 0.6) / launchSpeed('normal', 0.6)).toBeCloseTo(1.2);
   });
 
-  it('keeps the normal arrow unchanged', () => {
-    expect(PROJECTILE_PHYSICS.normal).toEqual({ mass: 1, dragMultiplier: 1 });
+  it('launches the player normal arrow 10% faster than the plain bow speed (enemy archers)', () => {
+    expect(launchSpeed('normal', 0.6) / bowSpeed(0.6)).toBeCloseTo(1.1);
+    expect(launchSpeed('explosive', 0.6)).toBeLessThan(bowSpeed(0.6));
   });
 
   it('carries piercing furthest and explosive shortest', () => {
