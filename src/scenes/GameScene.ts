@@ -153,7 +153,7 @@ export class GameScene extends Scene {
   }
 
   public update(deltaMs: number): void {
-    this.background.update(deltaMs, this.cameraX);
+    this.background.update(deltaMs);
     if (this.gameEnded) {
       return;
     }

@@ -44,7 +44,9 @@ src/
   current wave index and health carried between waves. Each `GameScene` plays one wave. A cleared wave
   offers "Next wave" (health carries over) until the last one, and then Victory. Defeat goes back to setup.
 - **Battlegrounds** (`data/battlegrounds.ts`): map themes (sky, sun, hills, tree style, ground colors)
-  drawn by `rendering/Background.ts`. Add a new map by adding an entry there.
+  drawn by `rendering/Background.ts`. Add a new map by adding an entry there. Clouds come from
+  `rendering/clouds.ts` (pure, seeded per map name): cumulus, stratus, cirrus and puffs, higher ones
+  drifting slower. Each cloud is cached as a texture so its alpha applies to the whole cloud.
 - **UI** is HTML (`ui/template.ts`, styles in `index.html`). The in-game HUD sits *outside* the canvas
   (bar above, status line below) and `DomUi.fitCanvas()` scales the canvas into the remaining space.
   Never place HUD elements over the play field. Only menus, the settings drawer and the end screen

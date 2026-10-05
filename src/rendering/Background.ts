@@ -1,6 +1,7 @@
 import { Graphics, type Container } from 'pixi.js';
 import { GAME_HEIGHT, GROUND_Y, WORLD_WIDTH } from '../config';
 import type { Battleground } from '../data/battlegrounds';
+import { layoutClouds, mixColor, type CloudLayer, type CloudShape } from './clouds';
 
 type Cloud = {
   sprite: Graphics;
@@ -8,12 +9,9 @@ type Cloud = {
   width: number;
 };
 
-const CLOUDS = [
-  { x: 160, y: 105, width: 170, height: 42, speed: 3 },
-  { x: 610, y: 155, width: 125, height: 30, speed: 2 },
-  { x: 1040, y: 90, width: 210, height: 48, speed: 4 },
-  { x: 1430, y: 140, width: 145, height: 34, speed: 2 },
-];
+/** Each battleground gets its own (but always the same) sky from a hash of its name. */
+const skySeed = (name: string): number =>
+  Array.from(name).reduce((hash, char) => Math.imul(hash ^ char.charCodeAt(0), 16777619), 2166136261) >>> 0;
 
 /** Sky, sun, hills, trees, drifting clouds and the ground strip of a battleground. */
 export class Background {
@@ -28,28 +26,47 @@ export class Background {
     glow.circle(sun.x, sun.y, sun.radius * 1.3).fill({ color: sun.color, alpha: 0.12 });
     container.addChild(glow);
 
-    container.addChild(...Background.createDistantLandscape(battleground));
-    this.clouds = CLOUDS.map(({ x, y, width, height, speed }) => {
-      const fill = { color: battleground.cloudColor, alpha: battleground.cloudAlpha };
-      const cloud = new Graphics();
-      cloud.ellipse(x, y, width * 0.5, height * 0.5).fill(fill);
-      cloud.ellipse(x - width * 0.25, y + 4, width * 0.225, height * 0.4).fill(fill);
-      cloud.ellipse(x + width * 0.2, y - 5, width * 0.25, height * 0.5).fill(fill);
+    // Clouds float behind the hills (but in front of the sun).
+    this.clouds = layoutClouds(WORLD_WIDTH, skySeed(battleground.name)).map(({ shape, x, y, speed, alpha }) => {
+      const cloud = Background.createCloud(shape, battleground);
+      cloud.position.set(x, y);
+      // Rendered once to a texture so the alpha applies to the whole cloud; otherwise every
+      // overlapping blob would show through the others.
+      cloud.cacheAsTexture({ resolution: Math.max(1, window.devicePixelRatio || 1), antialias: true });
+      cloud.alpha = battleground.cloudAlpha * alpha;
       cloud.zIndex = 0;
       container.addChild(cloud);
-      return { sprite: cloud, speed, width };
+      return { sprite: cloud, speed, width: shape.width };
     });
+    container.addChild(...Background.createDistantLandscape(battleground));
     container.addChild(Background.createTerrain(battleground));
   }
 
-  public update(deltaMs: number, cameraX: number): void {
+  /** Drifts the clouds right; one that leaves the world on the right comes back in on the left. */
+  public update(deltaMs: number): void {
     const deltaSeconds = deltaMs / 1000;
     this.clouds.forEach(({ sprite, speed, width }) => {
-      sprite.x += speed * deltaSeconds * 15;
-      if (sprite.x - cameraX > WORLD_WIDTH + width) {
-        sprite.x = -width;
+      sprite.x += speed * deltaSeconds;
+      if (sprite.x - width / 2 > WORLD_WIDTH) {
+        sprite.x = -width / 2;
       }
     });
+  }
+
+  /** Shadow underneath tinted towards the far hills, body in the cloud colour, highlight towards white. */
+  private static createCloud(shape: CloudShape, { cloudColor, hills }: Battleground): Graphics {
+    const colors: Record<CloudLayer, number> = {
+      shadow: mixColor(cloudColor, hills[0], 0.35),
+      body: cloudColor,
+      highlight: mixColor(cloudColor, 0xffffff, 0.3),
+    };
+    const graphics = new Graphics();
+    (['shadow', 'body', 'highlight'] as const).forEach((layer) => {
+      shape.blobs
+        .filter((blob) => blob.layer === layer)
+        .forEach(({ x, y, rx, ry }) => graphics.ellipse(x, y, rx, ry).fill({ color: colors[layer] }));
+    });
+    return graphics;
   }
 
   /** Horizontal bands from the top colour down to the horizon. */

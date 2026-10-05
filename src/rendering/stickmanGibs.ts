@@ -1,5 +1,6 @@
 import type { Graphics } from 'pixi.js';
 import type { Vec2 } from '../types';
+import { createRandom } from '../utils/math';
 import { STICKMAN_HEAD } from './stickman';
 import { getFallPose } from './stickmanFall';
 
@@ -48,18 +49,6 @@ export interface BloodStain {
   x: number;
   width: number;
 }
-
-/** Small seeded PRNG (mulberry32) so every replay with the same seed looks the same. */
-const createRandom = (seed: number): (() => number) => {
-  let state = seed >>> 0;
-  return () => {
-    state = (state + 0x6d2b79f5) >>> 0;
-    let t = state;
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-};
 
 const segment = (a: Vec2, b: Vec2, rear = false): Omit<GibPiece, 'vx' | 'vy' | 'spin'> => ({
   x: (a.x + b.x) / 2,
