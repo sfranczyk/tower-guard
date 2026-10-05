@@ -37,7 +37,8 @@ export interface BodyAnchor {
   angle: number;
 }
 
-const spriteToWorld = (point: Vec2, t: BodyTransform): Vec2 => {
+/** Maps a point from body-sprite space to world space. */
+export const spriteToWorld = (point: Vec2, t: BodyTransform): Vec2 => {
   const x = point.x * t.scaleX;
   const y = point.y * t.scaleY;
   const cos = Math.cos(t.rotation);

@@ -1,9 +1,10 @@
 import { Container, Graphics } from 'pixi.js';
-import { ENEMY_ATTACK_INTERVAL_MS, ENEMY_GROUND_Y } from '../config';
+import { ENEMY_ARCHER_COOLDOWN_MS, ENEMY_ARCHER_DRAW_MS, ENEMY_ATTACK_INTERVAL_MS, ENEMY_GROUND_Y } from '../config';
+import { getArcherRig, toArcherLocalAngle } from '../rendering/archer';
 import { STICKMAN_HEAD, drawStickman, type StickmanPose } from '../rendering/stickman';
 import { FALL_DURATION_MS, drawStickmanFall, getFallPose, type FallKind, type FallPose } from '../rendering/stickmanFall';
-import { fromBodyAnchor, toBodyAnchor, type BodyAnchor, type BodyTransform, type Torso } from '../systems/bodyAnchor';
-import type { Bounds, Vec2 } from '../types';
+import { fromBodyAnchor, spriteToWorld, toBodyAnchor, type BodyAnchor, type BodyTransform, type Torso } from '../systems/bodyAnchor';
+import type { Bounds, EnemyType, Vec2 } from '../types';
 
 const ATTACK_ANIMATION_DURATION_MS = 1_130;
 
@@ -36,6 +37,10 @@ const ENEMY_POSE: StickmanPose = { armed: true, originY: BODY_ORIGIN_Y };
 /** Health bar size and placement in container space (the container is drawn at 2/3 scale). */
 const HEALTH_BAR = { width: 30, height: 4, standingY: -68, aboveHead: 14 };
 const STANDING_TORSO: Torso = { hip: { x: 0, y: 0 }, shoulder: { x: 0, y: -35 } };
+/** Archers are tinted slightly red to tell them apart from club fighters. */
+const ARCHER_TINT = 0xffc2b4;
+const BOW_RAISE_MS = 220;
+const BOW_LOWER_MS = 400;
 
 export default class Enemy extends Container {
   private readonly body: Graphics;
@@ -50,6 +55,11 @@ export default class Enemy extends Container {
   private velocity = { x: 0, y: 0 };
   private alive = true;
   private fall?: FallState;
+  /** Archer bow state: raised (0..1), draw tension (0..1), aim angle (world) and time to the next shot. */
+  private bowReady = 0;
+  private bowTension = 0;
+  private aimAngle = Math.PI;
+  private bowCooldownMs = 0;
   public target: EnemyTarget;
 
   public constructor(
@@ -57,6 +67,7 @@ export default class Enemy extends Container {
     health = 3,
     speed = 60,
     target: EnemyTarget = 'bowman',
+    public readonly kind: EnemyType = 'basic',
   ) {
     super();
     this.body = new Graphics();
@@ -72,7 +83,70 @@ export default class Enemy extends Container {
     this.position.set(x, ENEMY_GROUND_Y);
     this.zIndex = 1;
     this.velocity.x = -this.speed;
+    if (this.isArcher) {
+      this.body.tint = ARCHER_TINT;
+    }
     this.drawHealthBar();
+  }
+
+  public get isArcher(): boolean {
+    return this.kind === 'archer';
+  }
+
+  /**
+   * Archer: face `angle`, raise the bow, draw, and return true on the frame the arrow is released.
+   * Call every frame while standing in range; call relaxBow() otherwise.
+   */
+  public aimBow(angle: number, deltaMs: number): boolean {
+    this.aimAngle = angle;
+    this.velocity = { x: 0, y: 0 };
+    this.body.scale.x = Math.cos(angle) < 0 ? -BODY_SCALE.x : BODY_SCALE.x;
+    this.bowCooldownMs = Math.max(0, this.bowCooldownMs - deltaMs);
+    this.bowReady = Math.min(1, this.bowReady + deltaMs / BOW_RAISE_MS);
+    if (this.bowReady < 1 || this.bowCooldownMs > 0) {
+      this.bowTension = Math.max(0, this.bowTension - deltaMs / 200);
+      return false;
+    }
+    this.bowTension = Math.min(1, this.bowTension + deltaMs / ENEMY_ARCHER_DRAW_MS);
+    if (this.bowTension < 1) {
+      return false;
+    }
+    this.bowTension = 0;
+    this.bowCooldownMs = ENEMY_ARCHER_COOLDOWN_MS;
+    return true;
+  }
+
+  /** Archer: lower the bow (walking, knocked down, no target). */
+  public relaxBow(deltaMs: number): void {
+    this.bowCooldownMs = Math.max(0, this.bowCooldownMs - deltaMs);
+    this.bowTension = Math.max(0, this.bowTension - deltaMs / 200);
+    this.bowReady = Math.max(0, this.bowReady - deltaMs / BOW_LOWER_MS);
+  }
+
+  /** Archer: where the arrow is nocked, in world space (matches the drawn bow). */
+  public getBowReleasePoint(): Vec2 {
+    const facing = Math.sign(this.body.scale.x) || -1;
+    const localAngle = toArcherLocalAngle(this.aimAngle, this.body.rotation, facing);
+    const nock = getArcherRig(localAngle, this.bowTension, this.bowReady).stringNock;
+    return spriteToWorld(nock, this.bodyTransform());
+  }
+
+  /** Pose options for the current look: club fighters carry a club, archers a bow. */
+  private pose(extra: StickmanPose): StickmanPose {
+    if (!this.isArcher) {
+      return { ...ENEMY_POSE, ...extra };
+    }
+    return {
+      ...ENEMY_POSE,
+      ...extra,
+      armed: false,
+      attackPhase: 0,
+      archerPose: true,
+      bowReady: this.bowReady,
+      bowTension: this.bowTension,
+      bowAngle: this.aimAngle,
+      facingDirection: Math.sign(this.body.scale.x) || -1,
+    };
   }
 
   private drawPlaceholder(): void {
@@ -157,14 +231,17 @@ export default class Enemy extends Container {
     if (!moving) {
       this.body.rotation = 0;
       this.body.y = -29;
-      drawStickman(this.body, this.animationTime, { ...ENEMY_POSE, idleBlend: 1 });
+      drawStickman(this.body, this.animationTime, this.pose({ idleBlend: 1 }));
       return;
     }
 
     this.animationTime += deltaMs;
-    drawStickman(this.body, this.animationTime / 150, ENEMY_POSE);
     this.body.scale.x = this.velocity.x < 0 ? -BODY_SCALE.x : BODY_SCALE.x;
-    this.body.rotation = this.velocity.x < 0 ? -0.06 : 0.06;
+    drawStickman(this.body, this.animationTime / 150, this.pose({}));
+    if (!this.isArcher) {
+      // Archers keep drawStickman's own lean so the bow rig stays consistent.
+      this.body.rotation = this.velocity.x < 0 ? -0.06 : 0.06;
+    }
   }
 
   public isAlive(): boolean {

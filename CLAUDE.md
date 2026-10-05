@@ -67,6 +67,10 @@ src/
   preview simulates with the same functions, so any flight change goes there to keep both in sync.
   Each projectile type has a mass and head drag in `data/projectiles.ts`: launch speed ∝ 1/√mass and
   drag ∝ dragMultiplier/mass. Piercing is light (fast, flat, long) and explosive is heavy (short high arc).
+- **Enemy archers** (`EnemyType 'archer'`): `CombatSystem.updateArcher` walks them into
+  `ENEMY_ARCHER_RANGE`, aims with `solveLaunchAngle` (same ballistics as the player, cached ~250 ms) and
+  fires hostile arrows (`Arrow.hostile`) through the `enemyShot` event. Hostile arrows hit the bowman, or
+  the keep while he hides, and never hit enemies. Tuning lives in `config.ts` (`ENEMY_ARCHER_*`, `ENEMY_ARROW_*`).
 - **Coordinates**: the screen is 1024×540 and the world is wider (`WORLD_WIDTH`). `GameScene` scrolls the
   `world` container by `cameraX`. The ground is at `GROUND_Y`.
 

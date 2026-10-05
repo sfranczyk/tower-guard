@@ -42,13 +42,14 @@ const LEVEL_ONE_SPAWNINGS: readonly ISpawnMetadata[] = [
     interval: 500,
     spawnPoint: MVP_SPAWN_POINT,
   },
+  makeSpawn('archer', 2, 1200),
 ];
 
 const LEVEL_TWO_SPAWNINGS: readonly ISpawnMetadata[] = [
-  makeSpawn('basic', 4), makeSpawn('fast', 4, 400), makeSpawn('tank', 2, 900),
+  makeSpawn('basic', 4), makeSpawn('fast', 4, 400), makeSpawn('tank', 2, 900), makeSpawn('archer', 3, 1000),
 ];
 const LEVEL_THREE_SPAWNINGS: readonly ISpawnMetadata[] = [
-  makeSpawn('fast', 5, 360), makeSpawn('tank', 4, 700), makeSpawn('basic', 6, 330),
+  makeSpawn('fast', 5, 360), makeSpawn('tank', 4, 700), makeSpawn('basic', 6, 330), makeSpawn('archer', 4, 900),
 ];
 
 const LEVEL_ONE_WAVES: readonly IWave[] = [
@@ -69,6 +70,12 @@ const LEVEL_ONE_WAVES: readonly IWave[] = [
     count: 4,
     enemyType: 'basic',
     spawn: LEVEL_ONE_SPAWNINGS[2],
+  },
+  {
+    delay: 12_000,
+    count: 2,
+    enemyType: 'archer',
+    spawn: LEVEL_ONE_SPAWNINGS[3],
   },
 ];
 
@@ -95,7 +102,7 @@ const LEVEL_DATA: Readonly<Record<number, ILevelData>> = {
     id: 2,
     name: 'The Red Pass',
     enemies: [],
-    waves: wavesFor(LEVEL_TWO_SPAWNINGS, [0, 6_000, 13_000]),
+    waves: wavesFor(LEVEL_TWO_SPAWNINGS, [0, 6_000, 13_000, 15_000]),
     spawnings: LEVEL_TWO_SPAWNINGS,
     enemyDifficulty: 1.35,
     goldReward: 180,
@@ -105,7 +112,7 @@ const LEVEL_DATA: Readonly<Record<number, ILevelData>> = {
     id: 3,
     name: 'The Last Stand',
     enemies: [],
-    waves: wavesFor(LEVEL_THREE_SPAWNINGS, [0, 6_500, 14_000]),
+    waves: wavesFor(LEVEL_THREE_SPAWNINGS, [0, 6_500, 14_000, 16_000]),
     spawnings: LEVEL_THREE_SPAWNINGS,
     enemyDifficulty: 1.7,
     goldReward: 300,

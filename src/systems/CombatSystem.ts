@@ -1,6 +1,10 @@
 import type { Graphics } from 'pixi.js';
 import {
   BOWMAN_Y,
+  ENEMY_ARCHER_RANGE,
+  ENEMY_ARCHER_SPREAD,
+  ENEMY_ARROW_DAMAGE,
+  ENEMY_ARROW_POWER,
   ENEMY_TOWER_DAMAGE,
   EXPLOSION_DAMAGE,
   EXPLOSION_RADIUS,
@@ -10,12 +14,14 @@ import {
   PROJECTILE_DAMAGE,
   SHOW_HITBOX_DEBUG,
 } from '../config';
-import type Arrow from '../objects/Arrow';
+import Arrow from '../objects/Arrow';
+import { launchSpeed } from '../data/projectiles';
 import type Bowman from '../objects/Bowman';
 import type Enemy from '../objects/Enemy';
 import { TOWER_HEIGHT } from '../objects/Tower';
 import type Tower from '../objects/Tower';
 import type { Vec2 } from '../types';
+import { solveLaunchAngle } from './ballistics';
 import { segmentHitTime } from './collision';
 import type { EffectsSystem } from './EffectsSystem';
 
@@ -23,6 +29,12 @@ const MELEE_REACH = 25;
 const TOWER_ATTACK_REACH = 40;
 const TOWER_HALF_WIDTH = 48;
 const PIERCING_MAX_IMPACTS = 5;
+/** Bowman hit box (feet at bowman.y) and where enemy archers aim on him. */
+const BOWMAN_HALF_WIDTH = 7;
+const BOWMAN_HEIGHT = 40;
+const BOWMAN_CHEST = 22;
+/** Enemy archers re-solve their aim this often (the solver simulates many trajectories). */
+const ARCHER_AIM_REFRESH_MS = 250;
 
 export interface CombatWorld {
   readonly bowman: Bowman;
@@ -38,6 +50,8 @@ export interface CombatEvents {
   bowmanDamaged(amount: number): void;
   enemyKilled(): void;
   headshot(): void;
+  /** An enemy archer looses an arrow. */
+  enemyShot(from: Vec2, angle: number, speed: number): void;
 }
 
 interface EnemyHit {
@@ -59,6 +73,8 @@ export class CombatSystem {
   private readonly jumpedEnemies = new Set<Enemy>();
   /** Enemies each arrow has already hit, so piercing arrows hit each enemy once. */
   private readonly arrowHits = new Map<Arrow, Set<Enemy>>();
+  /** Cached aim per enemy archer. */
+  private readonly archerAim = new Map<Enemy, { angle: number; ageMs: number }>();
 
   public constructor(
     private readonly world: CombatWorld,
@@ -74,7 +90,9 @@ export class CombatSystem {
 
     const { arrows } = this.world;
     arrows.filter((arrow) => arrow.isActive).forEach((arrow) => arrow.update(deltaMs));
-    arrows.filter((arrow) => arrow.isActive && !arrow.isStuck).forEach((arrow) => this.resolveArrow(arrow, activeEnemies));
+    arrows
+      .filter((arrow) => arrow.isActive && !arrow.isStuck)
+      .forEach((arrow) => (arrow.hostile ? this.resolveHostileArrow(arrow) : this.resolveArrow(arrow, activeEnemies)));
     arrows
       .filter((arrow) => arrow.isActive && !arrow.isStuck && arrow.y >= GROUND_Y - 3)
       .forEach((arrow) => {
@@ -88,7 +106,12 @@ export class CombatSystem {
   }
 
   private updateEnemy(enemy: Enemy, deltaMs: number): void {
-    const { bowman, playerTower, debug } = this.world;
+    if (enemy.isArcher) {
+      this.updateArcher(enemy, deltaMs);
+      this.drawDebugHitboxes(enemy);
+      return;
+    }
+    const { bowman, playerTower } = this.world;
     enemy.target = bowman.isInTower ? 'tower' : 'bowman';
     const bowmanBehindEnemy = enemy.target === 'bowman' && bowman.x > enemy.x + MELEE_REACH;
     const targetPosition = enemy.target === 'bowman'
@@ -97,13 +120,7 @@ export class CombatSystem {
 
     enemy.update(deltaMs, targetPosition, enemy.target === 'tower' ? TOWER_ATTACK_REACH : MELEE_REACH);
     enemy.updateAnimation(deltaMs, enemy.isMoving());
-
-    if (SHOW_HITBOX_DEBUG) {
-      const hitbox = enemy.getPhysicsBounds();
-      debug.rect(hitbox.x, hitbox.y, hitbox.width, hitbox.height).stroke({ width: 1, color: 0xff5555, alpha: 0.9 });
-      const head = enemy.getHeadBounds();
-      debug.rect(head.x, head.y, head.width, head.height).stroke({ width: 1, color: 0xffd23f, alpha: 0.9 });
-    }
+    this.drawDebugHitboxes(enemy);
 
     // Knocked down by an explosion: no moving or attacking until it gets back up.
     if (enemy.isDown) {
@@ -132,6 +149,84 @@ export class CombatSystem {
     }
 
     enemy.clearHitTint();
+  }
+
+  private drawDebugHitboxes(enemy: Enemy): void {
+    if (!SHOW_HITBOX_DEBUG) {
+      return;
+    }
+    const { debug } = this.world;
+    const hitbox = enemy.getPhysicsBounds();
+    debug.rect(hitbox.x, hitbox.y, hitbox.width, hitbox.height).stroke({ width: 1, color: 0xff5555, alpha: 0.9 });
+    const head = enemy.getHeadBounds();
+    debug.rect(head.x, head.y, head.width, head.height).stroke({ width: 1, color: 0xffd23f, alpha: 0.9 });
+  }
+
+  /**
+   * Enemy archer: walk until the bowman (or the keep, if he's hiding in it) is in range, then stop,
+   * aim with the real ballistics and shoot with a little spread.
+   */
+  private updateArcher(enemy: Enemy, deltaMs: number): void {
+    const { bowman, playerTower } = this.world;
+    const aimPoint = bowman.isInTower
+      ? { x: playerTower.x, y: GROUND_Y - TOWER_HEIGHT * 0.55 }
+      : { x: bowman.x, y: bowman.y - BOWMAN_CHEST };
+    const inRange = Math.abs(aimPoint.x - enemy.x) <= ENEMY_ARCHER_RANGE;
+
+    if (enemy.isDown || !inRange) {
+      enemy.update(deltaMs, { x: aimPoint.x, y: GROUND_Y }, 0);
+      enemy.relaxBow(deltaMs);
+      this.archerAim.delete(enemy);
+    } else {
+      const speed = launchSpeed('normal', ENEMY_ARROW_POWER);
+      const cached = this.archerAim.get(enemy);
+      let angle = cached?.angle;
+      if (!cached || cached.ageMs >= ARCHER_AIM_REFRESH_MS) {
+        angle = solveLaunchAngle(enemy.getBowReleasePoint(), aimPoint, speed, Arrow.getFlightParams('normal'), GROUND_Y);
+        this.archerAim.set(enemy, { angle, ageMs: 0 });
+      } else {
+        cached.ageMs += deltaMs;
+      }
+      if (enemy.aimBow(angle ?? Math.PI, deltaMs)) {
+        const spread = (Math.random() * 2 - 1) * ENEMY_ARCHER_SPREAD;
+        this.events.enemyShot(enemy.getBowReleasePoint(), (angle ?? Math.PI) + spread, speed * (0.97 + Math.random() * 0.06));
+      }
+    }
+    enemy.updateAnimation(deltaMs, enemy.isMoving());
+  }
+
+  /** Enemy arrows hurt the bowman, or the keep while he hides inside it. */
+  private resolveHostileArrow(arrow: Arrow): void {
+    const { start, end } = arrow.getTravelSegment();
+    const travel = { x: end.x - start.x, y: end.y - start.y };
+    const { bowman, playerTower, effects } = this.world;
+
+    if (bowman.isInTower) {
+      const towerHit = segmentHitTime(start, travel, {
+        left: playerTower.x - TOWER_HALF_WIDTH,
+        right: playerTower.x + TOWER_HALF_WIDTH,
+        top: GROUND_Y - TOWER_HEIGHT,
+        bottom: GROUND_Y,
+      });
+      if (towerHit !== undefined) {
+        playerTower.takeDamage(ENEMY_ARROW_DAMAGE);
+        effects.impact(pointAlong(start, travel, towerHit));
+        arrow.deactivate();
+      }
+      return;
+    }
+
+    const bowmanHit = segmentHitTime(start, travel, {
+      left: bowman.x - BOWMAN_HALF_WIDTH,
+      right: bowman.x + BOWMAN_HALF_WIDTH,
+      top: bowman.y - BOWMAN_HEIGHT,
+      bottom: bowman.y,
+    });
+    if (bowmanHit !== undefined) {
+      this.events.bowmanDamaged(ENEMY_ARROW_DAMAGE);
+      effects.bloodBurst(pointAlong(start, travel, bowmanHit));
+      arrow.deactivate();
+    }
   }
 
   private resolveArrow(arrow: Arrow, activeEnemies: readonly Enemy[]): void {

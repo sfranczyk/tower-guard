@@ -1,4 +1,4 @@
-export type EnemyType = 'basic' | 'fast' | 'tank';
+export type EnemyType = 'basic' | 'fast' | 'tank' | 'archer';
 export type ProjectileType = 'normal' | 'explosive' | 'piercing';
 
 export interface IPushStrength {

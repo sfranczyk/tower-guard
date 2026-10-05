@@ -111,6 +111,22 @@ export class AnimationLabScene extends Scene {
       render: (sprite) => drawStickman(sprite, 0, { idleBlend: 1, armed: true, attackPhase: this.attackPhase, originY: 0 }),
     },
     {
+      id: 'enemy-archer',
+      title: 'Enemy archer · draw and shoot',
+      description: 'Red-tinted enemy with a bow: raises it, draws, looses and repeats from range.',
+      render: (sprite) => {
+        sprite.tint = 0xffc2b4;
+        const cycle = (this.attackPhase * 0.25) % 1;
+        drawStickman(sprite, 0, {
+          idleBlend: 1,
+          archerPose: true,
+          bowReady: Math.min(1, cycle * 5),
+          bowTension: Math.max(0, Math.min(1, (cycle - 0.2) / 0.6)),
+          originY: 0,
+        });
+      },
+    },
+    {
       id: 'death',
       title: 'Death · collapse forward',
       description: 'Knees buckle, drops to the knees, then collapses face down where it stood.',

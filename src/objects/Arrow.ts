@@ -26,6 +26,8 @@ export default class Arrow extends Sprite {
   private activeProjectile = false;
   private projectileType: ProjectileType = 'normal';
   private hitCount = 0;
+  /** Shot by an enemy archer: hurts the bowman/keep, ignores enemies. */
+  private hostileShot = false;
 
   public constructor(x: number, y: number, texture: Texture, trail: Graphics) {
     super(texture);
@@ -37,7 +39,8 @@ export default class Arrow extends Sprite {
     this.visible = false;
   }
 
-  public fire(angle: number, power: number, projectileType: ProjectileType = 'normal'): this {
+  public fire(angle: number, power: number, projectileType: ProjectileType = 'normal', hostile = false): this {
+    this.hostileShot = hostile;
     this.stuck = false;
     this.stuckTarget = undefined;
     this.stuckAnchor = undefined;
@@ -85,10 +88,12 @@ export default class Arrow extends Sprite {
     this.segmentEnd = { x: this.x, y: this.y };
 
     if (this.trailVisible && Math.hypot(this.previousPosition.x - this.x, this.previousPosition.y - this.y) > 1) {
+      // Enemy arrows leave a red trail so they read as a threat.
+      const [glow, core] = this.hostileShot ? [0xe5534b, 0xffb3a8] : [0xf3c969, 0xffe7a4];
       this.trail.moveTo(this.previousPosition.x, this.previousPosition.y).lineTo(this.x, this.y)
-        .stroke({ width: 2.5, color: 0xf3c969, alpha: 0.16 });
+        .stroke({ width: 2.5, color: glow, alpha: 0.16 });
       this.trail.moveTo(this.previousPosition.x, this.previousPosition.y).lineTo(this.x, this.y)
-        .stroke({ width: 1, color: 0xffe7a4, alpha: 0.72 });
+        .stroke({ width: 1, color: core, alpha: 0.72 });
       this.previousPosition = { x: this.x, y: this.y };
     }
 
@@ -173,6 +178,10 @@ export default class Arrow extends Sprite {
     this.visible = false;
     this.activeProjectile = false;
     return this;
+  }
+
+  public get hostile(): boolean {
+    return this.hostileShot;
   }
 
   public get isActive(): boolean {

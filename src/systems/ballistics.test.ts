@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { advanceProjectile, simulateTrajectory, stepProjectile, type FlightParams } from './ballistics';
+import { advanceProjectile, simulateTrajectory, solveLaunchAngle, stepProjectile, type FlightParams } from './ballistics';
 
 const GRAVITY = 700;
 const NO_DRAG: FlightParams = { gravity: GRAVITY, drag: 0 };
@@ -76,5 +76,32 @@ describe('simulateTrajectory', () => {
   it('stops when leaving the world horizontally', () => {
     const points = simulateTrajectory(start, velocity, DRAG, { ...WORLD, maxX: 300 });
     expect(points.every((point) => point.x <= 300)).toBe(true);
+  });
+});
+
+describe('solveLaunchAngle', () => {
+  const hitsTarget = (start: { x: number; y: number }, target: { x: number; y: number }, speed: number, angle: number): boolean => {
+    const points = simulateTrajectory(start, { x: Math.cos(angle) * speed, y: Math.sin(angle) * speed }, DRAG, { ...WORLD, groundY: 600 });
+    return points.some((point) => Math.hypot(point.x - target.x, point.y - target.y) < 12);
+  };
+
+  it('finds a shot that passes through a target to the left', () => {
+    const start = { x: 800, y: 455 };
+    const target = { x: 480, y: 470 };
+    const angle = solveLaunchAngle(start, target, 700, DRAG, 600);
+    expect(Math.cos(angle)).toBeLessThan(0);
+    expect(hitsTarget(start, target, 700, angle)).toBe(true);
+  });
+
+  it('finds a shot to the right and up (e.g. onto a tower)', () => {
+    const start = { x: 300, y: 460 };
+    const target = { x: 120, y: 330 };
+    const angle = solveLaunchAngle(start, target, 800, DRAG, 600);
+    expect(hitsTarget(start, target, 800, angle)).toBe(true);
+  });
+
+  it('prefers the flatter of the two possible arcs', () => {
+    const angle = solveLaunchAngle({ x: 0, y: 450 }, { x: 300, y: 450 }, 800, DRAG, 600);
+    expect(-angle).toBeLessThan(Math.PI / 4);
   });
 });

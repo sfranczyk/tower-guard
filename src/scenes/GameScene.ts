@@ -36,6 +36,7 @@ const BOWMAN_MAX_HEALTH = 100;
 const MIN_SHOT_POWER = 0.05;
 const CAMERA_SMOOTHING = 0.1;
 const DEFAULT_STATUS = 'Drag from the bowman and release to fire';
+const ENEMY_ARROW_TINT = 0xff8f80;
 
 const PROJECTILE_LABELS: Record<ProjectileType, string> = {
   normal: 'Normal arrow · reliable damage',
@@ -119,6 +120,7 @@ export class GameScene extends Scene {
           this.defeatedEnemies += 1;
         },
         headshot: () => this.ctx.ui.setStatus(`Headshot! ×${HEADSHOT_DAMAGE_MULTIPLIER} damage`),
+        enemyShot: (from, angle, speed) => this.fireEnemyArrow(from, angle, speed),
       },
     );
 
@@ -289,7 +291,7 @@ export class GameScene extends Scene {
       return;
     }
     const stats = getEnemyStats(wave.enemyType, this.level.enemyDifficulty);
-    const enemy = new Enemy(wave.spawn.spawnPoint.x, stats.health, stats.speed, 'bowman');
+    const enemy = new Enemy(wave.spawn.spawnPoint.x, stats.health, stats.speed, 'bowman', wave.enemyType);
     enemy.visible = this.enemiesVisible;
     this.enemies.push(enemy);
     this.spawnedEnemies += 1;
@@ -307,6 +309,18 @@ export class GameScene extends Scene {
     const type = this.selectedProjectile;
     const arrow = new Arrow(releasePoint.x, releasePoint.y, this.ctx.textures.arrows[type], trail);
     arrow.fire(Math.atan2(aim.direction.y, aim.direction.x), launchSpeed(type, power), type);
+    this.arrows.push(arrow);
+    this.world.addChild(arrow);
+  }
+
+  /** An enemy archer's arrow: reddish, hurts the bowman (or the keep while he hides). */
+  private fireEnemyArrow(from: Vec2, angle: number, speed: number): void {
+    const trail = new Graphics();
+    trail.zIndex = 1;
+    this.world.addChild(trail);
+    const arrow = new Arrow(from.x, from.y, this.ctx.textures.arrows.normal, trail);
+    arrow.tint = ENEMY_ARROW_TINT;
+    arrow.fire(angle, speed, 'normal', true);
     this.arrows.push(arrow);
     this.world.addChild(arrow);
   }

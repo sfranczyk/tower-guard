@@ -36,6 +36,14 @@ export const EXPLOSION_RADIUS = 72;
 export const EXPLOSION_DAMAGE = 14;
 export const PIERCING_DAMAGE_MULTIPLIER = 0.62;
 export const ENEMY_TOWER_DAMAGE = 16;
+/** Enemy archers: stop and shoot from this distance, draw time, pause between shots, aim error. */
+export const ENEMY_ARCHER_RANGE = 340;
+export const ENEMY_ARCHER_DRAW_MS = 900;
+export const ENEMY_ARCHER_COOLDOWN_MS = 1700;
+export const ENEMY_ARCHER_SPREAD = 0.07;
+/** Draw power (0..1) of enemy shots and the damage they deal to the bowman or the keep. */
+export const ENEMY_ARROW_POWER = 0.75;
+export const ENEMY_ARROW_DAMAGE = 8;
 export const ENEMY_GROUND_Y = GROUND_Y;
 
 

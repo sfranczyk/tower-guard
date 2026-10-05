@@ -42,7 +42,7 @@ describe('LevelManager', () => {
     }
   });
 
-  it('counts the first level as 10 enemies', () => {
-    expect(getLevelEnemyTotal(new LevelManager().loadLevel(1))).toBe(10);
+  it('counts the first level as 12 enemies (10 fighters + 2 archers)', () => {
+    expect(getLevelEnemyTotal(new LevelManager().loadLevel(1))).toBe(12);
   });
 });
