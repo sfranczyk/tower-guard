@@ -13,6 +13,9 @@ export class MusicPlayer {
   private wanted = false;
   private playedIntro = false;
   private volume = 1;
+  /** Context time when the current source started, and the file offset it started from. */
+  private startedAt = 0;
+  private startOffset = 0;
 
   public constructor(private readonly context: AudioContext, destination: AudioNode) {
     this.gain = context.createGain();
@@ -42,6 +45,38 @@ export class MusicPlayer {
     }
   }
 
+  public get isPlaying(): boolean {
+    return this.source !== undefined;
+  }
+
+  public get duration(): number {
+    return this.buffer?.duration ?? 0;
+  }
+
+  /** Current position in the file (seconds), following the loop. */
+  public get position(): number {
+    if (!this.source) {
+      return 0;
+    }
+    const position = this.startOffset + (this.context.currentTime - this.startedAt);
+    const loopEnd = Math.min(MUSIC_LOOP_END_S, this.duration);
+    if (position <= loopEnd) {
+      return position;
+    }
+    return MUSIC_LOOP_START_S + ((position - loopEnd) % (loopEnd - MUSIC_LOOP_START_S));
+  }
+
+  /** Jumps to `seconds` in the file while playing (e.g. just before the loop seam to hear it). */
+  public seek(seconds: number): void {
+    if (!this.source || !this.buffer) {
+      return;
+    }
+    const old = this.source;
+    this.source = undefined;
+    old.stop();
+    this.start(this.buffer, seconds);
+  }
+
   private sync(): void {
     if (this.wanted && !this.source && this.buffer) {
       this.start(this.buffer);
@@ -50,14 +85,16 @@ export class MusicPlayer {
     }
   }
 
-  private start(buffer: AudioBuffer): void {
+  private start(buffer: AudioBuffer, offset = this.playedIntro ? MUSIC_LOOP_START_S : 0): void {
     const source = this.context.createBufferSource();
     source.buffer = buffer;
     source.loop = true;
     source.loopStart = MUSIC_LOOP_START_S;
     source.loopEnd = Math.min(MUSIC_LOOP_END_S, buffer.duration);
     source.connect(this.gain);
-    source.start(0, this.playedIntro ? MUSIC_LOOP_START_S : 0);
+    source.start(0, offset);
+    this.startedAt = this.context.currentTime;
+    this.startOffset = offset;
     this.playedIntro = true;
     this.source = source;
     this.rampTo(this.volume);

@@ -84,11 +84,39 @@ export class SoundManager {
   }
 
   public play(id: SoundId, mix: SpatialMix = { gain: 1, pan: 0 }): void {
+    if (this.current.effectsEnabled) {
+      this.start(id, this.pickVariant(id), mix);
+    }
+  }
+
+  /**
+   * Sound test panel: plays one variant (or a random one) centred, even with effects switched off.
+   * Also resumes the context, since the panel's own click may be the first interaction.
+   */
+  public preview(id: SoundId, variant?: number): void {
+    void this.context?.resume();
+    const buffer = variant === undefined ? this.pickVariant(id) : this.buffers.get(id)?.[variant];
+    this.start(id, buffer, { gain: 1, pan: 0 });
+  }
+
+  /** Durations (seconds) of each decoded variant of a sound. */
+  public variantDurations(id: SoundId): number[] {
+    return (this.buffers.get(id) ?? []).map((buffer) => buffer.duration);
+  }
+
+  public get musicState(): { playing: boolean; position: number; duration: number } {
+    const music = this.music;
+    return { playing: music?.isPlaying ?? false, position: music?.position ?? 0, duration: music?.duration ?? 0 };
+  }
+
+  public seekMusic(seconds: number): void {
+    this.music?.seek(seconds);
+  }
+
+  private start(id: SoundId, buffer: AudioBuffer | undefined, mix: SpatialMix): void {
     const { context, effects } = this;
-    const buffer = this.pickVariant(id);
     const playing = this.voices.get(id) ?? 0;
-    if (!context || !effects || !buffer || !this.current.effectsEnabled || context.state !== 'running'
-      || playing >= SOUND_MAX_VOICES) {
+    if (!context || !effects || !buffer || context.state !== 'running' || playing >= SOUND_MAX_VOICES) {
       return;
     }
     const source = context.createBufferSource();

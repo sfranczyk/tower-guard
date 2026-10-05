@@ -1,14 +1,16 @@
 import { GAME_HEIGHT, GAME_WIDTH } from '../config';
 import type { ProjectileType } from '../types';
 import type { AudioSettings } from '../audio/audioSettings';
+import type { SoundId } from '../audio/SoundManager';
 import type { SandboxSettings } from '../data/sandbox';
 import { SandboxForm } from './SandboxForm';
+import { SoundLabPanel, type SoundLabMusic, type SoundLabMusicState, type SoundLabRow } from './SoundLabPanel';
 import { HUD_BOTTOM_TEMPLATE, HUD_TOP_TEMPLATE, OVERLAY_TEMPLATE } from './template';
 
 /** Breathing room kept around the canvas + HUD stack inside the window. */
 const PAGE_MARGIN = 16;
 
-export type UiScreen = 'menu' | 'sandbox' | 'animationLab' | 'game';
+export type UiScreen = 'menu' | 'sandbox' | 'animationLab' | 'soundLab' | 'game';
 
 export interface HudValues {
   towerHealth: number;
@@ -32,6 +34,7 @@ export interface EndScreenOptions {
 export interface UiHandlers {
   start?: () => void;
   openAnimationLab?: () => void;
+  openSoundLab?: () => void;
   openGame?: () => void;
   /** Animation lab: leave the zoomed view and return to the list. */
   labBack?: () => void;
@@ -43,6 +46,11 @@ export interface UiHandlers {
   trajectoryChange?: (enabled: boolean) => void;
   /** A music or effects toggle/volume (0..1) changed in the settings drawer. */
   audioChange?: (changes: Partial<AudioSettings>) => void;
+  soundLabPlay?: (id: SoundId, variant?: number) => void;
+  soundLabToggleMusic?: () => void;
+  soundLabMusicSeam?: () => void;
+  soundLabAudioChange?: (changes: Partial<AudioSettings>) => void;
+  soundLabBack?: () => void;
 }
 
 /**
@@ -72,6 +80,8 @@ export class DomUi {
   private readonly battlegroundElement: HTMLElement;
   private readonly sandboxScreen: HTMLElement;
   private readonly sandboxForm: SandboxForm;
+  private readonly soundLabScreen: HTMLElement;
+  private readonly soundLabPanel: SoundLabPanel;
   private readonly projectileButtons: HTMLButtonElement[];
   private readonly trajectoryInput: HTMLInputElement;
   private readonly soundInput: HTMLInputElement;
@@ -111,6 +121,14 @@ export class DomUi {
       start: () => this.handlers.sandboxStart?.(),
       back: () => this.handlers.sandboxBack?.(),
     });
+    this.soundLabScreen = this.query('[data-sound-lab]');
+    this.soundLabPanel = new SoundLabPanel(this.query('[data-sound-lab-panel]'), {
+      play: (id, variant) => this.handlers.soundLabPlay?.(id, variant),
+      toggleMusic: () => this.handlers.soundLabToggleMusic?.(),
+      musicSeam: () => this.handlers.soundLabMusicSeam?.(),
+      audioChange: (changes) => this.handlers.soundLabAudioChange?.(changes),
+      back: () => this.handlers.soundLabBack?.(),
+    });
     this.projectileButtons = Array.from(this.host.querySelectorAll<HTMLButtonElement>('[data-projectile]'));
     this.trajectoryInput = this.query<HTMLInputElement>('[data-trajectory]');
     this.soundInput = this.query<HTMLInputElement>('[data-sound]');
@@ -120,6 +138,7 @@ export class DomUi {
 
     this.onClick('[data-start]', () => this.handlers.start?.());
     this.onClick('[data-open-test]', () => this.handlers.openAnimationLab?.());
+    this.onClick('[data-open-sound-lab]', () => this.handlers.openSoundLab?.());
     this.onClick('[data-open-game]', () => this.handlers.openGame?.());
     this.onClick('[data-lab-back]', () => this.handlers.labBack?.());
     this.onClick('[data-options]', () => this.handlers.toggleOptions?.());
@@ -143,6 +162,7 @@ export class DomUi {
   public showScreen(screen: UiScreen): void {
     this.menuScreen.hidden = screen !== 'menu';
     this.sandboxScreen.hidden = screen !== 'sandbox';
+    this.soundLabScreen.hidden = screen !== 'soundLab';
     this.labScreen.hidden = screen !== 'animationLab';
     this.hudTop.hidden = screen !== 'game';
     this.hudBottom.hidden = screen !== 'game';
@@ -182,6 +202,14 @@ export class DomUi {
   /** Rebuilds the sandbox setup form (e.g. after the wave count changes). */
   public renderSandbox(settings: SandboxSettings): void {
     this.sandboxForm.render(settings);
+  }
+
+  public renderSoundLab(rows: readonly SoundLabRow[], music: SoundLabMusic, settings: Readonly<AudioSettings>): void {
+    this.soundLabPanel.render(rows, music, settings);
+  }
+
+  public updateSoundLabMusic(state: SoundLabMusicState): void {
+    this.soundLabPanel.updateMusic(state);
   }
 
   public setTrajectoryOption(showTrajectory: boolean): void {

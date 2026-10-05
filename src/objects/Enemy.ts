@@ -6,6 +6,7 @@ import { FALL_DURATION_MS, drawStickmanFall, getFallPose, type FallKind, type Fa
 import { CHEER_KINDS, drawStickmanCheer, type CheerKind } from '../rendering/stickmanCheer';
 import { GibSimulation, drawStickmanGibs } from '../rendering/stickmanGibs';
 import { fromBodyAnchor, spriteToWorld, toBodyAnchor, worldToSprite, type BodyAnchor, type BodyTransform, type Torso } from '../systems/bodyAnchor';
+import { blowsApart } from '../data/enemies';
 import { groundAt } from '../systems/terrain';
 import type { Bounds, EnemyType, Vec2 } from '../types';
 
@@ -186,7 +187,7 @@ export default class Enemy extends Container {
       this.alive = false;
       this.velocity = { x: 0, y: 0 };
       this.healthBar.visible = false;
-      if (hit.cause === 'blast') {
+      if (blowsApart(hit.cause, amount, this.maxHealth)) {
         this.blowApart(hit.fromX, hit.point ?? { x: this.x, y: this.y - 20 });
       } else {
         this.startFall(Enemy.deathKind(hit.cause), hit.fromX);

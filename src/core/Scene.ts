@@ -4,7 +4,7 @@ import type { ProjectileType } from '../types';
 import type { SoundManager } from '../audio/SoundManager';
 import type { DomUi } from '../ui/DomUi';
 
-export type SceneName = 'menu' | 'sandbox' | 'animationLab' | 'game';
+export type SceneName = 'menu' | 'sandbox' | 'animationLab' | 'soundLab' | 'game';
 
 export interface GameTextures {
   tower: Texture;

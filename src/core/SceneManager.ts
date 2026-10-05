@@ -5,10 +5,11 @@ import { AnimationLabScene } from '../scenes/AnimationLabScene';
 import { GameScene } from '../scenes/GameScene';
 import { MenuScene } from '../scenes/MenuScene';
 import { SandboxScene } from '../scenes/SandboxScene';
+import { SoundLabScene } from '../scenes/SoundLabScene';
 import { ENEMY_KEEP_HEALTH } from '../config';
 import { loadSandbox } from './sandboxStorage';
 import type { GameContext, GameTextures, Scene, SceneName } from './Scene';
-import { LAB_PARAM, getUrlParam, setUrlParam } from './urlState';
+import { LAB_PARAM, SOUND_LAB_PARAM, getUrlParam, setUrlParam } from './urlState';
 
 /** Owns the active scene, switches between scenes and forwards ticker updates. */
 export class SceneManager {
@@ -38,13 +39,18 @@ export class SceneManager {
     ui.handlers.start = () => this.goTo('sandbox');
     ui.handlers.openGame = () => this.goTo('sandbox');
     ui.handlers.openAnimationLab = () => this.goTo('animationLab');
+    ui.handlers.openSoundLab = () => this.goTo('soundLab');
 
     app.ticker.add((ticker) => this.current?.update(ticker.deltaMS));
   }
 
-  /** Opens the animation lab when the URL says so (e.g. after a refresh), otherwise the menu. */
+  /** Opens the animation lab or sound panel when the URL says so (e.g. after a refresh), otherwise the menu. */
   public start(): void {
-    this.goTo(getUrlParam(LAB_PARAM) !== null ? 'animationLab' : 'menu');
+    if (getUrlParam(LAB_PARAM) !== null) {
+      this.goTo('animationLab');
+    } else {
+      this.goTo(getUrlParam(SOUND_LAB_PARAM) !== null ? 'soundLab' : 'menu');
+    }
   }
 
   public goTo(name: SceneName): void {
@@ -53,6 +59,7 @@ export class SceneManager {
     } else if (getUrlParam(LAB_PARAM) === null) {
       setUrlParam(LAB_PARAM, '');
     }
+    setUrlParam(SOUND_LAB_PARAM, name === 'soundLab' ? '' : null);
     this.current?.exit();
     this.ctx.root.removeChildren().forEach((child) => child.destroy({ children: true }));
     this.current = this.createScene(name);
@@ -67,6 +74,8 @@ export class SceneManager {
         return new SandboxScene(this.ctx);
       case 'animationLab':
         return new AnimationLabScene(this.ctx);
+      case 'soundLab':
+        return new SoundLabScene(this.ctx);
       case 'game':
         return new GameScene(this.ctx);
     }

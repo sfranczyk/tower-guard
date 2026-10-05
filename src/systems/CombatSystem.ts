@@ -324,7 +324,7 @@ export class CombatSystem {
           return;
         }
         // Survivors are knocked down away from the blast and get back up; the rest die thrown back.
-        candidate.takeDamage(EXPLOSION_DAMAGE, { cause: 'explosion', fromX: point.x });
+        candidate.takeDamage(EXPLOSION_DAMAGE, { cause: 'explosion', fromX: point.x, point });
       });
   }
 

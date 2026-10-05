@@ -10,6 +10,8 @@ enemy waves walk in from the enemy keep on the right. PixiJS 8 + TypeScript (str
     `scene.enemies[0].takeDamage(999, { cause: 'headshot', fromX: 0 })`.
   - `?lab` opens the animation lab directly, and `?lab=<id>` (e.g. `?lab=archer`) opens one animation zoomed in.
     Ids are in `AnimationLabScene`.
+  - `?sounds` opens the sound test panel (menu → "Open sound test panel"): every effect and each of its
+    variants, the theme with a jump to its loop seam, and the volumes.
 - `npm run check`: type-check (`tsc --noEmit`, includes noUnusedLocals/Parameters)
 - `npm test`: Vitest unit tests (`*.test.ts` next to the code)
 - `npm run build`: production build to `dist/`
@@ -81,9 +83,9 @@ src/
   knees and loop continuity. `Enemy.celebrate()` picks one at random when the enemies win.
 - **Explosive death** (`rendering/stickmanGibs.ts`): `GibSimulation` blows the standing stickman into
   10 pieces plus blood (seeded and deterministic, so it's testable), and `drawStickmanGibs` draws it.
-  In the game only the enemy hit *directly* by an explosive arrow (cause `'blast'`, which takes the arrow
-  plus `EXPLOSION_DAMAGE`) is blown apart when that kills it, with a random force (1–1.7×). Splash victims
-  get `knockback`. The lab uses force 1, and every lab figure is clipped to its frame.
+  In the game an enemy is blown apart (random force 1–1.7×) when killed by a direct explosive hit (cause
+  `'blast'`: arrow plus `EXPLOSION_DAMAGE`), or by a splash explosion that dealt more than its whole max
+  health (`blowsApart` in `data/enemies.ts`). Other splash victims get `knockback`. The lab uses force 1, and every lab figure is clipped to its frame.
 - **Bow ready**: `pose.bowReady` blends the archer between the lowered bow (0) and aiming (1). `Bowman`
   raises the bow while the player draws (aim power > 0) and lowers it after the shot.
 - **Animation lab** rows live in `scenes/AnimationLabScene.ts`, and scripted sequences in
@@ -107,7 +109,8 @@ src/
   recordings from `human/`, trimmed and normalized with ffmpeg). `CombatSystem` emits `sound(id, at)` events
   and `GameScene` plays them through `spatialMix` (pan by screen position, quieter off screen). Enemies
   groan when hit by an arrow (8 random variants); falls are silent. New sounds: add the mp3, its id in
-  `SOURCES` (an array of variants) and its volume in `config.ts` (`SOUND_VOLUMES`). When trimming, don't
+  `SOURCES` (an array of variants), its volume in `config.ts` (`SOUND_VOLUMES`) and its description in
+  `audio/soundCatalog.ts` (shown in the sound test panel, `scenes/SoundLabScene.ts` + `ui/SoundLabPanel.ts`). When trimming, don't
   denoise quiet takes or fade out trailing fricatives, or they get eaten. The enabled/volume
   settings in the drawer persist in localStorage.
 - **Music**: the theme (`assets/sounds/theme.mp3`, from the user's Suno track `human/resonant-drone.mp3`) is

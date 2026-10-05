@@ -11,6 +11,7 @@ export const OVERLAY_TEMPLATE = `
           <p>Protect the keep, control your position and fire with precision.</p>
           <button class="primary-button" data-start>Start game <span>Space</span></button>
           <button class="secondary-button" data-open-test>Open animation test panel</button>
+          <button class="secondary-button" data-open-sound-lab>Open sound test panel</button>
         </div>
       </section>
       <section class="test-screen" data-test>
@@ -25,6 +26,9 @@ export const OVERLAY_TEMPLATE = `
         <label class="field toggle-field"><span class="hud-label">Sound effects</span><input data-sound type="checkbox" checked></label>
         <label class="field"><span class="hud-label">Effects volume</span><input data-volume type="range" min="0" max="100" step="5" value="70"></label>
       </div>
+      <section class="screen sandbox-screen" data-sound-lab hidden>
+        <div class="sandbox-card sound-lab-card" data-sound-lab-panel></div>
+      </section>
       <section class="screen sandbox-screen" data-sandbox hidden>
         <div class="sandbox-card" data-sandbox-form></div>
       </section>

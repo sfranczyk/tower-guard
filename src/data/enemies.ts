@@ -22,3 +22,10 @@ export const getEnemyStats = (type: EnemyType, difficulty: number): EnemyStats =
     speed: base.speed * difficulty,
   };
 };
+
+/**
+ * Whether a killing blow blows the body apart: always for a direct explosive hit ('blast'), and for a
+ * splash explosion that dealt more than the enemy's whole maximum health in one go.
+ */
+export const blowsApart = (cause: string, damage: number, maxHealth: number): boolean =>
+  cause === 'blast' || (cause === 'explosion' && damage > maxHealth);
