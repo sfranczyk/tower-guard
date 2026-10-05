@@ -2,12 +2,11 @@ import { createRandom } from '../utils/math';
 
 /**
  * Cloud shapes and their layout in the sky, as plain data (no Pixi) so they can be tested.
- * - cumulus: big puffy dome on a flat base, shaded underneath and lit on top;
+ * - cumulus: long, fairly flat heap of domes on a flat base, shaded underneath and lit on top;
  * - stratus: long flat band of overlapping ellipses;
- * - cirrus: thin, high, slanted wisps (drawn fainter);
- * - puff: small round cloudlet.
+ * - cirrus: thin, high, slanted wisps (drawn fainter).
  */
-export type CloudKind = 'cumulus' | 'stratus' | 'cirrus' | 'puff';
+export type CloudKind = 'cumulus' | 'stratus' | 'cirrus';
 
 /** Shadow is drawn first, then the body, then the highlight on top. */
 export type CloudLayer = 'shadow' | 'body' | 'highlight';
@@ -43,9 +42,10 @@ type Random = () => number;
 const between = (random: Random, min: number, max: number): number => min + random() * (max - min);
 
 const cumulus = (random: Random, width: number): CloudShape => {
-  const height = width * between(random, 0.42, 0.52);
+  // Long and fairly flat.
+  const height = width * between(random, 0.3, 0.38);
   const blobs: CloudBlob[] = [];
-  const domes = 5 + Math.floor(random() * 3);
+  const domes = 6 + Math.floor(random() * 3);
   for (let index = 0; index < domes; index += 1) {
     const t = index / (domes - 1);
     const radius = height * (0.32 + 0.38 * Math.sin(Math.PI * t)) * between(random, 0.88, 1.08);
@@ -94,27 +94,13 @@ const cirrus = (random: Random, width: number): CloudShape => {
   return { kind: 'cirrus', width, height: 26, blobs };
 };
 
-const puff = (random: Random, width: number): CloudShape => {
-  const height = width * 0.5;
-  const blobs: CloudBlob[] = [
-    { layer: 'shadow', x: 0, y: 0, rx: width * 0.44, ry: height * 0.22 },
-    { layer: 'body', x: -width * 0.22, y: -height * 0.3, rx: height * 0.38, ry: height * 0.36 },
-    { layer: 'body', x: width * 0.05, y: -height * 0.5, rx: height * between(random, 0.48, 0.56), ry: height * 0.5 },
-    { layer: 'body', x: width * 0.26, y: -height * 0.28, rx: height * 0.34, ry: height * 0.32 },
-    { layer: 'body', x: 0, y: -height * 0.12, rx: width * 0.42, ry: height * 0.2 },
-    { layer: 'highlight', x: -width * 0.02, y: -height * 0.66, rx: height * 0.26, ry: height * 0.22 },
-  ];
-  return { kind: 'puff', width, height, blobs };
-};
-
-const BUILDERS: Record<CloudKind, (random: Random, width: number) => CloudShape> = { cumulus, stratus, cirrus, puff };
+const BUILDERS: Record<CloudKind, (random: Random, width: number) => CloudShape> = { cumulus, stratus, cirrus };
 
 /** Size range, height band (base y), drift speed (px/s), alpha and how many of each kind float in the sky. */
 const KIND_SETTINGS: Record<CloudKind, { width: [number, number]; y: [number, number]; speed: [number, number]; alpha: number; count: number }> = {
   cirrus: { width: [190, 290], y: [48, 85], speed: [8, 12], alpha: 0.55, count: 2 },
   stratus: { width: [260, 380], y: [115, 160], speed: [16, 22], alpha: 0.8, count: 2 },
-  puff: { width: [60, 95], y: [95, 190], speed: [24, 32], alpha: 1, count: 3 },
-  cumulus: { width: [150, 230], y: [175, 225], speed: [32, 42], alpha: 1, count: 3 },
+  cumulus: { width: [200, 300], y: [175, 225], speed: [32, 42], alpha: 1, count: 3 },
 };
 
 export const createCloudShape = (kind: CloudKind, width: number, seed: number): CloudShape =>

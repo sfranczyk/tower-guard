@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createCloudShape, layoutClouds, mixColor, type CloudKind } from './clouds';
 
-const KINDS: CloudKind[] = ['cumulus', 'stratus', 'cirrus', 'puff'];
+const KINDS: CloudKind[] = ['cumulus', 'stratus', 'cirrus'];
 
 describe('cloud shapes', () => {
   it('stay within their width and above their base', () => {

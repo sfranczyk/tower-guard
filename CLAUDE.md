@@ -47,7 +47,7 @@ src/
   and a killed bowman topples over backwards (`Bowman.die()`).
 - **Battlegrounds** (`data/battlegrounds.ts`): map themes (sky, sun, hills, tree style, ground colors)
   drawn by `rendering/Background.ts`. Add a new map by adding an entry there. Clouds come from
-  `rendering/clouds.ts` (pure, seeded per map name): cumulus, stratus, cirrus and puffs, higher ones
+  `rendering/clouds.ts` (pure, seeded per map name): cumulus, stratus and cirrus, higher ones
   drifting slower. Each cloud is cached as a texture so its alpha applies to the whole cloud.
 - **UI** is HTML (`ui/template.ts`, styles in `index.html`). The in-game HUD sits *outside* the canvas
   (bar above, status line below) and `DomUi.fitCanvas()` scales the canvas into the remaining space.
