@@ -75,7 +75,14 @@ export class CombatSystem {
     arrows.filter((arrow) => arrow.isActive && !arrow.isStuck).forEach((arrow) => this.resolveArrow(arrow, activeEnemies));
     arrows
       .filter((arrow) => arrow.isActive && !arrow.isStuck && arrow.y >= GROUND_Y - 3)
-      .forEach((arrow) => arrow.stickToGround(GROUND_Y - 3));
+      .forEach((arrow) => {
+        if (arrow.type === 'explosive') {
+          this.explode({ x: arrow.x, y: GROUND_Y - 3 }, activeEnemies);
+          arrow.deactivate();
+        } else {
+          arrow.stickToGround(GROUND_Y - 3);
+        }
+      });
   }
 
   private updateEnemy(enemy: Enemy, deltaMs: number): void {
@@ -141,7 +148,7 @@ export class CombatSystem {
     });
 
     if (towerHit !== undefined && (enemyHit === undefined || towerHit <= enemyHit.time)) {
-      this.hitTower(arrow, pointAlong(start, travel, towerHit));
+      this.hitTower(arrow, pointAlong(start, travel, towerHit), activeEnemies);
       return;
     }
     if (enemyHit) {
@@ -159,14 +166,38 @@ export class CombatSystem {
     return bodyTime === undefined ? undefined : { enemy, time: bodyTime, headshot: false };
   }
 
-  private hitTower(arrow: Arrow, impactPoint: Vec2): void {
+  private hitTower(arrow: Arrow, impactPoint: Vec2, activeEnemies: readonly Enemy[]): void {
     const explosive = arrow.type === 'explosive';
     this.world.enemyTower.takeDamage(ENEMY_TOWER_DAMAGE * (explosive ? 1.25 : 1));
-    this.world.effects.impact(impactPoint, explosive);
     if (explosive) {
-      this.world.effects.explosion(impactPoint);
+      this.explode(impactPoint, activeEnemies);
+    } else {
+      this.world.effects.impact(impactPoint);
     }
     arrow.deactivate();
+  }
+
+  /**
+   * Explosion visuals plus splash damage and knockback for every living enemy whose body centre is
+   * within EXPLOSION_RADIUS (except `directHit`, which already took the arrow's damage).
+   */
+  private explode(point: Vec2, activeEnemies: readonly Enemy[], directHit?: Enemy): void {
+    this.world.effects.explosion(point);
+    activeEnemies
+      .filter((candidate) => candidate !== directHit && candidate.isAlive())
+      .forEach((candidate) => {
+        const body = candidate.getPhysicsBounds();
+        const dx = body.x + body.width / 2 - point.x;
+        const dy = body.y + body.height / 2 - point.y;
+        if (Math.hypot(dx, dy) > EXPLOSION_RADIUS) {
+          return;
+        }
+        candidate.applyHitReaction(dx >= 0 ? 8 : -6);
+        candidate.takeDamage(EXPLOSION_DAMAGE);
+        if (!candidate.isAlive()) {
+          this.events.enemyKilled();
+        }
+      });
   }
 
   private hitEnemy(
@@ -195,19 +226,10 @@ export class CombatSystem {
     arrow.registerImpact();
 
     if (arrow.type === 'explosive') {
-      effects.explosion(impactPoint);
-      activeEnemies
-        .filter((candidate) => candidate !== enemy && candidate.isAlive()
-          && Math.hypot(candidate.x - impactPoint.x, candidate.y - impactPoint.y) <= EXPLOSION_RADIUS)
-        .forEach((candidate) => {
-          candidate.takeDamage(EXPLOSION_DAMAGE);
-          if (!candidate.isAlive()) {
-            this.events.enemyKilled();
-          }
-        });
+      this.explode(impactPoint, activeEnemies, enemy);
       arrow.deactivate();
     } else if (arrow.type === 'piercing') {
-      effects.impact(impactPoint, false);
+      effects.impact(impactPoint);
       if (arrow.impacts >= PIERCING_MAX_IMPACTS) {
         arrow.deactivate();
       }

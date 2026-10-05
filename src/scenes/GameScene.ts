@@ -371,7 +371,8 @@ export class GameScene extends Scene {
   private updateCamera(): void {
     const target = clamp(this.bowman.x - GAME_WIDTH / 2, 0, WORLD_WIDTH - GAME_WIDTH);
     this.cameraX += (target - this.cameraX) * CAMERA_SMOOTHING;
-    this.world.x = -this.cameraX;
+    const shake = this.effects.cameraShake;
+    this.world.position.set(-this.cameraX + shake.x, shake.y);
   }
 
   private checkEndConditions(): void {
