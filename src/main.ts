@@ -14,20 +14,6 @@ const loadTextures = async (): Promise<GameTextures> => {
   return { tower, arrow };
 };
 
-/** Letterboxes the fixed-resolution canvas to fit the window. */
-const fitCanvasToWindow = (canvas: HTMLCanvasElement): void => {
-  const resize = (): void => {
-    const ratio = Math.min(window.innerWidth / GAME_WIDTH, window.innerHeight / GAME_HEIGHT);
-    canvas.style.width = `${Math.max(1, Math.floor(GAME_WIDTH * ratio))}px`;
-    canvas.style.height = `${Math.max(1, Math.floor(GAME_HEIGHT * ratio))}px`;
-    canvas.style.display = 'block';
-    canvas.style.margin = '0 auto';
-    canvas.style.imageRendering = 'auto';
-  };
-  resize();
-  window.addEventListener('resize', resize);
-};
-
 const bootstrap = async (): Promise<void> => {
   const app = new Application();
   await app.init({
@@ -44,8 +30,7 @@ const bootstrap = async (): Promise<void> => {
   host.appendChild(app.canvas);
 
   const textures = await loadTextures();
-  fitCanvasToWindow(app.canvas);
-  const ui = new DomUi(host);
+  const ui = new DomUi(host, app.canvas);
   new SceneManager(app, ui, textures).goTo('menu');
 };
 

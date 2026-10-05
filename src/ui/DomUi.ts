@@ -1,5 +1,9 @@
+import { GAME_HEIGHT, GAME_WIDTH } from '../config';
 import type { ProjectileType } from '../types';
-import { UI_TEMPLATE } from './template';
+import { HUD_BOTTOM_TEMPLATE, HUD_TOP_TEMPLATE, OVERLAY_TEMPLATE } from './template';
+
+/** Breathing room kept around the canvas + HUD stack inside the window. */
+const PAGE_MARGIN = 16;
 
 export type UiScreen = 'menu' | 'animationLab' | 'game';
 
@@ -9,6 +13,7 @@ export interface HudValues {
   defeatedEnemies: number;
   totalEnemies: number;
   level: number;
+  levelName: string;
   gold: number;
 }
 
@@ -31,14 +36,19 @@ export interface UiHandlers {
   tensionChange?: (value: number) => void;
 }
 
-/** HTML overlay on top of the canvas: menus, HUD, settings drawer and end screen. */
+/**
+ * HTML around and over the canvas. Lays out [HUD top][canvas + overlay][HUD bottom], scales the
+ * canvas to the space left by the HUD, and owns menus, settings drawer and end screen.
+ */
 export class DomUi {
   public readonly handlers: UiHandlers = {};
 
-  private readonly root: HTMLDivElement;
+  private readonly host: HTMLElement;
+  private readonly canvas: HTMLCanvasElement;
+  private readonly hudTop: HTMLElement;
+  private readonly hudBottom: HTMLElement;
   private readonly menuScreen: HTMLElement;
   private readonly labScreen: HTMLElement;
-  private readonly gameUi: HTMLElement;
   private readonly optionsDrawer: HTMLElement;
   private readonly endScreen: HTMLElement;
   private readonly endTitle: HTMLElement;
@@ -50,6 +60,7 @@ export class DomUi {
   private readonly bowmanHealthElement: HTMLElement;
   private readonly enemyCountElement: HTMLElement;
   private readonly levelElement: HTMLElement;
+  private readonly levelNameElement: HTMLElement;
   private readonly goldElement: HTMLElement;
   private readonly projectileButtons: HTMLButtonElement[];
   private readonly gravityInput: HTMLInputElement;
@@ -58,15 +69,19 @@ export class DomUi {
   private readonly tensionValue: HTMLElement;
   private onEndButton?: () => void;
 
-  public constructor(host: HTMLElement) {
-    this.root = document.createElement('div');
-    this.root.id = 'ui-root';
-    this.root.innerHTML = UI_TEMPLATE;
-    host.appendChild(this.root);
+  public constructor(host: HTMLElement, canvas: HTMLCanvasElement) {
+    this.host = host;
+    this.canvas = canvas;
+    this.hudTop = DomUi.createElement('hud hud-top', HUD_TOP_TEMPLATE);
+    this.hudBottom = DomUi.createElement('hud hud-bottom', HUD_BOTTOM_TEMPLATE);
+    const stage = DomUi.createElement('stage', '');
+    const overlay = DomUi.createElement('', OVERLAY_TEMPLATE);
+    overlay.id = 'ui-root';
+    stage.append(canvas, overlay);
+    host.append(this.hudTop, stage, this.hudBottom);
 
     this.menuScreen = this.query('[data-menu]');
     this.labScreen = this.query('[data-test]');
-    this.gameUi = this.query('[data-game-ui]');
     this.optionsDrawer = this.query('[data-drawer]');
     this.endScreen = this.query('[data-end]');
     this.endTitle = this.query('[data-end-title]');
@@ -78,8 +93,9 @@ export class DomUi {
     this.bowmanHealthElement = this.query('[data-bowman-health]');
     this.enemyCountElement = this.query('[data-enemy-count]');
     this.levelElement = this.query('[data-level]');
+    this.levelNameElement = this.query('[data-level-name]');
     this.goldElement = this.query('[data-gold]');
-    this.projectileButtons = Array.from(this.root.querySelectorAll<HTMLButtonElement>('[data-projectile]'));
+    this.projectileButtons = Array.from(this.host.querySelectorAll<HTMLButtonElement>('[data-projectile]'));
     this.gravityInput = this.query<HTMLInputElement>('[data-gravity]');
     this.tensionInput = this.query<HTMLInputElement>('[data-tension]');
     this.gravityValue = this.query('[data-gravity-value]');
@@ -96,15 +112,20 @@ export class DomUi {
     });
     this.gravityInput.addEventListener('input', () => this.handlers.gravityChange?.(Number(this.gravityInput.value)));
     this.tensionInput.addEventListener('input', () => this.handlers.tensionChange?.(Number(this.tensionInput.value)));
+
+    window.addEventListener('resize', () => this.fitCanvas());
+    this.showScreen('menu');
   }
 
   /** Shows one screen and hides the others, including the end screen and settings drawer. */
   public showScreen(screen: UiScreen): void {
     this.menuScreen.hidden = screen !== 'menu';
     this.labScreen.hidden = screen !== 'animationLab';
-    this.gameUi.hidden = screen !== 'game';
+    this.hudTop.hidden = screen !== 'game';
+    this.hudBottom.hidden = screen !== 'game';
     this.endScreen.hidden = true;
     this.optionsDrawer.hidden = true;
+    this.fitCanvas();
   }
 
   public setStatus(text: string): void {
@@ -120,6 +141,7 @@ export class DomUi {
     this.bowmanHealthElement.textContent = `${values.bowmanHealth} HP`;
     this.enemyCountElement.textContent = `${values.defeatedEnemies} / ${values.totalEnemies}`;
     this.levelElement.textContent = `${values.level}`;
+    this.levelNameElement.textContent = values.levelName;
     this.goldElement.textContent = `${values.gold}`;
   }
 
@@ -147,12 +169,37 @@ export class DomUi {
     this.endScreen.hidden = false;
   }
 
+  /** Largest canvas size with the game's aspect ratio that fits next to the visible HUD bars. */
+  private fitCanvas(): void {
+    const viewport = document.documentElement;
+    const availableWidth = viewport.clientWidth - PAGE_MARGIN * 2;
+    this.host.style.width = `${availableWidth}px`;
+    // Two passes: the HUD height depends on the width it wraps in, which depends on the canvas width.
+    for (let pass = 0; pass < 2; pass += 1) {
+      const hudHeight = (this.hudTop.hidden ? 0 : this.hudTop.offsetHeight)
+        + (this.hudBottom.hidden ? 0 : this.hudBottom.offsetHeight);
+      const availableHeight = viewport.clientHeight - PAGE_MARGIN * 2 - hudHeight;
+      const ratio = Math.max(0, Math.min(availableWidth / GAME_WIDTH, availableHeight / GAME_HEIGHT));
+      const width = Math.max(1, Math.floor(GAME_WIDTH * ratio));
+      this.canvas.style.width = `${width}px`;
+      this.canvas.style.height = `${Math.max(1, Math.floor(GAME_HEIGHT * ratio))}px`;
+      this.host.style.width = `${width}px`;
+    }
+  }
+
+  private static createElement(className: string, html: string): HTMLDivElement {
+    const element = document.createElement('div');
+    element.className = className;
+    element.innerHTML = html;
+    return element;
+  }
+
   private onClick(selector: string, handler: () => void): void {
     this.query<HTMLButtonElement>(selector).addEventListener('click', handler);
   }
 
   private query<T extends HTMLElement = HTMLElement>(selector: string): T {
-    const element = this.root.querySelector<T>(selector);
+    const element = this.host.querySelector<T>(selector);
     if (!element) {
       throw new Error(`Missing UI element: ${selector}`);
     }

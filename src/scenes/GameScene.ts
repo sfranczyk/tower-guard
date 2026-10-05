@@ -340,6 +340,7 @@ export class GameScene extends Scene {
       defeatedEnemies: this.defeatedEnemies,
       totalEnemies: getLevelEnemyTotal(this.level),
       level: this.ctx.session.levelNumber,
+      levelName: this.level.name,
       gold: this.ctx.session.gold,
     });
   }

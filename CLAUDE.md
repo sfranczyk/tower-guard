@@ -34,8 +34,11 @@ src/
   switches scenes, and `SceneManager` destroys everything under `ctx.root` on each switch.
 - **Persistent state** between levels lives in `ctx.session` (level number, gold, bow tension).
   `MenuScene` resets it.
-- **UI** is HTML over the canvas (`ui/template.ts`, styles in `index.html`). Scenes never touch the DOM
-  directly. They call `DomUi` methods and assign `ui.handlers.*` callbacks.
+- **UI** is HTML (`ui/template.ts`, styles in `index.html`). The in-game HUD sits *outside* the canvas
+  (bar above, status line below) and `DomUi.fitCanvas()` scales the canvas into the remaining space.
+  Never place HUD elements over the play field. Only menus, the settings drawer and the end screen
+  overlay the canvas. Scenes never touch the DOM directly. They call `DomUi` methods and assign
+  `ui.handlers.*` callbacks.
 - **Stickman drawing** goes through `drawStickman(sprite, phase, pose)` in `rendering/stickman.ts`.
   Bowman, enemies and the animation lab all use it. Preview animation changes in the lab
   (menu → "Open animation test panel").
@@ -53,4 +56,3 @@ src/
 
 - `Bowman.updateAnimation` passes bow rotation as `bowTension` and aim power as `bowAngle` (see the FIXME).
   This looks swapped, but it's kept so the archer looks unchanged. Fixing it changes the archer's arm pose.
-- The toolbar title in `ui/template.ts` always says "The First Wave".
