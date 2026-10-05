@@ -79,8 +79,6 @@ export class Bowman extends Container {
   private animationTime = 0;
   private animationIdleBlend = 1;
   private animationRunningBlend = 0;
-  private attackTimerMs = 0;
-  private attackPhase = 0;
   private facingDirection = 1;
   private aim: BowmanAim = {
     direction: { x: 1, y: 0 },
@@ -228,11 +226,6 @@ export class Bowman extends Container {
       this.bodySprite.scale.x = this.facingDirection;
     }
     this.drawBow(this.aim.power);
-  }
-
-  public playAttackAnimation(): void {
-    this.attackTimerMs = 180;
-    this.attackPhase = 0;
   }
 
   public updateAnimation(deltaMs: number, moving: boolean, sprinting = false): void {

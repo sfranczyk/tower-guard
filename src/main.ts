@@ -3,7 +3,6 @@ import {
   Assets,
   Container,
   Graphics,
-  Rectangle,
   Texture,
 } from 'pixi.js';
 import Arrow from './objects/Arrow';
@@ -23,7 +22,6 @@ import {
   BOWMAN_START_X,
   BOWMAN_Y,
   ENEMY_HEALTH,
-  ENEMY_HIT_DAMAGE,
   ENEMY_TOWER_DAMAGE,
   EXPLOSION_DAMAGE,
   EXPLOSION_RADIUS,
@@ -40,7 +38,6 @@ import {
   TOWER_ENTRY_ZONE_HEIGHT,
   TOWER_ENTRY_ZONE_WIDTH,
   TOWER_EXIT_X_OFFSET,
-  TOWER_MAX_HEALTH,
   WORLD_WIDTH,
 } from './config';
 
@@ -60,170 +57,7 @@ type BloodParticle = {
 
 const clamp = (value: number, min: number, max: number): number => Math.max(min, Math.min(max, value));
 
-const makeFrames = (texture: Texture, frameWidth: number, frameHeight: number): Texture[] => {
-  const frameCount = Math.max(1, Math.floor(texture.width / frameWidth));
-  return Array.from({ length: frameCount }, (_, index) => new Texture({
-    source: texture.source,
-    frame: new Rectangle(index * frameWidth, 0, frameWidth, frameHeight),
-  }));
-};
-
 type Point = { x: number; y: number };
-
-type StaticPose = 'neutral' | 'front' | 'rear';
-
-type LabAnimation = {
-  sprite: Graphics;
-  elapsed: number;
-};
-
-const drawStaticStickman = (sprite: Graphics, pose: StaticPose): void => {
-  sprite.clear();
-  const skeleton = 0xf4f7fb;
-  const rear = 0xb7c1d1;
-  const line = (a: Point, b: Point, isRear = false): void => {
-    sprite.moveTo(a.x, a.y).lineTo(b.x, b.y).stroke({
-      width: isRear ? 3 : 3.5,
-      color: isRear ? rear : skeleton,
-      cap: 'round',
-      join: 'round',
-    });
-  };
-  const joint = (point: Point, isRear = false): void => {
-    sprite.circle(point.x, point.y, 3).stroke({
-      width: 1.5,
-      color: isRear ? rear : skeleton,
-    });
-  };
-  const hip = { x: 0, y: 0 };
-   const shoulder = { x: pose === 'neutral' ? 0 : 2, y: -52 };
-   const head = { x: pose === 'neutral' ? 0 : 4, y: -68 };
-   const frontLeg = pose === 'neutral'
-     ? [{ x: 0, y: 30 }, { x: 0, y: 60 }]
-     : pose === 'front'
-     ? [{ x: 28, y: 24 }, { x: 52, y: 52 }]
-     : [{ x: 12, y: 30 }, { x: 18, y: 60 }];
-  const rearLeg = pose === 'rear'
-    ? [{ x: -28, y: 22 }, { x: -52, y: 52 }]
-    : [{ x: -12, y: 30 }, { x: -18, y: 60 }];
-  const drawLimb = (root: Point, jointPoint: Point, end: Point, isRear: boolean): void => {
-    line(root, jointPoint, isRear);
-    line(jointPoint, end, isRear);
-    joint(jointPoint, isRear);
-  };
-
-   if (pose !== 'neutral') {
-     drawLimb(hip, rearLeg[0], rearLeg[1], true);
-     drawLimb(shoulder, { x: -18, y: -28 }, { x: -30, y: -4 }, true);
-   }
-   line(hip, shoulder);
-   joint(hip);
-  line(shoulder, { x: head.x, y: head.y + 8 });
-  sprite.circle(head.x, head.y, 10).stroke({ width: 2, color: skeleton });
-  drawLimb(hip, frontLeg[0], frontLeg[1], false);
-   drawLimb(
-     shoulder,
-     pose === 'neutral' ? { x: 0, y: -28 } : { x: 21, y: -30 },
-     pose === 'neutral' ? { x: 0, y: -4 } : { x: 34, y: -8 },
-     false,
-  );
-};
-
-type WalkKeyframe = {
-  leftLeg: { knee: Point; ankle: Point; foot: { heel: Point; toe: Point } };
-  rightLeg: { knee: Point; ankle: Point; foot: { heel: Point; toe: Point } };
-  leftArm: { elbow: Point; hand: Point };
-  rightArm: { elbow: Point; hand: Point };
-};
-
-const WALK_KEYFRAMES: WalkKeyframe[] = [
-  { leftLeg: { knee: { x: -8, y: 25 }, ankle: { x: -22, y: 53 }, foot: { heel: { x: -25, y: 58 }, toe: { x: -12, y: 58 } } }, rightLeg: { knee: { x: 13, y: 28 }, ankle: { x: 25, y: 53 }, foot: { heel: { x: 20, y: 58 }, toe: { x: 34, y: 58 } } }, leftArm: { elbow: { x: -12, y: -12 }, hand: { x: -17, y: 8 } }, rightArm: { elbow: { x: 11, y: -12 }, hand: { x: 24, y: 4 } } },
-  { leftLeg: { knee: { x: -4, y: 17 }, ankle: { x: 2, y: 47 }, foot: { heel: { x: -3, y: 55 }, toe: { x: 11, y: 55 } } }, rightLeg: { knee: { x: 14, y: 30 }, ankle: { x: 28, y: 53 }, foot: { heel: { x: 23, y: 58 }, toe: { x: 37, y: 58 } } }, leftArm: { elbow: { x: -12, y: -8 }, hand: { x: -18, y: 12 } }, rightArm: { elbow: { x: 12, y: -13 }, hand: { x: 25, y: 4 } } },
-  { leftLeg: { knee: { x: -14, y: 27 }, ankle: { x: -32, y: 51 }, foot: { heel: { x: -37, y: 57 }, toe: { x: -24, y: 57 } } }, rightLeg: { knee: { x: 10, y: 21 }, ankle: { x: 28, y: 51 }, foot: { heel: { x: 24, y: 57 }, toe: { x: 39, y: 57 } } }, leftArm: { elbow: { x: -12, y: -5 }, hand: { x: -12, y: 15 } }, rightArm: { elbow: { x: 15, y: -10 }, hand: { x: 29, y: 2 } } },
-  { leftLeg: { knee: { x: -19, y: 29 }, ankle: { x: -39, y: 51 }, foot: { heel: { x: -44, y: 57 }, toe: { x: -31, y: 57 } } }, rightLeg: { knee: { x: 14, y: 20 }, ankle: { x: 34, y: 51 }, foot: { heel: { x: 30, y: 57 }, toe: { x: 45, y: 57 } } }, leftArm: { elbow: { x: -13, y: -8 }, hand: { x: -18, y: 10 } }, rightArm: { elbow: { x: 16, y: -9 }, hand: { x: 31, y: 2 } } },
-  { leftLeg: { knee: { x: -14, y: 25 }, ankle: { x: -32, y: 51 }, foot: { heel: { x: -37, y: 57 }, toe: { x: -24, y: 57 } } }, rightLeg: { knee: { x: 18, y: 17 }, ankle: { x: 39, y: 50 }, foot: { heel: { x: 35, y: 57 }, toe: { x: 50, y: 57 } } }, leftArm: { elbow: { x: -12, y: -12 }, hand: { x: -17, y: 6 } }, rightArm: { elbow: { x: 15, y: -10 }, hand: { x: 29, y: 2 } } },
-];
-
-const drawKeyframedWalkingStickman = (sprite: Graphics, phase: number): void => {
-  sprite.clear();
-  const skeleton = 0xf4f7fb;
-  const rear = 0xb7c1d1;
-  const smooth = (value: number): number => value * value * (3 - 2 * value);
-  const cycle = ((phase % WALK_KEYFRAMES.length) + WALK_KEYFRAMES.length) % WALK_KEYFRAMES.length;
-  const frameIndex = Math.floor(cycle);
-  const nextIndex = (frameIndex + 1) % WALK_KEYFRAMES.length;
-  const amount = smooth(cycle - frameIndex);
-  const start = WALK_KEYFRAMES[frameIndex];
-  const end = WALK_KEYFRAMES[nextIndex];
-  const interpolate = (a: Point, b: Point): Point => ({
-    x: a.x + (b.x - a.x) * amount,
-    y: a.y + (b.y - a.y) * amount,
-  });
-  const frame = {
-    leftLeg: {
-      knee: interpolate(start.leftLeg.knee, end.leftLeg.knee),
-      ankle: interpolate(start.leftLeg.ankle, end.leftLeg.ankle),
-      foot: {
-        heel: interpolate(start.leftLeg.foot.heel, end.leftLeg.foot.heel),
-        toe: interpolate(start.leftLeg.foot.toe, end.leftLeg.foot.toe),
-      },
-    },
-    rightLeg: {
-      knee: interpolate(start.rightLeg.knee, end.rightLeg.knee),
-      ankle: interpolate(start.rightLeg.ankle, end.rightLeg.ankle),
-      foot: {
-        heel: interpolate(start.rightLeg.foot.heel, end.rightLeg.foot.heel),
-        toe: interpolate(start.rightLeg.foot.toe, end.rightLeg.foot.toe),
-      },
-    },
-    leftArm: { elbow: interpolate(start.leftArm.elbow, end.leftArm.elbow), hand: interpolate(start.leftArm.hand, end.leftArm.hand) },
-    rightArm: { elbow: interpolate(start.rightArm.elbow, end.rightArm.elbow), hand: interpolate(start.rightArm.hand, end.rightArm.hand) },
-  };
-  const hip = { x: 0, y: 0 };
-  const shoulder = { x: 0, y: -35 };
-  const line = (a: Point, b: Point, isRear = false): void => {
-    sprite.moveTo(a.x, a.y).lineTo(b.x, b.y).stroke({
-      width: isRear ? 3 : 3.5,
-      color: isRear ? rear : skeleton,
-      cap: 'round',
-      join: 'round',
-    });
-  };
-  const joint = (point: Point, isRear = false): void => {
-    sprite.circle(point.x, point.y, 3).stroke({ width: 1.5, color: isRear ? rear : skeleton });
-  };
-  const endpoint = (point: Point, isRear = false): void => {
-    sprite.circle(point.x, point.y, 2.5).fill({ color: isRear ? rear : skeleton });
-  };
-  const drawFoot = (foot: { heel: Point; toe: Point }, isRear: boolean): void => {
-    line(foot.heel, foot.toe, isRear);
-    endpoint(foot.heel, isRear);
-    endpoint(foot.toe, isRear);
-  };
-  const drawLimb = (root: Point, jointPoint: Point, ankle: Point, foot: { heel: Point; toe: Point }, isRear: boolean): void => {
-    line(root, jointPoint, isRear);
-    line(jointPoint, ankle, isRear);
-    joint(jointPoint, isRear);
-    joint(ankle, isRear);
-    drawFoot(foot, isRear);
-  };
-  const drawArm = (root: Point, elbow: Point, hand: Point, isRear: boolean): void => {
-    line(root, elbow, isRear);
-    line(elbow, hand, isRear);
-    joint(elbow, isRear);
-    endpoint(hand, isRear);
-  };
-
-  // Left limbs are the rear pair; draw them before the stable torso and front pair.
-  drawLimb(hip, frame.leftLeg.knee, frame.leftLeg.ankle, frame.leftLeg.foot, true);
-  drawArm(shoulder, frame.leftArm.elbow, frame.leftArm.hand, true);
-  line(hip, shoulder);
-  joint(hip);
-  line(shoulder, { x: 0, y: -43 });
-  sprite.circle(0, -52, 10).stroke({ width: 2, color: skeleton });
-  drawLimb(hip, frame.rightLeg.knee, frame.rightLeg.ankle, frame.rightLeg.foot, false);
-  drawArm(shoulder, frame.rightArm.elbow, frame.rightArm.hand, false);
-};
 
 const drawWalkingStickman = (
   sprite: Graphics,
@@ -452,20 +286,6 @@ const drawWalkingStickman = (
       )
       .stroke({ width: 2.5, color: 0xe3ad4f, cap: 'round' });
   }
-};
-
-const drawStandingArcher = (sprite: Graphics): void => {
-  drawWalkingStickman(sprite, 0, 1, false, false, 0, 430, 0, true);
-  sprite.moveTo(35, -94).quadraticCurveTo(77, -43, 35, 8).stroke({
-    width: 3.5,
-    color: 0xe3ad4f,
-    cap: 'round',
-  });
-  sprite.moveTo(35, -94).lineTo(35, 8).stroke({
-    width: 1.5,
-    color: 0xf6e2a4,
-    cap: 'round',
-  });
 };
 
 const drawTensionArcher = (sprite: Graphics, phase: number): void => {
@@ -1019,7 +839,6 @@ class TowerGuardApp {
       this.bowman.setAim(aim.direction, aim.power);
       const effectivePower = aim.power * this.bowTension;
       if (effectivePower > 0.05) {
-        this.bowman.playAttackAnimation();
         this.lastReleaseRadius = aim.strength.distance * 0.55;
         this.lastReleaseDirection = { ...aim.direction };
         this.fireArrow(aim, effectivePower);
@@ -1111,7 +930,6 @@ class TowerGuardApp {
     }[wave.enemyType];
     const enemy = new Enemy(
       wave.spawn.spawnPoint.x,
-      wave.spawn.spawnPoint.y,
       Math.round(enemyStats.health * this.currentLevel.enemyDifficulty),
       enemyStats.speed * this.currentLevel.enemyDifficulty,
       'bowman',
@@ -1750,14 +1568,6 @@ class TowerGuardApp {
       exit = Math.min(exit, far);
     }
     return entry <= exit && Number.isFinite(entry) ? clamp(entry, 0, 1) : undefined;
-  }
-
-  private screenPoint(event: PointerEvent): Vec2 {
-    const rect = this.app.canvas.getBoundingClientRect();
-    return {
-      x: ((event.clientX - rect.left) / rect.width) * GAME_WIDTH,
-      y: ((event.clientY - rect.top) / rect.height) * GAME_HEIGHT,
-    };
   }
 }
 

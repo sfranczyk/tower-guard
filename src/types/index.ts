@@ -44,17 +44,3 @@ export interface ILevelData {
   readonly goldReward: number;
   readonly towerHealth: number;
 }
-
-export type GameStatus =
-  | 'menu'
-  | 'running'
-  | 'paused'
-  | 'won'
-  | 'lost'
-  | 'gameover';
-
-export interface IGameState {
-  level: number;
-  score: number;
-  gameStatus: GameStatus;
-}

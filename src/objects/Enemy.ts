@@ -172,7 +172,6 @@ export default class Enemy extends Container {
 
   public constructor(
     x: number,
-    y: number,
     health = 3,
     speed = 60,
     target: EnemyTarget = 'bowman',

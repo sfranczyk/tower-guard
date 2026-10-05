@@ -43,4 +43,7 @@ export const GRAVITY = 1100;
 export const JUMP_BUFFER_MS = 110;
 
 export const TOWER_MAX_HEALTH = 570;
-export const SHOW_HITBOX_DEBUG = true;
+
+// Enable with ?debug in the URL.
+export const SHOW_HITBOX_DEBUG = typeof window !== 'undefined'
+  && new URLSearchParams(window.location.search).has('debug');

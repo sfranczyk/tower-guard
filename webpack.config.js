@@ -25,14 +25,6 @@ module.exports = {
   },
   resolve: {
     extensions: ['.tsx', '.ts', '.js'],
-    alias: {
-      '@': path.resolve(__dirname, 'src/'),
-      '@objects': path.resolve(__dirname, 'src/objects/'),
-      '@managers': path.resolve(__dirname, 'src/managers/'),
-      '@scenes': path.resolve(__dirname, 'src/scenes/'),
-      '@config': path.resolve(__dirname, 'src/config/'),
-      '@types': path.resolve(__dirname, 'src/types/'),
-    },
   },
   devServer: {
     static: './dist',
