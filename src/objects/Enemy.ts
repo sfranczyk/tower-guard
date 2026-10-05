@@ -1,13 +1,36 @@
 import { Container, Graphics, Text } from 'pixi.js';
 import { ENEMY_ATTACK_INTERVAL_MS, ENEMY_GROUND_Y } from '../config';
 import { STICKMAN_HEAD, drawStickman, type StickmanPose } from '../rendering/stickman';
+import { FALL_DURATION_MS, drawStickmanFall, getFallPose, type FallKind, type FallPose } from '../rendering/stickmanFall';
 import type { Bounds, Vec2 } from '../types';
 
 const ATTACK_ANIMATION_DURATION_MS = 1_130;
 
 export type EnemyTarget = 'bowman' | 'tower';
 
-const ENEMY_POSE: StickmanPose = { armed: true, originY: -25 };
+/** What dealt the damage, and from which side, so the right reaction plays. */
+export interface HitInfo {
+  cause: 'arrow' | 'headshot' | 'explosion';
+  /** World x the hit came from; the enemy turns to face it before falling. */
+  fromX: number;
+}
+
+/** A playing fall animation. Dead enemies stay in their last frame. */
+interface FallState {
+  kind: FallKind;
+  timeMs: number;
+  /** +1: fall-space +x is world +x; −1: mirrored. */
+  facing: number;
+  /** Knockback only: get up after lying down this long, then fight on. */
+  getUpAfterMs?: number;
+}
+
+/** Time a knocked-down (surviving) enemy lies on the ground before getting up. */
+const KNOCKDOWN_LIE_MS = 450;
+/** Body sprite scale (x is mirrored by facing). */
+const BODY_SCALE = { x: 0.5, y: 0.52 };
+const BODY_ORIGIN_Y = -25;
+const ENEMY_POSE: StickmanPose = { armed: true, originY: BODY_ORIGIN_Y };
 
 export default class Enemy extends Container {
   private readonly body: Graphics;
@@ -21,6 +44,7 @@ export default class Enemy extends Container {
   private attackTimerMs = 0;
   private velocity = { x: 0, y: 0 };
   private alive = true;
+  private fall?: FallState;
   public target: EnemyTarget;
 
   public constructor(
@@ -61,10 +85,14 @@ export default class Enemy extends Container {
   private drawPlaceholder(): void {
     drawStickman(this.body, 0, { ...ENEMY_POSE, idleBlend: 1 });
     this.body.position.set(0, -29);
-    this.body.scale.set(-0.5, 0.52);
+    this.body.scale.set(-BODY_SCALE.x, BODY_SCALE.y);
   }
 
-  public takeDamage(amount: number): number {
+  /**
+   * Applies damage and plays the reaction: a death animation when killed (headshot → stiff fall,
+   * explosion → knockback, otherwise a random collapse), or a knockdown when an explosion doesn't kill.
+   */
+  public takeDamage(amount: number, hit: HitInfo = { cause: 'arrow', fromX: this.x - 1 }): number {
     if (!this.isAlive()) {
       return this.health;
     }
@@ -73,13 +101,19 @@ export default class Enemy extends Container {
     this.updateHealthLabel();
     if (this.health === 0) {
       this.alive = false;
-      this.y = ENEMY_GROUND_Y + 12;
-      this.body.rotation = 0.35;
-      this.body.alpha = 0.6;
       this.velocity = { x: 0, y: 0 };
+      this.healthLabel.visible = false;
+      this.startFall(Enemy.deathKind(hit.cause), hit.fromX);
+    } else if (hit.cause === 'explosion') {
+      this.startFall('knockback', hit.fromX, KNOCKDOWN_LIE_MS);
     }
 
     return this.health;
+  }
+
+  /** True while a surviving enemy is knocked down (can't move or attack). */
+  public get isDown(): boolean {
+    return this.isAlive() && this.fall !== undefined;
   }
 
   public clearHitTint(): void {
@@ -90,7 +124,7 @@ export default class Enemy extends Container {
   }
 
   public applyHitReaction(pushX: number): void {
-    if (!this.isAlive()) {
+    if (!this.isAlive() || this.fall) {
       return;
     }
     this.hitStaggerMs = Math.max(this.hitStaggerMs, 120);
@@ -103,6 +137,11 @@ export default class Enemy extends Container {
   }
 
   public updateAnimation(deltaMs: number, moving: boolean): void {
+    if (this.fall) {
+      // Dead enemies keep playing (then holding) their death; survivors get back up.
+      this.updateFall(deltaMs);
+      return;
+    }
     if (!this.isAlive()) {
       return;
     }
@@ -130,7 +169,7 @@ export default class Enemy extends Container {
 
     this.animationTime += deltaMs;
     drawStickman(this.body, this.animationTime / 150, ENEMY_POSE);
-    this.body.scale.x = this.velocity.x < 0 ? -0.5 : 0.5;
+    this.body.scale.x = this.velocity.x < 0 ? -BODY_SCALE.x : BODY_SCALE.x;
     this.body.rotation = this.velocity.x < 0 ? -0.06 : 0.06;
   }
 
@@ -143,6 +182,14 @@ export default class Enemy extends Container {
   }
 
   public getPhysicsBounds(): Bounds {
+    const falling = this.fallPointsWorld();
+    if (falling) {
+      // Box around the falling/lying body.
+      const { pose, toWorld } = falling;
+      const points = [pose.hip, pose.shoulder, pose.head, pose.frontKnee, pose.rearKnee, pose.frontFoot, pose.rearFoot]
+        .map(toWorld);
+      return Enemy.boundsAround(points, 2);
+    }
     const width = 14;
     const height = 28;
     const x = this.x - width / 2;
@@ -159,8 +206,13 @@ export default class Enemy extends Container {
     };
   }
 
-  /** Box around the drawn head (follows bob, lean and scale), in world space. */
+  /** Box around the drawn head (follows bob, lean, scale and falls), in world space. */
   public getHeadBounds(): Bounds {
+    const falling = this.fallPointsWorld();
+    if (falling) {
+      const center = falling.toWorld(falling.pose.head);
+      return Enemy.boundsAround([center], STICKMAN_HEAD.radius * BODY_SCALE.x * this.scale.x);
+    }
     const { body } = this;
     const cos = Math.cos(body.rotation);
     const sin = Math.sin(body.rotation);
@@ -169,20 +221,11 @@ export default class Enemy extends Container {
     const centerX = this.x + (body.x + localX * cos - localY * sin) * this.scale.x;
     const centerY = this.y + (body.y + localX * sin + localY * cos) * this.scale.y;
     const radius = STICKMAN_HEAD.radius * Math.abs(body.scale.x) * this.scale.x;
-    return {
-      x: centerX - radius,
-      y: centerY - radius,
-      width: radius * 2,
-      height: radius * 2,
-      left: centerX - radius,
-      right: centerX + radius,
-      top: centerY - radius,
-      bottom: centerY + radius,
-    };
+    return Enemy.boundsAround([{ x: centerX, y: centerY }], radius);
   }
 
   public update(deltaMs: number, target?: Vec2, stopDistance = 0): void {
-    if (!this.isAlive()) {
+    if (!this.isAlive() || this.fall) {
       return;
     }
 
@@ -217,6 +260,9 @@ export default class Enemy extends Container {
   }
 
   public canAttack(deltaMs: number): boolean {
+    if (this.fall) {
+      return false;
+    }
     this.attackCooldown = Math.max(0, this.attackCooldown - deltaMs);
     if (this.attackCooldown > 0) {
       return false;
@@ -234,6 +280,81 @@ export default class Enemy extends Container {
       this.velocity.x = 0;
       this.velocity.y = 0;
     }
+  }
+
+  private static deathKind(cause: HitInfo['cause']): FallKind {
+    if (cause === 'headshot') {
+      return 'deathStiff';
+    }
+    if (cause === 'explosion') {
+      return 'knockback';
+    }
+    return Math.random() < 0.5 ? 'death' : 'deathCrumple';
+  }
+
+  /** Turns to face the hit (so backwards falls go away from it) and starts a fall animation. */
+  private startFall(kind: FallKind, fromX: number, getUpAfterMs?: number): void {
+    const facing = fromX >= this.x ? 1 : -1;
+    this.fall = { kind, timeMs: 0, facing, getUpAfterMs };
+    this.attackTimerMs = 0;
+    this.hitStaggerMs = 0;
+    this.body.scale.set(BODY_SCALE.x * facing, BODY_SCALE.y);
+    this.drawFall();
+  }
+
+  private get fallProgress(): number {
+    return this.fall ? Math.min(1, this.fall.timeMs / FALL_DURATION_MS[this.fall.kind]) : 0;
+  }
+
+  private drawFall(): void {
+    if (this.fall) {
+      drawStickmanFall(this.body, this.fall.kind, this.fallProgress, BODY_ORIGIN_Y);
+    }
+  }
+
+  /** Advances the fall; a knocked-down survivor gets up and is moved to where it ended up. */
+  private updateFall(deltaMs: number): void {
+    const fall = this.fall;
+    if (!fall) {
+      return;
+    }
+    fall.timeMs += deltaMs;
+    const duration = FALL_DURATION_MS[fall.kind];
+    if (fall.kind === 'knockback' && fall.getUpAfterMs !== undefined && fall.timeMs >= duration + fall.getUpAfterMs) {
+      this.fall = { kind: 'getUp', timeMs: 0, facing: fall.facing };
+    } else if (fall.kind === 'getUp' && fall.timeMs >= duration) {
+      // The get-up ends standing away from where the knockback started; move there for real.
+      const endHipX = getFallPose('getUp', 1).hip.x;
+      this.x += endHipX * BODY_SCALE.x * fall.facing * this.scale.x;
+      this.fall = undefined;
+      drawStickman(this.body, this.animationTime, { ...ENEMY_POSE, idleBlend: 1 });
+      return;
+    }
+    this.drawFall();
+  }
+
+  /** The current fall pose and a mapping from its sprite space to world space (only while falling). */
+  private fallPointsWorld(): { pose: FallPose; toWorld: (point: Vec2) => Vec2 } | undefined {
+    if (!this.fall) {
+      return undefined;
+    }
+    const pose = getFallPose(this.fall.kind, this.fallProgress);
+    const { body } = this;
+    return {
+      pose,
+      toWorld: (point) => ({
+        x: this.x + (body.x + point.x * body.scale.x) * this.scale.x,
+        y: this.y + (body.y + point.y * body.scale.y) * this.scale.y,
+      }),
+    };
+  }
+
+  private static boundsAround(points: Vec2[], padding: number): Bounds {
+    const left = Math.min(...points.map((point) => point.x)) - padding;
+    const right = Math.max(...points.map((point) => point.x)) + padding;
+    const top = Math.min(...points.map((point) => point.y)) - padding;
+    const bottom = Math.max(...points.map((point) => point.y)) + padding;
+    return { x: left, y: top, width: right - left, height: bottom - top, left, right, top, bottom };
   }
 
   private updateHealthLabel(): void {

@@ -18,6 +18,9 @@ import {
 const BODY_ORIGIN_Y = -55;
 /** Time for the body lean to swing from one side to the other after turning around. */
 const LEAN_TURN_MS = 260;
+/** Raising the bow when a draw starts, and lowering it after the shot. */
+const BOW_RAISE_MS = 200;
+const BOW_LOWER_MS = 380;
 
 export interface BowmanAim {
   direction: Vec2;
@@ -51,6 +54,8 @@ export class Bowman extends Container {
   private facingDirection = 1;
   /** Follows facingDirection smoothly so the lean doesn't flip instantly on a turn. */
   private leanDirection = 1;
+  /** 0 = bow held low (default), 1 = raised to aim; follows whether the player is drawing. */
+  private bowReady = 0;
   private aim: BowmanAim = {
     direction: { x: 1, y: 0 },
     power: 0,
@@ -205,6 +210,9 @@ export class Bowman extends Container {
       this.aim.direction = { x: this.facingDirection, y: 0 };
     }
     this.leanDirection = approach(this.leanDirection, this.facingDirection, (deltaMs / LEAN_TURN_MS) * 2);
+    // The bow comes up while the player draws and goes back down after the shot.
+    const drawing = this.aim.power > 0;
+    this.bowReady = approach(this.bowReady, drawing ? 1 : 0, deltaMs / (drawing ? BOW_RAISE_MS : BOW_LOWER_MS));
     this.redraw();
   }
 
@@ -220,7 +228,7 @@ export class Bowman extends Container {
   public getBowReleasePoint(): Vec2 {
     const body = this.bodySprite;
     const localAngle = toArcherLocalAngle(this.aimAngle, body.rotation, this.facingDirection);
-    const hand = getArcherRig(localAngle, this.aim.power).stringNock;
+    const hand = getArcherRig(localAngle, this.aim.power, this.bowReady).stringNock;
     const cos = Math.cos(body.rotation);
     const sin = Math.sin(body.rotation);
     const x = hand.x * body.scale.x;
@@ -243,6 +251,7 @@ export class Bowman extends Container {
       originY: BODY_ORIGIN_Y,
       archerPose: true,
       bowTension: this.aim.power,
+      bowReady: this.bowReady,
       bowAngle: this.aimAngle,
       facingDirection: this.facingDirection,
       leanDirection: this.leanDirection,

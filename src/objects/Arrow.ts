@@ -122,6 +122,10 @@ export default class Arrow extends Sprite {
     return this.stuck;
   }
 
+  public isStuckTo(target: { x: number; y: number }): boolean {
+    return this.stuck && this.stuckTarget === target;
+  }
+
   public static setGravity(value: number): void {
     Arrow.currentGravity = Math.max(0, Math.min(1000, value));
   }

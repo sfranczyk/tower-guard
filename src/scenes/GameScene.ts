@@ -11,6 +11,7 @@ import {
   GROUND_Y,
   HEADSHOT_DAMAGE_MULTIPLIER,
   PLAYER_TOWER_X,
+  SHOW_HITBOX_DEBUG,
   TOWER_ENTRY_ZONE_HEIGHT,
   TOWER_ENTRY_ZONE_WIDTH,
   TOWER_EXIT_X_OFFSET,
@@ -128,6 +129,13 @@ export class GameScene extends Scene {
     this.syncOptions();
     this.bindInput();
     this.spawner.schedule(this.level.waves);
+    if (SHOW_HITBOX_DEBUG) {
+      // Debug console hook (?debug): window.__towerGuard.scene gives access to the running level.
+      (window as unknown as { __towerGuard?: unknown }).__towerGuard = { scene: this };
+      this.onExit(() => {
+        delete (window as unknown as { __towerGuard?: unknown }).__towerGuard;
+      });
+    }
     this.onExit(() => this.spawner.dispose());
     ui.setStatus(`Level ${this.level.id}: ${this.level.name} · defend your keep`);
   }

@@ -69,6 +69,8 @@ export class CombatSystem {
   public update(deltaMs: number, enemiesActive = true): void {
     const activeEnemies = enemiesActive ? this.world.enemies.filter((enemy) => enemy.isAlive()) : [];
     activeEnemies.forEach((enemy) => this.updateEnemy(enemy, deltaMs));
+    // Dead enemies finish (then hold) their death animation.
+    this.world.enemies.filter((enemy) => !enemy.isAlive()).forEach((enemy) => enemy.updateAnimation(deltaMs, false));
 
     const { arrows } = this.world;
     arrows.filter((arrow) => arrow.isActive).forEach((arrow) => arrow.update(deltaMs));
@@ -101,6 +103,11 @@ export class CombatSystem {
       debug.rect(hitbox.x, hitbox.y, hitbox.width, hitbox.height).stroke({ width: 1, color: 0xff5555, alpha: 0.9 });
       const head = enemy.getHeadBounds();
       debug.rect(head.x, head.y, head.width, head.height).stroke({ width: 1, color: 0xffd23f, alpha: 0.9 });
+    }
+
+    // Knocked down by an explosion: no moving or attacking until it gets back up.
+    if (enemy.isDown) {
+      return;
     }
 
     if (enemy.target === 'tower') {
@@ -192,12 +199,23 @@ export class CombatSystem {
         if (Math.hypot(dx, dy) > EXPLOSION_RADIUS) {
           return;
         }
-        candidate.applyHitReaction(dx >= 0 ? 8 : -6);
-        candidate.takeDamage(EXPLOSION_DAMAGE);
+        // Survivors are knocked down away from the blast and get back up; the rest die thrown back.
+        candidate.takeDamage(EXPLOSION_DAMAGE, { cause: 'explosion', fromX: point.x });
+        this.afterEnemyHit(candidate);
         if (!candidate.isAlive()) {
           this.events.enemyKilled();
         }
       });
+  }
+
+  /** Arrows stuck in an enemy that starts falling drop to the ground instead of hanging in the air. */
+  private afterEnemyHit(enemy: Enemy): void {
+    if (enemy.isAlive() && !enemy.isDown) {
+      return;
+    }
+    this.world.arrows
+      .filter((arrow) => arrow.isStuckTo(enemy))
+      .forEach((arrow) => arrow.stickToGround(GROUND_Y - 3));
   }
 
   private hitEnemy(
@@ -220,8 +238,10 @@ export class CombatSystem {
     if (headshot) {
       this.events.headshot();
     }
-    enemy.applyHitReaction(arrow.x < enemy.x ? 6 : -4);
-    enemy.takeDamage(damage);
+    const fromLeft = arrow.x < enemy.x;
+    enemy.applyHitReaction(fromLeft ? 6 : -4);
+    const cause = arrow.type === 'explosive' ? 'explosion' : headshot ? 'headshot' : 'arrow';
+    enemy.takeDamage(damage, { cause, fromX: fromLeft ? enemy.x - 1 : enemy.x + 1 });
     hitEnemies.add(enemy);
     arrow.registerImpact();
 
@@ -233,9 +253,13 @@ export class CombatSystem {
       if (arrow.impacts >= PIERCING_MAX_IMPACTS) {
         arrow.deactivate();
       }
-    } else {
+    } else if (enemy.isAlive()) {
       arrow.stickToEnemy(enemy, impactPoint);
+    } else {
+      // The enemy is falling: the arrow drops to the ground rather than floating where the body was.
+      arrow.stickToGround(GROUND_Y - 3);
     }
+    this.afterEnemyHit(enemy);
 
     if (!enemy.isAlive()) {
       this.events.enemyKilled();

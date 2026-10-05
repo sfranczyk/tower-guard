@@ -6,6 +6,8 @@ enemy waves walk in from the enemy keep on the right. PixiJS 8 + TypeScript (str
 ## Commands
 
 - `npm run dev`: dev server on http://localhost:8080 (add `?debug` to show hitboxes)
+  - With `?debug`, `window.__towerGuard.scene` exposes the running `GameScene` in the console, e.g.
+    `scene.enemies[0].takeDamage(999, { cause: 'headshot', fromX: 0 })`.
   - `?lab` opens the animation lab directly, and `?lab=<id>` (e.g. `?lab=archer`) opens one animation zoomed in.
     Ids are in `AnimationLabScene`.
 - `npm run check`: type-check (`tsc --noEmit`, includes noUnusedLocals/Parameters)
@@ -47,10 +49,12 @@ src/
 - **Fall animations** (`rendering/stickmanFall.ts`) are one-shot keyframed poses driven by progress
   0..1: three deaths (`death` collapses face down, `deathCrumple` sits down and falls back, `deathStiff`
   is a rigid backwards topple computed analytically), `knockback` (thrown backwards, lands on the back)
-  and `getUp` (starts from knockback's last pose). They aren't used in the game yet. `getFallPose()` is
+  and `getUp` (starts from knockback's last pose). `Enemy.takeDamage(amount, { cause, fromX })` picks
+  the reaction: a headshot gives `deathStiff`, an explosion gives `knockback` (survivors get up and fight
+  on), and other kills pick `death` or `deathCrumple` at random. `getFallPose()` is
   pure; feet and hands are kept on the ground by `groundedAngle`, and tests check every frame.
-- **Bow ready**: `pose.bowReady` blends the archer between the lowered bow (0) and aiming (1). The game
-  still always aims (1); hooking it to input is a TODO.
+- **Bow ready**: `pose.bowReady` blends the archer between the lowered bow (0) and aiming (1). `Bowman`
+  raises the bow while the player draws (aim power > 0) and lowers it after the shot.
 - **Animation lab** rows live in `scenes/AnimationLabScene.ts`, and scripted sequences in
   `scenes/labSequences.ts`. Add new animations there so they can be previewed and zoomed.
 - **Archer pose**: bow, hands and elbows come from `getArcherRig()` in `rendering/archer.ts`. It pivots
