@@ -62,12 +62,12 @@
   <rect x="58" y="298" width="84" height="74" fill="url(#bricks)" stroke="#34333a" stroke-width="2"/>
   <rect x="116" y="300" width="24" height="70" fill="#000" opacity="0.12"/>
   <rect x="27" y="312" width="24" height="3" fill="#34333a"/>
-  <path d="M30 315H48V352L39 360L30 352Z" fill="#2d3f99" stroke="#c9a23b" stroke-width="2"/>
-  <rect x="32" y="317" width="4" height="34" fill="#1f2c6e" opacity=".6"/>
+  <path d="M30 315H48V352L39 360L30 352Z" fill="#8f2430" stroke="#c9a23b" stroke-width="2"/>
+  <rect x="32" y="317" width="4" height="34" fill="#621822" opacity=".6"/>
   <path d="M37 325h4v2h2v4h-2v2h3v6h-2v-2h-2v4h-2v-3h-2v3h-2v-4h1v-6h1v-4z" fill="#d9b44a"/>
   <rect x="149" y="312" width="24" height="3" fill="#34333a"/>
-  <path d="M152 315H170V352L161 360L152 352Z" fill="#2d3f99" stroke="#c9a23b" stroke-width="2"/>
-  <rect x="154" y="317" width="4" height="34" fill="#1f2c6e" opacity=".6"/>
+  <path d="M152 315H170V352L161 360L152 352Z" fill="#8f2430" stroke="#c9a23b" stroke-width="2"/>
+  <rect x="154" y="317" width="4" height="34" fill="#621822" opacity=".6"/>
   <path d="M159 325h4v2h2v4h-2v2h3v6h-2v-2h-2v4h-2v-3h-2v3h-2v-4h1v-6h1v-4z" fill="#d9b44a"/>
   <path d="M80 372V332a20 20 0 0 1 40 0V372" fill="none" stroke="#a7a094" stroke-width="4"/>
   <path d="M82 372V332a18 18 0 0 1 36 0V372Z" fill="#6b4a2e" stroke="#34333a" stroke-width="2"/>

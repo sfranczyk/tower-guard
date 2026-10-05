@@ -15,7 +15,8 @@ export default class Tower extends Sprite {
     this.health = this.maxHealth;
     this.groundY = y;
     this.anchor.set(0.5, 1);
-    this.scale.set(0.42, 1.0667);
+    // tower.svg is 200×406: drawn at half size → ~100×203 in the world.
+    this.scale.set(0.5);
     this.position.set(x, y);
     this.zIndex = 1;
     this.updateDurabilityVisual();

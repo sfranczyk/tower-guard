@@ -98,8 +98,7 @@ export class GameScene extends Scene {
 
     const { textures } = this.ctx;
     this.playerTower = new Tower(PLAYER_TOWER_X, GROUND_Y, textures.tower, this.level.towerHealth);
-    this.enemyTower = new Tower(ENEMY_TOWER_X, GROUND_Y, textures.tower, this.level.towerHealth);
-    this.enemyTower.tint = 0xb85a4a;
+    this.enemyTower = new Tower(ENEMY_TOWER_X, GROUND_Y, textures.towerEnemy, this.level.towerHealth);
     this.bowman = new Bowman(BOWMAN_START_X, BOWMAN_Y, { x: 50, y: 0, width: WORLD_WIDTH - 100, height: GAME_HEIGHT });
     this.debugGraphics.zIndex = 4;
     this.world.addChild(this.playerTower, this.enemyTower, this.bowman, this.aimOverlay, this.debugGraphics);
@@ -275,7 +274,8 @@ export class GameScene extends Scene {
 
   private enterTower(): void {
     this.bowman.enterTower();
-    this.bowman.setTowerPosition(PLAYER_TOWER_X, GROUND_Y - TOWER_HEIGHT + 48);
+    // Feet hidden behind the parapet, head and shoulders above the merlons.
+    this.bowman.setTowerPosition(PLAYER_TOWER_X, GROUND_Y - TOWER_HEIGHT + 40);
     this.ctx.ui.setStatus('Hidden in tower · move right to exit');
   }
 

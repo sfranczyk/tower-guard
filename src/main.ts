@@ -1,17 +1,19 @@
 import { Application, Assets, type Texture } from 'pixi.js';
 import arrowAsset from './assets/arrow.svg';
 import towerAsset from './assets/tower.svg';
+import towerEnemyAsset from './assets/tower-enemy.svg';
 import { GAME_HEIGHT, GAME_WIDTH } from './config';
 import type { GameTextures } from './core/Scene';
 import { SceneManager } from './core/SceneManager';
 import { DomUi } from './ui/DomUi';
 
 const loadTextures = async (): Promise<GameTextures> => {
-  const [tower, arrow] = await Promise.all([
+  const [tower, towerEnemy, arrow] = await Promise.all([
     Assets.load<Texture>(towerAsset),
+    Assets.load<Texture>(towerEnemyAsset),
     Assets.load<Texture>(arrowAsset),
   ]);
-  return { tower, arrow };
+  return { tower, towerEnemy, arrow };
 };
 
 const bootstrap = async (): Promise<void> => {

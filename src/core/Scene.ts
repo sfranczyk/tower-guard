@@ -5,6 +5,7 @@ export type SceneName = 'menu' | 'animationLab' | 'game';
 
 export interface GameTextures {
   tower: Texture;
+  towerEnemy: Texture;
   arrow: Texture;
 }
 
