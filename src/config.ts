@@ -94,6 +94,12 @@ export const LIGHTNING_WARNING_MS = 700;
 export const LIGHTNING_DAMAGE = 30;
 export const LIGHTNING_RADIUS = 38;
 
+/** Light rain during storms: number of streaks, fall speed range (px/s), sideways drift per px fallen, opacity. */
+export const RAIN_DROPS = 90;
+export const RAIN_SPEED: readonly [number, number] = [620, 820];
+export const RAIN_SLANT = 0.22;
+export const RAIN_ALPHA = 0.28;
+
 // Enable with ?debug in the URL.
 export const SHOW_HITBOX_DEBUG = typeof window !== 'undefined'
   && new URLSearchParams(window.location.search).has('debug');

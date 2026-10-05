@@ -20,7 +20,7 @@ import {
 import type { SoundId } from '../audio/SoundManager';
 import { spatialMix } from '../audio/spatial';
 import { Scene, type GameContext } from '../core/Scene';
-import { BATTLEGROUNDS, type Battleground } from '../data/battlegrounds';
+import { BATTLEGROUNDS, aimColorsOf, type Battleground } from '../data/battlegrounds';
 import { getEnemyStats } from '../data/enemies';
 import { launchSpeed } from '../data/projectiles';
 import { waveEnemyTotal, waveSpawnOrder, type WaveSetup } from '../data/sandbox';
@@ -111,6 +111,7 @@ export class GameScene extends Scene {
     this.ctx.root.addChild(this.world);
     this.background = new Background(this.world, this.battleground);
     this.effects = new EffectsSystem(this.world);
+    this.aimOverlay.setColors(aimColorsOf(this.battleground));
 
     const { textures } = this.ctx;
     const { sandbox, run } = this.ctx.session;
@@ -333,7 +334,8 @@ export class GameScene extends Scene {
 
     const releasePoint = this.bowman.getBowReleasePoint();
     const type = this.selectedProjectile;
-    const arrow = new Arrow(releasePoint.x, releasePoint.y, this.ctx.textures.arrows[type], trail);
+    const { trailGlow, trailCore } = aimColorsOf(this.battleground);
+    const arrow = new Arrow(releasePoint.x, releasePoint.y, this.ctx.textures.arrows[type], trail, { glow: trailGlow, core: trailCore });
     arrow.fire(Math.atan2(aim.direction.y, aim.direction.x), launchSpeed(type, power), type);
     this.arrows.push(arrow);
     this.world.addChild(arrow);

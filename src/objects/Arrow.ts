@@ -1,5 +1,6 @@
 import { Graphics, Sprite, Texture } from 'pixi.js';
 import { ARROW_GRAVITY, GAME_HEIGHT, WORLD_WIDTH } from '../config';
+import { DEFAULT_AIM_COLORS } from '../data/battlegrounds';
 import { flightParams } from '../data/projectiles';
 import { advanceProjectile, type FlightParams } from '../systems/ballistics';
 import type { BodyAnchor } from '../systems/bodyAnchor';
@@ -28,7 +29,13 @@ export default class Arrow extends Sprite {
   /** Shot by an enemy archer: hurts the bowman/keep, ignores enemies. */
   private hostileShot = false;
 
-  public constructor(x: number, y: number, texture: Texture, trail: Graphics) {
+  public constructor(
+    x: number,
+    y: number,
+    texture: Texture,
+    trail: Graphics,
+    private readonly trailColors: { glow: number; core: number } = { glow: DEFAULT_AIM_COLORS.trailGlow, core: DEFAULT_AIM_COLORS.trailCore },
+  ) {
     super(texture);
     this.trail = trail;
     this.anchor.set(0.5, 0.5);
@@ -89,9 +96,9 @@ export default class Arrow extends Sprite {
     // Only the player's arrows leave a trail; enemy arrows fly clean.
     if (this.trailVisible && !this.hostileShot && Math.hypot(this.previousPosition.x - this.x, this.previousPosition.y - this.y) > 1) {
       this.trail.moveTo(this.previousPosition.x, this.previousPosition.y).lineTo(this.x, this.y)
-        .stroke({ width: 2.5, color: 0xf3c969, alpha: 0.16 });
+        .stroke({ width: 2.5, color: this.trailColors.glow, alpha: 0.16 });
       this.trail.moveTo(this.previousPosition.x, this.previousPosition.y).lineTo(this.x, this.y)
-        .stroke({ width: 1, color: 0xffe7a4, alpha: 0.72 });
+        .stroke({ width: 1, color: this.trailColors.core, alpha: 0.72 });
       this.previousPosition = { x: this.x, y: this.y };
     }
 

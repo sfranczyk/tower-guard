@@ -8,6 +8,24 @@ export type BattlegroundId = 'greenMeadow' | 'crimsonPass' | 'sunscorchDunes' | 
 /** fair: drifting clouds; clear: cloudless sky; storm: dark storm clouds with lightning. */
 export type Weather = 'fair' | 'clear' | 'storm';
 
+/** Colours of the aim circles, the predicted path and the player's arrow trails. */
+export interface AimColors {
+  aim: number;
+  /** Ghost of the previous shot. */
+  previousShot: number;
+  trajectory: number;
+  trailGlow: number;
+  trailCore: number;
+}
+
+export const DEFAULT_AIM_COLORS: Readonly<AimColors> = {
+  aim: 0xf5d76e,
+  previousShot: 0x9ec5ff,
+  trajectory: 0xfff3c4,
+  trailGlow: 0xf3c969,
+  trailCore: 0xffe7a4,
+};
+
 export interface Battleground {
   id: BattlegroundId;
   name: string;
@@ -23,6 +41,8 @@ export interface Battleground {
   hillShape: 'hills' | 'dunes';
   trees: { style: 'round' | 'pine' | 'cactus'; colors: readonly [number, number, number]; trunk: number };
   ground: { fill: number; edge: number; tufts: number };
+  /** Overrides DEFAULT_AIM_COLORS where the default gold and light blue don't stand out. */
+  aimColors?: AimColors;
 }
 
 export const BATTLEGROUNDS: Readonly<Record<BattlegroundId, Battleground>> = {
@@ -66,6 +86,15 @@ export const BATTLEGROUNDS: Readonly<Record<BattlegroundId, Battleground>> = {
     hillShape: 'dunes',
     trees: { style: 'cactus', colors: [0x5b8a4c, 0x6f9e5c, 0x47703c], trunk: 0x47703c },
     ground: { fill: 0xe2c286, edge: 0xf2dba3, tufts: 0xc4a066 },
+    // Gold and light blue vanish against sand and pale sky: deep violet (complementary to the sand,
+    // much darker than the sky) for aim, path and trails, dark teal for the previous shot.
+    aimColors: {
+      aim: 0x6a12c9,
+      previousShot: 0x00666e,
+      trajectory: 0x7a0fb5,
+      trailGlow: 0xb54dff,
+      trailCore: 0x5a0aa8,
+    },
   },
   thunderRidge: {
     id: 'thunderRidge',
@@ -84,3 +113,5 @@ export const BATTLEGROUNDS: Readonly<Record<BattlegroundId, Battleground>> = {
 
 export const BATTLEGROUND_IDS = Object.keys(BATTLEGROUNDS) as BattlegroundId[];
 export const DEFAULT_BATTLEGROUND: BattlegroundId = 'greenMeadow';
+
+export const aimColorsOf = (battleground: Battleground): AimColors => battleground.aimColors ?? DEFAULT_AIM_COLORS;

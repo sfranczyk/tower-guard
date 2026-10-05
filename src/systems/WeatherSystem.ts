@@ -1,6 +1,7 @@
 import { Graphics, type Container } from 'pixi.js';
 import { GAME_HEIGHT, GAME_WIDTH, GROUND_Y, LIGHTNING_FIRST_DELAY_MS, LIGHTNING_GROUND_CHANCE, LIGHTNING_WARNING_MS, WORLD_WIDTH } from '../config';
 import type { Background } from '../rendering/Background';
+import { Rain } from '../rendering/Rain';
 import type { Vec2 } from '../types';
 import { createBolt, planStrike, type Bolt, type StrikePlan } from './lightning';
 
@@ -36,12 +37,13 @@ const flicker = (ageMs: number): number => {
 const random = (min: number, max: number): number => min + Math.random() * (max - min);
 
 /**
- * Storm weather: now and then a bolt flashes between the clouds, and sometimes one comes down to
+ * Storm weather: light rain, and now and then a bolt flashes between the clouds, and sometimes one comes down to
  * the ground. Ground strikes crackle at the spot for LIGHTNING_WARNING_MS first so they can be
  * dodged. Bolts are drawn in the world; the sky flash is a screen-wide overlay.
  */
 export class WeatherSystem {
   private readonly flashOverlay: Graphics;
+  private readonly rain: Rain;
   private readonly bolts: DrawnBolt[] = [];
   private pending?: PendingStrike;
   private plan: StrikePlan = { delayMs: LIGHTNING_FIRST_DELAY_MS, reachesGround: Math.random() < LIGHTNING_GROUND_CHANCE };
@@ -53,6 +55,7 @@ export class WeatherSystem {
     private readonly background: Background,
     private readonly events: WeatherEvents,
   ) {
+    this.rain = new Rain(screen);
     this.flashOverlay = new Graphics().rect(0, 0, GAME_WIDTH, GAME_HEIGHT).fill({ color: 0xe6eeff });
     this.flashOverlay.alpha = 0;
     this.flashOverlay.zIndex = 100;
@@ -60,6 +63,7 @@ export class WeatherSystem {
   }
 
   public update(deltaMs: number, cameraX: number): void {
+    this.rain.update(deltaMs, cameraX);
     this.waitMs -= deltaMs;
     if (!this.pending && this.waitMs <= 0) {
       this.trigger(this.plan, cameraX);

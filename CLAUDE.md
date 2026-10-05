@@ -56,6 +56,9 @@ src/
   strike that crackles at the spot for `LIGHTNING_WARNING_MS` first. `CombatSystem.lightningStrike` deals
   `LIGHTNING_DAMAGE` within `LIGHTNING_RADIUS` (enemies: cause `'lightning'`, stiff death or knockdown; the
   bowman is safe inside the keep). Thunder is the explosion recording slowed down (`SOUND_RATES`).
+  Storms also have light rain (`rendering/Rain.ts`, screen space, shifts with the camera; `RAIN_*`).
+- **Aim colours**: aim circles, the predicted path and the player's arrow trails use `aimColorsOf(battleground)`
+  (`DEFAULT_AIM_COLORS`, overridden per map, e.g. deep violet on the desert where gold disappears).
 - **UI** is HTML (`ui/template.ts`, styles in `index.html`). The in-game HUD sits *outside* the canvas
   (bar above, status line below) and `DomUi.fitCanvas()` scales the canvas into the remaining space.
   Never place HUD elements over the play field. Only menus, the settings drawer and the end screen
