@@ -1,11 +1,6 @@
 import { Graphics, Sprite, Texture } from 'pixi.js';
 import { ARROW_GRAVITY, GAME_HEIGHT, WORLD_WIDTH } from '../config';
-import type { ProjectileType } from '../types';
-
-export interface Vec2 {
-  x: number;
-  y: number;
-}
+import type { ProjectileType, Vec2 } from '../types';
 
 export default class Arrow extends Sprite {
   private static currentGravity = ARROW_GRAVITY;

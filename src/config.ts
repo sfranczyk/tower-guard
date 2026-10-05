@@ -31,7 +31,6 @@ export const PIERCING_DAMAGE_MULTIPLIER = 0.62;
 export const ENEMY_TOWER_DAMAGE = 16;
 export const ENEMY_GROUND_Y = GROUND_Y;
 
-export const TOTAL_LEVEL_ENEMIES = 10;
 
 export const WALK_ACCELERATION = 600;
 export const SPRINT_ACCELERATION = 185;

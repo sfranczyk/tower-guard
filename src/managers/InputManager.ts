@@ -1,9 +1,6 @@
 import { EventEmitter } from 'eventemitter3';
-
-export interface Vec2 {
-  x: number;
-  y: number;
-}
+import type { Vec2 } from '../types';
+import { clamp } from '../utils/math';
 
 export interface AimInput {
   direction: Vec2;
@@ -32,8 +29,6 @@ export interface InputManagerConfig {
   eventTarget: HTMLElement;
   screenSize: Vec2;
 }
-
-const clamp = (value: number, min: number, max: number): number => Math.max(min, Math.min(max, value));
 
 const normalize = (vector: Vec2): Vec2 => {
   const length = Math.hypot(vector.x, vector.y);

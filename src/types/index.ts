@@ -44,3 +44,22 @@ export interface ILevelData {
   readonly goldReward: number;
   readonly towerHealth: number;
 }
+
+export interface Vec2 {
+  x: number;
+  y: number;
+}
+
+export interface Rect {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+export interface Bounds extends Rect {
+  left: number;
+  right: number;
+  top: number;
+  bottom: number;
+}

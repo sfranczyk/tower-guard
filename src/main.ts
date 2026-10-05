@@ -9,9 +9,14 @@ import Arrow from './objects/Arrow';
 import Enemy from './objects/Enemy';
 import Tower, { TOWER_HEIGHT } from './objects/Tower';
 import Bowman from './objects/Bowman';
-import InputManager, { type AimInput, type Vec2 } from './managers/InputManager';
-import { LevelManager } from './managers/LevelManager';
+import InputManager, { type AimInput } from './managers/InputManager';
+import { LevelManager, getLevelEnemyTotal } from './managers/LevelManager';
+import { drawStickman, drawTensionArcher } from './rendering/stickman';
+import { getEnemyStats } from './data/enemies';
+import { segmentHitTime } from './systems/collision';
+import { clamp } from './utils/math';
 import type { ILevelData, IWave, ProjectileType } from './types';
+import type { Vec2 } from './types';
 import towerAsset from './assets/tower.svg';
 import arrowAsset from './assets/arrow.svg';
 import {
@@ -21,11 +26,9 @@ import {
   ARROW_SPEED_FACTOR,
   BOWMAN_START_X,
   BOWMAN_Y,
-  ENEMY_HEALTH,
   ENEMY_TOWER_DAMAGE,
   EXPLOSION_DAMAGE,
   EXPLOSION_RADIUS,
-  ENEMY_SPEED,
   ENEMY_TOWER_X,
   GAME_HEIGHT,
   GAME_WIDTH,
@@ -34,7 +37,6 @@ import {
   PIERCING_DAMAGE_MULTIPLIER,
   PROJECTILE_DAMAGE,
   SHOW_HITBOX_DEBUG,
-  TOTAL_LEVEL_ENEMIES,
   TOWER_ENTRY_ZONE_HEIGHT,
   TOWER_ENTRY_ZONE_WIDTH,
   TOWER_EXIT_X_OFFSET,
@@ -55,256 +57,7 @@ type BloodParticle = {
   lifeMs: number;
 };
 
-const clamp = (value: number, min: number, max: number): number => Math.max(min, Math.min(max, value));
 
-type Point = { x: number; y: number };
-
-const drawWalkingStickman = (
-  sprite: Graphics,
-  phase: number,
-  idleBlend = 0,
-  armed = false,
-  running = false,
-  runningBlend = running ? 1 : 0,
-  originY = 430,
-  attackPhase = 0,
-  archerPose = false,
-  bowTension = 0,
-  bowAngle = 0,
-  facingDirection = 1,
-): void => {
-  sprite.clear();
-  const motionBlend = running ? 1 : runningBlend;
-  const normalizedAttackPhase = ((attackPhase % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
-  const attackImpactEnd = Math.PI * 0.38;
-  const smoothAttack = (value: number): number => value * value * (3 - 2 * value);
-  const strikeProgress = normalizedAttackPhase < attackImpactEnd
-    ? smoothAttack(normalizedAttackPhase / attackImpactEnd)
-    : 1;
-  const recoveryProgress = normalizedAttackPhase >= attackImpactEnd
-    ? smoothAttack((normalizedAttackPhase - attackImpactEnd) / (Math.PI * 2 - attackImpactEnd))
-    : 0;
-  const attackLean = (0.12 - 0.34 * strikeProgress + 0.34 * recoveryProgress) * (1 - idleBlend);
-  sprite.rotation = (0.06 + 0.04 * motionBlend) * (1 - idleBlend) + attackLean;
-  const walkingBounce = (0.5 + Math.cos(phase * 2) * 0.5) * 1.4 * (1 - motionBlend) * (1 - idleBlend);
-  const runningBounce = (0.5 - Math.cos(phase * 2) * 0.5) * 2.4 * motionBlend;
-  sprite.y = originY + 5 * motionBlend
-    + walkingBounce
-    + runningBounce;
-  const skeleton = 0xf4f7fb;
-  const rear = 0xb7c1d1;
-  const hip = { x: 0, y: 0 };
-  const shoulder = { x: 0, y: -35 };
-  const cycle = ((phase % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
-  const rightLegIsSwinging = cycle < Math.PI;
-  const progress = rightLegIsSwinging ? cycle / Math.PI : (cycle - Math.PI) / Math.PI;
-  const easedProgress = progress * progress * (3 - 2 * progress);
-  const legSwing = (rightLegIsSwinging ? 1 : -1) * Math.sin(progress * Math.PI);
-  const footLift = 20 + (32 - 20) * motionBlend;
-  const kneeBendAmount = 0.85 + (1.15 - 0.85) * motionBlend;
-  const armSwing = 0.58 + (1.0 - 0.58) * motionBlend;
-  const attackArmOffset = attackPhase === 0
-    ? 0
-    : (Math.PI - 0.1) + strikeProgress * (-Math.PI - 0.95)
-      + recoveryProgress * (Math.PI + 0.95);
-  const attackForearmBend = attackPhase === 0
-    ? 0.48
-    : 1.13 - 0.93 * strikeProgress + 0.93 * recoveryProgress;
-
-  const line = (a: Point, b: Point, isRear = false, width = 3.5): void => {
-    sprite.moveTo(a.x, a.y).lineTo(b.x, b.y).stroke({
-      width: isRear ? width - 0.5 : width,
-      color: isRear ? rear : skeleton,
-      cap: 'round',
-      join: 'round',
-    });
-  };
-  const joint = (point: Point, isRear = false): void => {
-    sprite.circle(point.x, point.y, 3).stroke({ width: 1.5, color: isRear ? rear : skeleton });
-  };
-  const endpoint = (point: Point, isRear = false): void => {
-    sprite.circle(point.x, point.y, 2.5).fill({ color: isRear ? rear : skeleton });
-  };
-
-  const drawLeg = (foot: Point, kneeBend: number, isRear: boolean): void => {
-    const upperLength = 30;
-    const lowerLength = 30;
-    const dx = foot.x - hip.x;
-    const dy = foot.y - hip.y;
-    const targetLength = Math.max(1, Math.min(upperLength + lowerLength - 0.01, Math.hypot(dx, dy)));
-    const ux = dx / Math.max(1, Math.hypot(dx, dy));
-    const uy = dy / Math.max(1, Math.hypot(dx, dy));
-    const along = (upperLength ** 2 - lowerLength ** 2 + targetLength ** 2) / (2 * targetLength);
-    const height = Math.sqrt(Math.max(0, upperLength ** 2 - along ** 2));
-    const knee = {
-      x: hip.x + ux * along - uy * height * kneeBend,
-      y: hip.y + uy * along + ux * height * kneeBend,
-    };
-    line(hip, knee, isRear);
-    line(knee, foot, isRear);
-    joint(knee, isRear);
-    endpoint(foot, isRear);
-    const shinLength = Math.hypot(foot.x - knee.x, foot.y - knee.y) || 1;
-    const shinDirection = {
-      x: (foot.x - knee.x) / shinLength,
-      y: (foot.y - knee.y) / shinLength,
-    };
-    const footDirection = { x: shinDirection.y, y: -shinDirection.x };
-    line(
-      { x: foot.x - footDirection.x * 2, y: foot.y - footDirection.y * 2 },
-      { x: foot.x + footDirection.x * 9, y: foot.y + footDirection.y * 9 },
-      isRear,
-      3,
-    );
-  };
-
-  const drawArm = (angle: number, isRear: boolean, armed = false): Point => {
-    const elbow = {
-      x: shoulder.x + Math.sin(angle) * 21,
-      y: shoulder.y + Math.cos(angle) * 21,
-    };
-    const forearmAngle = angle + (armed ? attackForearmBend : 0.2 + (Math.PI / 2 - 0.2) * motionBlend);
-    const hand = {
-      x: elbow.x + Math.sin(forearmAngle) * 21,
-      y: elbow.y + Math.cos(forearmAngle) * 21,
-    };
-    line(shoulder, elbow, isRear);
-    line(elbow, hand, isRear);
-    joint(elbow, isRear);
-    endpoint(hand, isRear);
-    return hand;
-  };
-  const drawArcherArm = (elbow: Point, hand: Point, isRear: boolean): Point => {
-    line(shoulder, elbow, isRear);
-    line(elbow, hand, isRear);
-    joint(elbow, isRear);
-    endpoint(hand, isRear);
-    return hand;
-  };
-  const rotateFromBodyCenter = (offset: Point): Point => ({
-    x: offset.x * Math.cos(bowAngle) - offset.y * Math.sin(bowAngle),
-    y: offset.x * Math.sin(bowAngle) + offset.y * Math.cos(bowAngle),
-  });
-  const mirrorForFacing = (point: Point): Point => ({
-    x: point.x * facingDirection,
-    y: point.y,
-  });
-
-  const runnerFoot = (x: number): Point => ({
-    x,
-    y: Math.sqrt(Math.max(0, 58 ** 2 - x ** 2)),
-  });
-  const walkSwingFoot = {
-    x: -22 + easedProgress * 22 * 2,
-    y: 55 - Math.sin(progress * Math.PI) * footLift,
-  };
-  const walkStanceFoot = {
-    x: 22 - easedProgress * 22 * 2,
-    y: 55,
-  };
-  const runnerSwingFoot = runnerFoot(-55 * Math.cos(progress * Math.PI));
-  const runnerStanceFoot = runnerFoot(55 * Math.cos(progress * Math.PI));
-  runnerSwingFoot.y -= 8;
-  runnerStanceFoot.y -= 8;
-  const blendMotionPoint = (walking: Point, runningPoint: Point): Point => ({
-    x: walking.x + (runningPoint.x - walking.x) * motionBlend,
-    y: walking.y + (runningPoint.y - walking.y) * motionBlend,
-  });
-  const swingFoot = blendMotionPoint(walkSwingFoot, runnerSwingFoot);
-  const stanceFoot = blendMotionPoint(walkStanceFoot, runnerStanceFoot);
-  const rightFoot = rightLegIsSwinging ? swingFoot : stanceFoot;
-  const leftFoot = rightLegIsSwinging ? stanceFoot : swingFoot;
-  const smoothStep = (value: number): number => value * value * value * (value * (value * 6 - 15) + 10);
-  const bendTransition = Math.min(1, progress / 0.35);
-  const runnerForwardKneeBend = -smoothStep(bendTransition);
-  const runnerReturnKneeBend = -1 + smoothStep(bendTransition);
-  const swingKneeBend = 0.2 - Math.sin(progress * Math.PI) * kneeBendAmount;
-  const idleLeftFoot = { x: -16, y: 55 };
-  const idleRightFoot = { x: 16, y: 55 };
-  const blendPoint = (walking: Point, standing: Point): Point => ({
-    x: walking.x + (standing.x - walking.x) * idleBlend,
-    y: walking.y + (standing.y - walking.y) * idleBlend,
-  });
-  const walkingLeftKneeBend = rightLegIsSwinging ? 0.2 : swingKneeBend;
-  const walkingRightKneeBend = rightLegIsSwinging ? swingKneeBend : 0.2;
-  const runningLeftKneeBend = rightLegIsSwinging ? runnerReturnKneeBend : runnerForwardKneeBend;
-  const runningRightKneeBend = rightLegIsSwinging ? runnerForwardKneeBend : runnerReturnKneeBend;
-  const leftKneeBend = walkingLeftKneeBend
-    + (runningLeftKneeBend - walkingLeftKneeBend) * motionBlend;
-  const rightKneeBend = walkingRightKneeBend
-    + (runningRightKneeBend - walkingRightKneeBend) * motionBlend;
-
-  drawLeg(blendPoint(leftFoot, idleLeftFoot), leftKneeBend, true);
-  // Rear gray arm follows the front white leg; the front white arm follows the rear gray leg.
-  if (archerPose) {
-    const stringHandX = -21 - bowTension * 35;
-    const woodHand = rotateFromBodyCenter({ x: 56, y: -43 });
-    const woodElbow = rotateFromBodyCenter({ x: 28, y: -39 });
-    const stringHand = rotateFromBodyCenter({ x: 56 + stringHandX, y: -43 });
-    const stringElbow = rotateFromBodyCenter({
-      x: 28 + stringHandX * 0.5 - bowTension * 20,
-      y: -39 + bowTension * 9,
-    });
-    drawArcherArm(
-      mirrorForFacing(stringElbow),
-      mirrorForFacing(stringHand),
-      true,
-    );
-    drawArcherArm(mirrorForFacing(woodElbow), mirrorForFacing(woodHand), false);
-  } else {
-    const rearArmAngle = legSwing * armSwing * (1 - idleBlend) + 0.1 * idleBlend;
-    drawArm(rearArmAngle, true);
-  }
-  line(hip, shoulder);
-  joint(hip);
-  line(shoulder, { x: 0, y: -43 });
-  sprite.circle(0, -52, 10).stroke({ width: 2, color: skeleton });
-  drawLeg(blendPoint(rightFoot, idleRightFoot), rightKneeBend, false);
-  const frontArmAngle = -legSwing * armSwing * (1 - idleBlend) + 0.1 * idleBlend + attackArmOffset;
-  const weaponHand = archerPose
-    ? { x: 0, y: 0 }
-    : drawArm(frontArmAngle, false, armed);
-  if (armed) {
-    const forearmAngle = frontArmAngle + attackForearmBend;
-    const weaponDirection = { x: Math.cos(forearmAngle), y: -Math.sin(forearmAngle) };
-    sprite.moveTo(
-      weaponHand.x - weaponDirection.x * 8,
-      weaponHand.y - weaponDirection.y * 8,
-    )
-      .lineTo(
-        weaponHand.x + weaponDirection.x * 28,
-        weaponHand.y + weaponDirection.y * 28,
-      )
-      .stroke({ width: 5, color: 0x30243a, cap: 'round' });
-    sprite.moveTo(
-      weaponHand.x - weaponDirection.x * 8,
-      weaponHand.y - weaponDirection.y * 8,
-    )
-      .lineTo(
-        weaponHand.x + weaponDirection.x * 28,
-        weaponHand.y + weaponDirection.y * 28,
-      )
-      .stroke({ width: 2.5, color: 0xe3ad4f, cap: 'round' });
-  }
-};
-
-const drawTensionArcher = (sprite: Graphics, phase: number): void => {
-  const tension = 0.25 + (Math.sin(phase) + 1) * 0.375;
-  drawWalkingStickman(sprite, 0, 1, false, false, 0, 430, 0, true, tension);
-  const bowX = 35;
-  const stringX = 56 * (1 - tension);
-  const stringY = -43 + tension * 8;
-  sprite.moveTo(bowX, -94).quadraticCurveTo(bowX + 42 + tension * 12, -43, bowX, 8).stroke({
-    width: 3.5,
-    color: 0xe3ad4f,
-    cap: 'round',
-  });
-  sprite.moveTo(bowX, -94).lineTo(stringX, stringY).lineTo(bowX, 8).stroke({
-    width: 1.5,
-    color: 0xf6e2a4,
-    cap: 'round',
-  });
-};
 
 class TowerGuardApp {
   private readonly app: Application;
@@ -663,11 +416,11 @@ class TowerGuardApp {
     this.testStepsSinceStand = 0;
     this.testIdleRemainingMs = 0;
     this.testIdleBlend = 0;
-    drawWalkingStickman(this.testWalkSprite, this.testWalkPhase, this.testIdleBlend);
-    drawWalkingStickman(this.testArmedWalkSprite, this.testWalkPhase, this.testIdleBlend, true);
-    drawWalkingStickman(this.testRunningSprite, this.testRunPhase, 0, false, true);
-    drawWalkingStickman(this.testAttackSprite, 0, 1, true, false, 0, 430, this.testAttackPhase);
-    drawWalkingStickman(this.testSequenceSprite, this.testSequencePhase);
+    drawStickman(this.testWalkSprite, this.testWalkPhase, { idleBlend: this.testIdleBlend });
+    drawStickman(this.testArmedWalkSprite, this.testWalkPhase, { idleBlend: this.testIdleBlend, armed: true });
+    drawStickman(this.testRunningSprite, this.testRunPhase, { running: true });
+    drawStickman(this.testAttackSprite, 0, { idleBlend: 1, armed: true, attackPhase: this.testAttackPhase });
+    drawStickman(this.testSequenceSprite, this.testSequencePhase);
     drawTensionArcher(this.testArcherSprite, this.testArcherPhase);
 
     if (this.menuScreen) {
@@ -740,7 +493,6 @@ class TowerGuardApp {
       BOWMAN_START_X,
       BOWMAN_Y,
       { x: 50, y: 0, width: WORLD_WIDTH - 100, height: GAME_HEIGHT },
-      { animationRenderer: drawWalkingStickman },
     );
 
     this.gameContainer.addChild(this.playerTower, this.enemyTower, this.bowman);
@@ -923,18 +675,8 @@ class TowerGuardApp {
       return;
     }
 
-    const enemyStats = {
-      basic: { health: ENEMY_HEALTH, speed: ENEMY_SPEED },
-      fast: { health: Math.round(ENEMY_HEALTH * 0.7), speed: ENEMY_SPEED * 1.65 },
-      tank: { health: Math.round(ENEMY_HEALTH * 2.6), speed: ENEMY_SPEED * 0.62 },
-    }[wave.enemyType];
-    const enemy = new Enemy(
-      wave.spawn.spawnPoint.x,
-      Math.round(enemyStats.health * this.currentLevel.enemyDifficulty),
-      enemyStats.speed * this.currentLevel.enemyDifficulty,
-      'bowman',
-      drawWalkingStickman,
-    );
+    const stats = getEnemyStats(wave.enemyType, this.currentLevel.enemyDifficulty);
+    const enemy = new Enemy(wave.spawn.spawnPoint.x, stats.health, stats.speed, 'bowman');
 
     enemy.visible = this.enemiesVisible;
     this.enemies.push(enemy);
@@ -991,22 +733,22 @@ class TowerGuardApp {
         }
       }
       if (this.testWalkSprite) {
-        drawWalkingStickman(this.testWalkSprite, this.testWalkPhase, this.testIdleBlend);
+        drawStickman(this.testWalkSprite, this.testWalkPhase, { idleBlend: this.testIdleBlend });
       }
       this.testArcherPhase += deltaMs / 900;
       if (this.testArcherSprite) {
         drawTensionArcher(this.testArcherSprite, this.testArcherPhase);
       }
       if (this.testArmedWalkSprite) {
-        drawWalkingStickman(this.testArmedWalkSprite, this.testWalkPhase, this.testIdleBlend, true);
+        drawStickman(this.testArmedWalkSprite, this.testWalkPhase, { idleBlend: this.testIdleBlend, armed: true });
       }
       this.testRunPhase += deltaMs / 160;
       if (this.testRunningSprite) {
-        drawWalkingStickman(this.testRunningSprite, this.testRunPhase, 0, false, true);
+        drawStickman(this.testRunningSprite, this.testRunPhase, { running: true });
       }
       this.testAttackPhase += deltaMs / 180;
       if (this.testAttackSprite) {
-        drawWalkingStickman(this.testAttackSprite, 0, 1, true, false, 0, 430, this.testAttackPhase);
+        drawStickman(this.testAttackSprite, 0, { idleBlend: 1, armed: true, attackPhase: this.testAttackPhase });
       }
       if (this.testSequenceSprite) {
         if (this.testSequenceState === 'stand') {
@@ -1055,25 +797,11 @@ class TowerGuardApp {
         }
 
         if (this.testSequenceState === 'run') {
-          drawWalkingStickman(
-            this.testSequenceSprite,
-            this.testSequenceRunPhase,
-            0,
-            false,
-            false,
-            this.testSequenceRunBlend,
-          );
+          drawStickman(this.testSequenceSprite, this.testSequenceRunPhase, { runningBlend: this.testSequenceRunBlend });
         } else if (this.testSequenceState === 'runToWalk') {
-          drawWalkingStickman(
-            this.testSequenceSprite,
-            this.testSequencePhase,
-            0,
-            false,
-            false,
-            this.testSequenceRunBlend,
-          );
+          drawStickman(this.testSequenceSprite, this.testSequencePhase, { runningBlend: this.testSequenceRunBlend });
         } else {
-          drawWalkingStickman(this.testSequenceSprite, this.testSequencePhase, this.testSequenceIdleBlend);
+          drawStickman(this.testSequenceSprite, this.testSequencePhase, { idleBlend: this.testSequenceIdleBlend });
         }
       }
       this.updateTestReadout();
@@ -1208,11 +936,16 @@ class TowerGuardApp {
 
       const enemyHit = activeEnemies
         .filter((candidate) => candidate.isAlive() && !hitEnemies.has(candidate))
-        .map((candidate) => ({ enemy: candidate, time: this.getArrowHitTime(start, travel, candidate) }))
+        .map((candidate) => ({ enemy: candidate, time: segmentHitTime(start, travel, candidate.getPhysicsBounds()) }))
         .filter((hit): hit is { enemy: Enemy; time: number } => hit.time !== undefined)
         .sort((first, second) => first.time - second.time)[0];
 
-      const towerHit = this.getTowerHitTime(start, travel);
+      const towerHit = segmentHitTime(start, travel, {
+        left: this.enemyTower.x - 48,
+        right: this.enemyTower.x + 48,
+        top: GROUND_Y - TOWER_HEIGHT,
+        bottom: GROUND_Y,
+      });
       if (towerHit !== undefined && (enemyHit === undefined || towerHit <= enemyHit.time)) {
         const impactPoint = { x: start.x + travel.x * towerHit, y: start.y + travel.y * towerHit };
         this.enemyTower.takeDamage(ENEMY_TOWER_DAMAGE * (arrow.type === 'explosive' ? 1.25 : 1));
@@ -1338,7 +1071,7 @@ class TowerGuardApp {
       this.bowmanHealthElement.textContent = `${this.bowmanHealth} HP`;
     }
     if (this.enemyCountElement) {
-      const total = this.currentLevel?.spawnings.reduce((sum, spawn) => sum + spawn.count, 0) ?? TOTAL_LEVEL_ENEMIES;
+      const total = getLevelEnemyTotal(this.currentLevel);
       this.enemyCountElement.textContent = `${this.defeatedEnemies} / ${total}`;
     }
     if (this.levelElement) this.levelElement.textContent = `${this.levelNumber}`;
@@ -1443,7 +1176,7 @@ class TowerGuardApp {
       return;
     }
 
-    const total = this.currentLevel.spawnings.reduce((sum, spawn) => sum + spawn.count, 0);
+    const total = getLevelEnemyTotal(this.currentLevel);
     if (this.enemyTower.isDestroyed()) {
       this.endGame(true);
       return;
@@ -1508,67 +1241,6 @@ class TowerGuardApp {
     this.setStatus('Drag from the bowman and release to fire');
   }
 
-  private getArrowHitTime(start: Vec2, travel: Vec2, enemy: Enemy): number | undefined {
-    const hitbox = enemy.getPhysicsBounds();
-    let entry = 0;
-    let exit = 1;
-
-    (['x', 'y'] as const).forEach((axis) => {
-      if (entry > exit) {
-        return;
-      }
-
-      const origin = start[axis];
-      const delta = travel[axis];
-      const minimum = axis === 'x' ? hitbox.left : hitbox.top;
-      const maximum = axis === 'x' ? hitbox.right : hitbox.bottom;
-
-      if (Math.abs(delta) < Number.EPSILON) {
-        if (origin < minimum || origin > maximum) {
-          entry = Number.POSITIVE_INFINITY;
-          exit = Number.NEGATIVE_INFINITY;
-        }
-        return;
-      }
-
-      let near = (minimum - origin) / delta;
-      let far = (maximum - origin) / delta;
-      if (near > far) {
-        [near, far] = [far, near];
-      }
-      entry = Math.max(entry, near);
-      exit = Math.min(exit, far);
-    });
-
-    if (entry > exit || !Number.isFinite(entry)) {
-      return undefined;
-    }
-
-    return clamp(entry, 0, 1);
-  }
-
-  private getTowerHitTime(start: Vec2, travel: Vec2): number | undefined {
-    const left = this.enemyTower.x - 48;
-    const right = this.enemyTower.x + 48;
-    const top = GROUND_Y - TOWER_HEIGHT;
-    let entry = 0;
-    let exit = 1;
-    for (const [origin, delta, minimum, maximum] of [
-      [start.x, travel.x, left, right],
-      [start.y, travel.y, top, GROUND_Y],
-    ] as Array<[number, number, number, number]>) {
-      if (Math.abs(delta) < Number.EPSILON) {
-        if (origin < minimum || origin > maximum) return undefined;
-        continue;
-      }
-      let near = (minimum - origin) / delta;
-      let far = (maximum - origin) / delta;
-      if (near > far) [near, far] = [far, near];
-      entry = Math.max(entry, near);
-      exit = Math.min(exit, far);
-    }
-    return entry <= exit && Number.isFinite(entry) ? clamp(entry, 0, 1) : undefined;
-  }
 }
 
 const bootstrap = async (): Promise<void> => {

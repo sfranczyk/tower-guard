@@ -113,6 +113,10 @@ const LEVEL_DATA: Readonly<Record<number, ILevelData>> = {
   },
 };
 
+/** Total number of enemies spawned over the whole level. */
+export const getLevelEnemyTotal = (level: ILevelData): number =>
+  level.spawnings.reduce((sum, spawn) => sum + spawn.count, 0);
+
 export class LevelManager {
   private currentLevel: ILevelData | undefined;
   private nextWaveIndex = 0;

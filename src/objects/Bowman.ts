@@ -1,5 +1,7 @@
 import { Container, Graphics } from 'pixi.js';
-import type { IPushStrength } from '../types';
+import type { IPushStrength, Rect, Vec2 } from '../types';
+import { approach, clamp } from '../utils/math';
+import { drawStickman } from '../rendering/stickman';
 import {
   GRAVITY,
   JUMP_BUFFER_MS,
@@ -18,18 +20,6 @@ const BOW_ORBIT_OFFSET = { x: 56, y: -43 };
 const BOW_STRING_OFFSET_X = -21;
 const BOW_STRING_PULL_X = -35;
 
-export interface Vec2 {
-  x: number;
-  y: number;
-}
-
-export interface Rect {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-}
-
 export interface BowmanAim {
   direction: Vec2;
   power: number;
@@ -41,25 +31,7 @@ export interface BowmanConfig {
   height?: number;
   movementSpeed?: number;
   maxHealth?: number;
-  animationRenderer?: BowmanAnimationRenderer;
 }
-
-export type BowmanAnimationRenderer = (
-  sprite: Graphics,
-  phase: number,
-  idleBlend?: number,
-  armed?: boolean,
-  running?: boolean,
-  runningBlend?: number,
-  originY?: number,
-  attackPhase?: number,
-  archerPose?: boolean,
-  bowAngle?: number,
-  bowTension?: number,
-  facingDirection?: number,
-) => void;
-
-const clamp = (value: number, min: number, max: number): number => Math.max(min, Math.min(max, value));
 
 export class Bowman extends Container {
   public readonly maxHealth: number;
@@ -71,7 +43,6 @@ export class Bowman extends Container {
   private readonly bodySprite: Graphics;
   private readonly groundY: number;
   private readonly bow: Graphics;
-  private readonly animationRenderer?: BowmanAnimationRenderer;
   private inTower = false;
   private verticalVelocity = 0;
   private horizontalSpeed = 0;
@@ -100,10 +71,8 @@ export class Bowman extends Container {
     this.groundY = y;
     this.maxHealth = config.maxHealth ?? 100;
     this.health = this.maxHealth;
-    this.animationRenderer = config.animationRenderer;
 
     this.bodySprite = new Graphics();
-    this.drawStickman();
     this.addChild(this.bodySprite);
 
     this.bow = new Graphics();
@@ -147,12 +116,12 @@ export class Bowman extends Container {
       const acceleration = sprinting ? SPRINT_ACCELERATION : WALK_ACCELERATION;
       const isReversing = Math.sign(targetSpeed) !== Math.sign(this.horizontalSpeed) && Math.abs(this.horizontalSpeed) > 0;
       const step = (isReversing ? WALK_DECELERATION : acceleration) * deltaSeconds;
-      this.horizontalSpeed = Bowman.approach(this.horizontalSpeed, targetSpeed, step);
+      this.horizontalSpeed = approach(this.horizontalSpeed, targetSpeed, step);
     } else if (deltaSeconds > 0) {
       const deceleration = Math.abs(this.horizontalSpeed) > this.movementSpeed
         ? SPRINT_DECELERATION
         : WALK_DECELERATION;
-      this.horizontalSpeed = Bowman.approach(this.horizontalSpeed, 0, deceleration * deltaSeconds);
+      this.horizontalSpeed = approach(this.horizontalSpeed, 0, deceleration * deltaSeconds);
     }
 
     this.x += this.horizontalSpeed * deltaSeconds;
@@ -229,53 +198,28 @@ export class Bowman extends Container {
   }
 
   public updateAnimation(deltaMs: number, moving: boolean, sprinting = false): void {
-    if (!this.animationRenderer) {
-      return;
-    }
-
-    const hasMomentum = this.currentSpeed > 1;
-    const isMoving = moving || hasMomentum;
+    const isMoving = moving || this.currentSpeed > 1;
     const targetIdleBlend = isMoving ? 0 : 1;
     const targetRunningBlend = isMoving && sprinting ? 1 : 0;
     const blendStep = deltaMs / 220;
-    this.animationIdleBlend = Bowman.approach(this.animationIdleBlend, targetIdleBlend, blendStep);
-    this.animationRunningBlend = Bowman.approach(this.animationRunningBlend, targetRunningBlend, blendStep);
+    this.animationIdleBlend = approach(this.animationIdleBlend, targetIdleBlend, blendStep);
+    this.animationRunningBlend = approach(this.animationRunningBlend, targetRunningBlend, blendStep);
 
     if (isMoving) {
       this.animationTime += deltaMs / (150 + this.animationRunningBlend * 10);
-      this.animationRenderer(
-        this.bodySprite,
-        this.animationTime,
-        this.animationIdleBlend,
-        false,
-        false,
-        this.animationRunningBlend,
-        -55,
-        0,
-        true,
-        this.bow.rotation,
-        this.aim.power,
-        this.facingDirection,
-      );
-      this.bodySprite.scale.x = this.facingDirection;
-      return;
     }
-
     this.bodySprite.scale.x = this.facingDirection;
-    this.animationRenderer(
-      this.bodySprite,
-      this.animationTime,
-      this.animationIdleBlend,
-      false,
-      false,
-      this.animationRunningBlend,
-      -55,
-      0,
-      true,
-      this.bow.rotation,
-      this.aim.power,
-      this.facingDirection,
-    );
+    drawStickman(this.bodySprite, this.animationTime, {
+      idleBlend: this.animationIdleBlend,
+      runningBlend: this.animationRunningBlend,
+      originY: -55,
+      archerPose: true,
+      // FIXME: angle and power look swapped (bowTension gets radians, bowAngle gets 0..1).
+      // Kept as-is during the refactor so the archer looks exactly the same.
+      bowTension: this.bow.rotation,
+      bowAngle: this.aim.power,
+      facingDirection: this.facingDirection,
+    });
   }
 
   public getAim(): BowmanAim {
@@ -323,49 +267,6 @@ export class Bowman extends Container {
     this.bow.scale.set(scale);
   }
 
-  private drawStickman(): void {
-    const front = 0xe6c067;
-    const rear = 0x7f8da6;
-    const line = (a: Vec2, b: Vec2, color: number, width = 5): void => {
-      this.bodySprite.moveTo(a.x, a.y).lineTo(b.x, b.y).stroke({
-        width,
-        color,
-        cap: 'round',
-        join: 'round',
-      });
-    };
-    const joint = (point: Vec2, color: number): void => {
-      this.bodySprite.circle(point.x, point.y, 3).fill({ color });
-    };
-
-    const hip = { x: 0, y: -30 };
-    const shoulder = { x: 0, y: -68 };
-    const rearKnee = { x: -12, y: -2 };
-    const rearFoot = { x: -22, y: 0 };
-    const frontKnee = { x: 12, y: 0 };
-    const frontFoot = { x: 20, y: 0 };
-    const rearElbow = { x: -16, y: -48 };
-    const rearHand = { x: -18, y: -28 };
-    const frontElbow = { x: 16, y: -48 };
-    const frontHand = { x: 24, y: -35 };
-
-    line(hip, rearKnee, rear);
-    line(rearKnee, rearFoot, rear);
-    line(shoulder, rearElbow, rear);
-    line(rearElbow, rearHand, rear);
-    line(hip, shoulder, front);
-    line(hip, frontKnee, front);
-    line(frontKnee, frontFoot, front);
-    line(shoulder, frontElbow, front);
-    line(frontElbow, frontHand, front);
-    this.bodySprite.circle(0, -88, 11).fill({ color: 0xc98768 }).stroke({ width: 2, color: 0x30243a });
-    this.bodySprite.moveTo(-10, -92).lineTo(0, -101).lineTo(11, -92).lineTo(8, -86).lineTo(-8, -86).closePath()
-      .fill({ color: 0x3c2a3e }).stroke({ width: 2, color: 0x201827 });
-    [hip, rearKnee, rearElbow, frontKnee, frontElbow].forEach((point) => joint(point, front));
-    [rearFoot, rearHand].forEach((point) => joint(point, rear));
-    [frontFoot, frontHand].forEach((point) => joint(point, front));
-  }
-
   private constrainToBoard(): void {
     const halfWidth = this.bodyWidth / 2;
     this.x = clamp(this.x, this.boardBounds.x + halfWidth, this.boardBounds.x + this.boardBounds.width - halfWidth);
@@ -381,16 +282,6 @@ export class Bowman extends Container {
 
   private isGrounded(): boolean {
     return this.y >= this.groundY - 1.5 && this.verticalVelocity >= 0;
-  }
-
-  private static approach(current: number, target: number, maxDelta: number): number {
-    if (current < target) {
-      return Math.min(current + maxDelta, target);
-    }
-    if (current > target) {
-      return Math.max(current - maxDelta, target);
-    }
-    return target;
   }
 }
 
