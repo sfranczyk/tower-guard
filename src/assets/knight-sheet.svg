@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="384" height="92" viewBox="0 0 384 92">
+  <defs>
+    <linearGradient id="steel" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#667286"/>
+      <stop offset=".45" stop-color="#252e3e"/>
+      <stop offset="1" stop-color="#080c15"/>
+    </linearGradient>
+    <g id="body">
+      <ellipse cx="32" cy="88" rx="22" ry="4" fill="#070b13" opacity=".5"/>
+      <path d="M16 43c3-14 31-16 35 0l7 36H7z" fill="url(#steel)" stroke="#dce5f2" stroke-width="2"/>
+      <path d="M18 47h28l4 26H14z" fill="#303a4b" opacity=".8"/>
+      <path d="M15 25c-1-15 6-23 18-23 13 0 19 10 16 26l-8-8-11 5-12-5z" fill="#090d16" stroke="#dce5f2" stroke-width="2"/>
+      <path d="M22 26h20M26 32h12" stroke="#9eafc4" stroke-width="2"/>
+      <path d="M7 39h50" stroke="#d4a74e" stroke-width="4"/>
+    </g>
+    <path id="leftLeg" d="M21 77l-6 11h13l7-11z" fill="#090d16" stroke="#aebbd0" stroke-width="2"/>
+    <path id="rightLeg" d="M43 77l6 11H36l-5-11z" fill="#090d16" stroke="#aebbd0" stroke-width="2"/>
+    <path id="leftArm" d="M14 51L4 72l9 5 15-20" fill="#161d2a" stroke="#c3cede" stroke-width="2"/>
+    <path id="rightArm" d="M50 51l10 19-9 6-14-19" fill="#161d2a" stroke="#c3cede" stroke-width="2"/>
+    <g id="sword">
+      <path d="M56 47l8 27" stroke="#d4a74e" stroke-width="4"/>
+      <path d="M56 47l8 27" stroke="#edf3ff" stroke-width="2"/>
+    </g>
+    <g id="slash">
+      <path d="M48 20c19 12 22 31 10 48" fill="none" stroke="#f4d889" stroke-width="2" opacity=".9"/>
+    </g>
+  </defs>
+
+  <!-- idle -->
+  <g transform="translate(0 0)">
+    <use href="#body"/><use href="#leftLeg"/><use href="#rightLeg"/><use href="#leftArm"/><use href="#rightArm"/><use href="#sword"/>
+  </g>
+  <!-- walk step 1: opposite legs and arms -->
+  <g transform="translate(64 0)">
+    <use href="#body"/>
+    <use href="#leftLeg" transform="rotate(-14 21 77)"/>
+    <use href="#rightLeg" transform="rotate(10 43 77)"/>
+    <use href="#leftArm" transform="rotate(5 14 51)"/>
+    <use href="#rightArm" transform="rotate(-5 50 51)"/>
+    <use href="#sword"/>
+  </g>
+  <!-- walk step 2 -->
+  <g transform="translate(128 0)">
+    <use href="#body"/>
+    <use href="#leftLeg" transform="rotate(10 21 77)"/>
+    <use href="#rightLeg" transform="rotate(-14 43 77)"/>
+    <use href="#leftArm" transform="rotate(-5 14 51)"/>
+    <use href="#rightArm" transform="rotate(5 50 51)"/>
+    <use href="#sword"/>
+  </g>
+  <!-- walk step 3 -->
+  <g transform="translate(192 0)">
+    <use href="#body"/>
+    <use href="#leftLeg" transform="rotate(-8 21 77)"/>
+    <use href="#rightLeg" transform="rotate(8 43 77)"/>
+    <use href="#leftArm" transform="rotate(3 14 51)"/>
+    <use href="#rightArm" transform="rotate(-3 50 51)"/>
+    <use href="#sword"/>
+  </g>
+  <!-- attack wind-up: sword raised -->
+  <g transform="translate(256 0)">
+    <use href="#body"/><use href="#leftLeg"/><use href="#rightLeg"/>
+    <use href="#leftArm"/><use href="#rightArm" transform="rotate(-22 50 51)"/>
+    <use href="#sword" transform="rotate(-55 56 47)"/>
+  </g>
+  <!-- attack slash: sword sweeps forward -->
+  <g transform="translate(320 0)">
+    <use href="#body"/><use href="#leftLeg"/><use href="#rightLeg"/>
+    <use href="#leftArm"/><use href="#rightArm" transform="rotate(28 50 51)"/>
+    <use href="#sword" transform="rotate(58 56 47)"/>
+    <use href="#slash"/>
+  </g>
+</svg>

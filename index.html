@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tower Guard</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            color-scheme: dark;
+            font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            --surface: rgba(18, 27, 43, .94);
+            --surface-soft: rgba(255, 255, 255, .08);
+            --border: rgba(255, 255, 255, .14);
+            --text: #f5f7fb;
+            --muted: #aeb9c9;
+            --blue: #5b8def;
+            --gold: #e3ad4f;
+            --danger: #e66b6b;
+        }
+        body {
+            display: flex; align-items: center; justify-content: center;
+            min-height: 100vh; overflow: hidden; background: #0a111d; color: var(--text);
+        }
+        #game { position: relative; line-height: 0; display: flex; justify-content: center; filter: drop-shadow(0 18px 36px rgba(0, 0, 0, .45)); }
+        canvas { display: block; margin: 0 auto; max-width: 100vw !important; max-height: 100vh !important; height: auto !important; image-rendering: auto; border: 1px solid rgba(255, 255, 255, .12); }
+        #ui-root { position: absolute; inset: 0; z-index: 10; line-height: 1.4; pointer-events: none; }
+        button, input { font: inherit; }
+        button { border: 0; cursor: pointer; }
+        .screen { position: absolute; inset: 0; display: grid; place-items: center; pointer-events: auto; }
+        .screen[data-menu] { background: radial-gradient(circle at 50% 35%, rgba(42, 76, 111, .7), rgba(8, 15, 26, .9) 72%); }
+        .screen[hidden], .test-screen[hidden], .game-ui[hidden], .drawer[hidden] { display: none; }
+        .menu-card { width: min(420px, calc(100% - 36px)); padding: 36px; border: 1px solid var(--border); border-radius: 20px; background: rgba(12, 21, 35, .92); box-shadow: 0 24px 70px rgba(0, 0, 0, .42); text-align: left; }
+        .eyebrow, .metric-label, .toolbar-label { color: var(--muted); font-size: 11px; font-weight: 700; letter-spacing: .11em; text-transform: uppercase; }
+        .menu-card h1 { margin: 8px 0 10px; font-size: 42px; line-height: 1; letter-spacing: -.05em; }
+        .menu-card p { margin: 0 0 28px; color: var(--muted); font-size: 15px; }
+        .primary-button { width: 100%; padding: 13px 18px; border-radius: 10px; background: var(--blue); color: white; font-size: 14px; font-weight: 700; transition: transform .15s ease, filter .15s ease; }
+        .primary-button:hover { filter: brightness(1.12); transform: translateY(-1px); }
+        .menu-card .secondary-button { width: 100%; margin-top: 10px; }
+        .game-ui { position: absolute; inset: 0; pointer-events: none; }
+        .topbar { position: absolute; top: 14px; left: 14px; right: 14px; display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+        .metrics { display: flex; gap: 8px; }
+        .metric-card, .toolbar { min-width: 130px; padding: 12px 14px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); box-shadow: 0 8px 24px rgba(0, 0, 0, .18); }
+        .metric-value { display: block; margin-top: 5px; font-size: 18px; font-weight: 700; }
+        .toolbar { display: flex; align-items: center; gap: 14px; pointer-events: auto; }
+        .toolbar-title { margin-top: 4px; font-size: 14px; font-weight: 650; }
+        .icon-button { width: 34px; height: 34px; border: 1px solid var(--border); border-radius: 9px; background: var(--surface-soft); color: var(--text); }
+         .status-bar { position: absolute; bottom: 14px; left: 50%; min-width: 290px; padding: 10px 16px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); color: var(--muted); font-size: 13px; text-align: center; transform: translateX(-50%); }
+         .projectile-bar { position: absolute; bottom: 58px; left: 50%; display: flex; gap: 7px; padding: 7px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); transform: translateX(-50%); pointer-events: auto; }
+         .projectile-button { padding: 7px 10px; border: 1px solid transparent; border-radius: 8px; background: transparent; color: var(--muted); font-size: 11px; font-weight: 700; white-space: nowrap; }
+         .projectile-button b { display: inline-grid; width: 18px; height: 18px; margin-right: 4px; place-items: center; border-radius: 5px; background: rgba(255,255,255,.1); color: var(--text); }
+         .projectile-button:hover, .projectile-button.active { border-color: var(--gold); background: rgba(227,173,79,.16); color: var(--text); }
+        .drawer { position: absolute; top: 14px; right: 14px; width: min(330px, calc(100% - 28px)); padding: 22px; border: 1px solid var(--border); border-radius: 16px; background: #121d2e; box-shadow: 0 22px 50px rgba(0, 0, 0, .42); pointer-events: auto; }
+        .drawer-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+        .drawer h2 { margin: 0; font-size: 18px; }
+        .field { margin-top: 18px; }
+        .field-row { display: flex; justify-content: space-between; margin-bottom: 8px; }
+        .field-value { color: var(--blue); font-size: 12px; font-weight: 700; }
+        input[type="range"] { width: 100%; accent-color: var(--blue); }
+        .end-card { width: min(360px, calc(100% - 36px)); padding: 28px; border: 1px solid var(--border); border-radius: 16px; background: var(--surface); text-align: center; pointer-events: auto; }
+        .end-card h2 { margin: 0 0 8px; font-size: 26px; }
+        .end-card p { margin: 0 0 20px; color: var(--muted); }
+        .test-screen { position: absolute; inset: 0; padding: 30px 34px; pointer-events: none; }
+        .test-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; }
+        .test-header h1 { margin: 8px 0 8px; font-size: 34px; letter-spacing: -.04em; }
+        .test-header p { max-width: 510px; color: var(--muted); font-size: 14px; }
+        .secondary-button { padding: 10px 16px; border: 1px solid var(--border); border-radius: 9px; background: var(--surface-soft); color: var(--text); font-weight: 700; pointer-events: auto; }
+        .secondary-button:hover { background: rgba(255, 255, 255, .14); }
+        .test-panel { position: absolute; top: 142px; right: 34px; width: 270px; padding: 18px; border: 1px solid var(--border); border-radius: 16px; background: var(--surface); box-shadow: 0 18px 44px rgba(0, 0, 0, .28); pointer-events: auto; }
+        .test-panel-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+        .test-panel-heading strong { display: block; margin-top: 5px; font-size: 17px; }
+        .test-panel > p { margin: 15px 0; color: var(--muted); font-size: 13px; line-height: 1.5; }
+        .test-badge { padding: 4px 7px; border-radius: 5px; background: rgba(103, 167, 255, .16); color: #8fc0ff; font-size: 9px; font-weight: 800; letter-spacing: .08em; }
+        .test-legend { display: flex; align-items: center; flex-wrap: wrap; gap: 7px; color: var(--muted); font-size: 11px; line-height: 1.7; }
+        .legend-dot { width: 8px; height: 8px; border-radius: 50%; background: #f5f7fb; box-shadow: 0 0 0 2px #18253a; }
+        .legend-line { width: 18px; height: 3px; margin-left: 5px; border-radius: 4px; background: var(--blue); }
+        .test-selection { display: flex; gap: 7px; margin-top: 18px; }
+        .character-chip { padding: 7px 11px; border: 1px solid var(--border); border-radius: 7px; background: transparent; color: var(--muted); font-size: 12px; pointer-events: none; }
+        .character-chip.active { border-color: var(--blue); background: rgba(91, 141, 239, .16); color: var(--text); }
+        .enemy-chip { border-color: rgba(230, 107, 107, .35); }
+        .test-readout { min-height: 34px; margin-top: 16px; padding: 9px; border-radius: 7px; background: rgba(0, 0, 0, .18); color: var(--muted); font-size: 11px; line-height: 1.4; }
+        .test-animation-note { margin-top: 12px; color: var(--muted); font-size: 11px; line-height: 1.4; }
+         @media (max-width: 700px) {
+            .metrics { gap: 5px; }
+            .metric-card { min-width: 88px; padding: 9px; }
+            .metric-label { font-size: 9px; }
+            .metric-value { font-size: 14px; }
+            .toolbar-title { display: none; }
+            .test-screen { padding: 18px; }
+            .test-header h1 { font-size: 27px; }
+             .test-panel { top: auto; right: 18px; bottom: 18px; left: 18px; width: auto; }
+             .projectile-bar { max-width: calc(100% - 20px); }
+             .projectile-button { padding: 6px; font-size: 10px; }
+         }
+    </style>
+</head>
+<body>
+    <div id="game"></div>
+</body>
+</html>

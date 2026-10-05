@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="180" height="190" viewBox="0 0 180 190">
+  <defs>
+    <linearGradient id="stone" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f4e2bd"/>
+      <stop offset=".58" stop-color="#c9ae84"/>
+      <stop offset="1" stop-color="#8f7459"/>
+    </linearGradient>
+    <linearGradient id="stoneShade" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#a28768"/>
+      <stop offset=".38" stop-color="#d8c196"/>
+      <stop offset="1" stop-color="#aa8e6b"/>
+    </linearGradient>
+  </defs>
+  <ellipse cx="90" cy="186" rx="77" ry="5" fill="#15243a" opacity=".28"/>
+
+  <!-- Connected castle body -->
+  <path d="M14 184V130h152v54z" fill="url(#stone)" stroke="#463c55" stroke-width="4" stroke-linejoin="round"/>
+  <path d="M14 184V130h26v54zM140 130h26v54h-26z" fill="#a88d6c" opacity=".55"/>
+
+  <!-- Left and right wings -->
+  <path d="M14 130V116h40v14z" fill="url(#stoneShade)" stroke="#463c55" stroke-width="4" stroke-linejoin="round"/>
+  <path d="M126 130V116h40v14z" fill="url(#stoneShade)" stroke="#463c55" stroke-width="4" stroke-linejoin="round"/>
+
+  <!-- Central keep -->
+  <path d="M54 184V45h72v139z" fill="url(#stone)" stroke="#463c55" stroke-width="4"/>
+  <path d="M41 47V16h14v16h14V16h14v16h14V16h14v16h14V16h14v31z" fill="#d7bd91" stroke="#463c55" stroke-width="4" stroke-linejoin="round"/>
+  <path d="M54 62h72M54 88h72M54 114h72M54 140h72M54 166h72" stroke="#fff1d1" stroke-width="3" opacity=".38"/>
+
+  <!-- Stone courses and battlement shadows -->
+  <path d="M14 130h40M126 130h40M14 181h152" stroke="#6c584d" stroke-width="4" opacity=".65"/>
+  <path d="M23 140h23v11H23zM134 140h23v11h-23z" fill="#f7e5bf" opacity=".72"/>
+  <path d="M77 184v-51c0-15 26-15 26 0v51z" fill="#34405b" stroke="#463c55" stroke-width="4"/>
+  <path d="M82 143h16v41H82z" fill="#536583" opacity=".7"/>
+  <path d="M72 184h36" stroke="#f2d28b" stroke-width="4" opacity=".8"/>
+</svg>
