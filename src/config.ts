@@ -43,9 +43,11 @@ export const WALK_ACCELERATION = 600;
 export const SPRINT_ACCELERATION = 185;
 export const WALK_DECELERATION = 1100;
 export const SPRINT_DECELERATION = 480;
-export const SPRINT_MAX_MULTIPLIER = 3;
+/** Sprint top speed as a multiple of walking speed (120 px/s → 270 px/s). */
+export const SPRINT_MAX_MULTIPLIER = 2.25;
 export const JUMP_SPEED = 420;
-export const GRAVITY = 1100;
+/** Bowman gravity: with JUMP_SPEED this gives a ~40 px jump lasting ~0.38 s. */
+export const GRAVITY = 2200;
 export const JUMP_BUFFER_MS = 110;
 
 export const TOWER_MAX_HEALTH = 570;
