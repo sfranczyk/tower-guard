@@ -39,13 +39,13 @@ export class AimOverlay extends Graphics {
     this.circle(origin.x, origin.y, 4).fill({ color: AIM_COLOR, alpha: 1 });
     this.moveTo(origin.x, origin.y)
       .lineTo(origin.x + aim.direction.x * visualRadius, origin.y + aim.direction.y * visualRadius)
-      .stroke({ width: 3, color: AIM_COLOR, alpha: 0.9 });
-    this.circle(aim.start.x, aim.start.y, visualRadius).stroke({ width: 2, color: AIM_COLOR, alpha: 0.8 });
-    this.circle(origin.x, origin.y, visualRadius).stroke({ width: 2, color: AIM_COLOR, alpha: 0.8 });
+      .stroke({ width: 1.5, color: AIM_COLOR, alpha: 0.9 });
+    this.circle(aim.start.x, aim.start.y, visualRadius).stroke({ width: 1, color: AIM_COLOR, alpha: 0.8 });
+    this.circle(origin.x, origin.y, visualRadius).stroke({ width: 1, color: AIM_COLOR, alpha: 0.8 });
     this.circle(aim.start.x, aim.start.y, 4).fill({ color: AIM_COLOR, alpha: 0.35 });
     this.circle(aim.start.x, aim.start.y, visualRadius).fill({ color: AIM_COLOR, alpha: 0.1 });
     this.circle(origin.x, origin.y, visualRadius).fill({ color: AIM_COLOR, alpha: 0.1 });
-    this.circle(aim.start.x, aim.start.y, cursorRadius).stroke({ width: 2, color: AIM_COLOR, alpha: 0.45 });
+    this.circle(aim.start.x, aim.start.y, cursorRadius).stroke({ width: 1, color: AIM_COLOR, alpha: 0.45 });
 
     const dx = aim.current.x - aim.start.x;
     const dy = aim.current.y - aim.start.y;
@@ -54,7 +54,7 @@ export class AimOverlay extends Graphics {
       this.moveTo(aim.start.x, aim.start.y).lineTo(
         aim.start.x + (dx / length) * cursorRadius,
         aim.start.y + (dy / length) * cursorRadius,
-      ).stroke({ width: 2, color: AIM_COLOR, alpha: 0.7 });
+      ).stroke({ width: 1, color: AIM_COLOR, alpha: 0.7 });
     }
   }
 
@@ -72,11 +72,11 @@ export class AimOverlay extends Graphics {
       return;
     }
     const radius = this.lastReleaseRadius;
-    this.circle(origin.x, origin.y, radius).stroke({ width: 2, color: PREVIOUS_RELEASE_COLOR, alpha: 0.55 });
+    this.circle(origin.x, origin.y, radius).stroke({ width: 1, color: PREVIOUS_RELEASE_COLOR, alpha: 0.55 });
     this.moveTo(origin.x, origin.y).lineTo(
       origin.x + this.lastReleaseDirection.x * radius,
       origin.y + this.lastReleaseDirection.y * radius,
-    ).stroke({ width: 2, color: PREVIOUS_RELEASE_COLOR, alpha: 0.55 });
+    ).stroke({ width: 1, color: PREVIOUS_RELEASE_COLOR, alpha: 0.55 });
     this.circle(origin.x, origin.y, radius).fill({ color: PREVIOUS_RELEASE_COLOR, alpha: 0.12 });
   }
 }

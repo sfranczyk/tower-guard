@@ -82,9 +82,9 @@ export default class Arrow extends Sprite {
 
     if (this.trailVisible && Math.hypot(this.previousPosition.x - this.x, this.previousPosition.y - this.y) > 1) {
       this.trail.moveTo(this.previousPosition.x, this.previousPosition.y).lineTo(this.x, this.y)
-        .stroke({ width: 5, color: 0xf3c969, alpha: 0.16 });
+        .stroke({ width: 2.5, color: 0xf3c969, alpha: 0.16 });
       this.trail.moveTo(this.previousPosition.x, this.previousPosition.y).lineTo(this.x, this.y)
-        .stroke({ width: 2, color: 0xffe7a4, alpha: 0.72 });
+        .stroke({ width: 1, color: 0xffe7a4, alpha: 0.72 });
       this.previousPosition = { x: this.x, y: this.y };
     }
 
