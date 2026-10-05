@@ -146,9 +146,7 @@ export class GameScene extends Scene {
     this.enemies.forEach((enemy) => {
       enemy.visible = this.enemiesVisible;
     });
-    if (this.enemiesVisible) {
-      this.combat.update(deltaMs);
-    }
+    this.combat.update(deltaMs, this.enemiesVisible);
 
     this.updateAim();
     this.updateHud();

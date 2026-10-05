@@ -65,8 +65,9 @@ export class CombatSystem {
     private readonly events: CombatEvents,
   ) {}
 
-  public update(deltaMs: number): void {
-    const activeEnemies = this.world.enemies.filter((enemy) => enemy.isAlive());
+  /** With `enemiesActive` false (debug: enemies hidden) enemies freeze and arrows pass through them. */
+  public update(deltaMs: number, enemiesActive = true): void {
+    const activeEnemies = enemiesActive ? this.world.enemies.filter((enemy) => enemy.isAlive()) : [];
     activeEnemies.forEach((enemy) => this.updateEnemy(enemy, deltaMs));
 
     const { arrows } = this.world;
