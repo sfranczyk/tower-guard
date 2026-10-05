@@ -6,6 +6,8 @@ enemy waves walk in from the enemy keep on the right. PixiJS 8 + TypeScript (str
 ## Commands
 
 - `npm run dev`: dev server on http://localhost:8080 (add `?debug` to show hitboxes)
+  - `?lab` opens the animation lab directly, and `?lab=<id>` (e.g. `?lab=archer`) opens one animation zoomed in.
+    Ids are in `AnimationLabScene`.
 - `npm run check`: type-check (`tsc --noEmit`, includes noUnusedLocals/Parameters)
 - `npm test`: Vitest unit tests (`*.test.ts` next to the code)
 - `npm run build`: production build to `dist/`

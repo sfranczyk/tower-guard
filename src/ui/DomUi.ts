@@ -30,6 +30,8 @@ export interface UiHandlers {
   start?: () => void;
   openAnimationLab?: () => void;
   openGame?: () => void;
+  /** Animation lab: leave the zoomed view and return to the list. */
+  labBack?: () => void;
   toggleOptions?: () => void;
   selectProjectile?: (type: ProjectileType) => void;
   gravityChange?: (value: number) => void;
@@ -55,6 +57,7 @@ export class DomUi {
   private readonly endTitle: HTMLElement;
   private readonly endCopy: HTMLElement;
   private readonly endButton: HTMLButtonElement;
+  private readonly labBackButton: HTMLButtonElement;
   private readonly statusElement: HTMLElement;
   private readonly strengthElement: HTMLElement;
   private readonly towerHealthElement: HTMLElement;
@@ -89,6 +92,7 @@ export class DomUi {
     this.endTitle = this.query('[data-end-title]');
     this.endCopy = this.query('[data-end-copy]');
     this.endButton = this.query<HTMLButtonElement>('[data-end-button]');
+    this.labBackButton = this.query<HTMLButtonElement>('[data-lab-back]');
     this.statusElement = this.query('[data-status]');
     this.strengthElement = this.query('[data-force]');
     this.towerHealthElement = this.query('[data-tower-health]');
@@ -107,6 +111,7 @@ export class DomUi {
     this.onClick('[data-start]', () => this.handlers.start?.());
     this.onClick('[data-open-test]', () => this.handlers.openAnimationLab?.());
     this.onClick('[data-open-game]', () => this.handlers.openGame?.());
+    this.onClick('[data-lab-back]', () => this.handlers.labBack?.());
     this.onClick('[data-options]', () => this.handlers.toggleOptions?.());
     this.onClick('[data-close-options]', () => this.handlers.toggleOptions?.());
     this.endButton.addEventListener('click', () => this.onEndButton?.());
@@ -127,9 +132,15 @@ export class DomUi {
     this.labScreen.hidden = screen !== 'animationLab';
     this.hudTop.hidden = screen !== 'game';
     this.hudBottom.hidden = screen !== 'game';
+    this.labBackButton.hidden = true;
     this.endScreen.hidden = true;
     this.optionsDrawer.hidden = true;
     this.fitCanvas();
+  }
+
+  /** Shows the animation lab's back button while an animation is zoomed in. */
+  public setLabZoomed(zoomed: boolean): void {
+    this.labBackButton.hidden = !zoomed;
   }
 
   public setStatus(text: string): void {

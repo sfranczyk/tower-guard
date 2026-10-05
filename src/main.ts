@@ -31,7 +31,7 @@ const bootstrap = async (): Promise<void> => {
 
   const textures = await loadTextures();
   const ui = new DomUi(host, app.canvas);
-  new SceneManager(app, ui, textures).goTo('menu');
+  new SceneManager(app, ui, textures).start();
 };
 
 void bootstrap();

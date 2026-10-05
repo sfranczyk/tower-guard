@@ -14,6 +14,7 @@ export const OVERLAY_TEMPLATE = `
         </div>
       </section>
       <section class="test-screen" data-test>
+        <button class="secondary-button" data-lab-back hidden>← All animations</button>
         <button class="secondary-button" data-open-game>Open game</button>
       </section>
       <div class="drawer" data-drawer hidden>

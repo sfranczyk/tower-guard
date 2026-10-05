@@ -65,7 +65,8 @@
         .end-card { width: min(360px, calc(100% - 36px)); padding: 28px; border: 1px solid var(--border); border-radius: 16px; background: var(--surface); text-align: center; pointer-events: auto; }
         .end-card h2 { margin: 0 0 8px; font-size: 26px; }
         .end-card p { margin: 0 0 20px; color: var(--muted); }
-        .test-screen { position: absolute; top: 14px; right: 14px; pointer-events: none; }
+        .test-screen { position: absolute; top: 14px; right: 14px; display: flex; gap: 8px; pointer-events: none; }
+        .secondary-button[hidden] { display: none; }
         .secondary-button { padding: 10px 16px; border: 1px solid var(--border); border-radius: 9px; background: var(--surface-soft); color: var(--text); font-weight: 700; pointer-events: auto; }
         .secondary-button:hover { background: rgba(255, 255, 255, .14); }
          @media (max-width: 700px) {
