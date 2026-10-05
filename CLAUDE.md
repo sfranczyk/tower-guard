@@ -44,6 +44,9 @@ src/
 - **Stickman drawing** goes through `drawStickman(sprite, phase, pose)` in `rendering/stickman.ts`.
   Bowman, enemies and the animation lab all use it. Preview animation changes in the lab
   (menu → "Open animation test panel").
+- **Fall animations** (`rendering/stickmanFall.ts`) are one-shot keyframed poses driven by progress
+  0..1: `death` (collapses face down) and `knockback` (thrown backwards, lands on the back). They aren't
+  used in the game yet. `getFallPose()` is pure, and its tests keep every limb above the ground.
 - **Archer pose**: bow, hands and elbows come from `getArcherRig()` in `rendering/archer.ts`. It pivots
   at the neck and is drawn inside the stickman sprite, so the hands can't drift from the bow.
   `Bowman.getBowReleasePoint()` uses the same rig (string hand). Don't add a separately positioned bow.

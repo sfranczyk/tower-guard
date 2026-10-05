@@ -3,6 +3,7 @@ import { GAME_HEIGHT, GAME_WIDTH } from '../config';
 import { Scene } from '../core/Scene';
 import { LAB_PARAM, getUrlParam, setUrlParam } from '../core/urlState';
 import { drawStickman } from '../rendering/stickman';
+import { FALL_DURATION_MS, drawStickmanFall, type FallKind } from '../rendering/stickmanFall';
 
 const WALK_PHASE_MS = 150;
 const RUN_PHASE_MS = 160;
@@ -10,9 +11,12 @@ const IDLE_BLEND_MS = 350;
 const RUN_BLEND_MS = 400;
 
 const LIST_TOP = 78;
-const ROW_HEIGHT = (GAME_HEIGHT - LIST_TOP - 8) / 6;
-/** Previews are drawn smaller so six full-height stickmen fit one under another. */
-const PREVIEW_SCALE = 0.55;
+const ROW_COUNT = 8;
+const ROW_HEIGHT = (GAME_HEIGHT - LIST_TOP - 8) / ROW_COUNT;
+/** Previews are drawn smaller so every full-height stickman fits one under another. */
+const PREVIEW_SCALE = 0.4;
+/** Fall animations hold the final pose this long before replaying. */
+const FALL_HOLD_MS = 1200;
 const PREVIEW_X = 120;
 const TEXT_X = 250;
 const FONT = 'Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif';
@@ -32,6 +36,8 @@ type PreviewRow = {
   backdrop?: number;
   /** Draws the current frame of this animation; `originY: 0` keeps the hip at the sprite origin. */
   render: (sprite: Graphics) => void;
+  /** Shifts the figure right (unscaled units) for animations that travel left, so they stay centred. */
+  offsetX?: number;
 };
 
 const DEFAULT_BACKDROP = 0x16243a;
@@ -51,8 +57,7 @@ export class AnimationLabScene extends Scene {
       id: 'archer',
       backdrop: SKY_BACKDROP,
       title: 'Armored archer · bow draw',
-      description: 'The player character. Draw tension cycles between 25% and 100%. Bow, hands and the '
-        + 'nocked arrow come from the shared archer rig, which pivots at the neck.',
+      description: 'Player character. Draw tension cycles 25–100%; bow, hands and arrow come from the shared rig.',
       render: (sprite) => drawStickman(sprite, 0, {
         idleBlend: 1,
         archerPose: true,
@@ -70,8 +75,7 @@ export class AnimationLabScene extends Scene {
     {
       id: 'sequence',
       title: 'Sequence: walk → stand → walk → run → walk',
-      description: '5 steps, stand for 2 s, 2 steps, then 10 running steps with a 0.4 s blend in and out '
-        + 'of the run.',
+      description: '5 steps, stand for 2 s, 2 steps, then 10 running steps with 0.4 s blends in and out.',
       render: (sprite) => this.renderSequence(sprite),
     },
     {
@@ -83,7 +87,7 @@ export class AnimationLabScene extends Scene {
     {
       id: 'enemy-walk',
       title: 'Enemy walk (armed)',
-      description: 'Enemy walk cycle with a club in the front hand. Pauses together with the walk above.',
+      description: 'Walk cycle with a club in the front hand; pauses together with row 2.',
       render: (sprite) => drawStickman(sprite, this.walkPhase, { idleBlend: this.walkIdleBlend, armed: true, originY: 0 }),
     },
     {
@@ -91,6 +95,19 @@ export class AnimationLabScene extends Scene {
       title: 'Enemy club attack',
       description: 'Standing club swing: wind-up, strike with a forward lean, then recovery.',
       render: (sprite) => drawStickman(sprite, 0, { idleBlend: 1, armed: true, attackPhase: this.attackPhase, originY: 0 }),
+    },
+    {
+      id: 'death',
+      title: 'Death',
+      description: 'Knees buckle, drops to the knees, then collapses face down where it stood.',
+      render: (sprite) => drawStickmanFall(sprite, 'death', this.fallProgress('death')),
+    },
+    {
+      id: 'knockback',
+      title: 'Knockback (explosions)',
+      description: 'Thrown a short distance backwards, lands and ends lying on its back.',
+      offsetX: 54,
+      render: (sprite) => drawStickmanFall(sprite, 'knockback', this.fallProgress('knockback')),
     },
   ];
   private readonly listSprites = new Map<PreviewRow, Graphics>();
@@ -106,6 +123,7 @@ export class AnimationLabScene extends Scene {
   private walkIdleBlend = 0;
   private runPhase = 0;
   private attackPhase = 0;
+  private fallTimeMs = 0;
 
   private sequenceState: SequenceState = 'walkFirst';
   private sequencePhase = 0;
@@ -140,6 +158,7 @@ export class AnimationLabScene extends Scene {
     this.archerPhase += deltaMs / 900;
     this.runPhase += deltaMs / RUN_PHASE_MS;
     this.attackPhase += deltaMs / 180;
+    this.fallTimeMs += deltaMs;
     this.updateSequence(deltaMs);
     this.draw();
   }
@@ -172,14 +191,16 @@ export class AnimationLabScene extends Scene {
     row.addChild(new Graphics().moveTo(16, ROW_HEIGHT).lineTo(GAME_WIDTH - 16, ROW_HEIGHT)
       .stroke({ width: 1, color: 0x1c2b43 }));
 
-    row.addChild(new Graphics().roundRect(PREVIEW_X - 62, 5, 124, ROW_HEIGHT - 10, 8).fill({ color: backdrop }));
+    row.addChild(new Graphics().roundRect(PREVIEW_X - 62, 3, 124, ROW_HEIGHT - 6, 6).fill({ color: backdrop }));
     const sprite = new Graphics();
     this.listSprites.set(preview, sprite);
-    row.addChild(...AnimationLabScene.createFigure(sprite, PREVIEW_X, ROW_HEIGHT / 2, PREVIEW_SCALE, 45));
+    row.addChild(...AnimationLabScene.createFigure(
+      sprite, PREVIEW_X + (preview.offsetX ?? 0) * PREVIEW_SCALE, ROW_HEIGHT / 2, PREVIEW_SCALE, PREVIEW_X - 55, PREVIEW_X + 55,
+    ));
 
     row.addChild(AnimationLabScene.text(`${index + 1}`, 12, 0x5b8def, 700, 32, ROW_HEIGHT / 2 - 8));
-    row.addChild(AnimationLabScene.text(title, 15, 0xf5f7fb, 700, TEXT_X, 14));
-    row.addChild(AnimationLabScene.wrapped(description, 12, TEXT_X, 36, GAME_WIDTH - TEXT_X - 40));
+    row.addChild(AnimationLabScene.text(title, 14, 0xf5f7fb, 700, TEXT_X, ROW_HEIGHT / 2 - 18));
+    row.addChild(AnimationLabScene.text(description, 12, 0xaeb9c9, 400, TEXT_X, ROW_HEIGHT / 2 + 2));
 
     this.list.addChild(row);
   }
@@ -205,7 +226,9 @@ export class AnimationLabScene extends Scene {
     this.zoomView.addChild(new Graphics()
       .roundRect(40, top, ZOOM_TEXT_X - 70, height, 12)
       .fill({ color: preview.backdrop ?? DEFAULT_BACKDROP }));
-    this.zoomView.addChild(...AnimationLabScene.createFigure(this.zoomSprite, ZOOM_FIGURE_X - 30, top + height * 0.6, ZOOM_SCALE, 150));
+    this.zoomView.addChild(...AnimationLabScene.createFigure(
+      this.zoomSprite, ZOOM_FIGURE_X - 30 + (preview.offsetX ?? 0) * ZOOM_SCALE, top + height * 0.6, ZOOM_SCALE, 60, ZOOM_TEXT_X - 50,
+    ));
     this.zoomView.addChild(AnimationLabScene.text(`Animation ${index + 1} of ${this.rows.length}`, 12, 0x5b8def, 700, ZOOM_TEXT_X, top + 8));
     this.zoomView.addChild(AnimationLabScene.wrapped(preview.title, 22, ZOOM_TEXT_X, top + 30, GAME_WIDTH - ZOOM_TEXT_X - 40, 0xf5f7fb, 700));
     this.zoomView.addChild(AnimationLabScene.wrapped(preview.description, 14, ZOOM_TEXT_X, top + 100, GAME_WIDTH - ZOOM_TEXT_X - 40));
@@ -213,14 +236,16 @@ export class AnimationLabScene extends Scene {
     this.draw();
   }
 
-  /** Figure container (hip at x/hipY) plus a ground line under the feet. */
-  private static createFigure(sprite: Graphics, x: number, hipY: number, scale: number, groundHalfWidth: number): [Graphics, Container] {
+  /** Figure container (hip at x/hipY) plus a ground line under the feet from groundFrom to groundTo. */
+  private static createFigure(
+    sprite: Graphics, x: number, hipY: number, scale: number, groundFrom: number, groundTo: number,
+  ): [Graphics, Container] {
     const figure = new Container();
     figure.scale.set(scale);
     figure.position.set(x, hipY - 2 * scale);
     figure.addChild(sprite);
     const feetY = figure.y + 58 * scale;
-    const ground = new Graphics().moveTo(x - groundHalfWidth, feetY).lineTo(x + groundHalfWidth, feetY)
+    const ground = new Graphics().moveTo(groundFrom, feetY).lineTo(groundTo, feetY)
       .stroke({ width: 2, color: 0x42617f });
     return [ground, figure];
   }
@@ -319,6 +344,12 @@ export class AnimationLabScene extends Scene {
         }
       }
     }
+  }
+
+  /** Plays a fall animation, holds the last pose, then replays (all falls share one clock). */
+  private fallProgress(kind: FallKind): number {
+    const duration = FALL_DURATION_MS[kind];
+    return Math.min(1, (this.fallTimeMs % (duration + FALL_HOLD_MS)) / duration);
   }
 
   private renderSequence(sprite: Graphics): void {
