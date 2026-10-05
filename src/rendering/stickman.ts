@@ -1,6 +1,10 @@
 import type { Graphics } from 'pixi.js';
 import type { Vec2 as Point } from '../types';
 import { drawBow, getArcherRig, toArcherLocalAngle } from './archer';
+import { ARMOR_COLORS, drawArmor, drawArmoredBow, drawHood, drawPauldron, drawQuiver } from './armor';
+
+/** skeleton = thin white bones (enemies, previews); armored = the player's armored archer look. */
+export type StickmanSkin = 'skeleton' | 'armored';
 
 export interface StickmanPose {
   /** 0 = walk cycle, 1 = standing idle. */
@@ -28,6 +32,7 @@ export interface StickmanPose {
    * after a turn so the lean swings over smoothly instead of flipping.
    */
   leanDirection?: number;
+  skin?: StickmanSkin;
 }
 
 /** Head circle in stickman sprite space (shared with hitboxes). */
@@ -49,7 +54,9 @@ export const drawStickman: StickmanRenderer = (sprite, phase, pose = {}) => {
     bowAngle = 0,
     facingDirection = 1,
     leanDirection = Math.sign(facingDirection || 1),
+    skin = 'skeleton',
   } = pose;
+  const armored = skin === 'armored';
   sprite.clear();
   const motionBlend = running ? 1 : runningBlend;
   const normalizedAttackPhase = ((attackPhase % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
@@ -89,19 +96,25 @@ export const drawStickman: StickmanRenderer = (sprite, phase, pose = {}) => {
     ? 0.48
     : 1.13 - 0.93 * strikeProgress + 0.93 * recoveryProgress;
 
+  const frontColor = armored ? ARMOR_COLORS.limb : skeleton;
+  const rearColor = armored ? ARMOR_COLORS.limbRear : rear;
+  // Armored limbs are drawn about 2.3× thicker, without joint rings.
+  const widthScale = armored ? 2.3 : 1;
   const line = (a: Point, b: Point, isRear = false, width = 3.5): void => {
     sprite.moveTo(a.x, a.y).lineTo(b.x, b.y).stroke({
-      width: isRear ? width - 0.5 : width,
-      color: isRear ? rear : skeleton,
+      width: (isRear ? width - 0.5 : width) * widthScale,
+      color: isRear ? rearColor : frontColor,
       cap: 'round',
       join: 'round',
     });
   };
   const joint = (point: Point, isRear = false): void => {
-    sprite.circle(point.x, point.y, 3).stroke({ width: 1.5, color: isRear ? rear : skeleton });
+    if (!armored) {
+      sprite.circle(point.x, point.y, 3).stroke({ width: 1.5, color: isRear ? rear : skeleton });
+    }
   };
   const endpoint = (point: Point, isRear = false): void => {
-    sprite.circle(point.x, point.y, 2.5).fill({ color: isRear ? rear : skeleton });
+    sprite.circle(point.x, point.y, armored ? 4.5 : 2.5).fill({ color: isRear ? rearColor : frontColor });
   };
 
   const drawLeg = (foot: Point, kneeBend: number, isRear: boolean): void => {
@@ -211,16 +224,31 @@ export const drawStickman: StickmanRenderer = (sprite, phase, pose = {}) => {
     : undefined;
   if (archerRig) {
     drawArcherArm(archerRig.stringElbow, archerRig.stringHand, true);
-    drawArcherArm(archerRig.woodElbow, archerRig.woodHand, false);
+    if (!armored) {
+      drawArcherArm(archerRig.woodElbow, archerRig.woodHand, false);
+    }
   } else {
     const rearArmAngle = legSwing * armSwing * (1 - idleBlend) + 0.1 * idleBlend;
     drawArm(rearArmAngle, true);
   }
-  line(hip, shoulder);
-  joint(hip);
-  line(shoulder, { x: 0, y: -43 });
-  sprite.circle(STICKMAN_HEAD.x, STICKMAN_HEAD.y, STICKMAN_HEAD.radius).stroke({ width: 2, color: skeleton });
-  drawLeg(blendPoint(rightFoot, idleRightFoot), rightKneeBend, false);
+  if (armored) {
+    // Back to front: quiver, torso, front leg, armor over the legs, hood, bow arm, shoulder plate.
+    drawQuiver(sprite);
+    line(hip, shoulder);
+    drawLeg(blendPoint(rightFoot, idleRightFoot), rightKneeBend, false);
+    drawArmor(sprite);
+    drawHood(sprite, STICKMAN_HEAD);
+    if (archerRig) {
+      drawArcherArm(archerRig.woodElbow, archerRig.woodHand, false);
+    }
+    drawPauldron(sprite, shoulder);
+  } else {
+    line(hip, shoulder);
+    joint(hip);
+    line(shoulder, { x: 0, y: -43 });
+    sprite.circle(STICKMAN_HEAD.x, STICKMAN_HEAD.y, STICKMAN_HEAD.radius).stroke({ width: 2, color: skeleton });
+    drawLeg(blendPoint(rightFoot, idleRightFoot), rightKneeBend, false);
+  }
   const frontArmAngle = -legSwing * armSwing * (1 - idleBlend) + 0.1 * idleBlend + attackArmOffset;
   const weaponHand = archerPose
     ? { x: 0, y: 0 }
@@ -248,12 +276,16 @@ export const drawStickman: StickmanRenderer = (sprite, phase, pose = {}) => {
       .stroke({ width: 2.5, color: 0xe3ad4f, cap: 'round' });
   }
   if (archerRig) {
-    drawBow(sprite, archerRig);
+    if (armored) {
+      drawArmoredBow(sprite, archerRig, bowTension);
+    } else {
+      drawBow(sprite, archerRig);
+    }
   }
 };
 
 /** Standing archer with a bow that cycles its draw tension (animation lab preview). */
 export const drawTensionArcher = (sprite: Graphics, phase: number): void => {
   const tension = 0.25 + (Math.sin(phase) + 1) * 0.375;
-  drawStickman(sprite, 0, { idleBlend: 1, archerPose: true, bowTension: tension });
+  drawStickman(sprite, 0, { idleBlend: 1, archerPose: true, bowTension: tension, skin: 'armored' });
 };

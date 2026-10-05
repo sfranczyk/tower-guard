@@ -245,6 +245,7 @@ export class Bowman extends Container {
       bowAngle: this.aimAngle,
       facingDirection: this.facingDirection,
       leanDirection: this.leanDirection,
+      skin: 'armored',
     });
   }
 
