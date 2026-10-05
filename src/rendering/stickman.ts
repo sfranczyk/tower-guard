@@ -2,6 +2,7 @@ import type { Graphics } from 'pixi.js';
 import type { Vec2 as Point } from '../types';
 import { drawBow, getArcherRig, toArcherLocalAngle } from './archer';
 import { RUN_GROUND_Y, runArmSwing, runBounce, runFoot } from './runCycle';
+import { walkKneeBend } from './walkCycle';
 import { ARMOR_COLORS, drawArmor, drawArmoredBow, drawHood, drawPauldron, drawQuiver } from './armor';
 
 /** skeleton = thin white bones (enemies, previews); armored = the player's armored archer look. */
@@ -93,7 +94,6 @@ export const drawStickman: StickmanRenderer = (sprite, phase, pose = {}) => {
   const easedProgress = progress * progress * (3 - 2 * progress);
   const legSwing = (rightLegIsSwinging ? 1 : -1) * Math.sin(progress * Math.PI);
   const footLift = 20;
-  const kneeBendAmount = 0.85;
   // Arm swing angle for the rear arm (it moves with the front leg); the front arm mirrors it.
   const walkArmSwing = legSwing * 0.58;
   const runArm = runArmSwing(runProgress) * 0.9;
@@ -208,15 +208,14 @@ export const drawStickman: StickmanRenderer = (sprite, phase, pose = {}) => {
   const leftFoot = blendMotionPoint(rightLegIsSwinging ? walkStanceFoot : walkSwingFoot, runnerFootAt(runProgress + 0.5));
   // Running legs use the exact two-bone solution with the knee in front (bend −1).
   const runnerKneeBend = -1;
-  const swingKneeBend = 0.2 - Math.sin(progress * Math.PI) * kneeBendAmount;
   const idleLeftFoot = { x: -16, y: 55 };
   const idleRightFoot = { x: 16, y: 55 };
   const blendPoint = (walking: Point, standing: Point): Point => ({
     x: walking.x + (standing.x - walking.x) * idleBlend,
     y: walking.y + (standing.y - walking.y) * idleBlend,
   });
-  const walkingLeftKneeBend = rightLegIsSwinging ? 0.2 : swingKneeBend;
-  const walkingRightKneeBend = rightLegIsSwinging ? swingKneeBend : 0.2;
+  const walkingLeftKneeBend = walkKneeBend(progress, !rightLegIsSwinging);
+  const walkingRightKneeBend = walkKneeBend(progress, rightLegIsSwinging);
   const movingLeftKneeBend = walkingLeftKneeBend + (runnerKneeBend - walkingLeftKneeBend) * motionBlend;
   const movingRightKneeBend = walkingRightKneeBend + (runnerKneeBend - walkingRightKneeBend) * motionBlend;
   // Standing uses its own symmetric, slightly forward knee bend instead of whatever walk phase the
