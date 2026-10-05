@@ -9,6 +9,7 @@ import {
   GAME_HEIGHT,
   GAME_WIDTH,
   GROUND_Y,
+  HEADSHOT_DAMAGE_MULTIPLIER,
   PLAYER_TOWER_X,
   TOWER_ENTRY_ZONE_HEIGHT,
   TOWER_ENTRY_ZONE_WIDTH,
@@ -118,6 +119,7 @@ export class GameScene extends Scene {
         enemyKilled: () => {
           this.defeatedEnemies += 1;
         },
+        headshot: () => this.ctx.ui.setStatus(`Headshot! ×${HEADSHOT_DAMAGE_MULTIPLIER} damage`),
       },
     );
 

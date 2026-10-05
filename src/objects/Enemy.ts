@@ -1,6 +1,6 @@
 import { Container, Graphics, Text } from 'pixi.js';
 import { ENEMY_ATTACK_INTERVAL_MS, ENEMY_GROUND_Y } from '../config';
-import { drawStickman, type StickmanPose } from '../rendering/stickman';
+import { STICKMAN_HEAD, drawStickman, type StickmanPose } from '../rendering/stickman';
 import type { Bounds, Vec2 } from '../types';
 
 const ATTACK_ANIMATION_DURATION_MS = 1_130;
@@ -156,6 +156,28 @@ export default class Enemy extends Container {
       right: x + width,
       top: y,
       bottom: y + height,
+    };
+  }
+
+  /** Box around the drawn head (follows bob, lean and scale), in world space. */
+  public getHeadBounds(): Bounds {
+    const { body } = this;
+    const cos = Math.cos(body.rotation);
+    const sin = Math.sin(body.rotation);
+    const localX = STICKMAN_HEAD.x * body.scale.x;
+    const localY = STICKMAN_HEAD.y * body.scale.y;
+    const centerX = this.x + (body.x + localX * cos - localY * sin) * this.scale.x;
+    const centerY = this.y + (body.y + localX * sin + localY * cos) * this.scale.y;
+    const radius = STICKMAN_HEAD.radius * Math.abs(body.scale.x) * this.scale.x;
+    return {
+      x: centerX - radius,
+      y: centerY - radius,
+      width: radius * 2,
+      height: radius * 2,
+      left: centerX - radius,
+      right: centerX + radius,
+      top: centerY - radius,
+      bottom: centerY + radius,
     };
   }
 

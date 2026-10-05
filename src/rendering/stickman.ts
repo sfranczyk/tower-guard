@@ -23,7 +23,15 @@ export interface StickmanPose {
   bowAngle?: number;
   /** 1 = facing right, -1 = facing left. Must match the sprite's scale.x sign. */
   facingDirection?: number;
+  /**
+   * Lean multiplier in [-1, 1]; defaults to the facing sign. Animate it towards the new facing
+   * after a turn so the lean swings over smoothly instead of flipping.
+   */
+  leanDirection?: number;
 }
+
+/** Head circle in stickman sprite space (shared with hitboxes). */
+export const STICKMAN_HEAD = { x: 0, y: -52, radius: 10 } as const;
 
 export type StickmanRenderer = (sprite: Graphics, phase: number, pose?: StickmanPose) => void;
 
@@ -40,6 +48,7 @@ export const drawStickman: StickmanRenderer = (sprite, phase, pose = {}) => {
     bowTension = 0,
     bowAngle = 0,
     facingDirection = 1,
+    leanDirection = Math.sign(facingDirection || 1),
   } = pose;
   sprite.clear();
   const motionBlend = running ? 1 : runningBlend;
@@ -54,7 +63,7 @@ export const drawStickman: StickmanRenderer = (sprite, phase, pose = {}) => {
     : 0;
   const attackLean = (0.12 - 0.34 * strikeProgress + 0.34 * recoveryProgress) * (1 - idleBlend);
   // Lean forward in the facing direction (a mirrored sprite needs the rotation flipped too).
-  sprite.rotation = ((0.06 + 0.04 * motionBlend) * (1 - idleBlend) + attackLean) * Math.sign(facingDirection || 1);
+  sprite.rotation = ((0.06 + 0.04 * motionBlend) * (1 - idleBlend) + attackLean) * leanDirection;
   const walkingBounce = (0.5 + Math.cos(phase * 2) * 0.5) * 1.4 * (1 - motionBlend) * (1 - idleBlend);
   const runningBounce = (0.5 - Math.cos(phase * 2) * 0.5) * 2.4 * motionBlend;
   sprite.y = originY + 5 * motionBlend
@@ -210,7 +219,7 @@ export const drawStickman: StickmanRenderer = (sprite, phase, pose = {}) => {
   line(hip, shoulder);
   joint(hip);
   line(shoulder, { x: 0, y: -43 });
-  sprite.circle(0, -52, 10).stroke({ width: 2, color: skeleton });
+  sprite.circle(STICKMAN_HEAD.x, STICKMAN_HEAD.y, STICKMAN_HEAD.radius).stroke({ width: 2, color: skeleton });
   drawLeg(blendPoint(rightFoot, idleRightFoot), rightKneeBend, false);
   const frontArmAngle = -legSwing * armSwing * (1 - idleBlend) + 0.1 * idleBlend + attackArmOffset;
   const weaponHand = archerPose

@@ -16,6 +16,8 @@ import {
 
 /** Body sprite baseline (hip height) relative to the bowman's feet, in unscaled units. */
 const BODY_ORIGIN_Y = -55;
+/** Time for the body lean to swing from one side to the other after turning around. */
+const LEAN_TURN_MS = 260;
 
 export interface BowmanAim {
   direction: Vec2;
@@ -47,6 +49,8 @@ export class Bowman extends Container {
   private animationIdleBlend = 1;
   private animationRunningBlend = 0;
   private facingDirection = 1;
+  /** Follows facingDirection smoothly so the lean doesn't flip instantly on a turn. */
+  private leanDirection = 1;
   private aim: BowmanAim = {
     direction: { x: 1, y: 0 },
     power: 0,
@@ -199,6 +203,7 @@ export class Bowman extends Container {
       this.facingDirection = Math.sign(this.horizontalSpeed);
       this.aim.direction = { x: this.facingDirection, y: 0 };
     }
+    this.leanDirection = approach(this.leanDirection, this.facingDirection, (deltaMs / LEAN_TURN_MS) * 2);
     this.redraw();
   }
 
@@ -239,6 +244,7 @@ export class Bowman extends Container {
       bowTension: this.aim.power,
       bowAngle: this.aimAngle,
       facingDirection: this.facingDirection,
+      leanDirection: this.leanDirection,
     });
   }
 

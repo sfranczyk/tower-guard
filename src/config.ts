@@ -25,6 +25,8 @@ export const ENEMY_HEALTH = 20;
 export const ENEMY_ATTACK_INTERVAL_MS = 2000;
 export const ENEMY_HIT_DAMAGE = 10;
 export const PROJECTILE_DAMAGE = 20;
+/** Damage multiplier when an arrow hits an enemy's head. */
+export const HEADSHOT_DAMAGE_MULTIPLIER = 2;
 export const EXPLOSION_RADIUS = 72;
 export const EXPLOSION_DAMAGE = 14;
 export const PIERCING_DAMAGE_MULTIPLIER = 0.62;

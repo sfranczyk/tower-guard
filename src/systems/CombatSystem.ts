@@ -5,6 +5,7 @@ import {
   EXPLOSION_DAMAGE,
   EXPLOSION_RADIUS,
   GROUND_Y,
+  HEADSHOT_DAMAGE_MULTIPLIER,
   PIERCING_DAMAGE_MULTIPLIER,
   PROJECTILE_DAMAGE,
   SHOW_HITBOX_DEBUG,
@@ -36,6 +37,13 @@ export interface CombatWorld {
 export interface CombatEvents {
   bowmanDamaged(amount: number): void;
   enemyKilled(): void;
+  headshot(): void;
+}
+
+interface EnemyHit {
+  enemy: Enemy;
+  time: number;
+  headshot: boolean;
 }
 
 const randomEnemyDamage = (): number => Math.floor(Math.random() * 6) + 2;
@@ -83,6 +91,8 @@ export class CombatSystem {
     if (SHOW_HITBOX_DEBUG) {
       const hitbox = enemy.getPhysicsBounds();
       debug.rect(hitbox.x, hitbox.y, hitbox.width, hitbox.height).stroke({ width: 1, color: 0xff5555, alpha: 0.9 });
+      const head = enemy.getHeadBounds();
+      debug.rect(head.x, head.y, head.width, head.height).stroke({ width: 1, color: 0xffd23f, alpha: 0.9 });
     }
 
     if (enemy.target === 'tower') {
@@ -117,8 +127,8 @@ export class CombatSystem {
 
     const enemyHit = activeEnemies
       .filter((candidate) => candidate.isAlive() && !hitEnemies.has(candidate))
-      .map((candidate) => ({ enemy: candidate, time: segmentHitTime(start, travel, candidate.getPhysicsBounds()) }))
-      .filter((hit): hit is { enemy: Enemy; time: number } => hit.time !== undefined)
+      .map((candidate) => CombatSystem.hitTest(start, travel, candidate))
+      .filter((hit): hit is EnemyHit => hit !== undefined)
       .sort((first, second) => first.time - second.time)[0];
 
     const { enemyTower } = this.world;
@@ -134,8 +144,18 @@ export class CombatSystem {
       return;
     }
     if (enemyHit) {
-      this.hitEnemy(arrow, enemyHit.enemy, pointAlong(start, travel, enemyHit.time), hitEnemies, activeEnemies);
+      this.hitEnemy(arrow, enemyHit, pointAlong(start, travel, enemyHit.time), hitEnemies, activeEnemies);
     }
+  }
+
+  /** Earliest hit of the segment on an enemy's head or body; the head wins ties. */
+  private static hitTest(start: Vec2, travel: Vec2, enemy: Enemy): EnemyHit | undefined {
+    const headTime = segmentHitTime(start, travel, enemy.getHeadBounds());
+    const bodyTime = segmentHitTime(start, travel, enemy.getPhysicsBounds());
+    if (headTime !== undefined && (bodyTime === undefined || headTime <= bodyTime)) {
+      return { enemy, time: headTime, headshot: true };
+    }
+    return bodyTime === undefined ? undefined : { enemy, time: bodyTime, headshot: false };
   }
 
   private hitTower(arrow: Arrow, impactPoint: Vec2): void {
@@ -150,7 +170,7 @@ export class CombatSystem {
 
   private hitEnemy(
     arrow: Arrow,
-    enemy: Enemy,
+    { enemy, headshot }: EnemyHit,
     impactPoint: Vec2,
     hitEnemies: Set<Enemy>,
     activeEnemies: readonly Enemy[],
@@ -161,9 +181,13 @@ export class CombatSystem {
       debug.circle(impactPoint.x, impactPoint.y, 3).fill({ color: 0x55ff88, alpha: 1 });
     }
 
-    const damage = arrow.type === 'piercing'
+    const baseDamage = arrow.type === 'piercing'
       ? PROJECTILE_DAMAGE * Math.pow(PIERCING_DAMAGE_MULTIPLIER, arrow.impacts)
       : PROJECTILE_DAMAGE;
+    const damage = headshot ? baseDamage * HEADSHOT_DAMAGE_MULTIPLIER : baseDamage;
+    if (headshot) {
+      this.events.headshot();
+    }
     enemy.applyHitReaction(arrow.x < enemy.x ? 6 : -4);
     enemy.takeDamage(damage);
     hitEnemies.add(enemy);
