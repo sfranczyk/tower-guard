@@ -1,4 +1,4 @@
-import { Container, Graphics, Text } from 'pixi.js';
+import { Container, Graphics } from 'pixi.js';
 import { ENEMY_ATTACK_INTERVAL_MS, ENEMY_GROUND_Y } from '../config';
 import { STICKMAN_HEAD, drawStickman, type StickmanPose } from '../rendering/stickman';
 import { FALL_DURATION_MS, drawStickmanFall, getFallPose, type FallKind, type FallPose } from '../rendering/stickmanFall';
@@ -33,11 +33,13 @@ const BODY_SCALE = { x: 0.5, y: 0.52 };
 const BODY_ORIGIN_Y = -25;
 const ENEMY_POSE: StickmanPose = { armed: true, originY: BODY_ORIGIN_Y };
 /** drawStickman's hip and shoulder (sprite space) for walking, standing and attacking. */
+/** Health bar size and placement in container space (the container is drawn at 2/3 scale). */
+const HEALTH_BAR = { width: 30, height: 4, standingY: -68, aboveHead: 14 };
 const STANDING_TORSO: Torso = { hip: { x: 0, y: 0 }, shoulder: { x: 0, y: -35 } };
 
 export default class Enemy extends Container {
   private readonly body: Graphics;
-  private readonly healthLabel: Text;
+  private readonly healthBar: Graphics;
   private readonly maxHealth: number;
   private health: number;
   private readonly speed: number;
@@ -60,20 +62,8 @@ export default class Enemy extends Container {
     this.body = new Graphics();
     this.drawPlaceholder();
     this.addChild(this.body);
-    this.healthLabel = new Text({
-      text: '',
-      style: {
-        fill: 0xffffff,
-        fontFamily: 'Arial',
-        fontSize: 12,
-        fontWeight: '700',
-        stroke: { color: 0x3b2030, width: 3 },
-      },
-    });
-    this.healthLabel.anchor.set(0.5);
-    this.healthLabel.scale.set(2);
-    this.healthLabel.position.set(0, -76);
-    this.addChild(this.healthLabel);
+    this.healthBar = new Graphics();
+    this.addChild(this.healthBar);
     this.health = Math.max(0, health);
     this.maxHealth = Math.max(1, health);
     this.speed = Math.max(0, speed);
@@ -82,7 +72,7 @@ export default class Enemy extends Container {
     this.position.set(x, ENEMY_GROUND_Y);
     this.zIndex = 1;
     this.velocity.x = -this.speed;
-    this.updateHealthLabel();
+    this.drawHealthBar();
   }
 
   private drawPlaceholder(): void {
@@ -101,11 +91,11 @@ export default class Enemy extends Container {
     }
 
     this.health = Math.max(0, this.health - Math.max(0, amount));
-    this.updateHealthLabel();
+    this.drawHealthBar();
     if (this.health === 0) {
       this.alive = false;
       this.velocity = { x: 0, y: 0 };
-      this.healthLabel.visible = false;
+      this.healthBar.visible = false;
       this.startFall(Enemy.deathKind(hit.cause), hit.fromX);
     } else if (hit.cause === 'explosion') {
       this.startFall('knockback', hit.fromX, KNOCKDOWN_LIE_MS);
@@ -140,6 +130,7 @@ export default class Enemy extends Container {
   }
 
   public updateAnimation(deltaMs: number, moving: boolean): void {
+    this.positionHealthBar();
     if (this.fall) {
       // Dead enemies keep playing (then holding) their death; survivors get back up.
       this.updateFall(deltaMs);
@@ -393,8 +384,26 @@ export default class Enemy extends Container {
     return { x: left, y: top, width: right - left, height: bottom - top, left, right, top, bottom };
   }
 
-  private updateHealthLabel(): void {
-    this.healthLabel.text = `${Math.ceil(this.getHealthRatio() * 100)}%`;
-    this.healthLabel.alpha = this.isAlive() ? 1 : 0.55;
+  /** Bar above the head: dark track, fill from green (full) through yellow to red (low). */
+  private drawHealthBar(): void {
+    const ratio = Math.max(0, Math.min(1, this.getHealthRatio()));
+    const color = ratio > 0.6 ? 0x6fd36b : ratio > 0.3 ? 0xf2c94c : 0xe5534b;
+    const { width, height } = HEALTH_BAR;
+    this.healthBar.clear()
+      .rect(-width / 2 - 1, -height / 2 - 1, width + 2, height + 2).fill({ color: 0x1b1a20, alpha: 0.85 })
+      .rect(-width / 2, -height / 2, width * ratio, height).fill({ color });
+  }
+
+  /** Keeps the bar above the head, also while knocked down and getting up. */
+  private positionHealthBar(): void {
+    if (!this.fall) {
+      this.healthBar.position.set(0, HEALTH_BAR.standingY);
+      return;
+    }
+    const { head } = getFallPose(this.fall.kind, this.fallProgress);
+    this.healthBar.position.set(
+      this.body.x + head.x * this.body.scale.x,
+      this.body.y + head.y * this.body.scale.y - HEALTH_BAR.aboveHead,
+    );
   }
 }
