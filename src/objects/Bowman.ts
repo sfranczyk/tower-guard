@@ -21,6 +21,11 @@ const LEAN_TURN_MS = 260;
 /** Raising the bow when a draw starts, and lowering it after the shot. */
 const BOW_RAISE_MS = 200;
 const BOW_LOWER_MS = 380;
+/** Time for the dead bowman to topple over backwards, and how far (just short of flat: armor). */
+const TOPPLE_MS = 650;
+const TOPPLE_ANGLE = Math.PI / 2 - 0.12;
+/** Hip to feet in body-sprite space (drawStickman's standing feet). */
+const HIP_TO_FEET = 55;
 
 export interface BowmanAim {
   direction: Vec2;
@@ -38,6 +43,8 @@ export interface BowmanConfig {
 export class Bowman extends Container {
   public readonly maxHealth: number;
   public health: number;
+  /** Time since death; undefined while alive. */
+  private deathMs?: number;
   public readonly movementSpeed: number;
 
   private readonly boardBounds: Rect;
@@ -191,7 +198,24 @@ export class Bowman extends Container {
     this.redraw();
   }
 
+  /** Killed: drops the aim and topples over backwards (see updateAnimation). */
+  public die(): void {
+    if (this.deathMs === undefined) {
+      this.deathMs = 0;
+      this.aim.power = 0;
+    }
+  }
+
+  public get isDead(): boolean {
+    return this.deathMs !== undefined;
+  }
+
   public updateAnimation(deltaMs: number, moving: boolean, sprinting = false): void {
+    if (this.deathMs !== undefined) {
+      this.deathMs += deltaMs;
+      this.updateDeath(deltaMs);
+      return;
+    }
     const isMoving = moving || this.currentSpeed > 1;
     const targetIdleBlend = isMoving ? 0 : 1;
     const targetRunningBlend = isMoving && sprinting ? 1 : 0;
@@ -241,6 +265,20 @@ export class Bowman extends Container {
 
   private get aimAngle(): number {
     return Math.atan2(this.aim.direction.y, this.aim.direction.x);
+  }
+
+  /** Standing pose with the bow lowered, rotated about the feet as the body tips over. */
+  private updateDeath(deltaMs: number): void {
+    this.animationIdleBlend = approach(this.animationIdleBlend, 1, deltaMs / 120);
+    this.animationRunningBlend = 0;
+    this.bowReady = approach(this.bowReady, 0, deltaMs / BOW_LOWER_MS);
+    this.redraw();
+    const t = Math.min(1, (this.deathMs ?? 0) / TOPPLE_MS);
+    // Accelerates like a falling plank; backwards = away from the facing direction.
+    const angle = -this.facingDirection * TOPPLE_ANGLE * t * t;
+    const feet = HIP_TO_FEET * this.bodySprite.scale.y;
+    this.bodySprite.rotation = angle;
+    this.bodySprite.position.set(Math.sin(angle) * feet, BODY_ORIGIN_Y + feet - Math.cos(angle) * feet);
   }
 
   private redraw(): void {

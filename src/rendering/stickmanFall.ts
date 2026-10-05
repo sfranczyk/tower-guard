@@ -1,6 +1,7 @@
 import type { Graphics } from 'pixi.js';
 import type { Vec2 } from '../types';
 import { STICKMAN_HEAD } from './stickman';
+import { drawJointPose, type JointPose } from './stickmanPose';
 
 /**
  * One-shot falling animations for the skeleton stickman, driven by progress 0..1:
@@ -313,23 +314,8 @@ const limb = (from: Vec2, angle: number, length: number): Vec2 => ({
   y: from.y + Math.cos(angle) * length,
 });
 
-export interface FallPose {
-  hip: Vec2;
-  shoulder: Vec2;
-  neckTop: Vec2;
-  head: Vec2;
-  frontKnee: Vec2;
-  frontFoot: Vec2;
-  rearKnee: Vec2;
-  rearFoot: Vec2;
-  frontElbow: Vec2;
-  frontHand: Vec2;
-  rearElbow: Vec2;
-  rearHand: Vec2;
-  /** Shin directions, used to orient the feet. */
-  frontShinAngle: number;
-  rearShinAngle: number;
-}
+/** Fall frames are plain joint poses (see stickmanPose.ts). */
+export type FallPose = JointPose;
 
 /** Joint positions for a fall animation at `progress` (0..1, clamped). Pure and testable. */
 export const getFallPose = (kind: FallKind, progress: number): FallPose => {
@@ -369,49 +355,5 @@ export const getFallPose = (kind: FallKind, progress: number): FallPose => {
 
 /** Draws a fall animation frame with the skeleton look (same colours and widths as drawStickman). */
 export const drawStickmanFall = (sprite: Graphics, kind: FallKind, progress: number, originY = 0): void => {
-  sprite.clear();
-  sprite.rotation = 0;
-  sprite.y = originY;
-  const pose = getFallPose(kind, progress);
-  const skeleton = 0xf4f7fb;
-  const rear = 0xb7c1d1;
-
-  const line = (a: Vec2, b: Vec2, isRear: boolean, width = 3.5): void => {
-    sprite.moveTo(a.x, a.y).lineTo(b.x, b.y).stroke({
-      width: isRear ? width - 0.5 : width,
-      color: isRear ? rear : skeleton,
-      cap: 'round',
-      join: 'round',
-    });
-  };
-  const joint = (point: Vec2, isRear: boolean): void => {
-    sprite.circle(point.x, point.y, 3).stroke({ width: 1.5, color: isRear ? rear : skeleton });
-  };
-  const endpoint = (point: Vec2, isRear: boolean): void => {
-    sprite.circle(point.x, point.y, 2.5).fill({ color: isRear ? rear : skeleton });
-  };
-  const leg = (knee: Vec2, foot: Vec2, shinAngle: number, isRear: boolean): void => {
-    line(pose.hip, knee, isRear);
-    line(knee, foot, isRear);
-    joint(knee, isRear);
-    endpoint(foot, isRear);
-    // Foot points "forward" relative to the shin, like drawStickman.
-    const toe = { x: Math.cos(shinAngle), y: -Math.sin(shinAngle) };
-    line({ x: foot.x - toe.x * 2, y: foot.y - toe.y * 2 }, { x: foot.x + toe.x * 9, y: foot.y + toe.y * 9 }, isRear, 3);
-  };
-  const arm = (elbow: Vec2, hand: Vec2, isRear: boolean): void => {
-    line(pose.shoulder, elbow, isRear);
-    line(elbow, hand, isRear);
-    joint(elbow, isRear);
-    endpoint(hand, isRear);
-  };
-
-  leg(pose.rearKnee, pose.rearFoot, pose.rearShinAngle, true);
-  arm(pose.rearElbow, pose.rearHand, true);
-  line(pose.hip, pose.shoulder, false);
-  joint(pose.hip, false);
-  line(pose.shoulder, pose.neckTop, false);
-  sprite.circle(pose.head.x, pose.head.y, STICKMAN_HEAD.radius).stroke({ width: 2, color: skeleton });
-  leg(pose.frontKnee, pose.frontFoot, pose.frontShinAngle, false);
-  arm(pose.frontElbow, pose.frontHand, false);
+  drawJointPose(sprite, getFallPose(kind, progress), originY);
 };

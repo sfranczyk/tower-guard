@@ -3,6 +3,7 @@ import { ENEMY_ARCHER_COOLDOWN_MS, ENEMY_ARCHER_DRAW_MS, ENEMY_ATTACK_INTERVAL_M
 import { getArcherRig, toArcherLocalAngle } from '../rendering/archer';
 import { STICKMAN_HEAD, drawStickman, type StickmanPose } from '../rendering/stickman';
 import { FALL_DURATION_MS, drawStickmanFall, getFallPose, type FallKind, type FallPose } from '../rendering/stickmanFall';
+import { CHEER_KINDS, drawStickmanCheer, type CheerKind } from '../rendering/stickmanCheer';
 import { GibSimulation, drawStickmanGibs } from '../rendering/stickmanGibs';
 import { fromBodyAnchor, spriteToWorld, toBodyAnchor, worldToSprite, type BodyAnchor, type BodyTransform, type Torso } from '../systems/bodyAnchor';
 import type { Bounds, EnemyType, Vec2 } from '../types';
@@ -65,6 +66,8 @@ export default class Enemy extends Container {
   private velocity = { x: 0, y: 0 };
   private alive = true;
   private fall?: FallState;
+  /** Set when the enemies win: a looping cheer (played at a slightly random tempo). */
+  private cheer?: { kind: CheerKind; timeMs: number; tempo: number };
   /** Set when blown apart by a direct explosive hit. */
   private gibs?: GibSimulation;
   /** Archer bow state: raised (0..1), draw tension (0..1), aim angle (world) and time to the next shot. */
@@ -194,6 +197,28 @@ export default class Enemy extends Container {
     return this.health;
   }
 
+  /**
+   * The enemies won: stop and cheer (a random one of three). A knocked-down enemy gets up first.
+   * Faces the player's side.
+   */
+  public celebrate(): void {
+    if (!this.isAlive() || this.cheer) {
+      return;
+    }
+    this.cheer = {
+      kind: CHEER_KINDS[Math.floor(Math.random() * CHEER_KINDS.length)],
+      timeMs: Math.random() * 200,
+      tempo: 0.9 + Math.random() * 0.2,
+    };
+    this.velocity = { x: 0, y: 0 };
+    this.attackTimerMs = 0;
+    this.hitStaggerMs = 0;
+  }
+
+  public get isCelebrating(): boolean {
+    return this.isAlive() && this.cheer !== undefined;
+  }
+
   /** True while a surviving enemy is knocked down (can't move or attack). */
   public get isDown(): boolean {
     return this.isAlive() && this.fall !== undefined;
@@ -232,6 +257,13 @@ export default class Enemy extends Container {
       return;
     }
     if (!this.isAlive()) {
+      return;
+    }
+
+    if (this.cheer) {
+      this.cheer.timeMs += deltaMs * this.cheer.tempo;
+      this.body.scale.set(-BODY_SCALE.x, BODY_SCALE.y);
+      drawStickmanCheer(this.body, this.cheer.kind, this.cheer.timeMs, BODY_ORIGIN_Y, { club: !this.isArcher });
       return;
     }
 

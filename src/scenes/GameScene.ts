@@ -152,12 +152,9 @@ export class GameScene extends Scene {
     ui.setStatus(`Wave ${run.waveIndex + 1} of ${sandbox.waveCount} · ${this.battleground.name} · defend your keep`);
   }
 
+  /** The world keeps running after the wave ends; the end screen just overlays it. */
   public update(deltaMs: number): void {
     this.background.update(deltaMs);
-    if (this.gameEnded) {
-      return;
-    }
-
     this.updateBowman(deltaMs);
     this.playerTower.update();
     this.enemyTower.update();
@@ -172,7 +169,9 @@ export class GameScene extends Scene {
     this.updateAim();
     this.updateHud();
     this.updateCamera();
-    this.checkEndConditions();
+    if (!this.gameEnded) {
+      this.checkEndConditions();
+    }
   }
 
   public exit(): void {
@@ -243,6 +242,14 @@ export class GameScene extends Scene {
 
   private updateBowman(deltaMs: number): void {
     const deltaSeconds = deltaMs / 1000;
+    if (this.bowman.isDead) {
+      this.bowman.moveHorizontal(0, deltaSeconds);
+      if (!this.bowman.isInTower) {
+        this.bowman.updateVertical(deltaSeconds);
+      }
+      this.bowman.updateAnimation(deltaMs, false);
+      return;
+    }
     const direction = this.input?.getMovementDirection() ?? 0;
     const sprinting = this.input?.isSprintDown() ?? false;
     if (this.input?.isJumpPressed()) {
@@ -405,6 +412,9 @@ export class GameScene extends Scene {
 
   private checkEndConditions(): void {
     if (this.bowmanHealth <= 0 || this.playerTower.isDestroyed()) {
+      if (this.bowmanHealth <= 0) {
+        this.bowman.die();
+      }
       this.endGame(false);
       return;
     }
@@ -430,6 +440,10 @@ export class GameScene extends Scene {
   private endGame(won: boolean, waveCleared = false): void {
     this.gameEnded = true;
     this.destroyInput();
+    this.spawner.dispose();
+    if (!won) {
+      this.enemies.forEach((enemy) => enemy.celebrate());
+    }
 
     const { session, ui } = this.ctx;
     const { run, sandbox } = session;

@@ -108,6 +108,11 @@ export class CombatSystem {
   }
 
   private updateEnemy(enemy: Enemy, deltaMs: number): void {
+    if (enemy.isCelebrating) {
+      enemy.updateAnimation(deltaMs, false);
+      this.drawDebugHitboxes(enemy);
+      return;
+    }
     if (enemy.isArcher) {
       this.updateArcher(enemy, deltaMs);
       this.drawDebugHitboxes(enemy);
@@ -218,6 +223,9 @@ export class CombatSystem {
       return;
     }
 
+    if (bowman.isDead) {
+      return; // Flies over the fallen bowman into the ground.
+    }
     const bowmanHit = segmentHitTime(start, travel, {
       left: bowman.x - BOWMAN_HALF_WIDTH,
       right: bowman.x + BOWMAN_HALF_WIDTH,

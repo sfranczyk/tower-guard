@@ -43,6 +43,8 @@ src/
   `core/sandboxStorage.ts`. `ctx.session.sandbox` holds them, and `ctx.session.run` (`RunState`) the
   current wave index and health carried between waves. Each `GameScene` plays one wave. A cleared wave
   offers "Next wave" (health carries over) until the last one, and then Victory. Defeat goes back to setup.
+  The world keeps running after a wave ends (the end screen only overlays it): on defeat the enemies cheer,
+  and a killed bowman topples over backwards (`Bowman.die()`).
 - **Battlegrounds** (`data/battlegrounds.ts`): map themes (sky, sun, hills, tree style, ground colors)
   drawn by `rendering/Background.ts`. Add a new map by adding an entry there. Clouds come from
   `rendering/clouds.ts` (pure, seeded per map name): cumulus, stratus, cirrus and puffs, higher ones
@@ -62,6 +64,11 @@ src/
   the reaction: a headshot gives `deathStiff`, an explosion gives `knockback` (survivors get up and fight
   on), and other kills pick `death` or `deathCrumple` at random. `getFallPose()` is
   pure; feet and hands are kept on the ground by `groundedAngle`, and tests check every frame.
+- **Joint poses** (`rendering/stickmanPose.ts`): `JointPose` + `drawJointPose` draw a stickman from explicit
+  joint positions (skeleton look, optional club). Falls and cheers produce JointPoses.
+- **Cheers** (`rendering/stickmanCheer.ts`): three looping victory animations (`cheerJump`, `cheerFist`,
+  `cheerWave`), legs solved with two-bone IK so planted feet don't slide; tests check limb lengths, ground,
+  knees and loop continuity. `Enemy.celebrate()` picks one at random when the enemies win.
 - **Explosive death** (`rendering/stickmanGibs.ts`): `GibSimulation` blows the standing stickman into
   10 pieces plus blood (seeded and deterministic, so it's testable), and `drawStickmanGibs` draws it.
   In the game only the enemy hit *directly* by an explosive arrow (cause `'blast'`, which takes the arrow
@@ -84,8 +91,8 @@ src/
   Enemy archers shoot at the plain `bowSpeed`, so player arrow tuning doesn't change them. Piercing is light (fast, flat, long) and explosive is heavy (short high arc).
 - **Enemy archers** (`EnemyType 'archer'`): `CombatSystem.updateArcher` walks them into
   `ENEMY_ARCHER_RANGE`, aims with `solveLaunchAngle` (same ballistics as the player, cached ~250 ms) and
-  fires hostile arrows (`Arrow.hostile`) through the `enemyShot` event. Hostile arrows hit the bowman, or
-  the keep while he hides, and never hit enemies. Tuning lives in `config.ts` (`ENEMY_ARCHER_*`, `ENEMY_ARROW_*`).
+  fires hostile arrows (`Arrow.hostile`, no trail) through the `enemyShot` event. Hostile arrows hit the
+  bowman (not once he's dead), or the keep while he hides, and never hit enemies. Tuning lives in `config.ts` (`ENEMY_ARCHER_*`, `ENEMY_ARROW_*`).
 - **Sound**: `ctx.sound` (`audio/SoundManager.ts`) plays the effects in `assets/sounds/` (the user's own
   recordings from `human/`, trimmed and normalized with ffmpeg). `CombatSystem` emits `sound(id, at)` events
   and `GameScene` plays them through `spatialMix` (pan by screen position, quieter off screen). Enemies

@@ -3,6 +3,7 @@ import { GAME_HEIGHT, GAME_WIDTH } from '../config';
 import { Scene } from '../core/Scene';
 import { LAB_PARAM, getUrlParam, setUrlParam } from '../core/urlState';
 import { drawStickman } from '../rendering/stickman';
+import { drawStickmanCheer } from '../rendering/stickmanCheer';
 import { ArcherReadySequence, FallClock, GibReplay, PausingWalk, RUN_PHASE_MS, WALK_PHASE_MS, WalkRunSequence } from './labSequences';
 
 const LIST_TOP = 78;
@@ -173,6 +174,24 @@ export class AnimationLabScene extends Scene {
       offsetX: 54,
       render: (sprite) => this.fallClock.renderKnockbackGetUp(sprite),
     },
+    {
+      id: 'cheer-jump',
+      title: 'Cheer: jump',
+      description: 'Victory hop: crouches, springs up with both arms thrown into a V and lands softly. Enemies cheer like this when they win.',
+      render: (sprite) => drawStickmanCheer(sprite, 'cheerJump', this.cheerTime, 0, { club: true }),
+    },
+    {
+      id: 'cheer-fist',
+      title: 'Cheer: fist pump',
+      description: 'Pumps the club overhead with the other hand on the hip, dipping at the knees with each "yes!".',
+      render: (sprite) => drawStickmanCheer(sprite, 'cheerFist', this.cheerTime, 0, { club: true }),
+    },
+    {
+      id: 'cheer-wave',
+      title: 'Cheer: wave',
+      description: 'Both arms up, waving side to side while swaying and bouncing on the toes.',
+      render: (sprite) => drawStickmanCheer(sprite, 'cheerWave', this.cheerTime, 0, { club: true }),
+    },
   ];
   private readonly listSprites = new Map<PreviewRow, Graphics>();
   private readonly list = new Container();
@@ -184,6 +203,7 @@ export class AnimationLabScene extends Scene {
   private runPhase = 0;
   private attackPhase = 0;
   private archerWalkPhase = 0;
+  private cheerTime = 0;
   private readonly pausingWalk = new PausingWalk();
   private readonly walkRunSequence = new WalkRunSequence();
   private readonly archerSequence = new ArcherReadySequence();
@@ -224,6 +244,7 @@ export class AnimationLabScene extends Scene {
     this.archerPhase += deltaMs / 900;
     this.runPhase += deltaMs / RUN_PHASE_MS;
     this.attackPhase += deltaMs / 180;
+    this.cheerTime += deltaMs;
     this.archerWalkPhase += deltaMs / WALK_PHASE_MS;
     this.pausingWalk.update(deltaMs);
     this.walkRunSequence.update(deltaMs);

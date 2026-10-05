@@ -86,13 +86,12 @@ export default class Arrow extends Sprite {
 
     this.segmentEnd = { x: this.x, y: this.y };
 
-    if (this.trailVisible && Math.hypot(this.previousPosition.x - this.x, this.previousPosition.y - this.y) > 1) {
-      // Enemy arrows leave a red trail so they read as a threat.
-      const [glow, core] = this.hostileShot ? [0xe5534b, 0xffb3a8] : [0xf3c969, 0xffe7a4];
+    // Only the player's arrows leave a trail; enemy arrows fly clean.
+    if (this.trailVisible && !this.hostileShot && Math.hypot(this.previousPosition.x - this.x, this.previousPosition.y - this.y) > 1) {
       this.trail.moveTo(this.previousPosition.x, this.previousPosition.y).lineTo(this.x, this.y)
-        .stroke({ width: 2.5, color: glow, alpha: 0.16 });
+        .stroke({ width: 2.5, color: 0xf3c969, alpha: 0.16 });
       this.trail.moveTo(this.previousPosition.x, this.previousPosition.y).lineTo(this.x, this.y)
-        .stroke({ width: 1, color: core, alpha: 0.72 });
+        .stroke({ width: 1, color: 0xffe7a4, alpha: 0.72 });
       this.previousPosition = { x: this.x, y: this.y };
     }
 
