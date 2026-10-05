@@ -34,6 +34,7 @@ export interface UiHandlers {
   selectProjectile?: (type: ProjectileType) => void;
   gravityChange?: (value: number) => void;
   tensionChange?: (value: number) => void;
+  trajectoryChange?: (enabled: boolean) => void;
 }
 
 /**
@@ -65,6 +66,7 @@ export class DomUi {
   private readonly projectileButtons: HTMLButtonElement[];
   private readonly gravityInput: HTMLInputElement;
   private readonly tensionInput: HTMLInputElement;
+  private readonly trajectoryInput: HTMLInputElement;
   private readonly gravityValue: HTMLElement;
   private readonly tensionValue: HTMLElement;
   private onEndButton?: () => void;
@@ -98,6 +100,7 @@ export class DomUi {
     this.projectileButtons = Array.from(this.host.querySelectorAll<HTMLButtonElement>('[data-projectile]'));
     this.gravityInput = this.query<HTMLInputElement>('[data-gravity]');
     this.tensionInput = this.query<HTMLInputElement>('[data-tension]');
+    this.trajectoryInput = this.query<HTMLInputElement>('[data-trajectory]');
     this.gravityValue = this.query('[data-gravity-value]');
     this.tensionValue = this.query('[data-tension-value]');
 
@@ -112,6 +115,7 @@ export class DomUi {
     });
     this.gravityInput.addEventListener('input', () => this.handlers.gravityChange?.(Number(this.gravityInput.value)));
     this.tensionInput.addEventListener('input', () => this.handlers.tensionChange?.(Number(this.tensionInput.value)));
+    this.trajectoryInput.addEventListener('change', () => this.handlers.trajectoryChange?.(this.trajectoryInput.checked));
 
     window.addEventListener('resize', () => this.fitCanvas());
     this.showScreen('menu');
@@ -155,9 +159,10 @@ export class DomUi {
     this.optionsDrawer.hidden = !visible;
   }
 
-  public setOptionValues(gravity: number, tension: number): void {
+  public setOptionValues(gravity: number, tension: number, showTrajectory: boolean): void {
     this.gravityValue.textContent = `${Math.round(gravity)}`;
     this.tensionValue.textContent = `${Math.round(tension * 100)}%`;
+    this.trajectoryInput.checked = showTrajectory;
   }
 
   public showEndScreen(options: EndScreenOptions): void {

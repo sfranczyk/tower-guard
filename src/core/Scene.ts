@@ -14,6 +14,8 @@ export interface GameSession {
   gold: number;
   /** Bow tension multiplier from the settings drawer (0..1). */
   bowTension: number;
+  /** Draw the predicted arrow path while aiming (settings drawer). */
+  showTrajectory: boolean;
 }
 
 export interface GameContext {

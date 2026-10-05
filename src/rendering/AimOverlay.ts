@@ -4,6 +4,9 @@ import type { Vec2 } from '../types';
 
 const AIM_COLOR = 0xf5d76e;
 const PREVIOUS_RELEASE_COLOR = 0x9ec5ff;
+const TRAJECTORY_COLOR = 0xfff3c4;
+/** One dot per this many simulated frames. */
+const TRAJECTORY_DOT_EVERY = 3;
 /** Fraction of the drag distance used for the drawn aim radius. */
 export const AIM_VISUAL_RADIUS_FACTOR = 0.55;
 
@@ -22,9 +25,10 @@ export class AimOverlay extends Graphics {
     this.lastReleaseDirection = { ...aim.direction };
   }
 
-  public draw(origin: Vec2, aim: AimInput | undefined): void {
+  public draw(origin: Vec2, aim: AimInput | undefined, trajectory: readonly Vec2[] = []): void {
     this.clear();
     this.drawPreviousRelease(origin);
+    this.drawTrajectory(trajectory);
     if (!aim || aim.power <= 0) {
       return;
     }
@@ -51,6 +55,15 @@ export class AimOverlay extends Graphics {
         aim.start.x + (dx / length) * cursorRadius,
         aim.start.y + (dy / length) * cursorRadius,
       ).stroke({ width: 2, color: AIM_COLOR, alpha: 0.7 });
+    }
+  }
+
+  /** Dotted predicted path, fading towards the landing point. */
+  private drawTrajectory(points: readonly Vec2[]): void {
+    for (let index = TRAJECTORY_DOT_EVERY - 1; index < points.length; index += TRAJECTORY_DOT_EVERY) {
+      const { x, y } = points[index];
+      const alpha = 0.85 - 0.55 * (index / points.length);
+      this.circle(x, y, 2).fill({ color: TRAJECTORY_COLOR, alpha });
     }
   }
 

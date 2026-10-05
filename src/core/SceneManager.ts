@@ -20,7 +20,7 @@ export class SceneManager {
       root,
       ui,
       textures,
-      session: { levelNumber: 1, gold: 0, bowTension: 1 },
+      session: { levelNumber: 1, gold: 0, bowTension: 1, showTrajectory: true },
       goTo: (scene) => this.goTo(scene),
     };
 

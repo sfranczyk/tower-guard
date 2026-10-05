@@ -29,7 +29,8 @@ import { Background } from '../rendering/Background';
 import { CombatSystem } from '../systems/CombatSystem';
 import { EffectsSystem } from '../systems/EffectsSystem';
 import { WaveSpawner } from '../systems/WaveSpawner';
-import type { ILevelData, IWave, ProjectileType } from '../types';
+import { simulateTrajectory } from '../systems/ballistics';
+import type { ILevelData, IWave, ProjectileType, Vec2 } from '../types';
 import { clamp } from '../utils/math';
 
 const BOWMAN_MAX_HEALTH = 100;
@@ -192,11 +193,15 @@ export class GameScene extends Scene {
       session.bowTension = value;
       this.syncOptions();
     };
+    ui.handlers.trajectoryChange = (enabled) => {
+      session.showTrajectory = enabled;
+    };
     this.onExit(() => {
       ui.handlers.toggleOptions = undefined;
       ui.handlers.selectProjectile = undefined;
       ui.handlers.gravityChange = undefined;
       ui.handlers.tensionChange = undefined;
+      ui.handlers.trajectoryChange = undefined;
     });
 
     this.listenWindow('keydown', (event) => {
@@ -294,9 +299,7 @@ export class GameScene extends Scene {
 
     const releasePoint = this.bowman.getBowReleasePoint();
     const arrow = new Arrow(releasePoint.x, releasePoint.y, this.ctx.textures.arrow, trail);
-    const angle = Math.atan2(aim.direction.y, aim.direction.x);
-    const speed = (ARROW_BASE_SPEED + power * ARROW_FORCE_SPEED) * ARROW_SPEED_FACTOR;
-    arrow.fire(angle, speed, this.selectedProjectile);
+    arrow.fire(Math.atan2(aim.direction.y, aim.direction.x), GameScene.launchSpeed(power), this.selectedProjectile);
     this.arrows.push(arrow);
     this.world.addChild(arrow);
   }
@@ -314,7 +317,7 @@ export class GameScene extends Scene {
   }
 
   private syncOptions(): void {
-    this.ctx.ui.setOptionValues(Arrow.getGravity(), this.ctx.session.bowTension);
+    this.ctx.ui.setOptionValues(Arrow.getGravity(), this.ctx.session.bowTension, this.ctx.session.showTrajectory);
   }
 
   private toggleEnemiesVisible(): void {
@@ -326,11 +329,31 @@ export class GameScene extends Scene {
     this.debugGraphics.clear();
   }
 
+  private static launchSpeed(power: number): number {
+    return (ARROW_BASE_SPEED + power * ARROW_FORCE_SPEED) * ARROW_SPEED_FACTOR;
+  }
+
   private updateAim(): void {
     const aim = this.input?.getAim();
     const hasAim = aim !== undefined && aim.power > 0;
     this.ctx.ui.setAimPower(hasAim ? aim.strength.value : 0);
-    this.aimOverlay.draw(this.bowman.getBowReleasePoint(), hasAim ? aim : undefined);
+    const releasePoint = this.bowman.getBowReleasePoint();
+    this.aimOverlay.draw(releasePoint, hasAim ? aim : undefined, hasAim ? this.predictTrajectory(aim, releasePoint) : []);
+  }
+
+  /** Path the arrow would take if released now (same integrator, gravity and drag as real arrows). */
+  private predictTrajectory(aim: AimInput, releasePoint: Vec2): Vec2[] {
+    const power = aim.power * this.ctx.session.bowTension;
+    if (!this.ctx.session.showTrajectory || power <= MIN_SHOT_POWER) {
+      return [];
+    }
+    const speed = GameScene.launchSpeed(power);
+    const velocity = { x: aim.direction.x * speed, y: aim.direction.y * speed };
+    return simulateTrajectory(releasePoint, velocity, Arrow.getFlightParams(), {
+      groundY: GROUND_Y - 3,
+      minX: 0,
+      maxX: WORLD_WIDTH,
+    });
   }
 
   private updateHud(): void {

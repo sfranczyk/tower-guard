@@ -40,6 +40,7 @@ export const OVERLAY_TEMPLATE = `
         <div class="drawer-header"><h2>Game settings</h2><button class="icon-button" data-close-options aria-label="Close settings">×</button></div>
         <div class="field"><div class="field-row"><span class="hud-label">Arrow gravity</span><strong class="field-value" data-gravity-value>700</strong></div><input data-gravity type="range" min="80" max="1000" step="1" value="700"></div>
         <div class="field"><div class="field-row"><span class="hud-label">Bow tension</span><strong class="field-value" data-tension-value>100%</strong></div><input data-tension type="range" min="0" max="1" step=".01" value="1"></div>
+        <label class="field toggle-field"><span class="hud-label">Trajectory preview</span><input data-trajectory type="checkbox" checked></label>
       </div>
       <section class="screen" data-end hidden>
         <div class="end-card"><h2 data-end-title>Victory</h2><p data-end-copy>Press Space to return to the main menu.</p><button class="primary-button" data-end-button>Return to menu</button></div>

@@ -19,6 +19,11 @@ export const ARROW_SPEED_FACTOR = 1.6;
 export const ARROW_BASE_SPEED = 180;
 export const ARROW_FORCE_SPEED = 450;
 export const ARROW_GRAVITY = 700;
+/**
+ * Quadratic air drag k (a = −k·|v|·v). 0.0005 makes a full-power shot lose ~30% speed in its first
+ * second; terminal fall speed is √(ARROW_GRAVITY / k) ≈ 1180 px/s. Keep it small or arrows float.
+ */
+export const ARROW_DRAG = 0.0005;
 
 export const ENEMY_SPEED = 40;
 export const ENEMY_HEALTH = 20;

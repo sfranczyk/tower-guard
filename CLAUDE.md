@@ -48,6 +48,8 @@ src/
 - **Skins**: `pose.skin` picks the look. `'skeleton'` is the thin white bones used by enemies and previews.
   `'armored'` is the player's armored archer: thick dark limbs, plus hood, armor, quiver and bow from
   `rendering/armor.ts`, drawn on the same skeleton so every animation still works.
+- **Arrow flight** uses `systems/ballistics.ts` (gravity + quadratic drag `ARROW_DRAG`). The trajectory
+  preview simulates with the same functions, so any flight change goes there to keep both in sync.
 - **Coordinates**: the screen is 1024×540 and the world is wider (`WORLD_WIDTH`). `GameScene` scrolls the
   `world` container by `cameraX`. The ground is at `GROUND_Y`.
 

@@ -1,5 +1,6 @@
 import { Graphics, Sprite, Texture } from 'pixi.js';
-import { ARROW_GRAVITY, GAME_HEIGHT, WORLD_WIDTH } from '../config';
+import { ARROW_DRAG, ARROW_GRAVITY, GAME_HEIGHT, WORLD_WIDTH } from '../config';
+import { advanceProjectile, type FlightParams } from '../systems/ballistics';
 import type { ProjectileType, Vec2 } from '../types';
 
 export default class Arrow extends Sprite {
@@ -71,16 +72,11 @@ export default class Arrow extends Sprite {
     }
 
     this.segmentStart = { x: this.x, y: this.y };
-    const deltaSeconds = deltaMs / 1000;
-    const speed = Math.hypot(this.velocity.x, this.velocity.y);
-    const stepCount = Math.max(1, Math.ceil((speed * deltaSeconds) / 4));
-    const stepSeconds = deltaSeconds / stepCount;
-
-    for (let step = 0; step < stepCount; step += 1) {
-      this.velocity.y += Arrow.currentGravity * stepSeconds;
-      this.x += this.velocity.x * stepSeconds;
-      this.y += this.velocity.y * stepSeconds;
-    }
+    const state = { x: this.x, y: this.y, vx: this.velocity.x, vy: this.velocity.y };
+    advanceProjectile(state, deltaMs / 1000, Arrow.getFlightParams());
+    this.position.set(state.x, state.y);
+    this.velocity.x = state.vx;
+    this.velocity.y = state.vy;
 
     this.segmentEnd = { x: this.x, y: this.y };
 
@@ -132,6 +128,11 @@ export default class Arrow extends Sprite {
 
   public static getGravity(): number {
     return Arrow.currentGravity;
+  }
+
+  /** Gravity (from the settings slider) and air drag shared by arrows and the trajectory preview. */
+  public static getFlightParams(): FlightParams {
+    return { gravity: Arrow.currentGravity, drag: ARROW_DRAG };
   }
 
   public getTravelSegment(): { start: Vec2; end: Vec2 } {
