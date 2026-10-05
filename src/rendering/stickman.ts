@@ -53,7 +53,8 @@ export const drawStickman: StickmanRenderer = (sprite, phase, pose = {}) => {
     ? smoothAttack((normalizedAttackPhase - attackImpactEnd) / (Math.PI * 2 - attackImpactEnd))
     : 0;
   const attackLean = (0.12 - 0.34 * strikeProgress + 0.34 * recoveryProgress) * (1 - idleBlend);
-  sprite.rotation = (0.06 + 0.04 * motionBlend) * (1 - idleBlend) + attackLean;
+  // Lean forward in the facing direction (a mirrored sprite needs the rotation flipped too).
+  sprite.rotation = ((0.06 + 0.04 * motionBlend) * (1 - idleBlend) + attackLean) * Math.sign(facingDirection || 1);
   const walkingBounce = (0.5 + Math.cos(phase * 2) * 0.5) * 1.4 * (1 - motionBlend) * (1 - idleBlend);
   const runningBounce = (0.5 - Math.cos(phase * 2) * 0.5) * 2.4 * motionBlend;
   sprite.y = originY + 5 * motionBlend
