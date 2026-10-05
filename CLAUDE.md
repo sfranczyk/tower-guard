@@ -45,8 +45,10 @@ src/
   Bowman, enemies and the animation lab all use it. Preview animation changes in the lab
   (menu → "Open animation test panel").
 - **Fall animations** (`rendering/stickmanFall.ts`) are one-shot keyframed poses driven by progress
-  0..1: `death` (collapses face down), `knockback` (thrown backwards, lands on the back) and `getUp`
-  (starts from knockback's last pose and stands up). They aren't used in the game yet. `getFallPose()` is pure, and its tests keep every limb above the ground.
+  0..1: three deaths (`death` collapses face down, `deathCrumple` sits down and falls back, `deathStiff`
+  is a rigid backwards topple computed analytically), `knockback` (thrown backwards, lands on the back)
+  and `getUp` (starts from knockback's last pose). They aren't used in the game yet. `getFallPose()` is
+  pure; feet and hands are kept on the ground by `groundedAngle`, and tests check every frame.
 - **Bow ready**: `pose.bowReady` blends the archer between the lowered bow (0) and aiming (1). The game
   still always aims (1); hooking it to input is a TODO.
 - **Animation lab** rows live in `scenes/AnimationLabScene.ts`, and scripted sequences in

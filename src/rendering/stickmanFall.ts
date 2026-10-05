@@ -5,16 +5,20 @@ import { STICKMAN_HEAD } from './stickman';
 /**
  * One-shot falling animations for the skeleton stickman, driven by progress 0..1:
  * - death: buckles at the knees, kneels and collapses face down where it stood;
+ * - deathCrumple: recoils, the legs give way, sits down and falls onto its back;
+ * - deathStiff: head snaps back and the rigid body topples backwards around the feet (headshot);
  * - knockback: thrown a short distance backwards (−x), lands and ends lying on its back;
  * - getUp: starts from knockback's final pose, sits up, pushes off and stands up again.
  *
  * Sprite space matches drawStickman with originY 0: hip starts at (0, 0), facing +x, and the
  * ground is at y ≈ 58. Mirror with sprite.scale.x for the other direction.
  */
-export type FallKind = 'death' | 'knockback' | 'getUp';
+export type FallKind = 'death' | 'deathCrumple' | 'deathStiff' | 'knockback' | 'getUp';
 
 export const FALL_DURATION_MS: Readonly<Record<FallKind, number>> = {
   death: 1000,
+  deathCrumple: 1100,
+  deathStiff: 900,
   knockback: 900,
   getUp: 1100,
 };
@@ -62,7 +66,8 @@ const STANDING: Omit<FallKeyframe, 't'> = {
   rearFore: 0.3,
 };
 
-const KEYFRAMES: Readonly<Record<FallKind, FallKeyframe[]>> = {
+/** Keyframed kinds; deathStiff is computed analytically (see stiffFallFrame). */
+const KEYFRAMES: Readonly<Record<Exclude<FallKind, 'deathStiff'>, FallKeyframe[]>> = {
   death: [
     { t: 0, ...STANDING },
     {
@@ -94,6 +99,33 @@ const KEYFRAMES: Readonly<Record<FallKind, FallKeyframe[]>> = {
       t: 1, hip: { x: -4, y: 49 }, torso: 1.52, head: 0.05,
       frontThigh: -1.48, frontShin: -1.52, rearThigh: -1.42, rearShin: -1.5,
       frontUpper: 1.75, frontFore: 1.45, rearUpper: 1.3, rearFore: 1.6,
+    },
+  ],
+  deathCrumple: [
+    { t: 0, ...STANDING },
+    {
+      // Hit: recoils backwards, head thrown back, arms jerk forward.
+      t: 0.2, hip: { x: -3, y: 3 }, torso: -0.3, head: -0.4,
+      frontThigh: 0.3, frontShin: 0.25, rearThigh: -0.2, rearShin: -0.35,
+      frontUpper: 0.9, frontFore: 1.3, rearUpper: 0.6, rearFore: 1.0,
+    },
+    {
+      // Legs give way, sinking down with the head dropping forward.
+      t: 0.5, hip: { x: -10, y: 23 }, torso: -0.15, head: 0.3,
+      frontThigh: 1.4, frontShin: -0.1, rearThigh: 1.2, rearShin: -0.45,
+      frontUpper: 0.4, frontFore: 0.5, rearUpper: 0.2, rearFore: 0.4,
+    },
+    {
+      // Sits on the ground and starts tipping backwards.
+      t: 0.72, hip: { x: -14, y: 48 }, torso: -0.8, head: 0.25,
+      frontThigh: 2.0, frontShin: 0.55, rearThigh: 1.8, rearShin: 0.9,
+      frontUpper: -0.9, frontFore: -0.7, rearUpper: -0.6, rearFore: -0.4,
+    },
+    {
+      // Lying on the back, one knee still up, arms flopped back.
+      t: 1, hip: { x: -16, y: 47 }, torso: -1.5, head: -0.1,
+      frontThigh: 1.5, frontShin: 1.6, rearThigh: 2.2, rearShin: 0.7,
+      frontUpper: -1.5, frontFore: -1.55, rearUpper: -1.25, rearFore: -1.45,
     },
   ],
   knockback: [
@@ -178,7 +210,104 @@ const knockbackHip = (progress: number): Vec2 => {
 };
 
 const smooth = (value: number): number => value * value * (3 - 2 * value);
+
+type FallFrame = Omit<FallKeyframe, 't'>;
+
+/** Feet stay planted here while the rigid body rotates around them. */
+const STIFF_PIVOT: Vec2 = { x: 0, y: 58 };
+const STIFF_HIP_RADIUS = 58;
+/** Final tilt: slightly short of horizontal so the head rests on the ground. */
+const STIFF_LYING_ANGLE = 1.45;
+/** Knee offset angle so a 30+30 leg spans exactly STIFF_HIP_RADIUS. */
+const STIFF_KNEE = Math.acos(STIFF_HIP_RADIUS / (THIGH + SHIN));
+const STIFF_FALL_START = 0.08;
+const STIFF_IMPACT = 0.8;
+
+/**
+ * Rigid backwards topple: the head snaps back, then the whole body rotates around the feet with
+ * gravity-like acceleration, lands and bounces slightly.
+ */
+const stiffFallFrame = (p: number): FallFrame => {
+  let tilt: number;
+  if (p < STIFF_FALL_START) {
+    tilt = 0;
+  } else if (p < STIFF_IMPACT) {
+    tilt = STIFF_LYING_ANGLE * ((p - STIFF_FALL_START) / (STIFF_IMPACT - STIFF_FALL_START)) ** 2;
+  } else {
+    tilt = STIFF_LYING_ANGLE - 0.07 * Math.sin(Math.PI * (p - STIFF_IMPACT) / (1 - STIFF_IMPACT));
+  }
+  const snap = smooth(Math.min(1, p / 0.12));
+  const relax = smooth(Math.max(0, Math.min(1, (p - 0.12) / (STIFF_IMPACT - 0.12))));
+  // Arms float up a little while falling and settle along the body on impact.
+  const armLift = 0.5 * Math.sin(Math.PI * Math.min(1, p / STIFF_IMPACT));
+  const frame: FallFrame = {
+    hip: {
+      x: STIFF_PIVOT.x - Math.sin(tilt) * STIFF_HIP_RADIUS,
+      y: STIFF_PIVOT.y - Math.cos(tilt) * STIFF_HIP_RADIUS,
+    },
+    torso: -tilt,
+    head: -0.7 * snap + 0.55 * relax,
+    // Legs reach exactly from the hip to the planted feet (60 long over 58 → soft knees), slightly apart.
+    frontThigh: tilt + STIFF_KNEE + 0.04,
+    frontShin: tilt - STIFF_KNEE + 0.04,
+    rearThigh: tilt + STIFF_KNEE - 0.04,
+    rearShin: tilt - STIFF_KNEE - 0.04,
+    frontUpper: tilt + 0.15 + armLift,
+    frontFore: tilt + 0.25 + armLift,
+    rearUpper: tilt + 0.1 + armLift * 0.8,
+    rearFore: tilt + 0.2 + armLift * 0.8,
+  };
+  // During the snap the limbs move from the normal standing pose into the rigid one.
+  const settle = smooth(Math.min(1, p / STIFF_FALL_START));
+  const limbs = ['frontThigh', 'frontShin', 'rearThigh', 'rearShin', 'frontUpper', 'frontFore', 'rearUpper', 'rearFore'] as const;
+  limbs.forEach((key) => {
+    frame[key] = lerp(STANDING[key], frame[key], settle);
+  });
+  return frame;
+};
+
+/** Interpolates the keyframes of a keyframed kind (knockback's hip follows its own arc). */
+const keyframedFrame = (kind: Exclude<FallKind, 'deathStiff'>, p: number): FallFrame => {
+  const frames = KEYFRAMES[kind];
+  const nextIndex = Math.max(1, frames.findIndex((frame) => frame.t >= p));
+  const from = frames[nextIndex - 1];
+  const to = frames[nextIndex];
+  const amount = smooth((p - from.t) / (to.t - from.t || 1));
+  const mix = (key: Exclude<keyof FallKeyframe, 't' | 'hip'>): number => lerp(from[key], to[key], amount);
+  return {
+    hip: kind === 'knockback'
+      ? knockbackHip(p)
+      : { x: lerp(from.hip.x, to.hip.x, amount), y: lerp(from.hip.y, to.hip.y, amount) },
+    torso: mix('torso'),
+    head: mix('head'),
+    frontThigh: mix('frontThigh'),
+    frontShin: mix('frontShin'),
+    rearThigh: mix('rearThigh'),
+    rearShin: mix('rearShin'),
+    frontUpper: mix('frontUpper'),
+    frontFore: mix('frontFore'),
+    rearUpper: mix('rearUpper'),
+    rearFore: mix('rearFore'),
+  };
+};
 const lerp = (a: number, b: number, amount: number): number => a + (b - a) * amount;
+/** Feet and hands rest on this line; lower ends are rotated at the knee/elbow to meet it. */
+const CONTACT_GROUND_Y = 58;
+
+/**
+ * Rotates a lower limb (shin or forearm) at its joint so its end doesn't go below the ground,
+ * keeping the bone length. Leaves it alone when the joint itself is already at/below the ground.
+ */
+const groundedAngle = (joint: Vec2, angle: number, length: number): number => {
+  const endY = joint.y + Math.cos(angle) * length;
+  if (endY <= CONTACT_GROUND_Y || joint.y >= CONTACT_GROUND_Y) {
+    return angle;
+  }
+  const cos = (CONTACT_GROUND_Y - joint.y) / length;
+  const side = Math.sin(angle) >= 0 ? 1 : -1;
+  return side * Math.acos(Math.max(-1, Math.min(1, cos)));
+};
+
 const limb = (from: Vec2, angle: number, length: number): Vec2 => ({
   x: from.x + Math.sin(angle) * length,
   y: from.y + Math.cos(angle) * length,
@@ -205,16 +334,9 @@ export interface FallPose {
 /** Joint positions for a fall animation at `progress` (0..1, clamped). Pure and testable. */
 export const getFallPose = (kind: FallKind, progress: number): FallPose => {
   const p = Math.max(0, Math.min(1, progress));
-  const frames = KEYFRAMES[kind];
-  const nextIndex = Math.max(1, frames.findIndex((frame) => frame.t >= p));
-  const from = frames[nextIndex - 1];
-  const to = frames[nextIndex];
-  const amount = smooth((p - from.t) / (to.t - from.t || 1));
-  const mix = (key: Exclude<keyof FallKeyframe, 't' | 'hip'>): number => lerp(from[key], to[key], amount);
-
-  const hip = kind === 'knockback'
-    ? knockbackHip(p)
-    : { x: lerp(from.hip.x, to.hip.x, amount), y: lerp(from.hip.y, to.hip.y, amount) };
+  const frame = kind === 'deathStiff' ? stiffFallFrame(p) : keyframedFrame(kind, p);
+  const mix = (key: Exclude<keyof FallKeyframe, 't' | 'hip'>): number => frame[key];
+  const { hip } = frame;
   const torso = mix('torso');
   const up = { x: Math.sin(torso), y: -Math.cos(torso) };
   const shoulder = { x: hip.x + up.x * TORSO, y: hip.y + up.y * TORSO };
@@ -224,6 +346,8 @@ export const getFallPose = (kind: FallKind, progress: number): FallPose => {
   const rearKnee = limb(hip, mix('rearThigh'), THIGH);
   const frontElbow = limb(shoulder, mix('frontUpper'), UPPER_ARM);
   const rearElbow = limb(shoulder, mix('rearUpper'), UPPER_ARM);
+  const frontShinAngle = groundedAngle(frontKnee, mix('frontShin'), SHIN);
+  const rearShinAngle = groundedAngle(rearKnee, mix('rearShin'), SHIN);
 
   return {
     hip,
@@ -231,15 +355,15 @@ export const getFallPose = (kind: FallKind, progress: number): FallPose => {
     neckTop: { x: shoulder.x + headUp.x * NECK, y: shoulder.y + headUp.y * NECK },
     head: { x: shoulder.x + headUp.x * HEAD_OFFSET, y: shoulder.y + headUp.y * HEAD_OFFSET },
     frontKnee,
-    frontFoot: limb(frontKnee, mix('frontShin'), SHIN),
+    frontFoot: limb(frontKnee, frontShinAngle, SHIN),
     rearKnee,
-    rearFoot: limb(rearKnee, mix('rearShin'), SHIN),
+    rearFoot: limb(rearKnee, rearShinAngle, SHIN),
     frontElbow,
-    frontHand: limb(frontElbow, mix('frontFore'), FOREARM),
+    frontHand: limb(frontElbow, groundedAngle(frontElbow, mix('frontFore'), FOREARM), FOREARM),
     rearElbow,
-    rearHand: limb(rearElbow, mix('rearFore'), FOREARM),
-    frontShinAngle: mix('frontShin'),
-    rearShinAngle: mix('rearShin'),
+    rearHand: limb(rearElbow, groundedAngle(rearElbow, mix('rearFore'), FOREARM), FOREARM),
+    frontShinAngle,
+    rearShinAngle,
   };
 };
 

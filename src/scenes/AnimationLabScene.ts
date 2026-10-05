@@ -112,9 +112,23 @@ export class AnimationLabScene extends Scene {
     },
     {
       id: 'death',
-      title: 'Death',
+      title: 'Death · collapse forward',
       description: 'Knees buckle, drops to the knees, then collapses face down where it stood.',
       render: (sprite) => this.fallClock.render(sprite, 'death'),
+    },
+    {
+      id: 'death-crumple',
+      title: 'Death · crumple backwards',
+      description: 'Recoils from the hit, the legs give way, sits down and falls onto its back.',
+      offsetX: 29,
+      render: (sprite) => this.fallClock.render(sprite, 'deathCrumple'),
+    },
+    {
+      id: 'death-stiff',
+      title: 'Death · stiff fall (headshot)',
+      description: 'Head snaps back and the rigid body topples backwards around the feet, with a small bounce.',
+      offsetX: 54,
+      render: (sprite) => this.fallClock.render(sprite, 'deathStiff'),
     },
     {
       id: 'knockback',

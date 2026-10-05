@@ -3,7 +3,8 @@ import { STICKMAN_HEAD } from './stickman';
 import { getFallPose, type FallKind, type FallPose } from './stickmanFall';
 
 const GROUND_Y = 58;
-const KINDS: FallKind[] = ['death', 'knockback', 'getUp'];
+const KINDS: FallKind[] = ['death', 'deathCrumple', 'deathStiff', 'knockback', 'getUp'];
+const FALLS: FallKind[] = ['death', 'deathCrumple', 'deathStiff', 'knockback'];
 const samples = Array.from({ length: 41 }, (_, index) => index / 40);
 
 const lowestPoint = (pose: FallPose): number => Math.max(
@@ -12,7 +13,7 @@ const lowestPoint = (pose: FallPose): number => Math.max(
 );
 
 describe('getFallPose', () => {
-  it.each(['death', 'knockback'] as FallKind[])('%s starts standing upright', (kind) => {
+  it.each(FALLS)('%s starts standing upright', (kind) => {
     const pose = getFallPose(kind, 0);
     expect(pose.hip.x).toBeCloseTo(0);
     expect(pose.hip.y).toBeCloseTo(0);
@@ -26,7 +27,7 @@ describe('getFallPose', () => {
     });
   });
 
-  it.each(['death', 'knockback'] as FallKind[])('%s ends lying on the ground', (kind) => {
+  it.each(FALLS)('%s ends lying on the ground', (kind) => {
     const pose = getFallPose(kind, 1);
     expect(Math.abs(pose.head.y - pose.hip.y)).toBeLessThan(10);
     expect(pose.hip.y).toBeGreaterThan(40);
@@ -63,5 +64,19 @@ describe('getFallPose', () => {
     expect(pose.hip.y).toBeCloseTo(0);
     expect(pose.head.y).toBeLessThan(pose.shoulder.y);
     expect(pose.shoulder.y).toBeLessThan(pose.hip.y);
+  });
+
+  it.each(['deathCrumple', 'deathStiff'] as FallKind[])('%s falls backwards onto its back', (kind) => {
+    const pose = getFallPose(kind, 1);
+    expect(pose.head.x).toBeLessThan(pose.hip.x);
+  });
+
+  it('deathStiff keeps the feet planted while it topples', () => {
+    // After the initial snap (feet move from the standing stance together).
+    const start = getFallPose('deathStiff', 0.1);
+    [0.3, 0.6, 0.8].forEach((progress) => {
+      const pose = getFallPose('deathStiff', progress);
+      expect(Math.abs(pose.frontFoot.x - start.frontFoot.x)).toBeLessThan(8);
+    });
   });
 });
