@@ -1,4 +1,4 @@
-import { ENEMY_HEALTH, ENEMY_SPEED, SPLASH_GIB_CHANCE, SPLASH_GIB_THRESHOLD } from '../config';
+import { ENEMY_HEALTH, ENEMY_SPEED, SPLASH_GIB_BASE_CHANCE, SPLASH_GIB_THRESHOLD } from '../config';
 import type { EnemyType } from '../types';
 
 export interface EnemyStats {
@@ -24,10 +24,21 @@ export const getEnemyStats = (type: EnemyType, difficulty: number): EnemyStats =
 };
 
 /**
- * Whether a killing blow blows the body apart: always for a direct explosive hit ('blast'); for a
- * splash explosion that dealt more than SPLASH_GIB_THRESHOLD of the max health, with
- * SPLASH_GIB_CHANCE (`roll` is a random 0..1, passed in so tests can pin it).
+ * Chance (0..1) that a killing splash explosion blows the body apart: none up to SPLASH_GIB_THRESHOLD
+ * of max health, then SPLASH_GIB_BASE_CHANCE plus a point per damage-% above it (76% → 51%,
+ * 100% → 75%, 125%+ → certain).
+ */
+export const splashGibChance = (damage: number, maxHealth: number): number => {
+  const share = damage / maxHealth;
+  if (share <= SPLASH_GIB_THRESHOLD) {
+    return 0;
+  }
+  return Math.min(1, SPLASH_GIB_BASE_CHANCE + (share - SPLASH_GIB_THRESHOLD));
+};
+
+/**
+ * Whether a killing blow blows the body apart: always for a direct explosive hit ('blast'), by
+ * splashGibChance for a splash explosion. `roll` is a random 0..1, passed in so tests can pin it.
  */
 export const blowsApart = (cause: string, damage: number, maxHealth: number, roll = Math.random()): boolean =>
-  cause === 'blast'
-  || (cause === 'explosion' && damage > maxHealth * SPLASH_GIB_THRESHOLD && roll < SPLASH_GIB_CHANCE);
+  cause === 'blast' || (cause === 'explosion' && roll < splashGibChance(damage, maxHealth));

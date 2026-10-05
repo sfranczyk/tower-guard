@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ENEMY_HEALTH, ENEMY_SPEED } from '../config';
-import { blowsApart, getEnemyStats } from './enemies';
+import { blowsApart, getEnemyStats, splashGibChance } from './enemies';
 
 describe('getEnemyStats', () => {
   it('returns base stats at difficulty 1', () => {
@@ -40,14 +40,32 @@ describe('blowsApart', () => {
     expect(blowsApart('explosion', 14, 14, LUCKY)).toBe(true);
   });
 
-  it('happens about half the time when the splash is strong enough', () => {
+  it('follows the splash chance for random rolls', () => {
     const hits = Array.from({ length: 1000 }, (_, index) => blowsApart('explosion', 20, 20, index / 1000)).filter(Boolean).length;
-    expect(hits).toBe(500);
+    expect(hits).toBe(750);
   });
 
   it('never for other causes', () => {
     expect(blowsApart('arrow', 500, 20, LUCKY)).toBe(false);
     expect(blowsApart('headshot', 500, 20, LUCKY)).toBe(false);
     expect(blowsApart('lightning', 500, 20, LUCKY)).toBe(false);
+  });
+});
+
+describe('splashGibChance', () => {
+  it('is zero up to 75% of max health', () => {
+    expect(splashGibChance(75, 100)).toBe(0);
+    expect(splashGibChance(14, 20)).toBe(0);
+  });
+
+  it('starts at 50% and adds a point per damage-% above 75%', () => {
+    expect(splashGibChance(76, 100)).toBeCloseTo(0.51);
+    expect(splashGibChance(100, 100)).toBeCloseTo(0.75);
+    expect(splashGibChance(14, 16)).toBeCloseTo(0.625);
+  });
+
+  it('is certain from 125% up', () => {
+    expect(splashGibChance(125, 100)).toBe(1);
+    expect(splashGibChance(300, 100)).toBe(1);
   });
 });
