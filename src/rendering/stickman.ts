@@ -1,5 +1,6 @@
 import type { Graphics } from 'pixi.js';
 import type { Vec2 as Point } from '../types';
+import { drawBow, getArcherRig, toArcherLocalAngle } from './archer';
 
 export interface StickmanPose {
   /** 0 = walk cycle, 1 = standing idle. */
@@ -14,10 +15,13 @@ export interface StickmanPose {
   originY?: number;
   /** 0 = no attack, otherwise radians through the club swing. */
   attackPhase?: number;
-  /** Replaces swinging arms with arms holding a bow. */
+  /** Replaces swinging arms with arms holding a bow (drawn too), pivoting at the neck. */
   archerPose?: boolean;
+  /** 0 = string at rest, 1 = fully drawn. */
   bowTension?: number;
+  /** Aim angle in the sprite's parent space (radians, 0 = right). Lean and facing are compensated. */
   bowAngle?: number;
+  /** 1 = facing right, -1 = facing left. Must match the sprite's scale.x sign. */
   facingDirection?: number;
 }
 
@@ -145,14 +149,6 @@ export const drawStickman: StickmanRenderer = (sprite, phase, pose = {}) => {
     endpoint(hand, isRear);
     return hand;
   };
-  const rotateFromBodyCenter = (offset: Point): Point => ({
-    x: offset.x * Math.cos(bowAngle) - offset.y * Math.sin(bowAngle),
-    y: offset.x * Math.sin(bowAngle) + offset.y * Math.cos(bowAngle),
-  });
-  const mirrorForFacing = (point: Point): Point => ({
-    x: point.x * facingDirection,
-    y: point.y,
-  });
 
   const runnerFoot = (x: number): Point => ({
     x,
@@ -200,21 +196,12 @@ export const drawStickman: StickmanRenderer = (sprite, phase, pose = {}) => {
 
   drawLeg(blendPoint(leftFoot, idleLeftFoot), leftKneeBend, true);
   // Rear gray arm follows the front white leg; the front white arm follows the rear gray leg.
-  if (archerPose) {
-    const stringHandX = -21 - bowTension * 35;
-    const woodHand = rotateFromBodyCenter({ x: 56, y: -43 });
-    const woodElbow = rotateFromBodyCenter({ x: 28, y: -39 });
-    const stringHand = rotateFromBodyCenter({ x: 56 + stringHandX, y: -43 });
-    const stringElbow = rotateFromBodyCenter({
-      x: 28 + stringHandX * 0.5 - bowTension * 20,
-      y: -39 + bowTension * 9,
-    });
-    drawArcherArm(
-      mirrorForFacing(stringElbow),
-      mirrorForFacing(stringHand),
-      true,
-    );
-    drawArcherArm(mirrorForFacing(woodElbow), mirrorForFacing(woodHand), false);
+  const archerRig = archerPose
+    ? getArcherRig(toArcherLocalAngle(bowAngle, sprite.rotation, facingDirection), bowTension)
+    : undefined;
+  if (archerRig) {
+    drawArcherArm(archerRig.stringElbow, archerRig.stringHand, true);
+    drawArcherArm(archerRig.woodElbow, archerRig.woodHand, false);
   } else {
     const rearArmAngle = legSwing * armSwing * (1 - idleBlend) + 0.1 * idleBlend;
     drawArm(rearArmAngle, true);
@@ -250,23 +237,13 @@ export const drawStickman: StickmanRenderer = (sprite, phase, pose = {}) => {
       )
       .stroke({ width: 2.5, color: 0xe3ad4f, cap: 'round' });
   }
+  if (archerRig) {
+    drawBow(sprite, archerRig);
+  }
 };
 
 /** Standing archer with a bow that cycles its draw tension (animation lab preview). */
 export const drawTensionArcher = (sprite: Graphics, phase: number): void => {
   const tension = 0.25 + (Math.sin(phase) + 1) * 0.375;
   drawStickman(sprite, 0, { idleBlend: 1, archerPose: true, bowTension: tension });
-  const bowX = 35;
-  const stringX = 56 * (1 - tension);
-  const stringY = -43 + tension * 8;
-  sprite.moveTo(bowX, -94).quadraticCurveTo(bowX + 42 + tension * 12, -43, bowX, 8).stroke({
-    width: 3.5,
-    color: 0xe3ad4f,
-    cap: 'round',
-  });
-  sprite.moveTo(bowX, -94).lineTo(stringX, stringY).lineTo(bowX, 8).stroke({
-    width: 1.5,
-    color: 0xf6e2a4,
-    cap: 'round',
-  });
 };

@@ -1,6 +1,7 @@
 import { Container, Graphics } from 'pixi.js';
 import type { IPushStrength, Rect, Vec2 } from '../types';
 import { approach, clamp } from '../utils/math';
+import { getArcherRig, toArcherLocalAngle } from '../rendering/archer';
 import { drawStickman } from '../rendering/stickman';
 import {
   GRAVITY,
@@ -13,12 +14,8 @@ import {
   WALK_DECELERATION,
 } from '../config';
 
-const BOW_PIVOT_X = 17;
-export const BOW_RELEASE_OFFSET_X = BOW_PIVOT_X * 0.5;
-const BODY_CENTER_Y = -55;
-const BOW_ORBIT_OFFSET = { x: 56, y: -43 };
-const BOW_STRING_OFFSET_X = -21;
-const BOW_STRING_PULL_X = -35;
+/** Body sprite baseline (hip height) relative to the bowman's feet, in unscaled units. */
+const BODY_ORIGIN_Y = -55;
 
 export interface BowmanAim {
   direction: Vec2;
@@ -42,7 +39,6 @@ export class Bowman extends Container {
   private readonly bodyWidth: number;
   private readonly bodySprite: Graphics;
   private readonly groundY: number;
-  private readonly bow: Graphics;
   private inTower = false;
   private verticalVelocity = 0;
   private horizontalSpeed = 0;
@@ -75,15 +71,11 @@ export class Bowman extends Container {
     this.bodySprite = new Graphics();
     this.addChild(this.bodySprite);
 
-    this.bow = new Graphics();
-    this.bow.position.set(BOW_ORBIT_OFFSET.x, BODY_CENTER_Y + BOW_ORBIT_OFFSET.y);
-    this.drawBow(0);
-    this.addChild(this.bow);
-
     this.scale.set(1 / 3);
     this.zIndex = 2;
     this.position.set(x, y);
     this.constrainToBoard();
+    this.redraw();
   }
 
   public get isInTower(): boolean {
@@ -184,17 +176,10 @@ export class Bowman extends Container {
       max: 1,
       distance: this.aim.power,
     };
-    const angle = Math.atan2(this.aim.direction.y, this.aim.direction.x);
-    this.bow.rotation = angle;
-    this.bow.position.set(
-      Math.cos(angle) * BOW_ORBIT_OFFSET.x - Math.sin(angle) * BOW_ORBIT_OFFSET.y,
-      BODY_CENTER_Y + Math.sin(angle) * BOW_ORBIT_OFFSET.x + Math.cos(angle) * BOW_ORBIT_OFFSET.y,
-    );
     if (Math.abs(this.aim.direction.x) > Number.EPSILON) {
       this.facingDirection = this.aim.direction.x < 0 ? -1 : 1;
-      this.bodySprite.scale.x = this.facingDirection;
     }
-    this.drawBow(this.aim.power);
+    this.redraw();
   }
 
   public updateAnimation(deltaMs: number, moving: boolean, sprinting = false): void {
@@ -208,18 +193,7 @@ export class Bowman extends Container {
     if (isMoving) {
       this.animationTime += deltaMs / (150 + this.animationRunningBlend * 10);
     }
-    this.bodySprite.scale.x = this.facingDirection;
-    drawStickman(this.bodySprite, this.animationTime, {
-      idleBlend: this.animationIdleBlend,
-      runningBlend: this.animationRunningBlend,
-      originY: -55,
-      archerPose: true,
-      // FIXME: angle and power look swapped (bowTension gets radians, bowAngle gets 0..1).
-      // Kept as-is during the refactor so the archer looks exactly the same.
-      bowTension: this.bow.rotation,
-      bowAngle: this.aim.power,
-      facingDirection: this.facingDirection,
-    });
+    this.redraw();
   }
 
   public getAim(): BowmanAim {
@@ -230,41 +204,36 @@ export class Bowman extends Container {
     };
   }
 
+  /** Where the arrow is nocked: the string hand, converted from body-sprite space to world space. */
   public getBowReleasePoint(): Vec2 {
-    const angle = this.bow.rotation;
-    const stringOffsetX = BOW_STRING_OFFSET_X + BOW_STRING_PULL_X * this.aim.power;
-    const releaseOffsetX = Math.cos(angle) * stringOffsetX * this.bow.scale.x;
-    const releaseOffsetY = Math.sin(angle) * stringOffsetX * this.bow.scale.x;
+    const body = this.bodySprite;
+    const localAngle = toArcherLocalAngle(this.aimAngle, body.rotation, this.facingDirection);
+    const hand = getArcherRig(localAngle, this.aim.power).stringHand;
+    const cos = Math.cos(body.rotation);
+    const sin = Math.sin(body.rotation);
+    const x = hand.x * body.scale.x;
+    const y = hand.y * body.scale.y;
     return {
-      x: this.x + (this.bow.position.x + releaseOffsetX) * this.scale.x,
-      y: this.y + (this.bow.position.y + releaseOffsetY) * this.scale.y,
+      x: this.x + (body.x + x * cos - y * sin) * this.scale.x,
+      y: this.y + (body.y + x * sin + y * cos) * this.scale.y,
     };
   }
 
-  private drawBow(power: number): void {
-    this.bow.clear();
-    const curve = 21 + power * 3;
-    const stringHandX = BOW_STRING_OFFSET_X + BOW_STRING_PULL_X * power;
-    this.bow.moveTo(-21, -51).quadraticCurveTo(curve, 0, -21, 51).stroke({
-      width: 5,
-      color: 0x30243a,
-      cap: 'round',
-      join: 'round',
+  private get aimAngle(): number {
+    return Math.atan2(this.aim.direction.y, this.aim.direction.x);
+  }
+
+  private redraw(): void {
+    this.bodySprite.scale.x = this.facingDirection;
+    drawStickman(this.bodySprite, this.animationTime, {
+      idleBlend: this.animationIdleBlend,
+      runningBlend: this.animationRunningBlend,
+      originY: BODY_ORIGIN_Y,
+      archerPose: true,
+      bowTension: this.aim.power,
+      bowAngle: this.aimAngle,
+      facingDirection: this.facingDirection,
     });
-    this.bow.moveTo(-21, -51).quadraticCurveTo(curve, 0, -21, 51).stroke({
-      width: 3,
-      color: 0xe3ad4f,
-      cap: 'round',
-      join: 'round',
-    });
-    this.bow.moveTo(-21, -51).lineTo(stringHandX, 0).lineTo(-21, 51).stroke({
-      width: 1,
-      color: 0xf6e2a4,
-      cap: 'round',
-      join: 'round',
-    });
-    const scale = 1 + power * 0.15;
-    this.bow.scale.set(scale);
   }
 
   private constrainToBoard(): void {

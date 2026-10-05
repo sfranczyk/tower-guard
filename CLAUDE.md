@@ -42,6 +42,9 @@ src/
 - **Stickman drawing** goes through `drawStickman(sprite, phase, pose)` in `rendering/stickman.ts`.
   Bowman, enemies and the animation lab all use it. Preview animation changes in the lab
   (menu → "Open animation test panel").
+- **Archer pose**: bow, hands and elbows come from `getArcherRig()` in `rendering/archer.ts`. It pivots
+  at the neck and is drawn inside the stickman sprite, so the hands can't drift from the bow.
+  `Bowman.getBowReleasePoint()` uses the same rig (string hand). Don't add a separately positioned bow.
 - **Coordinates**: the screen is 1024×540 and the world is wider (`WORLD_WIDTH`). `GameScene` scrolls the
   `world` container by `cameraX`. The ground is at `GROUND_Y`.
 
@@ -51,8 +54,3 @@ src/
 - New tuning numbers go in `config.ts`, and new level content goes in `managers/LevelManager.ts`.
 - Aim for files of roughly 150–400 lines. Split by responsibility rather than growing `GameScene`.
 - Game text in the UI is English.
-
-## Known issues
-
-- `Bowman.updateAnimation` passes bow rotation as `bowTension` and aim power as `bowAngle` (see the FIXME).
-  This looks swapped, but it's kept so the archer looks unchanged. Fixing it changes the archer's arm pose.
