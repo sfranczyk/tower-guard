@@ -153,8 +153,10 @@ export class AnimationLabScene extends Scene {
       id: 'explosive-death',
       title: 'Explosive death · blown apart',
       description: 'Body bursts into head, torso, arms and legs that fly, spin, bounce and settle, with blood.',
-      previewScale: 0.25,
-      zoomScale: 1.3,
+      // Pieces fly up to ~350 units back and ~210 up (measured over many seeds): framed to fit.
+      offsetX: 155,
+      previewScale: 0.3,
+      zoomScale: 1,
       render: (sprite) => this.gibReplay.render(sprite),
     },
     {
@@ -262,14 +264,19 @@ export class AnimationLabScene extends Scene {
     row.addChild(new Graphics().roundRect(PREVIEW_X - 62, 3, 124, ROW_HEIGHT - 6, 6).fill({ color: backdrop }));
     const sprite = new Graphics();
     this.listSprites.set(preview, sprite);
-    row.addChild(...AnimationLabScene.createFigure(
+    // Clip the figure to its backdrop so wide animations (e.g. flying body parts) stay inside it.
+    const clip = new Graphics().roundRect(PREVIEW_X - 62, 3, 124, ROW_HEIGHT - 6, 6).fill({ color: 0xffffff });
+    row.addChild(clip);
+    const [rowGround, rowFigure] = AnimationLabScene.createFigure(
       sprite,
       PREVIEW_X + (preview.offsetX ?? 0) * (preview.previewScale ?? PREVIEW_SCALE),
       ROW_HEIGHT / 2,
       preview.previewScale ?? PREVIEW_SCALE,
       PREVIEW_X - 55,
       PREVIEW_X + 55,
-    ));
+    );
+    rowFigure.mask = clip;
+    row.addChild(rowGround, rowFigure);
 
     row.addChild(AnimationLabScene.text(`${index + 1}`, 12, 0x5b8def, 700, 32, ROW_HEIGHT / 2 - 8));
     row.addChild(AnimationLabScene.text(title, 14, 0xf5f7fb, 700, TEXT_X, ROW_HEIGHT / 2 - 18));
@@ -300,14 +307,18 @@ export class AnimationLabScene extends Scene {
     this.zoomView.addChild(new Graphics()
       .roundRect(40, top, ZOOM_TEXT_X - 70, height, 12)
       .fill({ color: preview.backdrop ?? DEFAULT_BACKDROP }));
-    this.zoomView.addChild(...AnimationLabScene.createFigure(
+    const clip = new Graphics().roundRect(40, top, ZOOM_TEXT_X - 70, height, 12).fill({ color: 0xffffff });
+    this.zoomView.addChild(clip);
+    const [zoomGround, zoomFigure] = AnimationLabScene.createFigure(
       this.zoomSprite,
       ZOOM_FIGURE_X - 30 + (preview.offsetX ?? 0) * (preview.zoomScale ?? ZOOM_SCALE),
       top + height * 0.6,
       preview.zoomScale ?? ZOOM_SCALE,
       60,
       ZOOM_TEXT_X - 50,
-    ));
+    );
+    zoomFigure.mask = clip;
+    this.zoomView.addChild(zoomGround, zoomFigure);
     this.zoomView.addChild(AnimationLabScene.text(`Animation ${index + 1} of ${this.rows.length}`, 12, 0x5b8def, 700, ZOOM_TEXT_X, top + 8));
     this.zoomView.addChild(AnimationLabScene.wrapped(preview.title, 22, ZOOM_TEXT_X, top + 30, GAME_WIDTH - ZOOM_TEXT_X - 40, 0xf5f7fb, 700));
     this.zoomView.addChild(AnimationLabScene.wrapped(preview.description, 14, ZOOM_TEXT_X, top + 100, GAME_WIDTH - ZOOM_TEXT_X - 40));

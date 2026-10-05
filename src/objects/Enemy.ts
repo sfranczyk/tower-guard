@@ -3,7 +3,8 @@ import { ENEMY_ARCHER_COOLDOWN_MS, ENEMY_ARCHER_DRAW_MS, ENEMY_ATTACK_INTERVAL_M
 import { getArcherRig, toArcherLocalAngle } from '../rendering/archer';
 import { STICKMAN_HEAD, drawStickman, type StickmanPose } from '../rendering/stickman';
 import { FALL_DURATION_MS, drawStickmanFall, getFallPose, type FallKind, type FallPose } from '../rendering/stickmanFall';
-import { fromBodyAnchor, spriteToWorld, toBodyAnchor, type BodyAnchor, type BodyTransform, type Torso } from '../systems/bodyAnchor';
+import { GibSimulation, drawStickmanGibs } from '../rendering/stickmanGibs';
+import { fromBodyAnchor, spriteToWorld, toBodyAnchor, worldToSprite, type BodyAnchor, type BodyTransform, type Torso } from '../systems/bodyAnchor';
 import type { Bounds, EnemyType, Vec2 } from '../types';
 
 const ATTACK_ANIMATION_DURATION_MS = 1_130;
@@ -12,9 +13,12 @@ export type EnemyTarget = 'bowman' | 'tower';
 
 /** What dealt the damage, and from which side, so the right reaction plays. */
 export interface HitInfo {
-  cause: 'arrow' | 'headshot' | 'explosion';
+  /** 'blast' = hit directly by an explosive arrow (a kill blows the body apart). */
+  cause: 'arrow' | 'headshot' | 'explosion' | 'blast';
   /** World x the hit came from; the enemy turns to face it before falling. */
   fromX: number;
+  /** World point of impact (used for 'blast' to throw the pieces away from it). */
+  point?: Vec2;
 }
 
 /** A playing fall animation. Dead enemies stay in their last frame. */
@@ -41,6 +45,12 @@ const STANDING_TORSO: Torso = { hip: { x: 0, y: 0 }, shoulder: { x: 0, y: -35 } 
 const ARCHER_TINT = 0xffc2b4;
 const BOW_RAISE_MS = 220;
 const BOW_LOWER_MS = 400;
+/** Explosive kills throw the pieces with a random force in this range (the lab uses 1). */
+const GIB_FORCE_MIN = 1;
+const GIB_FORCE_MAX = 1.7;
+/** Torso piece of a gib simulation is hip→neck top (43); anchors use hip→shoulder (35). */
+const TORSO_TO_NECK = 43;
+const TORSO_TO_SHOULDER = 35;
 
 export default class Enemy extends Container {
   private readonly body: Graphics;
@@ -55,6 +65,8 @@ export default class Enemy extends Container {
   private velocity = { x: 0, y: 0 };
   private alive = true;
   private fall?: FallState;
+  /** Set when blown apart by a direct explosive hit. */
+  private gibs?: GibSimulation;
   /** Archer bow state: raised (0..1), draw tension (0..1), aim angle (world) and time to the next shot. */
   private bowReady = 0;
   private bowTension = 0;
@@ -170,8 +182,12 @@ export default class Enemy extends Container {
       this.alive = false;
       this.velocity = { x: 0, y: 0 };
       this.healthBar.visible = false;
-      this.startFall(Enemy.deathKind(hit.cause), hit.fromX);
-    } else if (hit.cause === 'explosion') {
+      if (hit.cause === 'blast') {
+        this.blowApart(hit.fromX, hit.point ?? { x: this.x, y: this.y - 20 });
+      } else {
+        this.startFall(Enemy.deathKind(hit.cause), hit.fromX);
+      }
+    } else if (hit.cause === 'explosion' || hit.cause === 'blast') {
       this.startFall('knockback', hit.fromX, KNOCKDOWN_LIE_MS);
     }
 
@@ -204,6 +220,11 @@ export default class Enemy extends Container {
   }
 
   public updateAnimation(deltaMs: number, moving: boolean): void {
+    if (this.gibs) {
+      this.gibs.step(deltaMs);
+      drawStickmanGibs(this.body, this.gibs, BODY_ORIGIN_Y);
+      return;
+    }
     this.positionHealthBar();
     if (this.fall) {
       // Dead enemies keep playing (then holding) their death; survivors get back up.
@@ -364,6 +385,20 @@ export default class Enemy extends Container {
     return Math.random() < 0.5 ? 'death' : 'deathCrumple';
   }
 
+  /** Explosive kill: the body bursts into pieces thrown away from the impact point. */
+  private blowApart(fromX: number, point: Vec2): void {
+    const facing = fromX >= this.x ? 1 : -1;
+    this.fall = undefined;
+    this.attackTimerMs = 0;
+    this.body.rotation = 0;
+    this.body.y = BODY_ORIGIN_Y;
+    this.body.scale.set(BODY_SCALE.x * facing, BODY_SCALE.y);
+    const blast = worldToSprite(point, this.bodyTransform());
+    const force = GIB_FORCE_MIN + Math.random() * (GIB_FORCE_MAX - GIB_FORCE_MIN);
+    this.gibs = new GibSimulation(blast, Math.floor(Math.random() * 1e9), force);
+    drawStickmanGibs(this.body, this.gibs, BODY_ORIGIN_Y);
+  }
+
   /** Turns to face the hit (so backwards falls go away from it) and starts a fall animation. */
   private startFall(kind: FallKind, fromX: number, getUpAfterMs?: number): void {
     const facing = fromX >= this.x ? 1 : -1;
@@ -447,6 +482,13 @@ export default class Enemy extends Container {
 
   /** Hip and shoulder of the pose currently drawn, in body-sprite space. */
   private torso(): Torso {
+    if (this.gibs) {
+      // Follow the flying torso piece.
+      const piece = this.gibs.pieces[0];
+      const dir = { x: Math.cos(piece.angle), y: Math.sin(piece.angle) };
+      const hip = { x: piece.x - dir.x * TORSO_TO_NECK / 2, y: piece.y - dir.y * TORSO_TO_NECK / 2 };
+      return { hip, shoulder: { x: hip.x + dir.x * TORSO_TO_SHOULDER, y: hip.y + dir.y * TORSO_TO_SHOULDER } };
+    }
     if (this.fall) {
       const { hip, shoulder } = getFallPose(this.fall.kind, this.fallProgress);
       return { hip, shoulder };

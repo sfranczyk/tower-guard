@@ -49,7 +49,8 @@ export const spriteToWorld = (point: Vec2, t: BodyTransform): Vec2 => {
   };
 };
 
-const worldToSprite = (point: Vec2, t: BodyTransform): Vec2 => {
+/** Maps a point from world space to body-sprite space. */
+export const worldToSprite = (point: Vec2, t: BodyTransform): Vec2 => {
   const qx = (point.x - t.x) / t.scale - t.bodyX;
   const qy = (point.y - t.y) / t.scale - t.bodyY;
   const cos = Math.cos(-t.rotation);

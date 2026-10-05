@@ -15,7 +15,7 @@ export const GIB_GROUND_Y = 58;
 /** Gravity in sprite units (the enemy sprite is drawn at ~1/3 scale, so this matches ~700 px/s² in the world). */
 const GIB_GRAVITY = 1800;
 const BOUNCE = 0.32;
-const GROUND_FRICTION = 0.5;
+const GROUND_FRICTION = 0.72;
 const SPIN_DAMPING = 0.6;
 const BLOOD_DROPS = 26;
 
@@ -80,8 +80,9 @@ export class GibSimulation {
   /**
    * @param blast where the explosion hit, in sprite space (default: front of the chest)
    * @param seed  randomness seed
+   * @param force how hard the pieces are thrown (1 = default; the game randomises it)
    */
-  public constructor(blast: Vec2 = { x: 16, y: -20 }, seed = 1) {
+  public constructor(blast: Vec2 = { x: 16, y: -20 }, seed = 1, force = 1) {
     const random = createRandom(seed);
     const pose = getFallPose('death', 0);
     const shapes = [
@@ -101,11 +102,11 @@ export class GibSimulation {
       const dx = shape.x - blast.x;
       const dy = shape.y - blast.y;
       const distance = Math.hypot(dx, dy) || 1;
-      const speed = 90 + random() * 110;
+      const speed = (160 + random() * 200) * force;
       return {
         ...shape,
-        vx: (dx / distance) * speed + (random() - 0.5) * 50,
-        vy: (dy / distance) * speed - 380 - random() * 260,
+        vx: (dx / distance) * speed + (random() - 0.5) * 60 * force,
+        vy: (dy / distance) * speed - (260 + random() * 220) * Math.sqrt(force),
         spin: (random() - 0.5) * 26,
       };
     });

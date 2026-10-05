@@ -320,14 +320,16 @@ export class CombatSystem {
     const baseDamage = arrow.type === 'piercing'
       ? PROJECTILE_DAMAGE * Math.pow(PIERCING_DAMAGE_MULTIPLIER, arrow.impacts)
       : PROJECTILE_DAMAGE;
-    const damage = headshot ? baseDamage * HEADSHOT_DAMAGE_MULTIPLIER : baseDamage;
+    const arrowDamage = headshot ? baseDamage * HEADSHOT_DAMAGE_MULTIPLIER : baseDamage;
+    // A direct explosive hit also takes the blast; a kill blows the body apart.
+    const damage = arrow.type === 'explosive' ? arrowDamage + EXPLOSION_DAMAGE : arrowDamage;
     if (headshot) {
       this.events.headshot();
     }
     const fromLeft = arrow.x < enemy.x;
     enemy.applyHitReaction(fromLeft ? 6 : -4);
-    const cause = arrow.type === 'explosive' ? 'explosion' : headshot ? 'headshot' : 'arrow';
-    enemy.takeDamage(damage, { cause, fromX: fromLeft ? enemy.x - 1 : enemy.x + 1 });
+    const cause = arrow.type === 'explosive' ? 'blast' : headshot ? 'headshot' : 'arrow';
+    enemy.takeDamage(damage, { cause, fromX: fromLeft ? enemy.x - 1 : enemy.x + 1, point: impactPoint });
     hitEnemies.add(enemy);
     arrow.registerImpact();
 

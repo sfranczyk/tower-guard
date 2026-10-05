@@ -54,8 +54,10 @@ src/
   on), and other kills pick `death` or `deathCrumple` at random. `getFallPose()` is
   pure; feet and hands are kept on the ground by `groundedAngle`, and tests check every frame.
 - **Explosive death** (`rendering/stickmanGibs.ts`): `GibSimulation` blows the standing stickman into
-  10 pieces plus blood (seeded and deterministic, so it's testable), and `drawStickmanGibs` draws it. It's
-  in the lab (`?lab=explosive-death`) and not used in the game yet; the plan is for explosive kills.
+  10 pieces plus blood (seeded and deterministic, so it's testable), and `drawStickmanGibs` draws it.
+  In the game only the enemy hit *directly* by an explosive arrow (cause `'blast'`, which takes the arrow
+  plus `EXPLOSION_DAMAGE`) is blown apart when that kills it, with a random force (1–1.7×). Splash victims
+  get `knockback`. The lab uses force 1, and every lab figure is clipped to its frame.
 - **Bow ready**: `pose.bowReady` blends the archer between the lowered bow (0) and aiming (1). `Bowman`
   raises the bow while the player draws (aim power > 0) and lowers it after the shot.
 - **Animation lab** rows live in `scenes/AnimationLabScene.ts`, and scripted sequences in
