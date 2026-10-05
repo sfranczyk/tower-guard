@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { STICKMAN_HEAD } from './stickman';
-import { bodyLandingProgress, getFallPose, type FallKind, type FallPose } from './stickmanFall';
+import { getFallPose, type FallKind, type FallPose } from './stickmanFall';
 
 const GROUND_Y = 58;
 const KINDS: FallKind[] = ['death', 'deathCrumple', 'deathStiff', 'knockback', 'getUp'];
@@ -78,17 +78,5 @@ describe('getFallPose', () => {
       const pose = getFallPose('deathStiff', progress);
       expect(Math.abs(pose.frontFoot.x - start.frontFoot.x)).toBeLessThan(8);
     });
-  });
-});
-
-describe('bodyLandingProgress', () => {
-  it('lands partway through every fall to the ground, and never while getting up', () => {
-    const kinds = ['death', 'deathCrumple', 'deathStiff', 'knockback'] as const;
-    kinds.forEach((kind) => {
-      const progress = bodyLandingProgress(kind);
-      expect(progress).toBeGreaterThan(0.2);
-      expect(progress).toBeLessThan(1);
-    });
-    expect(bodyLandingProgress('getUp')).toBeUndefined();
   });
 });

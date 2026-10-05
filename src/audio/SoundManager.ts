@@ -1,4 +1,3 @@
-import bodyFallSound from '../assets/sounds/body-fall.mp3';
 import bowShotSound from '../assets/sounds/bow-shot.mp3';
 import explosionSound from '../assets/sounds/explosion.mp3';
 import groan1 from '../assets/sounds/groan-1.mp3';
@@ -18,7 +17,6 @@ export type SoundId = keyof typeof SOUND_VOLUMES;
 const SOURCES: Record<SoundId, readonly string[]> = {
   bowShot: [bowShotSound],
   groan: [groan1, groan2, groan3, groan4, groan5, groan6, groan7, groan8],
-  bodyFall: [bodyFallSound],
   explosion: [explosionSound],
 };
 
