@@ -1,6 +1,7 @@
 import type { Graphics } from 'pixi.js';
 import { drawStickman } from '../rendering/stickman';
 import { FALL_DURATION_MS, drawStickmanFall, type FallKind } from '../rendering/stickmanFall';
+import { GibSimulation, drawStickmanGibs } from '../rendering/stickmanGibs';
 
 /** Scripted animation sequences shown in the animation lab. Each has update(deltaMs) and render(sprite). */
 
@@ -241,5 +242,36 @@ export class FallClock {
     } else {
       drawStickmanFall(sprite, 'getUp', Math.min(1, (time - knockback - KNOCKDOWN_LIE_MS) / getUp));
     }
+  }
+}
+
+/** Pause on the standing figure before it blows apart, and how long the pieces stay before replaying. */
+const GIB_WAIT_MS = 500;
+const GIB_REPLAY_MS = 3200;
+
+/** Stands for a moment, blows apart, lets the pieces settle, then replays with a new random seed. */
+export class GibReplay {
+  private simulation = new GibSimulation(undefined, 1);
+  private timeMs = 0;
+  private seed = 1;
+
+  public update(deltaMs: number): void {
+    this.timeMs += deltaMs;
+    if (this.timeMs > GIB_WAIT_MS) {
+      this.simulation.step(deltaMs);
+    }
+    if (this.timeMs > GIB_WAIT_MS + GIB_REPLAY_MS) {
+      this.seed += 1;
+      this.simulation = new GibSimulation(undefined, this.seed);
+      this.timeMs = 0;
+    }
+  }
+
+  public render(sprite: Graphics): void {
+    if (this.timeMs <= GIB_WAIT_MS) {
+      drawStickmanFall(sprite, 'death', 0);
+      return;
+    }
+    drawStickmanGibs(sprite, this.simulation);
   }
 }

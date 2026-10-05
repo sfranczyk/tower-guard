@@ -3,7 +3,7 @@ import { GAME_HEIGHT, GAME_WIDTH } from '../config';
 import { Scene } from '../core/Scene';
 import { LAB_PARAM, getUrlParam, setUrlParam } from '../core/urlState';
 import { drawStickman } from '../rendering/stickman';
-import { ArcherReadySequence, FallClock, PausingWalk, RUN_PHASE_MS, WALK_PHASE_MS, WalkRunSequence } from './labSequences';
+import { ArcherReadySequence, FallClock, GibReplay, PausingWalk, RUN_PHASE_MS, WALK_PHASE_MS, WalkRunSequence } from './labSequences';
 
 const LIST_TOP = 78;
 const LIST_BOTTOM = GAME_HEIGHT - 8;
@@ -31,6 +31,9 @@ type PreviewRow = {
   render: (sprite: Graphics) => void;
   /** Shifts the figure right (unscaled units) for animations that travel left, so they stay centred. */
   offsetX?: number;
+  /** Scale overrides for animations that spread wide (default PREVIEW_SCALE / ZOOM_SCALE). */
+  previewScale?: number;
+  zoomScale?: number;
 };
 
 const DEFAULT_BACKDROP = 0x16243a;
@@ -147,6 +150,14 @@ export class AnimationLabScene extends Scene {
       render: (sprite) => this.fallClock.render(sprite, 'deathStiff'),
     },
     {
+      id: 'explosive-death',
+      title: 'Explosive death · blown apart',
+      description: 'Body bursts into head, torso, arms and legs that fly, spin, bounce and settle, with blood.',
+      previewScale: 0.25,
+      zoomScale: 1.3,
+      render: (sprite) => this.gibReplay.render(sprite),
+    },
+    {
       id: 'knockback',
       title: 'Knockback (explosions)',
       description: 'Thrown a short distance backwards, lands and ends lying on its back.',
@@ -175,6 +186,7 @@ export class AnimationLabScene extends Scene {
   private readonly walkRunSequence = new WalkRunSequence();
   private readonly archerSequence = new ArcherReadySequence();
   private readonly fallClock = new FallClock();
+  private readonly gibReplay = new GibReplay();
   private scrollY = 0;
   private readonly listMask = new Graphics().rect(0, LIST_TOP, GAME_WIDTH, LIST_BOTTOM - LIST_TOP).fill({ color: 0xffffff });
   private readonly scrollbar = new Graphics();
@@ -215,6 +227,7 @@ export class AnimationLabScene extends Scene {
     this.walkRunSequence.update(deltaMs);
     this.archerSequence.update(deltaMs);
     this.fallClock.update(deltaMs);
+    this.gibReplay.update(deltaMs);
     this.draw();
   }
 
@@ -250,7 +263,12 @@ export class AnimationLabScene extends Scene {
     const sprite = new Graphics();
     this.listSprites.set(preview, sprite);
     row.addChild(...AnimationLabScene.createFigure(
-      sprite, PREVIEW_X + (preview.offsetX ?? 0) * PREVIEW_SCALE, ROW_HEIGHT / 2, PREVIEW_SCALE, PREVIEW_X - 55, PREVIEW_X + 55,
+      sprite,
+      PREVIEW_X + (preview.offsetX ?? 0) * (preview.previewScale ?? PREVIEW_SCALE),
+      ROW_HEIGHT / 2,
+      preview.previewScale ?? PREVIEW_SCALE,
+      PREVIEW_X - 55,
+      PREVIEW_X + 55,
     ));
 
     row.addChild(AnimationLabScene.text(`${index + 1}`, 12, 0x5b8def, 700, 32, ROW_HEIGHT / 2 - 8));
@@ -283,7 +301,12 @@ export class AnimationLabScene extends Scene {
       .roundRect(40, top, ZOOM_TEXT_X - 70, height, 12)
       .fill({ color: preview.backdrop ?? DEFAULT_BACKDROP }));
     this.zoomView.addChild(...AnimationLabScene.createFigure(
-      this.zoomSprite, ZOOM_FIGURE_X - 30 + (preview.offsetX ?? 0) * ZOOM_SCALE, top + height * 0.6, ZOOM_SCALE, 60, ZOOM_TEXT_X - 50,
+      this.zoomSprite,
+      ZOOM_FIGURE_X - 30 + (preview.offsetX ?? 0) * (preview.zoomScale ?? ZOOM_SCALE),
+      top + height * 0.6,
+      preview.zoomScale ?? ZOOM_SCALE,
+      60,
+      ZOOM_TEXT_X - 50,
     ));
     this.zoomView.addChild(AnimationLabScene.text(`Animation ${index + 1} of ${this.rows.length}`, 12, 0x5b8def, 700, ZOOM_TEXT_X, top + 8));
     this.zoomView.addChild(AnimationLabScene.wrapped(preview.title, 22, ZOOM_TEXT_X, top + 30, GAME_WIDTH - ZOOM_TEXT_X - 40, 0xf5f7fb, 700));

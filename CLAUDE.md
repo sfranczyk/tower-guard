@@ -53,6 +53,9 @@ src/
   the reaction: a headshot gives `deathStiff`, an explosion gives `knockback` (survivors get up and fight
   on), and other kills pick `death` or `deathCrumple` at random. `getFallPose()` is
   pure; feet and hands are kept on the ground by `groundedAngle`, and tests check every frame.
+- **Explosive death** (`rendering/stickmanGibs.ts`): `GibSimulation` blows the standing stickman into
+  10 pieces plus blood (seeded and deterministic, so it's testable), and `drawStickmanGibs` draws it. It's
+  in the lab (`?lab=explosive-death`) and not used in the game yet; the plan is for explosive kills.
 - **Bow ready**: `pose.bowReady` blends the archer between the lowered bow (0) and aiming (1). `Bowman`
   raises the bow while the player draws (aim power > 0) and lowers it after the shot.
 - **Animation lab** rows live in `scenes/AnimationLabScene.ts`, and scripted sequences in
