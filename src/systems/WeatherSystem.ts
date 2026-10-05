@@ -1,9 +1,10 @@
 import { Graphics, type Container } from 'pixi.js';
-import { GAME_HEIGHT, GAME_WIDTH, GROUND_Y, LIGHTNING_FIRST_DELAY_MS, LIGHTNING_GROUND_CHANCE, LIGHTNING_WARNING_MS, WORLD_WIDTH } from '../config';
+import { GAME_HEIGHT, GAME_WIDTH, LIGHTNING_FIRST_DELAY_MS, LIGHTNING_GROUND_CHANCE, LIGHTNING_WARNING_MS, WORLD_WIDTH } from '../config';
 import type { Background } from '../rendering/Background';
 import { Rain } from '../rendering/Rain';
 import type { Vec2 } from '../types';
 import { createBolt, planStrike, type Bolt, type StrikePlan } from './lightning';
+import { groundAt } from './terrain';
 
 export interface WeatherEvents {
   /** A bolt hit the ground here (the scene applies damage and effects). */
@@ -90,7 +91,8 @@ export class WeatherSystem {
   private trigger(plan: StrikePlan, cameraX: number): void {
     const view = { left: cameraX, right: cameraX + GAME_WIDTH };
     if (plan.reachesGround) {
-      const target = { x: Math.min(WORLD_WIDTH - 20, Math.max(20, random(view.left + 60, view.right - 60))), y: GROUND_Y };
+      const targetX = Math.min(WORLD_WIDTH - 20, Math.max(20, random(view.left + 60, view.right - 60)));
+      const target = { x: targetX, y: groundAt(targetX) };
       const startX = target.x + random(-70, 70);
       const marker = new Graphics();
       marker.zIndex = 1;
@@ -138,8 +140,8 @@ export class WeatherSystem {
     const graphics = new Graphics();
     graphics.zIndex = 1;
     const stroke = (points: Vec2[], width: number, color: number, alpha: number): void => {
-      graphics.moveTo(points[0].x, Math.min(GROUND_Y, points[0].y));
-      points.slice(1).forEach((point) => graphics.lineTo(point.x, Math.min(GROUND_Y, point.y)));
+      graphics.moveTo(points[0].x, Math.min(groundAt(points[0].x), points[0].y));
+      points.slice(1).forEach((point) => graphics.lineTo(point.x, Math.min(groundAt(point.x), point.y)));
       graphics.stroke({ width: width * thickness, color, alpha, cap: 'round', join: 'round' });
     };
     bolt.branches.forEach((branch) => {

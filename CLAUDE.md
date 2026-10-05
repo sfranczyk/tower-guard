@@ -116,7 +116,12 @@ src/
   the audio leading up to the loop start, so the seam is sample-continuous. If you re-cut the file, keep
   the loop points in `config.ts` in sync. Music and effects have separate toggles and volumes.
 - **Coordinates**: the screen is 1024×540 and the world is wider (`WORLD_WIDTH`). `GameScene` scrolls the
-  `world` container by `cameraX`. The ground is at `GROUND_Y`.
+  `world` container by `cameraX`.
+- **Terrain**: the ground surface is `groundAt(x)` (`systems/terrain.ts`, pure): gentle waves of
+  `TERRAIN_AMPLITUDE` around `GROUND_Y`, flat at both keeps. The ground fill and grass edge are drawn along
+  it, and the bowman, enemies, arrows sticking in the ground, explosions, blood, scorch marks, lightning,
+  rain and the trajectory preview all use it. Use `groundAt(x)`, not `GROUND_Y`, for anything that touches
+  the ground (hills in the background extend to the bottom of the screen so dips never show a gap).
 
 ## Conventions
 

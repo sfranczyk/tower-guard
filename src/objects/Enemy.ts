@@ -1,11 +1,12 @@
 import { Container, Graphics } from 'pixi.js';
-import { ENEMY_ARCHER_COOLDOWN_MS, ENEMY_ARCHER_DRAW_MS, ENEMY_ATTACK_INTERVAL_MS, ENEMY_GROUND_Y } from '../config';
+import { ENEMY_ARCHER_COOLDOWN_MS, ENEMY_ARCHER_DRAW_MS, ENEMY_ATTACK_INTERVAL_MS } from '../config';
 import { getArcherRig, toArcherLocalAngle } from '../rendering/archer';
 import { STICKMAN_HEAD, drawStickman, type StickmanPose } from '../rendering/stickman';
 import { FALL_DURATION_MS, drawStickmanFall, getFallPose, type FallKind, type FallPose } from '../rendering/stickmanFall';
 import { CHEER_KINDS, drawStickmanCheer, type CheerKind } from '../rendering/stickmanCheer';
 import { GibSimulation, drawStickmanGibs } from '../rendering/stickmanGibs';
 import { fromBodyAnchor, spriteToWorld, toBodyAnchor, worldToSprite, type BodyAnchor, type BodyTransform, type Torso } from '../systems/bodyAnchor';
+import { groundAt } from '../systems/terrain';
 import type { Bounds, EnemyType, Vec2 } from '../types';
 
 const ATTACK_ANIMATION_DURATION_MS = 1_130;
@@ -95,7 +96,7 @@ export default class Enemy extends Container {
     this.speed = Math.max(0, speed);
     this.target = target;
     this.scale.set(2 / 3, 2 / 3);
-    this.position.set(x, ENEMY_GROUND_Y);
+    this.position.set(x, groundAt(x));
     this.zIndex = 1;
     this.velocity.x = -this.speed;
     if (this.isArcher) {
@@ -358,7 +359,7 @@ export default class Enemy extends Container {
     if (this.hitStaggerMs > 0) {
       this.velocity.x = 0;
       this.velocity.y = 0;
-      this.y = ENEMY_GROUND_Y;
+      this.y = groundAt(this.x);
       return;
     }
 
@@ -381,7 +382,7 @@ export default class Enemy extends Container {
 
     const deltaSeconds = deltaMs / 1000;
     this.x += this.velocity.x * deltaSeconds;
-    this.y = ENEMY_GROUND_Y;
+    this.y = groundAt(this.x);
   }
 
   public canAttack(deltaMs: number): boolean {

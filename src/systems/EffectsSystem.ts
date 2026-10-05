@@ -1,6 +1,7 @@
 import { Graphics, type Container } from 'pixi.js';
-import { EXPLOSION_RADIUS, GROUND_Y, LIGHTNING_RADIUS } from '../config';
+import { EXPLOSION_RADIUS, LIGHTNING_RADIUS } from '../config';
 import type { Vec2 } from '../types';
+import { groundAt } from './terrain';
 
 type BloodParticle = {
   sprite: Graphics;
@@ -71,7 +72,8 @@ export class EffectsSystem {
         lifeMs: 480 + Math.random() * 420,
       });
     }
-    this.bloodStain(point.x + (Math.random() - 0.5) * 12, GROUND_Y - 1);
+    const stainX = point.x + (Math.random() - 0.5) * 12;
+    this.bloodStain(stainX, groundAt(stainX) - 1);
   }
 
   public impact(point: Vec2): void {
@@ -85,7 +87,7 @@ export class EffectsSystem {
    */
   public explosion(point: Vec2): void {
     const radius = EXPLOSION_RADIUS;
-    const onGround = point.y >= GROUND_Y - 12;
+    const onGround = point.y >= groundAt(point.x) - 12;
     // On the ground everything is thrown upwards; in the air it bursts in all directions.
     const [minAngle, maxAngle] = onGround ? [-Math.PI * 0.95, -Math.PI * 0.05] : [-Math.PI, Math.PI];
     const still = { x: 0, y: 0 };
@@ -167,10 +169,10 @@ export class EffectsSystem {
       particle.sprite.y += particle.velocity.y * deltaSeconds;
       particle.sprite.alpha = Math.min(1, particle.lifeMs / 180);
 
-      const landed = particle.sprite.y >= GROUND_Y - 2;
+      const landed = particle.sprite.y >= groundAt(particle.sprite.x) - 2;
       if (landed || particle.lifeMs <= 0) {
         if (landed) {
-          this.bloodStain(particle.sprite.x, GROUND_Y - 1);
+          this.bloodStain(particle.sprite.x, groundAt(particle.sprite.x) - 1);
         }
         this.remove(particle.sprite);
         return false;
@@ -224,7 +226,7 @@ export class EffectsSystem {
     const scorch = new Graphics()
       .ellipse(0, 0, radius * 0.5, 5).fill({ color: 0x2b2420, alpha: 0.45 })
       .ellipse(0, 0, radius * 0.28, 3).fill({ color: 0x1a1512, alpha: 0.5 });
-    scorch.position.set(x, GROUND_Y + 1);
+    scorch.position.set(x, groundAt(x) + 1);
     scorch.zIndex = 0;
     this.container.addChild(scorch);
   }

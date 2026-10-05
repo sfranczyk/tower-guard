@@ -1,5 +1,5 @@
 import { Graphics } from 'pixi.js';
-import { GROUND_Y, WORLD_WIDTH } from '../config';
+import { GAME_HEIGHT, GROUND_Y, WORLD_WIDTH } from '../config';
 import type { Battleground } from '../data/battlegrounds';
 
 /** Far and near hills (or lower, smoother dunes) between the sky and the ground. */
@@ -9,18 +9,18 @@ export const drawHills = ({ hills: [far, near], hillShape }: Battleground): Grap
     hills.moveTo(0, 405).bezierCurveTo(160, 360, 300, 372, 430, 392)
       .bezierCurveTo(600, 418, 760, 340, 940, 362)
       .bezierCurveTo(1060, 376, 1130, 388, WORLD_WIDTH, 380)
-      .lineTo(WORLD_WIDTH, GROUND_Y).lineTo(0, GROUND_Y).closePath().fill({ color: far });
+      .lineTo(WORLD_WIDTH, GAME_HEIGHT).lineTo(0, GAME_HEIGHT).closePath().fill({ color: far });
     hills.moveTo(0, 448).bezierCurveTo(140, 418, 290, 422, 420, 440)
       .bezierCurveTo(560, 460, 700, 408, 860, 424)
       .bezierCurveTo(1000, 438, 1110, 452, WORLD_WIDTH, 436)
-      .lineTo(WORLD_WIDTH, GROUND_Y).lineTo(0, GROUND_Y).closePath().fill({ color: near });
+      .lineTo(WORLD_WIDTH, GAME_HEIGHT).lineTo(0, GAME_HEIGHT).closePath().fill({ color: near });
   } else {
     hills.moveTo(0, 360).bezierCurveTo(180, 250, 310, 340, 480, 275)
       .bezierCurveTo(650, 215, 820, 330, WORLD_WIDTH, 245)
-      .lineTo(WORLD_WIDTH, GROUND_Y).lineTo(0, GROUND_Y).closePath().fill({ color: far });
+      .lineTo(WORLD_WIDTH, GAME_HEIGHT).lineTo(0, GAME_HEIGHT).closePath().fill({ color: far });
     hills.moveTo(0, 412).bezierCurveTo(190, 320, 390, 390, 570, 330)
       .bezierCurveTo(760, 270, 900, 390, WORLD_WIDTH, 312)
-      .lineTo(WORLD_WIDTH, GROUND_Y).lineTo(0, GROUND_Y).closePath().fill({ color: near });
+      .lineTo(WORLD_WIDTH, GAME_HEIGHT).lineTo(0, GAME_HEIGHT).closePath().fill({ color: near });
   }
   hills.zIndex = 0;
   return hills;

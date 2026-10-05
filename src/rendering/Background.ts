@@ -3,12 +3,16 @@ import { GAME_HEIGHT, GROUND_Y, WORLD_WIDTH } from '../config';
 import type { Battleground } from '../data/battlegrounds';
 import { layoutClouds, mixColor, type CloudLayer, type CloudShape } from './clouds';
 import { drawHills, drawVegetation } from './landscape';
+import { groundAt } from '../systems/terrain';
 
 type Cloud = {
   sprite: Graphics;
   speed: number;
   width: number;
 };
+
+/** Spacing of the points the ground surface is drawn through. */
+const TERRAIN_STEP = 8;
 
 /** Each battleground gets its own (but always the same) sky from a hash of its name. */
 const skySeed = (name: string): number =>
@@ -95,12 +99,19 @@ export class Background {
 
   private static createTerrain({ ground: colors }: Battleground): Graphics {
     const ground = new Graphics();
-    ground.rect(0, GROUND_Y, WORLD_WIDTH, GAME_HEIGHT - GROUND_Y).fill({ color: colors.fill });
-    ground.moveTo(0, GROUND_Y).bezierCurveTo(210, GROUND_Y - 8, 420, GROUND_Y + 7, 650, GROUND_Y - 5)
-      .bezierCurveTo(850, GROUND_Y - 12, 1020, GROUND_Y + 5, WORLD_WIDTH, GROUND_Y)
-      .stroke({ width: 8, color: colors.edge });
+    // Fill and grass edge follow the same surface line, so there's never a gap between them.
+    const surface: number[] = [];
+    for (let x = 0; x <= WORLD_WIDTH + TERRAIN_STEP; x += TERRAIN_STEP) {
+      surface.push(x, groundAt(x));
+    }
+    ground.poly([...surface, WORLD_WIDTH + TERRAIN_STEP, GAME_HEIGHT, 0, GAME_HEIGHT]).fill({ color: colors.fill });
+    ground.moveTo(surface[0], surface[1]);
+    for (let index = 2; index < surface.length; index += 2) {
+      ground.lineTo(surface[index], surface[index + 1]);
+    }
+    ground.stroke({ width: 8, color: colors.edge, join: 'round' });
     for (let x = 25; x < WORLD_WIDTH; x += 70) {
-      ground.ellipse(x, GROUND_Y + 32 + (x % 3) * 8, 22, 6).fill({ color: colors.tufts, alpha: 0.35 });
+      ground.ellipse(x, groundAt(x) + 32 + (x % 3) * 8, 22, 6).fill({ color: colors.tufts, alpha: 0.35 });
     }
     ground.zIndex = 0;
     return ground;

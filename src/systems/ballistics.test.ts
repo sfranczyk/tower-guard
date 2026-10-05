@@ -79,6 +79,16 @@ describe('simulateTrajectory', () => {
   });
 });
 
+describe('simulateTrajectory on uneven ground', () => {
+  it('stops on the ground height under the projectile when given a function', () => {
+    const slope = (x: number): number => 400 - x * 0.2;
+    const points = simulateTrajectory({ x: 0, y: 300 }, { x: 300, y: -100 }, { gravity: 700, drag: 0 }, { groundY: slope, minX: -1e6, maxX: 1e6 });
+    const last = points[points.length - 1];
+    expect(last.y).toBeCloseTo(slope(last.x), 6);
+    points.slice(0, -1).forEach((point) => expect(point.y).toBeLessThan(slope(point.x)));
+  });
+});
+
 describe('solveLaunchAngle', () => {
   const hitsTarget = (start: { x: number; y: number }, target: { x: number; y: number }, speed: number, angle: number): boolean => {
     const points = simulateTrajectory(start, { x: Math.cos(angle) * speed, y: Math.sin(angle) * speed }, DRAG, { ...WORLD, groundY: 600 });

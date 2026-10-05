@@ -1,0 +1,28 @@
+import { ENEMY_TOWER_X, GROUND_Y, PLAYER_TOWER_X, TERRAIN_AMPLITUDE } from '../config';
+
+/**
+ * The ground's surface: gentle waves around GROUND_Y, flattened at both keeps so they stand level.
+ * Pure; the ground is drawn along it and everyone walks, lands and gets hit on it.
+ */
+
+/** Keeps sit on flat ground out to FLAT_RADIUS, blending into the waves by BLEND_RADIUS. */
+const FLAT_RADIUS = 110;
+const BLEND_RADIUS = 230;
+
+/** Sum of three sines, scaled into −1..1. */
+const wave = (x: number): number =>
+  Math.sin(x / 150 + 0.8) * 0.6 + Math.sin(x / 63 + 2.1) * 0.28 + Math.sin(x / 37 + 0.4) * 0.12;
+
+const smoothstep = (t: number): number => {
+  const c = Math.max(0, Math.min(1, t));
+  return c * c * (3 - 2 * c);
+};
+
+/** 0 on the flat ground at a keep, 1 out in the field. */
+const flatness = (x: number): number => {
+  const nearestKeep = Math.min(Math.abs(x - PLAYER_TOWER_X), Math.abs(x - ENEMY_TOWER_X));
+  return smoothstep((nearestKeep - FLAT_RADIUS) / (BLEND_RADIUS - FLAT_RADIUS));
+};
+
+/** Ground surface height (y) at world x. */
+export const groundAt = (x: number): number => GROUND_Y + TERRAIN_AMPLITUDE * wave(x) * flatness(x);

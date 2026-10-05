@@ -34,6 +34,7 @@ import { Background } from '../rendering/Background';
 import { CombatSystem } from '../systems/CombatSystem';
 import { EffectsSystem } from '../systems/EffectsSystem';
 import { WeatherSystem } from '../systems/WeatherSystem';
+import { groundAt } from '../systems/terrain';
 import { WaveSpawner } from '../systems/WaveSpawner';
 import { simulateTrajectory } from '../systems/ballistics';
 import type { EnemyType, ProjectileType, Vec2 } from '../types';
@@ -309,7 +310,7 @@ export class GameScene extends Scene {
   private exitTower(): void {
     this.bowman.exitTower();
     this.bowman.setHorizontalPosition(this.playerTower.x + TOWER_EXIT_X_OFFSET);
-    this.bowman.y = BOWMAN_Y;
+    this.bowman.y = groundAt(this.bowman.x);
     this.ctx.ui.setStatus(DEFAULT_STATUS);
   }
 
@@ -402,7 +403,8 @@ export class GameScene extends Scene {
     const speed = launchSpeed(this.selectedProjectile, power);
     const velocity = { x: aim.direction.x * speed, y: aim.direction.y * speed };
     return simulateTrajectory(releasePoint, velocity, Arrow.getFlightParams(this.selectedProjectile), {
-      groundY: GROUND_Y - 3,
+      // Same surface (and offset) at which flying arrows stick into the ground.
+      groundY: (x) => groundAt(x) - 3,
       minX: 0,
       maxX: WORLD_WIDTH,
     });

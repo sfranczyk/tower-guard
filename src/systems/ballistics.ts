@@ -42,8 +42,8 @@ export const advanceProjectile = (state: ProjectileState, frameSeconds: number, 
 };
 
 export interface TrajectoryOptions {
-  /** Stop when the projectile reaches this y (e.g. the ground). */
-  groundY: number;
+  /** Stop when the projectile reaches this y (e.g. the ground), or the ground height at its x. */
+  groundY: number | ((x: number) => number);
   /** Stop when x leaves [minX, maxX]. */
   minX: number;
   maxX: number;
@@ -63,8 +63,9 @@ export const simulateTrajectory = (
   const points: Vec2[] = [];
   for (let time = 0; time < maxSeconds; time += frameSeconds) {
     advanceProjectile(state, frameSeconds, params);
-    if (state.y >= groundY) {
-      points.push({ x: state.x, y: groundY });
+    const ground = typeof groundY === 'number' ? groundY : groundY(state.x);
+    if (state.y >= ground) {
+      points.push({ x: state.x, y: ground });
       break;
     }
     if (state.x < minX || state.x > maxX) {

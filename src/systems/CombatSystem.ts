@@ -27,6 +27,7 @@ import type { Vec2 } from '../types';
 import { solveLaunchAngle } from './ballistics';
 import { segmentHitTime } from './collision';
 import { struckBy } from './lightning';
+import { groundAt } from './terrain';
 import type { EffectsSystem } from './EffectsSystem';
 
 const MELEE_REACH = 25;
@@ -99,13 +100,13 @@ export class CombatSystem {
       .filter((arrow) => arrow.isActive && !arrow.isStuck)
       .forEach((arrow) => (arrow.hostile ? this.resolveHostileArrow(arrow) : this.resolveArrow(arrow, activeEnemies)));
     arrows
-      .filter((arrow) => arrow.isActive && !arrow.isStuck && arrow.y >= GROUND_Y - 3)
+      .filter((arrow) => arrow.isActive && !arrow.isStuck && arrow.y >= groundAt(arrow.x) - 3)
       .forEach((arrow) => {
         if (arrow.type === 'explosive') {
-          this.explode({ x: arrow.x, y: GROUND_Y - 3 }, activeEnemies);
+          this.explode({ x: arrow.x, y: groundAt(arrow.x) - 3 }, activeEnemies);
           arrow.deactivate();
         } else {
-          arrow.stickToGround(GROUND_Y - 3);
+          arrow.stickToGround(groundAt(arrow.x) - 3);
         }
       });
   }
@@ -146,7 +147,7 @@ export class CombatSystem {
     }
 
     const overlapsBowman = Math.abs(enemy.x - bowman.x) <= MELEE_REACH;
-    if (!bowman.isInTower && bowman.y < BOWMAN_Y - 20 && overlapsBowman) {
+    if (!bowman.isInTower && bowman.y < groundAt(bowman.x) - 20 && overlapsBowman) {
       this.jumpedEnemies.add(enemy);
     }
 

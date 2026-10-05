@@ -1,5 +1,6 @@
 import { Container, Graphics } from 'pixi.js';
 import type { IPushStrength, Rect, Vec2 } from '../types';
+import { groundAt } from '../systems/terrain';
 import { approach, clamp } from '../utils/math';
 import { getArcherRig, toArcherLocalAngle } from '../rendering/archer';
 import { drawStickman } from '../rendering/stickman';
@@ -21,6 +22,8 @@ const LEAN_TURN_MS = 260;
 /** Raising the bow when a draw starts, and lowering it after the shot. */
 const BOW_RAISE_MS = 200;
 const BOW_LOWER_MS = 380;
+/** A grounded bowman this close above the ground snaps onto it (walking downhill). */
+const GROUND_SNAP = 4;
 /** Time for the dead bowman to topple over backwards, and how far (just short of flat: armor). */
 const TOPPLE_MS = 650;
 const TOPPLE_ANGLE = Math.PI / 2 - 0.12;
@@ -50,7 +53,6 @@ export class Bowman extends Container {
   private readonly boardBounds: Rect;
   private readonly bodyWidth: number;
   private readonly bodySprite: Graphics;
-  private readonly groundY: number;
   private inTower = false;
   private verticalVelocity = 0;
   private horizontalSpeed = 0;
@@ -80,7 +82,6 @@ export class Bowman extends Container {
     this.bodyWidth = config.width ?? 32;
     this.boardBounds = { ...boardBounds };
     this.movementSpeed = config.movementSpeed ?? 120;
-    this.groundY = y;
     this.maxHealth = config.maxHealth ?? 100;
     this.health = this.maxHealth;
 
@@ -154,8 +155,10 @@ export class Bowman extends Container {
     this.jumpBuffer = Math.max(0, this.jumpBuffer - deltaSeconds * 1000);
     this.tryStartJump();
 
-    if (this.verticalVelocity === 0 && this.y >= this.groundY) {
-      this.y = this.groundY;
+    // Standing or walking: stick to the wavy ground both up and down hill (no micro-falls).
+    const ground = this.groundY;
+    if (this.verticalVelocity === 0 && this.y >= ground - GROUND_SNAP) {
+      this.y = ground;
       return;
     }
 
@@ -166,6 +169,11 @@ export class Bowman extends Container {
       this.y = this.groundY;
       this.verticalVelocity = 0;
     }
+  }
+
+  /** Ground height under the bowman. */
+  private get groundY(): number {
+    return groundAt(this.x);
   }
 
   public setHorizontalPosition(x: number): void {

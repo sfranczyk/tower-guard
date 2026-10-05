@@ -5,6 +5,8 @@ export const WORLD_WIDTH = GAME_WIDTH * 1.171875;
 export const CAMERA_ZOOM = 1;
 
 export const GROUND_Y = 490;
+/** The ground surface waves up and down by this much around GROUND_Y (see systems/terrain.ts). */
+export const TERRAIN_AMPLITUDE = 7;
 export const PLAYER_TOWER_X = 70;
 export const ENEMY_TOWER_X = WORLD_WIDTH - 70;
 export const BOWMAN_START_X = 160;
