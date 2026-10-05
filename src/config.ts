@@ -36,6 +36,12 @@ export const PROJECTILE_DAMAGE = 20;
 export const HEADSHOT_DAMAGE_MULTIPLIER = 2;
 export const EXPLOSION_RADIUS = 72;
 export const EXPLOSION_DAMAGE = 14;
+/**
+ * A splash explosion kill that dealt more than this share of the enemy's max health has
+ * SPLASH_GIB_CHANCE of blowing the body apart (a direct explosive hit always does).
+ */
+export const SPLASH_GIB_THRESHOLD = 0.75;
+export const SPLASH_GIB_CHANCE = 0.5;
 export const PIERCING_DAMAGE_MULTIPLIER = 0.62;
 export const ENEMY_TOWER_DAMAGE = 16;
 /** Enemy archers: stop and shoot from this distance, draw time, pause between shots, aim error. */

@@ -1,4 +1,4 @@
-import { ENEMY_HEALTH, ENEMY_SPEED } from '../config';
+import { ENEMY_HEALTH, ENEMY_SPEED, SPLASH_GIB_CHANCE, SPLASH_GIB_THRESHOLD } from '../config';
 import type { EnemyType } from '../types';
 
 export interface EnemyStats {
@@ -24,8 +24,10 @@ export const getEnemyStats = (type: EnemyType, difficulty: number): EnemyStats =
 };
 
 /**
- * Whether a killing blow blows the body apart: always for a direct explosive hit ('blast'), and for a
- * splash explosion that dealt more than the enemy's whole maximum health in one go.
+ * Whether a killing blow blows the body apart: always for a direct explosive hit ('blast'); for a
+ * splash explosion that dealt more than SPLASH_GIB_THRESHOLD of the max health, with
+ * SPLASH_GIB_CHANCE (`roll` is a random 0..1, passed in so tests can pin it).
  */
-export const blowsApart = (cause: string, damage: number, maxHealth: number): boolean =>
-  cause === 'blast' || (cause === 'explosion' && damage > maxHealth);
+export const blowsApart = (cause: string, damage: number, maxHealth: number, roll = Math.random()): boolean =>
+  cause === 'blast'
+  || (cause === 'explosion' && damage > maxHealth * SPLASH_GIB_THRESHOLD && roll < SPLASH_GIB_CHANCE);
