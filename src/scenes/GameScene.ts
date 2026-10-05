@@ -1,8 +1,5 @@
 import { Container, Graphics } from 'pixi.js';
 import {
-  ARROW_BASE_SPEED,
-  ARROW_FORCE_SPEED,
-  ARROW_SPEED_FACTOR,
   BOWMAN_START_X,
   BOWMAN_Y,
   ENEMY_TOWER_X,
@@ -19,6 +16,7 @@ import {
 } from '../config';
 import { Scene, type GameContext } from '../core/Scene';
 import { getEnemyStats } from '../data/enemies';
+import { launchSpeed } from '../data/projectiles';
 import InputManager, { type AimInput } from '../managers/InputManager';
 import { LEVEL_COUNT, LevelManager, getLevelEnemyTotal } from '../managers/LevelManager';
 import Arrow from '../objects/Arrow';
@@ -41,8 +39,8 @@ const DEFAULT_STATUS = 'Drag from the bowman and release to fire';
 
 const PROJECTILE_LABELS: Record<ProjectileType, string> = {
   normal: 'Normal arrow · reliable damage',
-  explosive: 'Explosive bolt · area damage on first impact',
-  piercing: 'Piercing arrow · passes through enemies',
+  explosive: 'Explosive bolt · heavy, short high arc, area damage on impact',
+  piercing: 'Piercing arrow · light and fast, flat and long, passes through enemies',
 };
 
 const PROJECTILE_KEYS: Record<string, ProjectileType> = {
@@ -307,7 +305,8 @@ export class GameScene extends Scene {
 
     const releasePoint = this.bowman.getBowReleasePoint();
     const arrow = new Arrow(releasePoint.x, releasePoint.y, this.ctx.textures.arrow, trail);
-    arrow.fire(Math.atan2(aim.direction.y, aim.direction.x), GameScene.launchSpeed(power), this.selectedProjectile);
+    const type = this.selectedProjectile;
+    arrow.fire(Math.atan2(aim.direction.y, aim.direction.x), launchSpeed(type, power), type);
     this.arrows.push(arrow);
     this.world.addChild(arrow);
   }
@@ -337,10 +336,6 @@ export class GameScene extends Scene {
     this.debugGraphics.clear();
   }
 
-  private static launchSpeed(power: number): number {
-    return (ARROW_BASE_SPEED + power * ARROW_FORCE_SPEED) * ARROW_SPEED_FACTOR;
-  }
-
   private updateAim(): void {
     const aim = this.input?.getAim();
     const hasAim = aim !== undefined && aim.power > 0;
@@ -355,9 +350,9 @@ export class GameScene extends Scene {
     if (!this.ctx.session.showTrajectory || power <= MIN_SHOT_POWER) {
       return [];
     }
-    const speed = GameScene.launchSpeed(power);
+    const speed = launchSpeed(this.selectedProjectile, power);
     const velocity = { x: aim.direction.x * speed, y: aim.direction.y * speed };
-    return simulateTrajectory(releasePoint, velocity, Arrow.getFlightParams(), {
+    return simulateTrajectory(releasePoint, velocity, Arrow.getFlightParams(this.selectedProjectile), {
       groundY: GROUND_Y - 3,
       minX: 0,
       maxX: WORLD_WIDTH,
