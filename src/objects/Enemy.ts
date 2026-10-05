@@ -185,9 +185,10 @@ export default class Enemy extends Container {
       return Enemy.boundsAround(points, 2);
     }
     const width = 14;
-    const height = 28;
+    // Reach up to (and 1 px into) the head box so there's no gap at the neck for arrows to slip through.
+    const y = Math.min(this.y - 28, this.getHeadBounds().bottom - 1);
+    const height = this.y - y;
     const x = this.x - width / 2;
-    const y = this.y - height;
     return {
       x,
       y,
