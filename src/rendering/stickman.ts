@@ -222,24 +222,26 @@ export const drawStickman: StickmanRenderer = (sprite, phase, pose = {}) => {
   const archerRig = archerPose
     ? getArcherRig(toArcherLocalAngle(bowAngle, sprite.rotation, facingDirection), bowTension)
     : undefined;
+  // Archer: the rear (lower-layer) arm holds the bow, the front arm draws the string so the
+  // drawing hand stays visible in front of the face.
   if (archerRig) {
-    drawArcherArm(archerRig.stringElbow, archerRig.stringHand, true);
+    drawArcherArm(archerRig.woodElbow, archerRig.woodHand, true);
     if (!armored) {
-      drawArcherArm(archerRig.woodElbow, archerRig.woodHand, false);
+      drawArcherArm(archerRig.stringElbow, archerRig.stringHand, false);
     }
   } else {
     const rearArmAngle = legSwing * armSwing * (1 - idleBlend) + 0.1 * idleBlend;
     drawArm(rearArmAngle, true);
   }
   if (armored) {
-    // Back to front: quiver, torso, front leg, armor over the legs, hood, bow arm, shoulder plate.
+    // Back to front: quiver, torso, front leg, armor over the legs, hood, drawing arm, shoulder plate.
     drawQuiver(sprite);
     line(hip, shoulder);
     drawLeg(blendPoint(rightFoot, idleRightFoot), rightKneeBend, false);
     drawArmor(sprite);
     drawHood(sprite, STICKMAN_HEAD);
     if (archerRig) {
-      drawArcherArm(archerRig.woodElbow, archerRig.woodHand, false);
+      drawArcherArm(archerRig.stringElbow, archerRig.stringHand, false);
     }
     drawPauldron(sprite, shoulder);
   } else {
