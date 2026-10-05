@@ -33,6 +33,7 @@ import { AimOverlay } from '../rendering/AimOverlay';
 import { Background } from '../rendering/Background';
 import { CombatSystem } from '../systems/CombatSystem';
 import { EffectsSystem } from '../systems/EffectsSystem';
+import { WeatherSystem } from '../systems/WeatherSystem';
 import { WaveSpawner } from '../systems/WaveSpawner';
 import { simulateTrajectory } from '../systems/ballistics';
 import type { EnemyType, ProjectileType, Vec2 } from '../types';
@@ -74,6 +75,8 @@ export class GameScene extends Scene {
   private background!: Background;
   private effects!: EffectsSystem;
   private combat!: CombatSystem;
+  /** Storm battlegrounds only: lightning. */
+  private weather?: WeatherSystem;
   private playerTower!: Tower;
   private enemyTower!: Tower;
   private bowman!: Bowman;
@@ -149,12 +152,24 @@ export class GameScene extends Scene {
       });
     }
     this.onExit(() => this.spawner.dispose());
-    ui.setStatus(`Wave ${run.waveIndex + 1} of ${sandbox.waveCount} · ${this.battleground.name} · defend your keep`);
+    if (this.battleground.weather === 'storm') {
+      this.weather = new WeatherSystem(this.world, this.ctx.root, this.background, {
+        // After the wave is decided lightning still flashes but no longer hurts anyone.
+        groundStrike: (point) => (this.gameEnded ? this.effects.lightningStrike(point) : this.combat.lightningStrike(point)),
+        thunder: (at, close) => {
+          const mix = spatialMix(at.x, this.cameraX);
+          this.ctx.sound.play('thunder', { ...mix, gain: mix.gain * (close ? 1 : 0.45) });
+        },
+      });
+    }
+    const hint = this.battleground.weather === 'storm' ? 'beware of lightning' : 'defend your keep';
+    ui.setStatus(`Wave ${run.waveIndex + 1} of ${sandbox.waveCount} · ${this.battleground.name} · ${hint}`);
   }
 
   /** The world keeps running after the wave ends; the end screen just overlays it. */
   public update(deltaMs: number): void {
     this.background.update(deltaMs);
+    this.weather?.update(deltaMs, this.cameraX);
     this.updateBowman(deltaMs);
     this.playerTower.update();
     this.enemyTower.update();

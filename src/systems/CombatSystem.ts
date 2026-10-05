@@ -10,6 +10,8 @@ import {
   EXPLOSION_RADIUS,
   GROUND_Y,
   HEADSHOT_DAMAGE_MULTIPLIER,
+  LIGHTNING_DAMAGE,
+  LIGHTNING_RADIUS,
   PIERCING_DAMAGE_MULTIPLIER,
   PROJECTILE_DAMAGE,
   SHOW_HITBOX_DEBUG,
@@ -24,6 +26,7 @@ import type Tower from '../objects/Tower';
 import type { Vec2 } from '../types';
 import { solveLaunchAngle } from './ballistics';
 import { segmentHitTime } from './collision';
+import { struckBy } from './lightning';
 import type { EffectsSystem } from './EffectsSystem';
 
 const MELEE_REACH = 25;
@@ -200,6 +203,20 @@ export class CombatSystem {
       }
     }
     enemy.updateAnimation(deltaMs, enemy.isMoving());
+  }
+
+  /**
+   * A lightning bolt hit the ground at `point`: everyone within LIGHTNING_RADIUS takes LIGHTNING_DAMAGE
+   * (enemies are knocked down or killed stiff). The bowman is safe inside the keep.
+   */
+  public lightningStrike(point: Vec2): void {
+    const { bowman, enemies, effects } = this.world;
+    effects.lightningStrike(point);
+    struckBy(point.x, LIGHTNING_RADIUS, enemies.filter((enemy) => enemy.isAlive()))
+      .forEach((enemy) => enemy.takeDamage(LIGHTNING_DAMAGE, { cause: 'lightning', fromX: point.x }));
+    if (!bowman.isInTower && !bowman.isDead && struckBy(point.x, LIGHTNING_RADIUS, [bowman]).length > 0) {
+      this.events.bowmanDamaged(LIGHTNING_DAMAGE);
+    }
   }
 
   /** Enemy arrows hurt the bowman, or the keep while he hides inside it. */

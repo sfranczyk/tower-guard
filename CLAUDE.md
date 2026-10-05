@@ -46,9 +46,16 @@ src/
   The world keeps running after a wave ends (the end screen only overlays it): on defeat the enemies cheer,
   and a killed bowman topples over backwards (`Bowman.die()`).
 - **Battlegrounds** (`data/battlegrounds.ts`): map themes (sky, sun, hills, tree style, ground colors)
-  drawn by `rendering/Background.ts`. Add a new map by adding an entry there. Clouds come from
-  `rendering/clouds.ts` (pure, seeded per map name): cumulus, stratus and cirrus, higher ones
-  drifting slower. Each cloud is cached as a texture so its alpha applies to the whole cloud.
+  drawn by `rendering/Background.ts` (hills/dunes and trees/cacti in `rendering/landscape.ts`). Add a new
+  map by adding an entry there. Each has a `weather`: `fair` (cumulus, stratus, cirrus), `clear` (no clouds,
+  e.g. Sunscorch Dunes) or `storm` (Thunder Ridge: dark storm deck, no sun, lightning). Clouds come from
+  `rendering/clouds.ts` (pure, seeded per map name), higher ones drifting slower; each is cached as a
+  texture so its alpha applies to the whole cloud.
+- **Lightning** (storm weather): `systems/lightning.ts` is pure (bolt shapes, strike schedule, who's in
+  range) and `systems/WeatherSystem.ts` draws it: sky flashes between clouds, and now and then a ground
+  strike that crackles at the spot for `LIGHTNING_WARNING_MS` first. `CombatSystem.lightningStrike` deals
+  `LIGHTNING_DAMAGE` within `LIGHTNING_RADIUS` (enemies: cause `'lightning'`, stiff death or knockdown; the
+  bowman is safe inside the keep). Thunder is the explosion recording slowed down (`SOUND_RATES`).
 - **UI** is HTML (`ui/template.ts`, styles in `index.html`). The in-game HUD sits *outside* the canvas
   (bar above, status line below) and `DomUi.fitCanvas()` scales the canvas into the remaining space.
   Never place HUD elements over the play field. Only menus, the settings drawer and the end screen

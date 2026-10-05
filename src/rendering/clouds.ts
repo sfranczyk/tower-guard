@@ -1,12 +1,14 @@
+import type { Weather } from '../data/battlegrounds';
 import { createRandom } from '../utils/math';
 
 /**
  * Cloud shapes and their layout in the sky, as plain data (no Pixi) so they can be tested.
  * - cumulus: long, fairly flat heap of domes on a flat base, shaded underneath and lit on top;
  * - stratus: long flat band of overlapping ellipses;
- * - cirrus: thin, high, slanted wisps (drawn fainter).
+ * - cirrus: thin, high, slanted wisps (drawn fainter);
+ * - storm: huge, dark, low-hanging cloud with a heavy shadowed base (storm weather only).
  */
-export type CloudKind = 'cumulus' | 'stratus' | 'cirrus';
+export type CloudKind = 'cumulus' | 'stratus' | 'cirrus' | 'storm';
 
 /** Shadow is drawn first, then the body, then the highlight on top. */
 export type CloudLayer = 'shadow' | 'body' | 'highlight';
@@ -94,32 +96,65 @@ const cirrus = (random: Random, width: number): CloudShape => {
   return { kind: 'cirrus', width, height: 26, blobs };
 };
 
-const BUILDERS: Record<CloudKind, (random: Random, width: number) => CloudShape> = { cumulus, stratus, cirrus };
+const storm = (random: Random, width: number): CloudShape => {
+  const height = width * between(random, 0.34, 0.42);
+  const blobs: CloudBlob[] = [];
+  const domes = 7 + Math.floor(random() * 3);
+  for (let index = 0; index < domes; index += 1) {
+    const t = index / (domes - 1);
+    const radius = height * (0.34 + 0.32 * Math.sin(Math.PI * t)) * between(random, 0.85, 1.12);
+    blobs.push({ layer: 'body', x: (t - 0.5) * width * 0.76, y: -height * 0.3 - radius * 0.55, rx: radius, ry: radius * 0.9 });
+  }
+  // Wide, heavy, dark underside: most of the cloud reads as shadow.
+  blobs.unshift(
+    { layer: 'shadow', x: 0, y: -height * 0.12, rx: width * 0.49, ry: height * 0.3 },
+    { layer: 'shadow', x: width * 0.18, y: -height * 0.02, rx: width * 0.26, ry: height * 0.2 },
+    { layer: 'shadow', x: -width * 0.2, y: -height * 0.04, rx: width * 0.24, ry: height * 0.18 },
+  );
+  // No sunlit highlight: there's no sun above a storm deck.
+  return { kind: 'storm', width, height, blobs };
+};
 
-/** Size range, height band (base y), drift speed (px/s), alpha and how many of each kind float in the sky. */
-const KIND_SETTINGS: Record<CloudKind, { width: [number, number]; y: [number, number]; speed: [number, number]; alpha: number; count: number }> = {
-  cirrus: { width: [190, 290], y: [48, 85], speed: [8, 12], alpha: 0.55, count: 2 },
-  stratus: { width: [260, 380], y: [115, 160], speed: [16, 22], alpha: 0.8, count: 2 },
-  cumulus: { width: [200, 300], y: [175, 225], speed: [32, 42], alpha: 1, count: 3 },
+const BUILDERS: Record<CloudKind, (random: Random, width: number) => CloudShape> = { cumulus, stratus, cirrus, storm };
+
+type KindSettings = { width: [number, number]; y: [number, number]; speed: [number, number]; alpha: number; count: number };
+
+/** Per weather: size range, height band (base y), drift speed (px/s), alpha and count of each kind. */
+const SKIES: Record<Weather, Partial<Record<CloudKind, KindSettings>>> = {
+  fair: {
+    cirrus: { width: [190, 290], y: [48, 85], speed: [8, 12], alpha: 0.55, count: 2 },
+    stratus: { width: [260, 380], y: [115, 160], speed: [16, 22], alpha: 0.8, count: 2 },
+    cumulus: { width: [200, 300], y: [175, 225], speed: [32, 42], alpha: 1, count: 3 },
+  },
+  clear: {},
+  // A low, nearly closed deck of storm clouds with a few ragged bands under it.
+  storm: {
+    storm: { width: [330, 470], y: [105, 150], speed: [6, 11], alpha: 1, count: 6 },
+    stratus: { width: [280, 400], y: [165, 200], speed: [14, 20], alpha: 0.7, count: 2 },
+  },
 };
 
 export const createCloudShape = (kind: CloudKind, width: number, seed: number): CloudShape =>
   BUILDERS[kind](createRandom(seed), width);
 
 /**
- * A sky's worth of clouds, spread evenly over the world width (with jitter) in a shuffled order
- * of kinds. The same seed always gives the same sky.
+ * A sky's worth of clouds for the weather, spread evenly over the world width (with jitter) in a
+ * shuffled order of kinds. The same seed always gives the same sky; a clear sky has none.
  */
-export const layoutClouds = (worldWidth: number, seed: number): CloudPlacement[] => {
+export const layoutClouds = (worldWidth: number, seed: number, weather: Weather = 'fair'): CloudPlacement[] => {
   const random = createRandom(seed);
-  const kinds = (Object.keys(KIND_SETTINGS) as CloudKind[]).flatMap((kind) => Array<CloudKind>(KIND_SETTINGS[kind].count).fill(kind));
+  const sky = SKIES[weather];
+  const kinds = (Object.keys(sky) as CloudKind[]).flatMap((kind) => Array<CloudKind>(sky[kind]?.count ?? 0).fill(kind));
+  if (kinds.length === 0) {
+    return [];
+  }
   for (let index = kinds.length - 1; index > 0; index -= 1) {
     const swap = Math.floor(random() * (index + 1));
     [kinds[index], kinds[swap]] = [kinds[swap], kinds[index]];
   }
   const slot = worldWidth / kinds.length;
   return kinds.map((kind, index) => {
-    const settings = KIND_SETTINGS[kind];
+    const settings = sky[kind] as KindSettings;
     const shape = createCloudShape(kind, between(random, ...settings.width), Math.floor(random() * 1e9));
     return {
       shape,

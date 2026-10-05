@@ -9,7 +9,7 @@ import groan6 from '../assets/sounds/groan-6.mp3';
 import groan7 from '../assets/sounds/groan-7.mp3';
 import groan8 from '../assets/sounds/groan-8.mp3';
 import themeMusic from '../assets/sounds/theme.mp3';
-import { SOUND_MAX_VOICES, SOUND_PITCH_VARIATION, SOUND_VOLUMES } from '../config';
+import { SOUND_MAX_VOICES, SOUND_PITCH_VARIATION, SOUND_RATES, SOUND_VOLUMES } from '../config';
 import { loadAudioSettings, normalizeAudioSettings, saveAudioSettings, type AudioSettings } from './audioSettings';
 import { MusicPlayer } from './MusicPlayer';
 import type { SpatialMix } from './spatial';
@@ -21,6 +21,7 @@ const SOURCES: Record<SoundId, readonly string[]> = {
   bowShot: [bowShotSound],
   groan: [groan1, groan2, groan3, groan4, groan5, groan6, groan7, groan8],
   explosion: [explosionSound],
+  thunder: [explosionSound],
 };
 
 /**
@@ -92,7 +93,7 @@ export class SoundManager {
     }
     const source = context.createBufferSource();
     source.buffer = buffer;
-    source.playbackRate.value = 1 + (Math.random() * 2 - 1) * SOUND_PITCH_VARIATION;
+    source.playbackRate.value = (SOUND_RATES[id] ?? 1) * (1 + (Math.random() * 2 - 1) * SOUND_PITCH_VARIATION);
     const gain = context.createGain();
     gain.gain.value = SOUND_VOLUMES[id] * mix.gain;
     const panner = context.createStereoPanner();

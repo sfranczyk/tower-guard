@@ -15,7 +15,7 @@ export type EnemyTarget = 'bowman' | 'tower';
 /** What dealt the damage, and from which side, so the right reaction plays. */
 export interface HitInfo {
   /** 'blast' = hit directly by an explosive arrow (a kill blows the body apart). */
-  cause: 'arrow' | 'headshot' | 'explosion' | 'blast';
+  cause: 'arrow' | 'headshot' | 'explosion' | 'blast' | 'lightning';
   /** World x the hit came from; the enemy turns to face it before falling. */
   fromX: number;
   /** World point of impact (used for 'blast' to throw the pieces away from it). */
@@ -190,7 +190,7 @@ export default class Enemy extends Container {
       } else {
         this.startFall(Enemy.deathKind(hit.cause), hit.fromX);
       }
-    } else if (hit.cause === 'explosion' || hit.cause === 'blast') {
+    } else if (hit.cause === 'explosion' || hit.cause === 'blast' || hit.cause === 'lightning') {
       this.startFall('knockback', hit.fromX, KNOCKDOWN_LIE_MS);
     }
 
@@ -408,7 +408,7 @@ export default class Enemy extends Container {
   }
 
   private static deathKind(cause: HitInfo['cause']): FallKind {
-    if (cause === 'headshot') {
+    if (cause === 'headshot' || cause === 'lightning') {
       return 'deathStiff';
     }
     if (cause === 'explosion') {

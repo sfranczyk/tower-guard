@@ -1,5 +1,5 @@
 import { Graphics, type Container } from 'pixi.js';
-import { EXPLOSION_RADIUS, GROUND_Y } from '../config';
+import { EXPLOSION_RADIUS, GROUND_Y, LIGHTNING_RADIUS } from '../config';
 import type { Vec2 } from '../types';
 
 type BloodParticle = {
@@ -132,6 +132,29 @@ export class EffectsSystem {
       this.scorchMark(point.x, radius);
     }
 
+    this.shakeMs = SHAKE_DURATION_MS;
+  }
+
+  /** Ground lightning strike: a white flash, blue-white sparks thrown up, smoke, a scorch mark, a shake. */
+  public lightningStrike(point: Vec2): void {
+    const still = { x: 0, y: 0 };
+    const flash = new Graphics().circle(0, 0, LIGHTNING_RADIUS * 0.8).fill({ color: 0xe8f1ff });
+    this.spawn(flash, point, 6, { velocity: still, lifeMs: 180, gravity: 0, drag: 0, grow: 0.8, startAlpha: 0.85 });
+    for (let index = 0; index < 5; index += 1) {
+      const smoke = new Graphics().circle(0, 0, random(7, 12)).fill({ color: pick([0x5f6470, 0x4b505b]) });
+      this.spawn(smoke, { x: point.x + random(-10, 10), y: point.y - 4 }, 4, {
+        velocity: { x: random(-20, 20), y: random(-55, -25) },
+        lifeMs: random(700, 1100), gravity: -10, drag: 1.2, grow: 1.2, startAlpha: 0.45,
+      });
+    }
+    for (let index = 0; index < 18; index += 1) {
+      const spark = new Graphics().circle(0, 0, random(1, 2.2)).fill({ color: pick([0xffffff, 0xd6e6ff, 0x9ec5ff]) });
+      this.spawn(spark, point, 6, {
+        velocity: burst(-Math.PI * 0.95, -Math.PI * 0.05, 150, 400),
+        lifeMs: random(300, 650), gravity: 700, drag: 1.5, grow: 0,
+      });
+    }
+    this.scorchMark(point.x, LIGHTNING_RADIUS * 1.6);
     this.shakeMs = SHAKE_DURATION_MS;
   }
 

@@ -66,7 +66,9 @@ export const WAVE_START_DELAY_MS = 800;
 
 /** Sound effects: default effects volume (0..1) and the base volume of each sound. */
 export const SOUND_DEFAULT_VOLUME = 0.7;
-export const SOUND_VOLUMES = { bowShot: 0.7, groan: 0.75, explosion: 1 } as const;
+export const SOUND_VOLUMES = { bowShot: 0.7, groan: 0.75, explosion: 1, thunder: 1 } as const;
+/** Base playback rate per sound (thunder is the explosion recording slowed down). */
+export const SOUND_RATES: Partial<Record<keyof typeof SOUND_VOLUMES, number>> = { thunder: 0.5 };
 /** Theme music volume (0..1), loop range in the file (see MusicPlayer) and fade time when toggled. */
 export const MUSIC_DEFAULT_VOLUME = 0.35;
 export const MUSIC_LOOP_START_S = 10.5;
@@ -79,6 +81,18 @@ export const SOUND_MAX_VOICES = 4;
 /** Sounds at the screen edge pan this far; off-screen ones fade to SOUND_MIN_GAIN over one screen width. */
 export const SOUND_MAX_PAN = 0.6;
 export const SOUND_MIN_GAIN = 0.2;
+
+/**
+ * Lightning (storm battlegrounds): a strike every LIGHTNING_INTERVAL_MS (random in the range); only
+ * LIGHTNING_GROUND_CHANCE of them reach the ground, after a LIGHTNING_WARNING_MS crackle at the spot.
+ * A ground strike hurts everyone within LIGHTNING_RADIUS (the bowman is safe inside the keep).
+ */
+export const LIGHTNING_INTERVAL_MS: readonly [number, number] = [5000, 11000];
+export const LIGHTNING_FIRST_DELAY_MS = 4000;
+export const LIGHTNING_GROUND_CHANCE = 0.4;
+export const LIGHTNING_WARNING_MS = 700;
+export const LIGHTNING_DAMAGE = 30;
+export const LIGHTNING_RADIUS = 38;
 
 // Enable with ?debug in the URL.
 export const SHOW_HITBOX_DEBUG = typeof window !== 'undefined'

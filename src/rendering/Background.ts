@@ -2,6 +2,7 @@ import { Graphics, type Container } from 'pixi.js';
 import { GAME_HEIGHT, GROUND_Y, WORLD_WIDTH } from '../config';
 import type { Battleground } from '../data/battlegrounds';
 import { layoutClouds, mixColor, type CloudLayer, type CloudShape } from './clouds';
+import { drawHills, drawVegetation } from './landscape';
 
 type Cloud = {
   sprite: Graphics;
@@ -13,7 +14,14 @@ type Cloud = {
 const skySeed = (name: string): number =>
   Array.from(name).reduce((hash, char) => Math.imul(hash ^ char.charCodeAt(0), 16777619), 2166136261) >>> 0;
 
-/** Sky, sun, hills, trees, drifting clouds and the ground strip of a battleground. */
+/** Where a cloud is right now (its base), e.g. for lightning to come out of. */
+export interface CloudSpot {
+  x: number;
+  y: number;
+  width: number;
+}
+
+/** Sky, sun, hills (or dunes), trees, drifting clouds (by weather) and the ground strip of a battleground. */
 export class Background {
   private readonly clouds: Cloud[];
 
@@ -22,12 +30,14 @@ export class Background {
     container.addChild(Background.createSky(battleground));
 
     const { sun } = battleground;
-    const glow = new Graphics().circle(sun.x, sun.y, sun.radius).fill({ color: sun.color, alpha: 0.88 });
-    glow.circle(sun.x, sun.y, sun.radius * 1.3).fill({ color: sun.color, alpha: 0.12 });
-    container.addChild(glow);
+    if (sun) {
+      const glow = new Graphics().circle(sun.x, sun.y, sun.radius).fill({ color: sun.color, alpha: 0.88 });
+      glow.circle(sun.x, sun.y, sun.radius * 1.3).fill({ color: sun.color, alpha: 0.12 });
+      container.addChild(glow);
+    }
 
     // Clouds float behind the hills (but in front of the sun).
-    this.clouds = layoutClouds(WORLD_WIDTH, skySeed(battleground.name)).map(({ shape, x, y, speed, alpha }) => {
+    this.clouds = layoutClouds(WORLD_WIDTH, skySeed(battleground.name), battleground.weather).map(({ shape, x, y, speed, alpha }) => {
       const cloud = Background.createCloud(shape, battleground);
       cloud.position.set(x, y);
       // Rendered once to a texture so the alpha applies to the whole cloud; otherwise every
@@ -38,7 +48,7 @@ export class Background {
       container.addChild(cloud);
       return { sprite: cloud, speed, width: shape.width };
     });
-    container.addChild(...Background.createDistantLandscape(battleground));
+    container.addChild(drawHills(battleground), drawVegetation(battleground));
     container.addChild(Background.createTerrain(battleground));
   }
 
@@ -51,6 +61,10 @@ export class Background {
         sprite.x = -width / 2;
       }
     });
+  }
+
+  public cloudSpots(): CloudSpot[] {
+    return this.clouds.map(({ sprite, width }) => ({ x: sprite.x, y: sprite.y, width }));
   }
 
   /** Shadow underneath tinted towards the far hills, body in the cloud colour, highlight towards white. */
@@ -77,38 +91,6 @@ export class Background {
       graphics.rect(0, index * bandHeight, WORLD_WIDTH, bandHeight + 1).fill({ color });
     });
     return graphics;
-  }
-
-  private static createDistantLandscape({ hills: [far, near], trees }: Battleground): Graphics[] {
-    const hills = new Graphics();
-    hills.moveTo(0, 360).bezierCurveTo(180, 250, 310, 340, 480, 275)
-      .bezierCurveTo(650, 215, 820, 330, WORLD_WIDTH, 245)
-      .lineTo(WORLD_WIDTH, GROUND_Y).lineTo(0, GROUND_Y).closePath().fill({ color: far });
-    hills.moveTo(0, 412).bezierCurveTo(190, 320, 390, 390, 570, 330)
-      .bezierCurveTo(760, 270, 900, 390, WORLD_WIDTH, 312)
-      .lineTo(WORLD_WIDTH, GROUND_Y).lineTo(0, GROUND_Y).closePath().fill({ color: near });
-
-    const forest = new Graphics();
-    const [main, light, dark] = trees.colors;
-    for (let x = 20; x < WORLD_WIDTH; x += 92) {
-      const height = 38 + ((x / 92) % 3) * 14;
-      if (trees.style === 'pine') {
-        // Layered triangular pines.
-        forest.rect(x - 2, GROUND_Y - 12, 4, 12).fill({ color: trees.trunk });
-        [[0, 30, light], [14, 24, main], [26, 17, dark]].forEach(([lift, halfWidth, color]) => {
-          const base = GROUND_Y - 10 - lift;
-          forest.poly([x - halfWidth, base, x, base - height * 0.8, x + halfWidth, base]).fill({ color });
-        });
-      } else {
-        forest.circle(x, GROUND_Y - height, 18).fill({ color: main });
-        forest.circle(x - 14, GROUND_Y - height + 12, 15).fill({ color: light });
-        forest.circle(x + 15, GROUND_Y - height + 12, 15).fill({ color: dark });
-        forest.rect(x - 3, GROUND_Y - height + 16, 6, height).fill({ color: trees.trunk });
-      }
-    }
-    hills.zIndex = 0;
-    forest.zIndex = 0;
-    return [hills, forest];
   }
 
   private static createTerrain({ ground: colors }: Battleground): Graphics {

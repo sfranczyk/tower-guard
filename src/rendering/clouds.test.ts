@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { createCloudShape, layoutClouds, mixColor, type CloudKind } from './clouds';
 
-const KINDS: CloudKind[] = ['cumulus', 'stratus', 'cirrus'];
+const KINDS: CloudKind[] = ['cumulus', 'stratus', 'cirrus', 'storm'];
+const FAIR_KINDS: CloudKind[] = ['cumulus', 'stratus', 'cirrus'];
 
 describe('cloud shapes', () => {
   it('stay within their width and above their base', () => {
@@ -28,7 +29,7 @@ describe('layoutClouds', () => {
   const clouds = layoutClouds(1200, 42);
 
   it('uses every kind and spreads clouds over the whole sky', () => {
-    expect(new Set(clouds.map((cloud) => cloud.shape.kind))).toEqual(new Set(KINDS));
+    expect(new Set(clouds.map((cloud) => cloud.shape.kind))).toEqual(new Set(FAIR_KINDS));
     const xs = clouds.map((cloud) => cloud.x).sort((a, b) => a - b);
     expect(xs[0]).toBeLessThan(200);
     expect(xs[xs.length - 1]).toBeGreaterThan(1000);
@@ -45,6 +46,17 @@ describe('layoutClouds', () => {
 
   it('is the same sky for the same seed', () => {
     expect(layoutClouds(1200, 42)).toEqual(clouds);
+  });
+});
+
+describe('weather skies', () => {
+  it('has no clouds when clear and a low deck of storm clouds in a storm', () => {
+    expect(layoutClouds(1200, 5, 'clear')).toEqual([]);
+    const storm = layoutClouds(1200, 5, 'storm');
+    expect(storm.filter((cloud) => cloud.shape.kind === 'storm').length).toBeGreaterThanOrEqual(5);
+    // Covers the sky: the storm clouds together span more than the world width.
+    const span = storm.filter((cloud) => cloud.shape.kind === 'storm').reduce((sum, cloud) => sum + cloud.shape.width, 0);
+    expect(span).toBeGreaterThan(1200 * 1.4);
   });
 });
 
