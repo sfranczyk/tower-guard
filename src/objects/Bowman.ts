@@ -193,6 +193,12 @@ export class Bowman extends Container {
     if (isMoving) {
       this.animationTime += deltaMs / (150 + this.animationRunningBlend * 10);
     }
+    // While the bow isn't drawn, face the way we're running and carry the bow pointing forward.
+    // While drawing, facing follows the aim (set in setAim).
+    if (this.aim.power <= 0 && this.currentSpeed > 1) {
+      this.facingDirection = Math.sign(this.horizontalSpeed);
+      this.aim.direction = { x: this.facingDirection, y: 0 };
+    }
     this.redraw();
   }
 
