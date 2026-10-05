@@ -207,14 +207,12 @@ export class GameScene extends Scene {
     ui.handlers.trajectoryChange = (enabled) => {
       session.showTrajectory = enabled;
     };
-    ui.handlers.soundChange = (enabled) => this.ctx.sound.setEnabled(enabled);
-    ui.handlers.volumeChange = (volume) => this.ctx.sound.setVolume(volume);
+    ui.handlers.audioChange = (changes) => this.ctx.sound.updateSettings(changes);
     this.onExit(() => {
       ui.handlers.toggleOptions = undefined;
       ui.handlers.selectProjectile = undefined;
       ui.handlers.trajectoryChange = undefined;
-      ui.handlers.soundChange = undefined;
-      ui.handlers.volumeChange = undefined;
+      ui.handlers.audioChange = undefined;
     });
 
     this.listenWindow('keydown', (event) => {
@@ -352,7 +350,7 @@ export class GameScene extends Scene {
 
   private syncOptions(): void {
     this.ctx.ui.setTrajectoryOption(this.ctx.session.showTrajectory);
-    this.ctx.ui.setSoundOptions(this.ctx.sound.enabled, this.ctx.sound.volume);
+    this.ctx.ui.setAudioOptions(this.ctx.sound.settings);
   }
 
   private toggleEnemiesVisible(): void {

@@ -1,5 +1,6 @@
 import { GAME_HEIGHT, GAME_WIDTH } from '../config';
 import type { ProjectileType } from '../types';
+import type { AudioSettings } from '../audio/audioSettings';
 import type { SandboxSettings } from '../data/sandbox';
 import { SandboxForm } from './SandboxForm';
 import { HUD_BOTTOM_TEMPLATE, HUD_TOP_TEMPLATE, OVERLAY_TEMPLATE } from './template';
@@ -40,9 +41,8 @@ export interface UiHandlers {
   sandboxStart?: () => void;
   sandboxBack?: () => void;
   trajectoryChange?: (enabled: boolean) => void;
-  soundChange?: (enabled: boolean) => void;
-  /** Master volume 0..1. */
-  volumeChange?: (volume: number) => void;
+  /** A music or effects toggle/volume (0..1) changed in the settings drawer. */
+  audioChange?: (changes: Partial<AudioSettings>) => void;
 }
 
 /**
@@ -76,6 +76,8 @@ export class DomUi {
   private readonly trajectoryInput: HTMLInputElement;
   private readonly soundInput: HTMLInputElement;
   private readonly volumeInput: HTMLInputElement;
+  private readonly musicInput: HTMLInputElement;
+  private readonly musicVolumeInput: HTMLInputElement;
   private onEndButton?: () => void;
 
   public constructor(host: HTMLElement, canvas: HTMLCanvasElement) {
@@ -113,6 +115,8 @@ export class DomUi {
     this.trajectoryInput = this.query<HTMLInputElement>('[data-trajectory]');
     this.soundInput = this.query<HTMLInputElement>('[data-sound]');
     this.volumeInput = this.query<HTMLInputElement>('[data-volume]');
+    this.musicInput = this.query<HTMLInputElement>('[data-music]');
+    this.musicVolumeInput = this.query<HTMLInputElement>('[data-music-volume]');
 
     this.onClick('[data-start]', () => this.handlers.start?.());
     this.onClick('[data-open-test]', () => this.handlers.openAnimationLab?.());
@@ -125,8 +129,11 @@ export class DomUi {
       button.addEventListener('click', () => this.handlers.selectProjectile?.(button.dataset.projectile as ProjectileType));
     });
     this.trajectoryInput.addEventListener('change', () => this.handlers.trajectoryChange?.(this.trajectoryInput.checked));
-    this.soundInput.addEventListener('change', () => this.handlers.soundChange?.(this.soundInput.checked));
-    this.volumeInput.addEventListener('input', () => this.handlers.volumeChange?.(Number(this.volumeInput.value) / 100));
+    const audioChange = (changes: Partial<AudioSettings>): void => this.handlers.audioChange?.(changes);
+    this.soundInput.addEventListener('change', () => audioChange({ effectsEnabled: this.soundInput.checked }));
+    this.volumeInput.addEventListener('input', () => audioChange({ effectsVolume: Number(this.volumeInput.value) / 100 }));
+    this.musicInput.addEventListener('change', () => audioChange({ musicEnabled: this.musicInput.checked }));
+    this.musicVolumeInput.addEventListener('input', () => audioChange({ musicVolume: Number(this.musicVolumeInput.value) / 100 }));
 
     window.addEventListener('resize', () => this.fitCanvas());
     this.showScreen('menu');
@@ -181,9 +188,11 @@ export class DomUi {
     this.trajectoryInput.checked = showTrajectory;
   }
 
-  public setSoundOptions(enabled: boolean, volume: number): void {
-    this.soundInput.checked = enabled;
-    this.volumeInput.value = `${Math.round(volume * 100)}`;
+  public setAudioOptions(settings: Readonly<AudioSettings>): void {
+    this.soundInput.checked = settings.effectsEnabled;
+    this.volumeInput.value = `${Math.round(settings.effectsVolume * 100)}`;
+    this.musicInput.checked = settings.musicEnabled;
+    this.musicVolumeInput.value = `${Math.round(settings.musicVolume * 100)}`;
   }
 
   public showEndScreen(options: EndScreenOptions): void {

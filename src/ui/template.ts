@@ -20,8 +20,10 @@ export const OVERLAY_TEMPLATE = `
       <div class="drawer" data-drawer hidden>
         <div class="drawer-header"><h2>Game settings</h2><button class="icon-button" data-close-options aria-label="Close settings">×</button></div>
         <label class="field toggle-field"><span class="hud-label">Trajectory preview</span><input data-trajectory type="checkbox" checked></label>
+        <label class="field toggle-field"><span class="hud-label">Music</span><input data-music type="checkbox" checked></label>
+        <label class="field"><span class="hud-label">Music volume</span><input data-music-volume type="range" min="0" max="100" step="5" value="35"></label>
         <label class="field toggle-field"><span class="hud-label">Sound effects</span><input data-sound type="checkbox" checked></label>
-        <label class="field"><span class="hud-label">Volume</span><input data-volume type="range" min="0" max="100" step="5" value="70"></label>
+        <label class="field"><span class="hud-label">Effects volume</span><input data-volume type="range" min="0" max="100" step="5" value="70"></label>
       </div>
       <section class="screen sandbox-screen" data-sandbox hidden>
         <div class="sandbox-card" data-sandbox-form></div>

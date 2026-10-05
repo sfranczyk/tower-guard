@@ -40,6 +40,7 @@ const bootstrap = async (): Promise<void> => {
   const [textures] = await Promise.all([loadTextures(), sound.load()]);
   const ui = new DomUi(host, app.canvas);
   new SceneManager(app, ui, textures, sound).start();
+  void sound.loadMusic();
 };
 
 void bootstrap();

@@ -23,7 +23,7 @@ src/
   main.ts              bootstrap: Pixi app, textures, canvas fit, DomUi, SceneManager
   config.ts            all tuning constants (speeds, damage, gravity, world size)
   types/               shared types: Vec2, Rect, Bounds, enemy/projectile types
-  audio/               SoundManager (Web Audio effects), spatial mix (pure)
+  audio/               SoundManager (effects), MusicPlayer (looping theme), audio settings, spatial mix
   core/                Scene base class, SceneManager, GameContext/GameSession, sandboxStorage
   scenes/              MenuScene, SandboxScene (battle setup), GameScene (one wave), AnimationLabScene
   systems/             gameplay logic: CombatSystem, EffectsSystem, WaveSpawner, collision (pure)
@@ -90,6 +90,11 @@ src/
   `SOURCES` (an array of variants) and its volume in `config.ts` (`SOUND_VOLUMES`). When trimming, don't
   denoise quiet takes or fade out trailing fricatives, or they get eaten. The enabled/volume
   settings in the drawer persist in localStorage.
+- **Music**: the theme (`assets/sounds/theme.mp3`, from the user's Suno track `human/resonant-drone.mp3`) is
+  started once at boot and plays across all scenes. The file plays its intro once and then loops
+  `MUSIC_LOOP_START_S..MUSIC_LOOP_END_S`; the last 6 s before the loop end are crossfaded (in the file) into
+  the audio leading up to the loop start, so the seam is sample-continuous. If you re-cut the file, keep
+  the loop points in `config.ts` in sync. Music and effects have separate toggles and volumes.
 - **Coordinates**: the screen is 1024×540 and the world is wider (`WORLD_WIDTH`). `GameScene` scrolls the
   `world` container by `cameraX`. The ground is at `GROUND_Y`.
 

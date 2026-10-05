@@ -8,7 +8,10 @@ import groan5 from '../assets/sounds/groan-5.mp3';
 import groan6 from '../assets/sounds/groan-6.mp3';
 import groan7 from '../assets/sounds/groan-7.mp3';
 import groan8 from '../assets/sounds/groan-8.mp3';
-import { SOUND_DEFAULT_VOLUME, SOUND_MAX_VOICES, SOUND_PITCH_VARIATION, SOUND_VOLUMES } from '../config';
+import themeMusic from '../assets/sounds/theme.mp3';
+import { SOUND_MAX_VOICES, SOUND_PITCH_VARIATION, SOUND_VOLUMES } from '../config';
+import { loadAudioSettings, normalizeAudioSettings, saveAudioSettings, type AudioSettings } from './audioSettings';
+import { MusicPlayer } from './MusicPlayer';
 import type { SpatialMix } from './spatial';
 
 export type SoundId = keyof typeof SOUND_VOLUMES;
@@ -20,35 +23,32 @@ const SOURCES: Record<SoundId, readonly string[]> = {
   explosion: [explosionSound],
 };
 
-const STORAGE_KEY = 'tower-guard.audio';
-
-interface AudioSettings {
-  enabled: boolean;
-  volume: number;
-}
-
 /**
- * Sound effects through Web Audio. Buffers are decoded once at startup; the context starts
- * suspended (browser autoplay policy) and is resumed on the first key press or click. Every play
- * gets a slight random pitch, and the enabled/volume settings are remembered per browser.
+ * Sound effects and the theme music through Web Audio. Effect buffers are decoded once at startup;
+ * the context starts suspended (browser autoplay policy) and is resumed on the first key press or
+ * click. Every effect gets a slight random pitch. Effects and music have their own volume, and the
+ * settings are remembered per browser.
  */
 export class SoundManager {
   private readonly context?: AudioContext;
-  private readonly master?: GainNode;
+  /** Effects bus (effects volume); music has its own gain inside MusicPlayer. */
+  private readonly effects?: GainNode;
+  private readonly music?: MusicPlayer;
   private readonly buffers = new Map<SoundId, AudioBuffer[]>();
   private readonly lastVariant = new Map<SoundId, number>();
   private readonly voices = new Map<SoundId, number>();
-  private settings: AudioSettings;
+  private current: AudioSettings;
 
   public constructor() {
-    this.settings = SoundManager.loadSettings();
+    this.current = loadAudioSettings();
     if (typeof AudioContext === 'undefined') {
       return;
     }
     this.context = new AudioContext();
-    this.master = this.context.createGain();
-    this.master.connect(this.context.destination);
-    this.applyVolume();
+    this.effects = this.context.createGain();
+    this.effects.connect(this.context.destination);
+    this.music = new MusicPlayer(this.context, this.context.destination);
+    this.applySettings();
 
     const unlock = (): void => {
       void this.context?.resume();
@@ -59,7 +59,12 @@ export class SoundManager {
     window.addEventListener('keydown', unlock);
   }
 
-  /** Fetches and decodes every sound; a failed sound just stays silent. */
+  /** Loads the theme in the background (large file); it starts as soon as it's decoded. */
+  public loadMusic(): Promise<void> {
+    return this.music?.load(themeMusic) ?? Promise.resolve();
+  }
+
+  /** Fetches and decodes every effect; a failed sound just stays silent. */
   public async load(): Promise<void> {
     const context = this.context;
     if (!context) {
@@ -78,10 +83,10 @@ export class SoundManager {
   }
 
   public play(id: SoundId, mix: SpatialMix = { gain: 1, pan: 0 }): void {
-    const { context, master } = this;
+    const { context, effects } = this;
     const buffer = this.pickVariant(id);
     const playing = this.voices.get(id) ?? 0;
-    if (!context || !master || !buffer || !this.settings.enabled || context.state !== 'running'
+    if (!context || !effects || !buffer || !this.current.effectsEnabled || context.state !== 'running'
       || playing >= SOUND_MAX_VOICES) {
       return;
     }
@@ -92,7 +97,7 @@ export class SoundManager {
     gain.gain.value = SOUND_VOLUMES[id] * mix.gain;
     const panner = context.createStereoPanner();
     panner.pan.value = mix.pan;
-    source.connect(gain).connect(panner).connect(master);
+    source.connect(gain).connect(panner).connect(effects);
 
     this.voices.set(id, playing + 1);
     source.addEventListener('ended', () => this.voices.set(id, (this.voices.get(id) ?? 1) - 1));
@@ -113,50 +118,22 @@ export class SoundManager {
     return variants[index];
   }
 
-  public get enabled(): boolean {
-    return this.settings.enabled;
+  public get settings(): Readonly<AudioSettings> {
+    return this.current;
   }
 
-  public get volume(): number {
-    return this.settings.volume;
+  /** Applies and remembers changed sound settings (from the settings drawer). */
+  public updateSettings(changes: Partial<AudioSettings>): void {
+    this.current = normalizeAudioSettings({ ...this.current, ...changes });
+    this.applySettings();
+    saveAudioSettings(this.current);
   }
 
-  public setEnabled(enabled: boolean): void {
-    this.settings = { ...this.settings, enabled };
-    this.saveSettings();
-  }
-
-  /** Master volume 0..1. */
-  public setVolume(volume: number): void {
-    this.settings = { ...this.settings, volume: Math.max(0, Math.min(1, volume)) };
-    this.applyVolume();
-    this.saveSettings();
-  }
-
-  private applyVolume(): void {
-    if (this.master) {
-      this.master.gain.value = this.settings.volume;
+  private applySettings(): void {
+    if (this.effects) {
+      this.effects.gain.value = this.current.effectsVolume;
     }
-  }
-
-  private static loadSettings(): AudioSettings {
-    const defaults = { enabled: true, volume: SOUND_DEFAULT_VOLUME };
-    try {
-      const stored = JSON.parse(window.localStorage.getItem(STORAGE_KEY) ?? '{}') as Partial<AudioSettings>;
-      return {
-        enabled: typeof stored.enabled === 'boolean' ? stored.enabled : defaults.enabled,
-        volume: typeof stored.volume === 'number' ? Math.max(0, Math.min(1, stored.volume)) : defaults.volume,
-      };
-    } catch {
-      return defaults;
-    }
-  }
-
-  private saveSettings(): void {
-    try {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(this.settings));
-    } catch {
-      // Not critical: the setting just won't be remembered.
-    }
+    this.music?.setVolume(this.current.musicVolume);
+    this.music?.setPlaying(this.current.musicEnabled);
   }
 }

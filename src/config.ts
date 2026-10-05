@@ -64,9 +64,14 @@ export const ENEMY_KEEP_HEALTH = 650;
 export const WAVE_SPAWN_INTERVAL_MS = 900;
 export const WAVE_START_DELAY_MS = 800;
 
-/** Sound effects: master volume (0..1) and the base volume of each sound. */
+/** Sound effects: default effects volume (0..1) and the base volume of each sound. */
 export const SOUND_DEFAULT_VOLUME = 0.7;
 export const SOUND_VOLUMES = { bowShot: 0.7, groan: 0.75, explosion: 1 } as const;
+/** Theme music volume (0..1), loop range in the file (see MusicPlayer) and fade time when toggled. */
+export const MUSIC_DEFAULT_VOLUME = 0.35;
+export const MUSIC_LOOP_START_S = 10.5;
+export const MUSIC_LOOP_END_S = 228;
+export const MUSIC_FADE_S = 1.2;
 /** Each play is pitched randomly by ±this fraction so repeats don't sound identical. */
 export const SOUND_PITCH_VARIATION = 0.07;
 /** At most this many copies of one sound play at once (piercing hits, volleys). */
