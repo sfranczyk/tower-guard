@@ -65,33 +65,13 @@
         .end-card { width: min(360px, calc(100% - 36px)); padding: 28px; border: 1px solid var(--border); border-radius: 16px; background: var(--surface); text-align: center; pointer-events: auto; }
         .end-card h2 { margin: 0 0 8px; font-size: 26px; }
         .end-card p { margin: 0 0 20px; color: var(--muted); }
-        .test-screen { position: absolute; inset: 0; padding: 30px 34px; pointer-events: none; }
-        .test-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; }
-        .test-header h1 { margin: 8px 0 8px; font-size: 34px; letter-spacing: -.04em; }
-        .test-header p { max-width: 510px; color: var(--muted); font-size: 14px; }
+        .test-screen { position: absolute; top: 14px; right: 14px; pointer-events: none; }
         .secondary-button { padding: 10px 16px; border: 1px solid var(--border); border-radius: 9px; background: var(--surface-soft); color: var(--text); font-weight: 700; pointer-events: auto; }
         .secondary-button:hover { background: rgba(255, 255, 255, .14); }
-        .test-panel { position: absolute; top: 142px; right: 34px; width: 270px; padding: 18px; border: 1px solid var(--border); border-radius: 16px; background: var(--surface); box-shadow: 0 18px 44px rgba(0, 0, 0, .28); pointer-events: auto; }
-        .test-panel-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-        .test-panel-heading strong { display: block; margin-top: 5px; font-size: 17px; }
-        .test-panel > p { margin: 15px 0; color: var(--muted); font-size: 13px; line-height: 1.5; }
-        .test-badge { padding: 4px 7px; border-radius: 5px; background: rgba(103, 167, 255, .16); color: #8fc0ff; font-size: 9px; font-weight: 800; letter-spacing: .08em; }
-        .test-legend { display: flex; align-items: center; flex-wrap: wrap; gap: 7px; color: var(--muted); font-size: 11px; line-height: 1.7; }
-        .legend-dot { width: 8px; height: 8px; border-radius: 50%; background: #f5f7fb; box-shadow: 0 0 0 2px #18253a; }
-        .legend-line { width: 18px; height: 3px; margin-left: 5px; border-radius: 4px; background: var(--blue); }
-        .test-selection { display: flex; gap: 7px; margin-top: 18px; }
-        .character-chip { padding: 7px 11px; border: 1px solid var(--border); border-radius: 7px; background: transparent; color: var(--muted); font-size: 12px; pointer-events: none; }
-        .character-chip.active { border-color: var(--blue); background: rgba(91, 141, 239, .16); color: var(--text); }
-        .enemy-chip { border-color: rgba(230, 107, 107, .35); }
-        .test-readout { min-height: 34px; margin-top: 16px; padding: 9px; border-radius: 7px; background: rgba(0, 0, 0, .18); color: var(--muted); font-size: 11px; line-height: 1.4; }
-        .test-animation-note { margin-top: 12px; color: var(--muted); font-size: 11px; line-height: 1.4; }
          @media (max-width: 700px) {
             .hud { flex-wrap: wrap; justify-content: center; }
             .hud-stats { flex-wrap: wrap; justify-content: center; }
             .hud-stat { min-width: 0; padding: 5px 7px; }
-            .test-screen { padding: 18px; }
-            .test-header h1 { font-size: 27px; }
-             .test-panel { top: auto; right: 18px; bottom: 18px; left: 18px; width: auto; }
              .projectile-button { padding: 6px; font-size: 10px; }
          }
     </style>

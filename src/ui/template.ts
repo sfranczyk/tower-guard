@@ -14,27 +14,7 @@ export const OVERLAY_TEMPLATE = `
         </div>
       </section>
       <section class="test-screen" data-test>
-        <div class="test-header">
-          <div>
-            <div class="eyebrow">Animation workshop / prototype</div>
-            <h1>Character test panel</h1>
-          <p>Compare the movement cycles and the archer's bow silhouette.</p>
-          </div>
-          <button class="secondary-button" data-open-game>Open game</button>
-        </div>
-        <div class="test-panel">
-          <div class="test-panel-heading">
-            <div><span class="eyebrow">Active character</span><strong>Archer stickman</strong></div>
-          <span class="test-badge">ANIMATION LAB</span>
-          </div>
-          <p>All previews use the same stickman proportions as the in-game characters.</p>
-          <div class="test-selection">
-            <button class="character-chip active">Archer</button>
-            <button class="character-chip enemy-chip">Enemy</button>
-          </div>
-          <div class="test-readout" data-test-joint>Animation previews and archer model</div>
-          <div class="test-animation-note">Walking, sprinting and club attack cycles are shown below.</div>
-        </div>
+        <button class="secondary-button" data-open-game>Open game</button>
       </section>
       <div class="drawer" data-drawer hidden>
         <div class="drawer-header"><h2>Game settings</h2><button class="icon-button" data-close-options aria-label="Close settings">×</button></div>

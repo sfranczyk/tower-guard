@@ -15,7 +15,7 @@ export interface StickmanPose {
   running?: boolean;
   /** 0 = walk, 1 = run. */
   runningBlend?: number;
-  /** Baseline written to sprite.y (bounce is added on top). */
+  /** Hip height written to sprite.y (bounce is added on top). Defaults to 430. */
   originY?: number;
   /** 0 = no attack, otherwise radians through the club swing. */
   attackPhase?: number;
@@ -282,10 +282,4 @@ export const drawStickman: StickmanRenderer = (sprite, phase, pose = {}) => {
       drawBow(sprite, archerRig);
     }
   }
-};
-
-/** Standing archer with a bow that cycles its draw tension (animation lab preview). */
-export const drawTensionArcher = (sprite: Graphics, phase: number): void => {
-  const tension = 0.25 + (Math.sin(phase) + 1) * 0.375;
-  drawStickman(sprite, 0, { idleBlend: 1, archerPose: true, bowTension: tension, skin: 'armored' });
 };
