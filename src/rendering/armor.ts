@@ -16,6 +16,9 @@ export const ARMOR_COLORS = {
   leather: 0x5a3b28,
 } as const;
 
+/** Nocked arrow length (sprite units): at full draw the head sits 16 units past the bow grip. */
+const NOCKED_ARROW_LENGTH = 72;
+
 const OUTLINE = { width: 2.5, color: ARMOR_COLORS.outline, join: 'round', cap: 'round' } as const;
 
 const polygon = (sprite: Graphics, points: Vec2[], fill: number): void => {
@@ -105,7 +108,8 @@ export const drawArmoredBow = (sprite: Graphics, rig: ArcherRig, tension: number
   const length = Math.hypot(dx, dy) || 1;
   const ux = dx / length;
   const uy = dy / length;
-  const tip = { x: woodHand.x + ux * 16, y: woodHand.y + uy * 16 };
+  // Fixed length: the arrow slides back with the string hand instead of stretching.
+  const tip = { x: stringHand.x + ux * NOCKED_ARROW_LENGTH, y: stringHand.y + uy * NOCKED_ARROW_LENGTH };
   sprite.moveTo(stringHand.x, stringHand.y).lineTo(tip.x, tip.y)
     .stroke({ width: 2, color: ARMOR_COLORS.limb, cap: 'round' });
   // Arrowhead and fletching.
