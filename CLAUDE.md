@@ -5,7 +5,7 @@ enemy waves walk in from the enemy keep on the right. PixiJS 8 + TypeScript (str
 
 ## Commands
 
-- `npm run dev`: dev server on http://localhost:8080 (add `?debug` to show hitboxes)
+- `npm run dev`: dev server on http://localhost:8080 (or `$PORT`) (add `?debug` to show hitboxes)
   - With `?debug`, `window.__towerGuard.scene` exposes the running `GameScene` in the console, e.g.
     `scene.enemies[0].takeDamage(999, { cause: 'headshot', fromX: 0 })`.
   - `?lab` opens the animation lab directly, and `?lab=<id>` (e.g. `?lab=archer`) opens one animation zoomed in.
