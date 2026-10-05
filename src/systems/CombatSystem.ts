@@ -201,22 +201,13 @@ export class CombatSystem {
         }
         // Survivors are knocked down away from the blast and get back up; the rest die thrown back.
         candidate.takeDamage(EXPLOSION_DAMAGE, { cause: 'explosion', fromX: point.x });
-        this.afterEnemyHit(candidate);
         if (!candidate.isAlive()) {
           this.events.enemyKilled();
         }
       });
   }
 
-  /** Arrows stuck in an enemy that starts falling drop to the ground instead of hanging in the air. */
-  private afterEnemyHit(enemy: Enemy): void {
-    if (enemy.isAlive() && !enemy.isDown) {
-      return;
-    }
-    this.world.arrows
-      .filter((arrow) => arrow.isStuckTo(enemy))
-      .forEach((arrow) => arrow.stickToGround(GROUND_Y - 3));
-  }
+
 
   private hitEnemy(
     arrow: Arrow,
@@ -253,13 +244,10 @@ export class CombatSystem {
       if (arrow.impacts >= PIERCING_MAX_IMPACTS) {
         arrow.deactivate();
       }
-    } else if (enemy.isAlive()) {
-      arrow.stickToEnemy(enemy, impactPoint);
     } else {
-      // The enemy is falling: the arrow drops to the ground rather than floating where the body was.
-      arrow.stickToGround(GROUND_Y - 3);
+      // Pinned to the body: it rides along with walking, falls and the corpse.
+      arrow.stickToEnemy(enemy, impactPoint);
     }
-    this.afterEnemyHit(enemy);
 
     if (!enemy.isAlive()) {
       this.events.enemyKilled();

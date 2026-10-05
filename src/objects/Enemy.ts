@@ -2,6 +2,7 @@ import { Container, Graphics, Text } from 'pixi.js';
 import { ENEMY_ATTACK_INTERVAL_MS, ENEMY_GROUND_Y } from '../config';
 import { STICKMAN_HEAD, drawStickman, type StickmanPose } from '../rendering/stickman';
 import { FALL_DURATION_MS, drawStickmanFall, getFallPose, type FallKind, type FallPose } from '../rendering/stickmanFall';
+import { fromBodyAnchor, toBodyAnchor, type BodyAnchor, type BodyTransform, type Torso } from '../systems/bodyAnchor';
 import type { Bounds, Vec2 } from '../types';
 
 const ATTACK_ANIMATION_DURATION_MS = 1_130;
@@ -31,6 +32,8 @@ const KNOCKDOWN_LIE_MS = 450;
 const BODY_SCALE = { x: 0.5, y: 0.52 };
 const BODY_ORIGIN_Y = -25;
 const ENEMY_POSE: StickmanPose = { armed: true, originY: BODY_ORIGIN_Y };
+/** drawStickman's hip and shoulder (sprite space) for walking, standing and attacking. */
+const STANDING_TORSO: Torso = { hip: { x: 0, y: 0 }, shoulder: { x: 0, y: -35 } };
 
 export default class Enemy extends Container {
   private readonly body: Graphics;
@@ -347,6 +350,39 @@ export default class Enemy extends Container {
         y: this.y + (body.y + point.y * body.scale.y) * this.scale.y,
       }),
     };
+  }
+
+  /** Pins a world point/angle (e.g. an arrow hit) to this enemy's torso. */
+  public toBodyAnchor(point: Vec2, angle: number): BodyAnchor {
+    return toBodyAnchor(point, angle, this.bodyTransform(), this.torso());
+  }
+
+  /** Where a pinned anchor is now, following walking, attacks, falls and lying. */
+  public resolveBodyAnchor(anchor: BodyAnchor): { position: Vec2; rotation: number } {
+    return fromBodyAnchor(anchor, this.bodyTransform(), this.torso());
+  }
+
+  private bodyTransform(): BodyTransform {
+    const { body } = this;
+    return {
+      x: this.x,
+      y: this.y,
+      scale: this.scale.x,
+      bodyX: body.x,
+      bodyY: body.y,
+      rotation: body.rotation,
+      scaleX: body.scale.x,
+      scaleY: body.scale.y,
+    };
+  }
+
+  /** Hip and shoulder of the pose currently drawn, in body-sprite space. */
+  private torso(): Torso {
+    if (this.fall) {
+      const { hip, shoulder } = getFallPose(this.fall.kind, this.fallProgress);
+      return { hip, shoulder };
+    }
+    return STANDING_TORSO;
   }
 
   private static boundsAround(points: Vec2[], padding: number): Bounds {

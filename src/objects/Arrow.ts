@@ -1,13 +1,20 @@
 import { Graphics, Sprite, Texture } from 'pixi.js';
 import { ARROW_DRAG, ARROW_GRAVITY, GAME_HEIGHT, WORLD_WIDTH } from '../config';
 import { advanceProjectile, type FlightParams } from '../systems/ballistics';
+import type { BodyAnchor } from '../systems/bodyAnchor';
 import type { ProjectileType, Vec2 } from '../types';
+
+/** Something an arrow can be pinned to that moves and changes pose (an enemy). */
+export interface AnchorTarget {
+  toBodyAnchor(point: Vec2, angle: number): BodyAnchor;
+  resolveBodyAnchor(anchor: BodyAnchor): { position: Vec2; rotation: number };
+}
 
 export default class Arrow extends Sprite {
   private static currentGravity = ARROW_GRAVITY;
   private stuck = false;
-  private stuckTarget: { x: number; y: number } | undefined;
-  private stuckOffset = { x: 0, y: 0 };
+  private stuckTarget: AnchorTarget | undefined;
+  private stuckAnchor: BodyAnchor | undefined;
   private readonly velocity = { x: 0, y: 0 };
   private readonly trail: Graphics;
   private previousPosition = { x: 0, y: 0 };
@@ -32,6 +39,7 @@ export default class Arrow extends Sprite {
   public fire(angle: number, power: number, projectileType: ProjectileType = 'normal'): this {
     this.stuck = false;
     this.stuckTarget = undefined;
+    this.stuckAnchor = undefined;
     this.trail.clear().visible = true;
     this.trail.alpha = 1;
     this.trailAge = 0;
@@ -60,12 +68,12 @@ export default class Arrow extends Sprite {
     }
 
     if (this.stuck) {
-      if (this.stuckTarget) {
+      if (this.stuckTarget && this.stuckAnchor) {
+        // Ride along with the target's torso: walking, falling and lying.
         this.segmentStart = { x: this.x, y: this.y };
-        this.position.set(
-          this.stuckTarget.x + this.stuckOffset.x,
-          this.stuckTarget.y + this.stuckOffset.y,
-        );
+        const { position, rotation } = this.stuckTarget.resolveBodyAnchor(this.stuckAnchor);
+        this.position.set(position.x, position.y);
+        this.rotation = rotation;
         this.segmentEnd = { x: this.x, y: this.y };
       }
       return;
@@ -102,28 +110,26 @@ export default class Arrow extends Sprite {
   public stickToGround(y: number): this {
     this.stuck = true;
     this.stuckTarget = undefined;
+    this.stuckAnchor = undefined;
     this.velocity.x = 0;
     this.velocity.y = 0;
     this.y = y;
     return this;
   }
 
-  public stickToEnemy(target: { x: number; y: number }, impactPoint = { x: this.x, y: this.y }): this {
+  /** Pins the arrow where it hit; it then follows the target's body, including death falls. */
+  public stickToEnemy(target: AnchorTarget, impactPoint = { x: this.x, y: this.y }): this {
     this.stuck = true;
     this.stuckTarget = target;
     this.velocity.x = 0;
     this.velocity.y = 0;
-    this.stuckOffset = { x: impactPoint.x - target.x, y: impactPoint.y - target.y };
     this.position.set(impactPoint.x, impactPoint.y);
+    this.stuckAnchor = target.toBodyAnchor(impactPoint, this.rotation);
     return this;
   }
 
   public get isStuck(): boolean {
     return this.stuck;
-  }
-
-  public isStuckTo(target: { x: number; y: number }): boolean {
-    return this.stuck && this.stuckTarget === target;
   }
 
   public static setGravity(value: number): void {
@@ -165,6 +171,7 @@ export default class Arrow extends Sprite {
   public deactivate(): this {
     this.stuck = false;
     this.stuckTarget = undefined;
+    this.stuckAnchor = undefined;
     this.velocity.x = 0;
     this.velocity.y = 0;
     this.visible = false;
