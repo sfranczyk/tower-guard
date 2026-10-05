@@ -5,16 +5,18 @@ import { STICKMAN_HEAD } from './stickman';
 /**
  * One-shot falling animations for the skeleton stickman, driven by progress 0..1:
  * - death: buckles at the knees, kneels and collapses face down where it stood;
- * - knockback: thrown a short distance backwards (−x), lands and ends lying on its back.
+ * - knockback: thrown a short distance backwards (−x), lands and ends lying on its back;
+ * - getUp: starts from knockback's final pose, sits up, pushes off and stands up again.
  *
  * Sprite space matches drawStickman with originY 0: hip starts at (0, 0), facing +x, and the
  * ground is at y ≈ 58. Mirror with sprite.scale.x for the other direction.
  */
-export type FallKind = 'death' | 'knockback';
+export type FallKind = 'death' | 'knockback' | 'getUp';
 
 export const FALL_DURATION_MS: Readonly<Record<FallKind, number>> = {
   death: 1000,
   knockback: 900,
+  getUp: 1100,
 };
 
 const THIGH = 30;
@@ -120,6 +122,40 @@ const KEYFRAMES: Readonly<Record<FallKind, FallKeyframe[]>> = {
       frontThigh: 1.45, frontShin: 1.55, rearThigh: 2.0, rearShin: 0.9,
       frontUpper: -1.65, frontFore: -1.3, rearUpper: -1.35, rearFore: -1.55,
     },
+  ],
+  getUp: [
+    {
+      // Same as knockback's last frame: lying on the back, one knee up.
+      t: 0, hip: { x: -66, y: 47 }, torso: -1.53, head: -0.05,
+      frontThigh: 1.45, frontShin: 1.55, rearThigh: 2.0, rearShin: 0.9,
+      frontUpper: -1.65, frontFore: -1.3, rearUpper: -1.35, rearFore: -1.55,
+    },
+    {
+      // Sits up halfway, propped on both hands behind, knees pulled in.
+      t: 0.25, hip: { x: -66, y: 48 }, torso: -0.6, head: 0.2,
+      frontThigh: 2.1, frontShin: 0.5, rearThigh: 2.3, rearShin: 0.3,
+      frontUpper: -0.7, frontFore: -0.3, rearUpper: -0.5, rearFore: -0.2,
+    },
+    {
+      // Sitting upright, feet planted, arms reaching forward.
+      t: 0.5, hip: { x: -64, y: 46 }, torso: 0.5, head: 0,
+      frontThigh: 2.4, frontShin: 0.2, rearThigh: 2.5, rearShin: 0.15,
+      frontUpper: 1.2, frontFore: 1.6, rearUpper: 0.9, rearFore: 1.4,
+    },
+    {
+      // Rocks forward into a crouch over the feet.
+      t: 0.72, hip: { x: -52, y: 22 }, torso: 0.7, head: -0.1,
+      frontThigh: 1.2, frontShin: -0.3, rearThigh: 1.0, rearShin: -0.75,
+      frontUpper: 0.6, frontFore: 0.9, rearUpper: 0.4, rearFore: 0.8,
+    },
+    {
+      // Rising out of the crouch with the feet kept on the ground.
+      t: 0.86, hip: { x: -55, y: 10 }, torso: 0.35, head: 0,
+      frontThigh: 0.8, frontShin: -0.15, rearThigh: 0.5, rearShin: -0.75,
+      frontUpper: 0.35, frontFore: 0.6, rearUpper: 0.35, rearFore: 0.6,
+    },
+    // Standing again (same pose as drawStickman's idle stance).
+    { t: 1, ...STANDING, hip: { x: -58, y: 0 } },
   ],
 };
 

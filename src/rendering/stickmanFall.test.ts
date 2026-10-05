@@ -3,7 +3,7 @@ import { STICKMAN_HEAD } from './stickman';
 import { getFallPose, type FallKind, type FallPose } from './stickmanFall';
 
 const GROUND_Y = 58;
-const KINDS: FallKind[] = ['death', 'knockback'];
+const KINDS: FallKind[] = ['death', 'knockback', 'getUp'];
 const samples = Array.from({ length: 41 }, (_, index) => index / 40);
 
 const lowestPoint = (pose: FallPose): number => Math.max(
@@ -12,7 +12,7 @@ const lowestPoint = (pose: FallPose): number => Math.max(
 );
 
 describe('getFallPose', () => {
-  it.each(KINDS)('%s starts standing upright', (kind) => {
+  it.each(['death', 'knockback'] as FallKind[])('%s starts standing upright', (kind) => {
     const pose = getFallPose(kind, 0);
     expect(pose.hip.x).toBeCloseTo(0);
     expect(pose.hip.y).toBeCloseTo(0);
@@ -26,7 +26,7 @@ describe('getFallPose', () => {
     });
   });
 
-  it.each(KINDS)('%s ends lying on the ground', (kind) => {
+  it.each(['death', 'knockback'] as FallKind[])('%s ends lying on the ground', (kind) => {
     const pose = getFallPose(kind, 1);
     expect(Math.abs(pose.head.y - pose.hip.y)).toBeLessThan(10);
     expect(pose.hip.y).toBeGreaterThan(40);
@@ -52,5 +52,16 @@ describe('getFallPose', () => {
   it('clamps progress outside 0..1', () => {
     expect(getFallPose('death', -1)).toEqual(getFallPose('death', 0));
     expect(getFallPose('death', 2)).toEqual(getFallPose('death', 1));
+  });
+
+  it('getUp starts exactly where knockback ends', () => {
+    expect(getFallPose('getUp', 0)).toEqual(getFallPose('knockback', 1));
+  });
+
+  it('getUp ends standing upright', () => {
+    const pose = getFallPose('getUp', 1);
+    expect(pose.hip.y).toBeCloseTo(0);
+    expect(pose.head.y).toBeLessThan(pose.shoulder.y);
+    expect(pose.shoulder.y).toBeLessThan(pose.hip.y);
   });
 });
