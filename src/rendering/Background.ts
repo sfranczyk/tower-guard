@@ -1,5 +1,6 @@
 import { Graphics, type Container } from 'pixi.js';
 import { GAME_HEIGHT, GROUND_Y, WORLD_WIDTH } from '../config';
+import type { Battleground } from '../data/battlegrounds';
 
 type Cloud = {
   sprite: Graphics;
@@ -14,28 +15,31 @@ const CLOUDS = [
   { x: 1430, y: 140, width: 145, height: 34, speed: 2 },
 ];
 
-/** Sky, sun, hills, forest, drifting clouds and the ground strip. */
+/** Sky, sun, hills, trees, drifting clouds and the ground strip of a battleground. */
 export class Background {
   private readonly clouds: Cloud[];
 
-  public constructor(container: Container) {
-    const bg = new Graphics().rect(0, 0, WORLD_WIDTH, GAME_HEIGHT).fill({ color: 0x10233a });
-    const sky = new Graphics().rect(0, 0, WORLD_WIDTH, GROUND_Y).fill({ color: 0x80b8d1, alpha: 1 });
-    const glow = new Graphics().circle(790, 105, 68).fill({ color: 0xf8dc9b, alpha: 0.88 });
-    glow.circle(790, 105, 88).fill({ color: 0xf8dc9b, alpha: 0.12 });
-    container.addChild(bg, sky, glow);
+  public constructor(container: Container, battleground: Battleground) {
+    container.addChild(new Graphics().rect(0, 0, WORLD_WIDTH, GAME_HEIGHT).fill({ color: 0x10233a }));
+    container.addChild(Background.createSky(battleground));
 
-    container.addChild(...Background.createDistantLandscape());
+    const { sun } = battleground;
+    const glow = new Graphics().circle(sun.x, sun.y, sun.radius).fill({ color: sun.color, alpha: 0.88 });
+    glow.circle(sun.x, sun.y, sun.radius * 1.3).fill({ color: sun.color, alpha: 0.12 });
+    container.addChild(glow);
+
+    container.addChild(...Background.createDistantLandscape(battleground));
     this.clouds = CLOUDS.map(({ x, y, width, height, speed }) => {
+      const fill = { color: battleground.cloudColor, alpha: battleground.cloudAlpha };
       const cloud = new Graphics();
-      cloud.ellipse(x, y, width * 0.5, height * 0.5).fill({ color: 0xf7fbf5, alpha: 0.68 });
-      cloud.ellipse(x - width * 0.25, y + 4, width * 0.225, height * 0.4).fill({ color: 0xf7fbf5, alpha: 0.68 });
-      cloud.ellipse(x + width * 0.2, y - 5, width * 0.25, height * 0.5).fill({ color: 0xf7fbf5, alpha: 0.68 });
+      cloud.ellipse(x, y, width * 0.5, height * 0.5).fill(fill);
+      cloud.ellipse(x - width * 0.25, y + 4, width * 0.225, height * 0.4).fill(fill);
+      cloud.ellipse(x + width * 0.2, y - 5, width * 0.25, height * 0.5).fill(fill);
       cloud.zIndex = 0;
       container.addChild(cloud);
       return { sprite: cloud, speed, width };
     });
-    container.addChild(Background.createTerrain());
+    container.addChild(Background.createTerrain(battleground));
   }
 
   public update(deltaMs: number, cameraX: number): void {
@@ -48,36 +52,56 @@ export class Background {
     });
   }
 
-  private static createDistantLandscape(): Graphics[] {
+  /** Horizontal bands from the top colour down to the horizon. */
+  private static createSky({ sky }: Battleground): Graphics {
+    const graphics = new Graphics();
+    const bandHeight = GROUND_Y / sky.length;
+    sky.forEach((color, index) => {
+      graphics.rect(0, index * bandHeight, WORLD_WIDTH, bandHeight + 1).fill({ color });
+    });
+    return graphics;
+  }
+
+  private static createDistantLandscape({ hills: [far, near], trees }: Battleground): Graphics[] {
     const hills = new Graphics();
     hills.moveTo(0, 360).bezierCurveTo(180, 250, 310, 340, 480, 275)
       .bezierCurveTo(650, 215, 820, 330, WORLD_WIDTH, 245)
-      .lineTo(WORLD_WIDTH, GROUND_Y).lineTo(0, GROUND_Y).closePath().fill({ color: 0x587d85 });
+      .lineTo(WORLD_WIDTH, GROUND_Y).lineTo(0, GROUND_Y).closePath().fill({ color: far });
     hills.moveTo(0, 412).bezierCurveTo(190, 320, 390, 390, 570, 330)
       .bezierCurveTo(760, 270, 900, 390, WORLD_WIDTH, 312)
-      .lineTo(WORLD_WIDTH, GROUND_Y).lineTo(0, GROUND_Y).closePath().fill({ color: 0x3f6965 });
+      .lineTo(WORLD_WIDTH, GROUND_Y).lineTo(0, GROUND_Y).closePath().fill({ color: near });
 
     const forest = new Graphics();
+    const [main, light, dark] = trees.colors;
     for (let x = 20; x < WORLD_WIDTH; x += 92) {
       const height = 38 + ((x / 92) % 3) * 14;
-      forest.circle(x, GROUND_Y - height, 18).fill({ color: 0x2d594f });
-      forest.circle(x - 14, GROUND_Y - height + 12, 15).fill({ color: 0x35695a });
-      forest.circle(x + 15, GROUND_Y - height + 12, 15).fill({ color: 0x264e4b });
-      forest.rect(x - 3, GROUND_Y - height + 16, 6, height).fill({ color: 0x584d42 });
+      if (trees.style === 'pine') {
+        // Layered triangular pines.
+        forest.rect(x - 2, GROUND_Y - 12, 4, 12).fill({ color: trees.trunk });
+        [[0, 30, light], [14, 24, main], [26, 17, dark]].forEach(([lift, halfWidth, color]) => {
+          const base = GROUND_Y - 10 - lift;
+          forest.poly([x - halfWidth, base, x, base - height * 0.8, x + halfWidth, base]).fill({ color });
+        });
+      } else {
+        forest.circle(x, GROUND_Y - height, 18).fill({ color: main });
+        forest.circle(x - 14, GROUND_Y - height + 12, 15).fill({ color: light });
+        forest.circle(x + 15, GROUND_Y - height + 12, 15).fill({ color: dark });
+        forest.rect(x - 3, GROUND_Y - height + 16, 6, height).fill({ color: trees.trunk });
+      }
     }
     hills.zIndex = 0;
     forest.zIndex = 0;
     return [hills, forest];
   }
 
-  private static createTerrain(): Graphics {
+  private static createTerrain({ ground: colors }: Battleground): Graphics {
     const ground = new Graphics();
-    ground.rect(0, GROUND_Y, WORLD_WIDTH, GAME_HEIGHT - GROUND_Y).fill({ color: 0x79a866 });
+    ground.rect(0, GROUND_Y, WORLD_WIDTH, GAME_HEIGHT - GROUND_Y).fill({ color: colors.fill });
     ground.moveTo(0, GROUND_Y).bezierCurveTo(210, GROUND_Y - 8, 420, GROUND_Y + 7, 650, GROUND_Y - 5)
       .bezierCurveTo(850, GROUND_Y - 12, 1020, GROUND_Y + 5, WORLD_WIDTH, GROUND_Y)
-      .stroke({ width: 8, color: 0xc7e094 });
+      .stroke({ width: 8, color: colors.edge });
     for (let x = 25; x < WORLD_WIDTH; x += 70) {
-      ground.ellipse(x, GROUND_Y + 32 + (x % 3) * 8, 22, 6).fill({ color: 0x679452, alpha: 0.35 });
+      ground.ellipse(x, GROUND_Y + 32 + (x % 3) * 8, 22, 6).fill({ color: colors.tufts, alpha: 0.35 });
     }
     ground.zIndex = 0;
     return ground;

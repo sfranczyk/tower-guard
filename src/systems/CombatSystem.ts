@@ -48,7 +48,6 @@ export interface CombatWorld {
 
 export interface CombatEvents {
   bowmanDamaged(amount: number): void;
-  enemyKilled(): void;
   headshot(): void;
   /** An enemy archer looses an arrow. */
   enemyShot(from: Vec2, angle: number, speed: number): void;
@@ -296,9 +295,6 @@ export class CombatSystem {
         }
         // Survivors are knocked down away from the blast and get back up; the rest die thrown back.
         candidate.takeDamage(EXPLOSION_DAMAGE, { cause: 'explosion', fromX: point.x });
-        if (!candidate.isAlive()) {
-          this.events.enemyKilled();
-        }
       });
   }
 
@@ -344,10 +340,6 @@ export class CombatSystem {
     } else {
       // Pinned to the body: it rides along with walking, falls and the corpse.
       arrow.stickToEnemy(enemy, impactPoint);
-    }
-
-    if (!enemy.isAlive()) {
-      this.events.enemyKilled();
     }
   }
 }

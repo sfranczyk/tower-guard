@@ -12,7 +12,6 @@ export interface AnchorTarget {
 }
 
 export default class Arrow extends Sprite {
-  private static currentGravity = ARROW_GRAVITY;
   private stuck = false;
   private stuckTarget: AnchorTarget | undefined;
   private stuckAnchor: BodyAnchor | undefined;
@@ -133,17 +132,9 @@ export default class Arrow extends Sprite {
     return this.stuck;
   }
 
-  public static setGravity(value: number): void {
-    Arrow.currentGravity = Math.max(0, Math.min(1000, value));
-  }
-
-  public static getGravity(): number {
-    return Arrow.currentGravity;
-  }
-
-  /** Gravity (from the settings slider) and air drag shared by arrows and the trajectory preview. */
+  /** Gravity and per-type air drag shared by arrows, the trajectory preview and enemy aim. */
   public static getFlightParams(type: ProjectileType): FlightParams {
-    return flightParams(type, Arrow.currentGravity);
+    return flightParams(type, ARROW_GRAVITY);
   }
 
   public getTravelSegment(): { start: Vec2; end: Vec2 } {

@@ -58,7 +58,11 @@ export const JUMP_SPEED = 420;
 export const GRAVITY = 2200;
 export const JUMP_BUFFER_MS = 110;
 
-export const TOWER_MAX_HEALTH = 570;
+/** The enemy keep's health in every sandbox run (destroying it wins immediately). */
+export const ENEMY_KEEP_HEALTH = 650;
+/** Time between enemies of a wave appearing, and the pause before the first one. */
+export const WAVE_SPAWN_INTERVAL_MS = 900;
+export const WAVE_START_DELAY_MS = 800;
 
 // Enable with ?debug in the URL.
 export const SHOW_HITBOX_DEBUG = typeof window !== 'undefined'

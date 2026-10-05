@@ -1,27 +1,20 @@
-import type { IWave } from '../types';
+import type { EnemyType } from '../types';
 
-/** Schedules wave spawns on timers; dispose() cancels everything still pending. */
+/** Spawns a wave's enemies one by one on timers; dispose() cancels everything still pending. */
 export class WaveSpawner {
   private timers: number[] = [];
 
-  public constructor(private readonly spawn: (wave: IWave) => void) {}
+  public constructor(private readonly spawn: (type: EnemyType) => void) {}
 
-  public schedule(waves: readonly IWave[]): void {
-    waves.forEach((wave) => {
-      this.setTimer(() => {
-        for (let index = 0; index < wave.count; index += 1) {
-          this.setTimer(() => this.spawn(wave), index * wave.spawn.interval);
-        }
-      }, wave.delay);
+  /** Spawns `order[i]` after `startDelayMs + i * intervalMs`. */
+  public schedule(order: readonly EnemyType[], intervalMs: number, startDelayMs = 0): void {
+    order.forEach((type, index) => {
+      this.timers.push(window.setTimeout(() => this.spawn(type), startDelayMs + index * intervalMs));
     });
   }
 
   public dispose(): void {
     this.timers.forEach((timerId) => window.clearTimeout(timerId));
     this.timers = [];
-  }
-
-  private setTimer(callback: () => void, delayMs: number): void {
-    this.timers.push(window.setTimeout(callback, delayMs));
   }
 }

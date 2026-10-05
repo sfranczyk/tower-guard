@@ -8,11 +8,12 @@ export default class Tower extends Sprite {
   private readonly groundY: number;
   private damageFlashMs = 0;
 
-  public constructor(x: number, y: number, texture: Texture, health = 100) {
+  /** `currentHealth` lets a keep start a wave already damaged (health carries over between waves). */
+  public constructor(x: number, y: number, texture: Texture, health = 100, currentHealth = health) {
     super(texture);
 
     this.maxHealth = Math.max(1, health);
-    this.health = this.maxHealth;
+    this.health = Math.max(0, Math.min(this.maxHealth, currentHealth));
     this.groundY = y;
     this.anchor.set(0.5, 1);
     // tower.svg is 200×406: drawn at half size → ~100×203 in the world.

@@ -3,6 +3,9 @@ import type { DomUi } from '../ui/DomUi';
 import { AnimationLabScene } from '../scenes/AnimationLabScene';
 import { GameScene } from '../scenes/GameScene';
 import { MenuScene } from '../scenes/MenuScene';
+import { SandboxScene } from '../scenes/SandboxScene';
+import { ENEMY_KEEP_HEALTH } from '../config';
+import { loadSandbox } from './sandboxStorage';
 import type { GameContext, GameTextures, Scene, SceneName } from './Scene';
 import { LAB_PARAM, getUrlParam, setUrlParam } from './urlState';
 
@@ -12,6 +15,7 @@ export class SceneManager {
   private current?: Scene;
 
   public constructor(app: Application, ui: DomUi, textures: GameTextures) {
+    const sandbox = loadSandbox();
     const root = new Container();
     root.sortableChildren = true;
     app.stage.addChild(root);
@@ -21,12 +25,16 @@ export class SceneManager {
       root,
       ui,
       textures,
-      session: { levelNumber: 1, gold: 0, bowTension: 1, showTrajectory: true },
+      session: {
+        sandbox,
+        run: { waveIndex: 0, bowmanHealth: sandbox.bowmanHealth, keepHealth: sandbox.keepHealth, enemyKeepHealth: ENEMY_KEEP_HEALTH },
+        showTrajectory: true,
+      },
       goTo: (scene) => this.goTo(scene),
     };
 
-    ui.handlers.start = () => this.goTo('game');
-    ui.handlers.openGame = () => this.goTo('game');
+    ui.handlers.start = () => this.goTo('sandbox');
+    ui.handlers.openGame = () => this.goTo('sandbox');
     ui.handlers.openAnimationLab = () => this.goTo('animationLab');
 
     app.ticker.add((ticker) => this.current?.update(ticker.deltaMS));
@@ -53,6 +61,8 @@ export class SceneManager {
     switch (name) {
       case 'menu':
         return new MenuScene(this.ctx);
+      case 'sandbox':
+        return new SandboxScene(this.ctx);
       case 'animationLab':
         return new AnimationLabScene(this.ctx);
       case 'game':

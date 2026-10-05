@@ -1,20 +1,22 @@
 import { GAME_HEIGHT, GAME_WIDTH } from '../config';
 import type { ProjectileType } from '../types';
+import type { SandboxSettings } from '../data/sandbox';
+import { SandboxForm } from './SandboxForm';
 import { HUD_BOTTOM_TEMPLATE, HUD_TOP_TEMPLATE, OVERLAY_TEMPLATE } from './template';
 
 /** Breathing room kept around the canvas + HUD stack inside the window. */
 const PAGE_MARGIN = 16;
 
-export type UiScreen = 'menu' | 'animationLab' | 'game';
+export type UiScreen = 'menu' | 'sandbox' | 'animationLab' | 'game';
 
 export interface HudValues {
   towerHealth: number;
   bowmanHealth: number;
   defeatedEnemies: number;
   totalEnemies: number;
-  level: number;
-  levelName: string;
-  gold: number;
+  wave: number;
+  waveCount: number;
+  battlegroundName: string;
 }
 
 export interface EndScreenOptions {
@@ -34,8 +36,9 @@ export interface UiHandlers {
   labBack?: () => void;
   toggleOptions?: () => void;
   selectProjectile?: (type: ProjectileType) => void;
-  gravityChange?: (value: number) => void;
-  tensionChange?: (value: number) => void;
+  sandboxChange?: (settings: SandboxSettings) => void;
+  sandboxStart?: () => void;
+  sandboxBack?: () => void;
   trajectoryChange?: (enabled: boolean) => void;
 }
 
@@ -59,19 +62,15 @@ export class DomUi {
   private readonly endButton: HTMLButtonElement;
   private readonly labBackButton: HTMLButtonElement;
   private readonly statusElement: HTMLElement;
-  private readonly strengthElement: HTMLElement;
   private readonly towerHealthElement: HTMLElement;
   private readonly bowmanHealthElement: HTMLElement;
   private readonly enemyCountElement: HTMLElement;
-  private readonly levelElement: HTMLElement;
-  private readonly levelNameElement: HTMLElement;
-  private readonly goldElement: HTMLElement;
+  private readonly waveElement: HTMLElement;
+  private readonly battlegroundElement: HTMLElement;
+  private readonly sandboxScreen: HTMLElement;
+  private readonly sandboxForm: SandboxForm;
   private readonly projectileButtons: HTMLButtonElement[];
-  private readonly gravityInput: HTMLInputElement;
-  private readonly tensionInput: HTMLInputElement;
   private readonly trajectoryInput: HTMLInputElement;
-  private readonly gravityValue: HTMLElement;
-  private readonly tensionValue: HTMLElement;
   private onEndButton?: () => void;
 
   public constructor(host: HTMLElement, canvas: HTMLCanvasElement) {
@@ -94,19 +93,19 @@ export class DomUi {
     this.endButton = this.query<HTMLButtonElement>('[data-end-button]');
     this.labBackButton = this.query<HTMLButtonElement>('[data-lab-back]');
     this.statusElement = this.query('[data-status]');
-    this.strengthElement = this.query('[data-force]');
     this.towerHealthElement = this.query('[data-tower-health]');
     this.bowmanHealthElement = this.query('[data-bowman-health]');
     this.enemyCountElement = this.query('[data-enemy-count]');
-    this.levelElement = this.query('[data-level]');
-    this.levelNameElement = this.query('[data-level-name]');
-    this.goldElement = this.query('[data-gold]');
+    this.waveElement = this.query('[data-wave]');
+    this.battlegroundElement = this.query('[data-battleground]');
+    this.sandboxScreen = this.query('[data-sandbox]');
+    this.sandboxForm = new SandboxForm(this.query('[data-sandbox-form]'), {
+      change: (settings) => this.handlers.sandboxChange?.(settings),
+      start: () => this.handlers.sandboxStart?.(),
+      back: () => this.handlers.sandboxBack?.(),
+    });
     this.projectileButtons = Array.from(this.host.querySelectorAll<HTMLButtonElement>('[data-projectile]'));
-    this.gravityInput = this.query<HTMLInputElement>('[data-gravity]');
-    this.tensionInput = this.query<HTMLInputElement>('[data-tension]');
     this.trajectoryInput = this.query<HTMLInputElement>('[data-trajectory]');
-    this.gravityValue = this.query('[data-gravity-value]');
-    this.tensionValue = this.query('[data-tension-value]');
 
     this.onClick('[data-start]', () => this.handlers.start?.());
     this.onClick('[data-open-test]', () => this.handlers.openAnimationLab?.());
@@ -118,8 +117,6 @@ export class DomUi {
     this.projectileButtons.forEach((button) => {
       button.addEventListener('click', () => this.handlers.selectProjectile?.(button.dataset.projectile as ProjectileType));
     });
-    this.gravityInput.addEventListener('input', () => this.handlers.gravityChange?.(Number(this.gravityInput.value)));
-    this.tensionInput.addEventListener('input', () => this.handlers.tensionChange?.(Number(this.tensionInput.value)));
     this.trajectoryInput.addEventListener('change', () => this.handlers.trajectoryChange?.(this.trajectoryInput.checked));
 
     window.addEventListener('resize', () => this.fitCanvas());
@@ -129,6 +126,7 @@ export class DomUi {
   /** Shows one screen and hides the others, including the end screen and settings drawer. */
   public showScreen(screen: UiScreen): void {
     this.menuScreen.hidden = screen !== 'menu';
+    this.sandboxScreen.hidden = screen !== 'sandbox';
     this.labScreen.hidden = screen !== 'animationLab';
     this.hudTop.hidden = screen !== 'game';
     this.hudBottom.hidden = screen !== 'game';
@@ -147,17 +145,12 @@ export class DomUi {
     this.statusElement.textContent = text;
   }
 
-  public setAimPower(ratio: number): void {
-    this.strengthElement.textContent = `${Math.round(ratio * 100)}%`;
-  }
-
   public updateHud(values: HudValues): void {
     this.towerHealthElement.textContent = `${values.towerHealth} HP`;
     this.bowmanHealthElement.textContent = `${values.bowmanHealth} HP`;
     this.enemyCountElement.textContent = `${values.defeatedEnemies} / ${values.totalEnemies}`;
-    this.levelElement.textContent = `${values.level}`;
-    this.levelNameElement.textContent = values.levelName;
-    this.goldElement.textContent = `${values.gold}`;
+    this.waveElement.textContent = `${values.wave} / ${values.waveCount}`;
+    this.battlegroundElement.textContent = values.battlegroundName;
   }
 
   public setActiveProjectile(type: ProjectileType): void {
@@ -170,9 +163,12 @@ export class DomUi {
     this.optionsDrawer.hidden = !visible;
   }
 
-  public setOptionValues(gravity: number, tension: number, showTrajectory: boolean): void {
-    this.gravityValue.textContent = `${Math.round(gravity)}`;
-    this.tensionValue.textContent = `${Math.round(tension * 100)}%`;
+  /** Rebuilds the sandbox setup form (e.g. after the wave count changes). */
+  public renderSandbox(settings: SandboxSettings): void {
+    this.sandboxForm.render(settings);
+  }
+
+  public setTrajectoryOption(showTrajectory: boolean): void {
     this.trajectoryInput.checked = showTrajectory;
   }
 

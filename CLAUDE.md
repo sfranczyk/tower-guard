@@ -22,22 +22,28 @@ Before finishing a change, run `npm run check && npm test`. For anything visual,
 src/
   main.ts              bootstrap: Pixi app, textures, canvas fit, DomUi, SceneManager
   config.ts            all tuning constants (speeds, damage, gravity, world size)
-  types/               shared types: Vec2, Rect, Bounds, level/wave data
-  core/                Scene base class, SceneManager, GameContext/GameSession
-  scenes/              MenuScene, GameScene (one level), AnimationLabScene (animation previews)
+  types/               shared types: Vec2, Rect, Bounds, enemy/projectile types
+  core/                Scene base class, SceneManager, GameContext/GameSession, sandboxStorage
+  scenes/              MenuScene, SandboxScene (battle setup), GameScene (one wave), AnimationLabScene
   systems/             gameplay logic: CombatSystem, EffectsSystem, WaveSpawner, collision (pure)
   rendering/           stickman renderer (pure drawing), Background, AimOverlay
   objects/             Pixi display objects with their own state: Bowman, Enemy, Arrow, Tower
-  managers/            InputManager (keyboard + drag-to-aim), LevelManager (level data)
-  data/                game data helpers (enemy stats per type and difficulty)
-  ui/                  DomUi (HTML overlay: menus, HUD, settings, end screen) + template.ts
+  managers/            InputManager (keyboard + drag-to-aim)
+  data/                game data: enemy stats, projectiles, sandbox settings, battlegrounds (map themes)
+  ui/                  DomUi (HTML overlay: menus, HUD, settings, end screen), SandboxForm, template.ts
 ```
 
 - **Scenes**: extend `Scene` from `core/Scene.ts`. Register window listeners with `listenWindow()`
   and teardown with `onExit()` so cleanup runs automatically. `ctx.goTo('menu' | 'game' | 'animationLab')`
   switches scenes, and `SceneManager` destroys everything under `ctx.root` on each switch.
-- **Persistent state** between levels lives in `ctx.session` (level number, gold, bow tension).
-  `MenuScene` resets it.
+- **Sandbox** (no levels): Start game opens `SandboxScene`, a form (`ui/SandboxForm.ts`) for the wave
+  count (1–5), enemies per type and battleground per wave, and bowman/keep health. Settings are pure data
+  in `data/sandbox.ts` (`normalizeSandbox` clamps everything) and persist in localStorage via
+  `core/sandboxStorage.ts`. `ctx.session.sandbox` holds them, and `ctx.session.run` (`RunState`) the
+  current wave index and health carried between waves. Each `GameScene` plays one wave. A cleared wave
+  offers "Next wave" (health carries over) until the last one, and then Victory. Defeat goes back to setup.
+- **Battlegrounds** (`data/battlegrounds.ts`): map themes (sky, sun, hills, tree style, ground colors)
+  drawn by `rendering/Background.ts`. Add a new map by adding an entry there.
 - **UI** is HTML (`ui/template.ts`, styles in `index.html`). The in-game HUD sits *outside* the canvas
   (bar above, status line below) and `DomUi.fitCanvas()` scales the canvas into the remaining space.
   Never place HUD elements over the play field. Only menus, the settings drawer and the end screen
@@ -82,6 +88,6 @@ src/
 ## Conventions
 
 - Keep pure logic (math, collision, data) free of Pixi/DOM imports so it can be unit-tested.
-- New tuning numbers go in `config.ts`, and new level content goes in `managers/LevelManager.ts`.
+- New tuning numbers go in `config.ts`, and sandbox defaults go in `data/sandbox.ts`.
 - Aim for files of roughly 150–400 lines. Split by responsibility rather than growing `GameScene`.
 - Game text in the UI is English.
