@@ -1,6 +1,7 @@
 import type { Application, Container, Texture } from 'pixi.js';
 import type { SandboxSettings } from '../data/sandbox';
 import type { ProjectileType } from '../types';
+import type { SoundManager } from '../audio/SoundManager';
 import type { DomUi } from '../ui/DomUi';
 
 export type SceneName = 'menu' | 'sandbox' | 'animationLab' | 'game';
@@ -35,6 +36,7 @@ export interface GameContext {
   readonly root: Container;
   readonly ui: DomUi;
   readonly textures: GameTextures;
+  readonly sound: SoundManager;
   readonly session: GameSession;
   goTo(scene: SceneName): void;
 }

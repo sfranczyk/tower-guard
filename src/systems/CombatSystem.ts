@@ -14,6 +14,7 @@ import {
   PROJECTILE_DAMAGE,
   SHOW_HITBOX_DEBUG,
 } from '../config';
+import type { SoundId } from '../audio/SoundManager';
 import Arrow from '../objects/Arrow';
 import { launchSpeed } from '../data/projectiles';
 import type Bowman from '../objects/Bowman';
@@ -49,6 +50,8 @@ export interface CombatWorld {
 export interface CombatEvents {
   bowmanDamaged(amount: number): void;
   headshot(): void;
+  /** A sound-worthy impact at a world position (the scene plays it). */
+  sound(id: SoundId, at: Vec2): void;
   /** An enemy archer looses an arrow. */
   enemyShot(from: Vec2, angle: number, speed: number): void;
 }
@@ -209,7 +212,9 @@ export class CombatSystem {
       });
       if (towerHit !== undefined) {
         playerTower.takeDamage(ENEMY_ARROW_DAMAGE);
-        effects.impact(pointAlong(start, travel, towerHit));
+        const point = pointAlong(start, travel, towerHit);
+        effects.impact(point);
+        this.events.sound('arrowHit', point);
         arrow.deactivate();
       }
       return;
@@ -223,7 +228,9 @@ export class CombatSystem {
     });
     if (bowmanHit !== undefined) {
       this.events.bowmanDamaged(ENEMY_ARROW_DAMAGE);
-      effects.bloodBurst(pointAlong(start, travel, bowmanHit));
+      const point = pointAlong(start, travel, bowmanHit);
+      effects.bloodBurst(point);
+      this.events.sound('arrowHit', point);
       arrow.deactivate();
     }
   }
@@ -274,6 +281,7 @@ export class CombatSystem {
       this.explode(impactPoint, activeEnemies);
     } else {
       this.world.effects.impact(impactPoint);
+      this.events.sound('arrowHit', impactPoint);
     }
     arrow.deactivate();
   }
@@ -284,6 +292,7 @@ export class CombatSystem {
    */
   private explode(point: Vec2, activeEnemies: readonly Enemy[], directHit?: Enemy): void {
     this.world.effects.explosion(point);
+    this.events.sound('explosion', point);
     activeEnemies
       .filter((candidate) => candidate !== directHit && candidate.isAlive())
       .forEach((candidate) => {
@@ -298,8 +307,6 @@ export class CombatSystem {
       });
   }
 
-
-
   private hitEnemy(
     arrow: Arrow,
     { enemy, headshot }: EnemyHit,
@@ -309,6 +316,9 @@ export class CombatSystem {
   ): void {
     const { effects, debug } = this.world;
     effects.bloodBurst(impactPoint);
+    if (arrow.type !== 'explosive') {
+      this.events.sound('arrowHit', impactPoint);
+    }
     if (SHOW_HITBOX_DEBUG) {
       debug.circle(impactPoint.x, impactPoint.y, 3).fill({ color: 0x55ff88, alpha: 1 });
     }

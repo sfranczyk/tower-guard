@@ -23,6 +23,7 @@ src/
   main.ts              bootstrap: Pixi app, textures, canvas fit, DomUi, SceneManager
   config.ts            all tuning constants (speeds, damage, gravity, world size)
   types/               shared types: Vec2, Rect, Bounds, enemy/projectile types
+  audio/               SoundManager (Web Audio effects), spatial mix (pure)
   core/                Scene base class, SceneManager, GameContext/GameSession, sandboxStorage
   scenes/              MenuScene, SandboxScene (battle setup), GameScene (one wave), AnimationLabScene
   systems/             gameplay logic: CombatSystem, EffectsSystem, WaveSpawner, collision (pure)
@@ -82,6 +83,11 @@ src/
   `ENEMY_ARCHER_RANGE`, aims with `solveLaunchAngle` (same ballistics as the player, cached ~250 ms) and
   fires hostile arrows (`Arrow.hostile`) through the `enemyShot` event. Hostile arrows hit the bowman, or
   the keep while he hides, and never hit enemies. Tuning lives in `config.ts` (`ENEMY_ARCHER_*`, `ENEMY_ARROW_*`).
+- **Sound**: `ctx.sound` (`audio/SoundManager.ts`) plays the effects in `assets/sounds/` (the user's own
+  recordings from `human/`, trimmed and normalized with ffmpeg). `CombatSystem` emits `sound(id, at)` events
+  and `GameScene` plays them through `spatialMix` (pan by screen position, quieter off screen). New sounds:
+  add the mp3, its id in `SOURCES` and its volume in `config.ts` (`SOUND_VOLUMES`). The enabled/volume
+  settings in the drawer persist in localStorage.
 - **Coordinates**: the screen is 1024×540 and the world is wider (`WORLD_WIDTH`). `GameScene` scrolls the
   `world` container by `cameraX`. The ground is at `GROUND_Y`.
 

@@ -40,6 +40,9 @@ export interface UiHandlers {
   sandboxStart?: () => void;
   sandboxBack?: () => void;
   trajectoryChange?: (enabled: boolean) => void;
+  soundChange?: (enabled: boolean) => void;
+  /** Master volume 0..1. */
+  volumeChange?: (volume: number) => void;
 }
 
 /**
@@ -71,6 +74,8 @@ export class DomUi {
   private readonly sandboxForm: SandboxForm;
   private readonly projectileButtons: HTMLButtonElement[];
   private readonly trajectoryInput: HTMLInputElement;
+  private readonly soundInput: HTMLInputElement;
+  private readonly volumeInput: HTMLInputElement;
   private onEndButton?: () => void;
 
   public constructor(host: HTMLElement, canvas: HTMLCanvasElement) {
@@ -106,6 +111,8 @@ export class DomUi {
     });
     this.projectileButtons = Array.from(this.host.querySelectorAll<HTMLButtonElement>('[data-projectile]'));
     this.trajectoryInput = this.query<HTMLInputElement>('[data-trajectory]');
+    this.soundInput = this.query<HTMLInputElement>('[data-sound]');
+    this.volumeInput = this.query<HTMLInputElement>('[data-volume]');
 
     this.onClick('[data-start]', () => this.handlers.start?.());
     this.onClick('[data-open-test]', () => this.handlers.openAnimationLab?.());
@@ -118,6 +125,8 @@ export class DomUi {
       button.addEventListener('click', () => this.handlers.selectProjectile?.(button.dataset.projectile as ProjectileType));
     });
     this.trajectoryInput.addEventListener('change', () => this.handlers.trajectoryChange?.(this.trajectoryInput.checked));
+    this.soundInput.addEventListener('change', () => this.handlers.soundChange?.(this.soundInput.checked));
+    this.volumeInput.addEventListener('input', () => this.handlers.volumeChange?.(Number(this.volumeInput.value) / 100));
 
     window.addEventListener('resize', () => this.fitCanvas());
     this.showScreen('menu');
@@ -170,6 +179,11 @@ export class DomUi {
 
   public setTrajectoryOption(showTrajectory: boolean): void {
     this.trajectoryInput.checked = showTrajectory;
+  }
+
+  public setSoundOptions(enabled: boolean, volume: number): void {
+    this.soundInput.checked = enabled;
+    this.volumeInput.value = `${Math.round(volume * 100)}`;
   }
 
   public showEndScreen(options: EndScreenOptions): void {

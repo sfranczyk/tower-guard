@@ -1,4 +1,5 @@
 import { Container, type Application } from 'pixi.js';
+import type { SoundManager } from '../audio/SoundManager';
 import type { DomUi } from '../ui/DomUi';
 import { AnimationLabScene } from '../scenes/AnimationLabScene';
 import { GameScene } from '../scenes/GameScene';
@@ -14,7 +15,7 @@ export class SceneManager {
   private readonly ctx: GameContext;
   private current?: Scene;
 
-  public constructor(app: Application, ui: DomUi, textures: GameTextures) {
+  public constructor(app: Application, ui: DomUi, textures: GameTextures, sound: SoundManager) {
     const sandbox = loadSandbox();
     const root = new Container();
     root.sortableChildren = true;
@@ -25,6 +26,7 @@ export class SceneManager {
       root,
       ui,
       textures,
+      sound,
       session: {
         sandbox,
         run: { waveIndex: 0, bowmanHealth: sandbox.bowmanHealth, keepHealth: sandbox.keepHealth, enemyKeepHealth: ENEMY_KEEP_HEALTH },

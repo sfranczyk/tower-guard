@@ -64,6 +64,17 @@ export const ENEMY_KEEP_HEALTH = 650;
 export const WAVE_SPAWN_INTERVAL_MS = 900;
 export const WAVE_START_DELAY_MS = 800;
 
+/** Sound effects: master volume (0..1) and the base volume of each sound. */
+export const SOUND_DEFAULT_VOLUME = 0.7;
+export const SOUND_VOLUMES = { bowShot: 0.7, arrowHit: 0.8, explosion: 1 } as const;
+/** Each play is pitched randomly by ±this fraction so repeats don't sound identical. */
+export const SOUND_PITCH_VARIATION = 0.07;
+/** At most this many copies of one sound play at once (piercing hits, volleys). */
+export const SOUND_MAX_VOICES = 4;
+/** Sounds at the screen edge pan this far; off-screen ones fade to SOUND_MIN_GAIN over one screen width. */
+export const SOUND_MAX_PAN = 0.6;
+export const SOUND_MIN_GAIN = 0.2;
+
 // Enable with ?debug in the URL.
 export const SHOW_HITBOX_DEBUG = typeof window !== 'undefined'
   && new URLSearchParams(window.location.search).has('debug');

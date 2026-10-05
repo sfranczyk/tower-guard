@@ -17,6 +17,8 @@ import {
   WAVE_START_DELAY_MS,
   WORLD_WIDTH,
 } from '../config';
+import type { SoundId } from '../audio/SoundManager';
+import { spatialMix } from '../audio/spatial';
 import { Scene, type GameContext } from '../core/Scene';
 import { BATTLEGROUNDS, type Battleground } from '../data/battlegrounds';
 import { getEnemyStats } from '../data/enemies';
@@ -131,6 +133,7 @@ export class GameScene extends Scene {
         },
         headshot: () => this.ctx.ui.setStatus(`Headshot! ×${HEADSHOT_DAMAGE_MULTIPLIER} damage`),
         enemyShot: (from, angle, speed) => this.fireEnemyArrow(from, angle, speed),
+        sound: (id, at) => this.playSound(id, at),
       },
     );
 
@@ -204,10 +207,14 @@ export class GameScene extends Scene {
     ui.handlers.trajectoryChange = (enabled) => {
       session.showTrajectory = enabled;
     };
+    ui.handlers.soundChange = (enabled) => this.ctx.sound.setEnabled(enabled);
+    ui.handlers.volumeChange = (volume) => this.ctx.sound.setVolume(volume);
     this.onExit(() => {
       ui.handlers.toggleOptions = undefined;
       ui.handlers.selectProjectile = undefined;
       ui.handlers.trajectoryChange = undefined;
+      ui.handlers.soundChange = undefined;
+      ui.handlers.volumeChange = undefined;
     });
 
     this.listenWindow('keydown', (event) => {
@@ -310,6 +317,7 @@ export class GameScene extends Scene {
     arrow.fire(Math.atan2(aim.direction.y, aim.direction.x), launchSpeed(type, power), type);
     this.arrows.push(arrow);
     this.world.addChild(arrow);
+    this.playSound('bowShot', releasePoint);
   }
 
   /** An enemy archer's arrow: reddish, hurts the bowman (or the keep while he hides). */
@@ -322,6 +330,12 @@ export class GameScene extends Scene {
     arrow.fire(angle, speed, 'normal', true);
     this.arrows.push(arrow);
     this.world.addChild(arrow);
+    this.playSound('bowShot', from);
+  }
+
+  /** Panned and faded by where it happens relative to the camera. */
+  private playSound(id: SoundId, at: Vec2): void {
+    this.ctx.sound.play(id, spatialMix(at.x, this.cameraX));
   }
 
   private selectProjectile(type: ProjectileType): void {
@@ -338,6 +352,7 @@ export class GameScene extends Scene {
 
   private syncOptions(): void {
     this.ctx.ui.setTrajectoryOption(this.ctx.session.showTrajectory);
+    this.ctx.ui.setSoundOptions(this.ctx.sound.enabled, this.ctx.sound.volume);
   }
 
   private toggleEnemiesVisible(): void {

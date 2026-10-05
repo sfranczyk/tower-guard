@@ -4,6 +4,7 @@ import arrowExplosiveAsset from './assets/arrow-explosive.svg';
 import arrowPiercingAsset from './assets/arrow-piercing.svg';
 import towerAsset from './assets/tower.svg';
 import towerEnemyAsset from './assets/tower-enemy.svg';
+import { SoundManager } from './audio/SoundManager';
 import { GAME_HEIGHT, GAME_WIDTH } from './config';
 import type { GameTextures } from './core/Scene';
 import { SceneManager } from './core/SceneManager';
@@ -35,9 +36,10 @@ const bootstrap = async (): Promise<void> => {
   host.innerHTML = '';
   host.appendChild(app.canvas);
 
-  const textures = await loadTextures();
+  const sound = new SoundManager();
+  const [textures] = await Promise.all([loadTextures(), sound.load()]);
   const ui = new DomUi(host, app.canvas);
-  new SceneManager(app, ui, textures).start();
+  new SceneManager(app, ui, textures, sound).start();
 };
 
 void bootstrap();
