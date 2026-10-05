@@ -45,18 +45,19 @@ interface FallKeyframe {
   rearFore: number;
 }
 
+/** Matches drawStickman's standing pose (feet at ±16, soft knees forward) so a fall starts seamlessly. */
 const STANDING: Omit<FallKeyframe, 't'> = {
   hip: { x: 0, y: 0 },
   torso: 0,
   head: 0,
-  frontThigh: 0.12,
-  frontShin: 0.12,
-  rearThigh: -0.12,
-  rearShin: -0.12,
-  frontUpper: 0.15,
+  frontThigh: 0.39,
+  frontShin: 0.17,
+  rearThigh: -0.17,
+  rearShin: -0.39,
+  frontUpper: 0.1,
   frontFore: 0.3,
-  rearUpper: -0.1,
-  rearFore: 0.05,
+  rearUpper: 0.1,
+  rearFore: 0.3,
 };
 
 const KEYFRAMES: Readonly<Record<FallKind, FallKeyframe[]>> = {

@@ -35,6 +35,9 @@ export interface StickmanPose {
   skin?: StickmanSkin;
 }
 
+/** Knee bend while standing: soft knees pointing slightly forward. */
+const IDLE_KNEE_BEND = -0.35;
+
 /** Head circle in stickman sprite space (shared with hitboxes). */
 export const STICKMAN_HEAD = { x: 0, y: -52, radius: 10 } as const;
 
@@ -140,7 +143,12 @@ export const drawStickman: StickmanRenderer = (sprite, phase, pose = {}) => {
       x: (foot.x - knee.x) / shinLength,
       y: (foot.y - knee.y) / shinLength,
     };
-    const footDirection = { x: shinDirection.y, y: -shinDirection.x };
+    // Feet follow the shin while moving and lie flat on the ground when standing.
+    const shinFoot = { x: shinDirection.y, y: -shinDirection.x };
+    const flatX = shinFoot.x + (1 - shinFoot.x) * idleBlend;
+    const flatY = shinFoot.y * (1 - idleBlend);
+    const flatLength = Math.hypot(flatX, flatY) || 1;
+    const footDirection = { x: flatX / flatLength, y: flatY / flatLength };
     line(
       { x: foot.x - footDirection.x * 2, y: foot.y - footDirection.y * 2 },
       { x: foot.x + footDirection.x * 9, y: foot.y + footDirection.y * 9 },
@@ -212,10 +220,14 @@ export const drawStickman: StickmanRenderer = (sprite, phase, pose = {}) => {
   const walkingRightKneeBend = rightLegIsSwinging ? swingKneeBend : 0.2;
   const runningLeftKneeBend = rightLegIsSwinging ? runnerReturnKneeBend : runnerForwardKneeBend;
   const runningRightKneeBend = rightLegIsSwinging ? runnerForwardKneeBend : runnerReturnKneeBend;
-  const leftKneeBend = walkingLeftKneeBend
+  const movingLeftKneeBend = walkingLeftKneeBend
     + (runningLeftKneeBend - walkingLeftKneeBend) * motionBlend;
-  const rightKneeBend = walkingRightKneeBend
+  const movingRightKneeBend = walkingRightKneeBend
     + (runningRightKneeBend - walkingRightKneeBend) * motionBlend;
+  // Standing uses its own symmetric, slightly forward knee bend instead of whatever walk phase the
+  // character stopped in (positive bends push the knee backwards).
+  const leftKneeBend = movingLeftKneeBend + (IDLE_KNEE_BEND - movingLeftKneeBend) * idleBlend;
+  const rightKneeBend = movingRightKneeBend + (IDLE_KNEE_BEND - movingRightKneeBend) * idleBlend;
 
   drawLeg(blendPoint(leftFoot, idleLeftFoot), leftKneeBend, true);
   // Rear gray arm follows the front white leg; the front white arm follows the rear gray leg.
