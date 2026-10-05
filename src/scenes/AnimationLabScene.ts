@@ -6,7 +6,7 @@ import { drawStickman } from '../rendering/stickman';
 import { FALL_DURATION_MS, drawStickmanFall, type FallKind } from '../rendering/stickmanFall';
 
 const WALK_PHASE_MS = 150;
-const RUN_PHASE_MS = 160;
+const RUN_PHASE_MS = 110;
 const IDLE_BLEND_MS = 350;
 const RUN_BLEND_MS = 400;
 
@@ -81,7 +81,7 @@ export class AnimationLabScene extends Scene {
     {
       id: 'sprint',
       title: 'Sprint cycle',
-      description: 'Full run: longer stride, higher foot lift, bent knees and a stronger body bounce.',
+      description: 'Contact, stance on the ground, push-off, heel kick, high knee drive and a short flight phase.',
       render: (sprite) => drawStickman(sprite, this.runPhase, { running: true, originY: 0 }),
     },
     {

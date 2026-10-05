@@ -195,7 +195,8 @@ export class Bowman extends Container {
     this.animationRunningBlend = approach(this.animationRunningBlend, targetRunningBlend, blendStep);
 
     if (isMoving) {
-      this.animationTime += deltaMs / (150 + this.animationRunningBlend * 10);
+      // Faster cadence when sprinting.
+      this.animationTime += deltaMs / (150 - this.animationRunningBlend * 45);
     }
     // While the bow isn't drawn, face the way we're running and carry the bow pointing forward.
     // While drawing, facing follows the aim (set in setAim).
