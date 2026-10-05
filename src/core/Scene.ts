@@ -1,4 +1,5 @@
 import type { Application, Container, Texture } from 'pixi.js';
+import type { ProjectileType } from '../types';
 import type { DomUi } from '../ui/DomUi';
 
 export type SceneName = 'menu' | 'animationLab' | 'game';
@@ -6,7 +7,8 @@ export type SceneName = 'menu' | 'animationLab' | 'game';
 export interface GameTextures {
   tower: Texture;
   towerEnemy: Texture;
-  arrow: Texture;
+  /** One texture per projectile type. */
+  arrows: Record<ProjectileType, Texture>;
 }
 
 /** Progress that survives between scenes; reset when returning to the menu. */

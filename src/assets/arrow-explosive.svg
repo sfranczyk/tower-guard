@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="72" height="12" viewBox="0 0 72 12">
+  <path d="M5 6h50" stroke="#27354e" stroke-width="3.5" stroke-linecap="round"/>
+  <path d="M5 6h50" stroke="#c98a3c" stroke-width="1.5" stroke-linecap="round"/>
+  <!-- Rounded charge instead of a point -->
+  <circle cx="62" cy="6" r="5.2" fill="#e2702a" stroke="#4b2a1e" stroke-width="1.4"/>
+  <circle cx="63.6" cy="4.3" r="1.6" fill="#ffc27a"/>
+  <path d="M57.4 3v6" stroke="#3b3a40" stroke-width="1.6"/>
+  <path d="M4 2c5 1 10 1 16 2L16 6l4 2c-6 1-11 1-16 2l4-4z" fill="#ffb066" stroke="#4b2a1e" stroke-width="1.2" stroke-linejoin="round"/>
+  <path d="M8 3.5L11 6 8 8.5M13 4L16 6 13 8" fill="none" stroke="#b8642a" stroke-width="1" stroke-linecap="round"/>
+</svg>

@@ -304,8 +304,8 @@ export class GameScene extends Scene {
     this.world.addChild(trail);
 
     const releasePoint = this.bowman.getBowReleasePoint();
-    const arrow = new Arrow(releasePoint.x, releasePoint.y, this.ctx.textures.arrow, trail);
     const type = this.selectedProjectile;
+    const arrow = new Arrow(releasePoint.x, releasePoint.y, this.ctx.textures.arrows[type], trail);
     arrow.fire(Math.atan2(aim.direction.y, aim.direction.x), launchSpeed(type, power), type);
     this.arrows.push(arrow);
     this.world.addChild(arrow);

@@ -52,11 +52,6 @@ export default class Arrow extends Sprite {
     this.activeProjectile = true;
     this.projectileType = projectileType;
     this.hitCount = 0;
-    this.tint = projectileType === 'explosive'
-      ? 0xffa63d
-      : projectileType === 'piercing'
-        ? 0x8fe3ff
-        : 0xffffff;
     this.rotation = angle;
     this.velocity.x = Math.cos(angle) * power;
     this.velocity.y = Math.sin(angle) * power;

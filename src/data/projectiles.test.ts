@@ -21,6 +21,10 @@ describe('projectile physics', () => {
     expect(launchSpeed('normal', 1)).toBeGreaterThan(launchSpeed('explosive', 1));
   });
 
+  it('launches piercing at 120% of the normal arrow speed', () => {
+    expect(launchSpeed('piercing', 0.6) / launchSpeed('normal', 0.6)).toBeCloseTo(1.2);
+  });
+
   it('keeps the normal arrow unchanged', () => {
     expect(PROJECTILE_PHYSICS.normal).toEqual({ mass: 1, dragMultiplier: 1 });
   });

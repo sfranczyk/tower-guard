@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="72" height="10" viewBox="0 0 72 10">
+  <path d="M5 5h50" stroke="#27354e" stroke-width="3" stroke-linecap="round"/>
+  <path d="M5 5h50" stroke="#b8c7d6" stroke-width="1.2" stroke-linecap="round"/>
+  <!-- Long, thin bodkin needle -->
+  <path d="M52 3.2L71 5 52 6.8 54 5z" fill="#f2fbff" stroke="#1f2b38" stroke-width="1.3" stroke-linejoin="round"/>
+  <path d="M54.5 5h13" stroke="#7aa6bb" stroke-width=".7"/>
+  <path d="M4 1c5 1 10 1 16 2L16 5l4 2c-6 1-11 1-16 2l4-4z" fill="#a9e4f5" stroke="#3b4a5e" stroke-width="1.2" stroke-linejoin="round"/>
+  <path d="M8 2.5L11 5 8 7.5M13 3L16 5 13 7" fill="none" stroke="#5f9fb5" stroke-width="1" stroke-linecap="round"/>
+</svg>

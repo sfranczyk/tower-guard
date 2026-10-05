@@ -15,8 +15,8 @@ export interface ProjectilePhysics {
 
 export const PROJECTILE_PHYSICS: Readonly<Record<ProjectileType, ProjectilePhysics>> = {
   normal: { mass: 1, dragMultiplier: 1 },
-  // Light, slim bodkin point: fast and flat, carries furthest.
-  piercing: { mass: 0.75, dragMultiplier: 0.7 },
+  // Light, slim bodkin point: launches at 120% speed (mass 1/1.2²), flat and carries furthest.
+  piercing: { mass: 1 / 1.2 ** 2, dragMultiplier: 0.7 },
   // Heavy charge with a bulky head: slow, short high arc.
   explosive: { mass: 1.8, dragMultiplier: 1.6 },
 };
