@@ -66,7 +66,7 @@ export const WAVE_START_DELAY_MS = 800;
 
 /** Sound effects: master volume (0..1) and the base volume of each sound. */
 export const SOUND_DEFAULT_VOLUME = 0.7;
-export const SOUND_VOLUMES = { bowShot: 0.7, arrowHit: 0.8, explosion: 1 } as const;
+export const SOUND_VOLUMES = { bowShot: 0.7, groan: 0.75, bodyFall: 0.8, explosion: 1 } as const;
 /** Each play is pitched randomly by ±this fraction so repeats don't sound identical. */
 export const SOUND_PITCH_VARIATION = 0.07;
 /** At most this many copies of one sound play at once (piercing hits, volleys). */

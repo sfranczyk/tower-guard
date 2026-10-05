@@ -299,6 +299,7 @@ export class GameScene extends Scene {
     const stats = getEnemyStats(type, 1);
     const enemy = new Enemy(ENEMY_SPAWN_X, stats.health, stats.speed, 'bowman', type);
     enemy.visible = this.enemiesVisible;
+    enemy.onBodyLanded = (at) => this.playSound('bodyFall', at);
     this.enemies.push(enemy);
     this.spawnedEnemies += 1;
     this.world.addChild(enemy);

@@ -2,7 +2,7 @@ import { Container, Graphics } from 'pixi.js';
 import { ENEMY_ARCHER_COOLDOWN_MS, ENEMY_ARCHER_DRAW_MS, ENEMY_ATTACK_INTERVAL_MS, ENEMY_GROUND_Y } from '../config';
 import { getArcherRig, toArcherLocalAngle } from '../rendering/archer';
 import { STICKMAN_HEAD, drawStickman, type StickmanPose } from '../rendering/stickman';
-import { FALL_DURATION_MS, drawStickmanFall, getFallPose, type FallKind, type FallPose } from '../rendering/stickmanFall';
+import { FALL_DURATION_MS, bodyLandingProgress, drawStickmanFall, getFallPose, type FallKind, type FallPose } from '../rendering/stickmanFall';
 import { GibSimulation, drawStickmanGibs } from '../rendering/stickmanGibs';
 import { fromBodyAnchor, spriteToWorld, toBodyAnchor, worldToSprite, type BodyAnchor, type BodyTransform, type Torso } from '../systems/bodyAnchor';
 import type { Bounds, EnemyType, Vec2 } from '../types';
@@ -29,6 +29,8 @@ interface FallState {
   facing: number;
   /** Knockback only: get up after lying down this long, then fight on. */
   getUpAfterMs?: number;
+  /** The torso has hit the ground (onBodyLanded fired). */
+  landed: boolean;
 }
 
 /** Time a knocked-down (surviving) enemy lies on the ground before getting up. */
@@ -65,6 +67,8 @@ export default class Enemy extends Container {
   private velocity = { x: 0, y: 0 };
   private alive = true;
   private fall?: FallState;
+  /** Called when a falling body hits the ground (death or knockdown), e.g. for the thud sound. */
+  public onBodyLanded?: (at: Vec2) => void;
   /** Set when blown apart by a direct explosive hit. */
   private gibs?: GibSimulation;
   /** Archer bow state: raised (0..1), draw tension (0..1), aim angle (world) and time to the next shot. */
@@ -402,7 +406,7 @@ export default class Enemy extends Container {
   /** Turns to face the hit (so backwards falls go away from it) and starts a fall animation. */
   private startFall(kind: FallKind, fromX: number, getUpAfterMs?: number): void {
     const facing = fromX >= this.x ? 1 : -1;
-    this.fall = { kind, timeMs: 0, facing, getUpAfterMs };
+    this.fall = { kind, timeMs: 0, facing, getUpAfterMs, landed: false };
     this.attackTimerMs = 0;
     this.hitStaggerMs = 0;
     this.body.scale.set(BODY_SCALE.x * facing, BODY_SCALE.y);
@@ -427,8 +431,13 @@ export default class Enemy extends Container {
     }
     fall.timeMs += deltaMs;
     const duration = FALL_DURATION_MS[fall.kind];
+    const landing = bodyLandingProgress(fall.kind);
+    if (!fall.landed && landing !== undefined && fall.timeMs >= landing * duration) {
+      fall.landed = true;
+      this.onBodyLanded?.({ x: this.x, y: ENEMY_GROUND_Y });
+    }
     if (fall.kind === 'knockback' && fall.getUpAfterMs !== undefined && fall.timeMs >= duration + fall.getUpAfterMs) {
-      this.fall = { kind: 'getUp', timeMs: 0, facing: fall.facing };
+      this.fall = { kind: 'getUp', timeMs: 0, facing: fall.facing, landed: true };
     } else if (fall.kind === 'getUp' && fall.timeMs >= duration) {
       // The get-up ends standing away from where the knockback started; move there for real.
       const endHipX = getFallPose('getUp', 1).hip.x;

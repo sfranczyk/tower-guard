@@ -212,9 +212,7 @@ export class CombatSystem {
       });
       if (towerHit !== undefined) {
         playerTower.takeDamage(ENEMY_ARROW_DAMAGE);
-        const point = pointAlong(start, travel, towerHit);
-        effects.impact(point);
-        this.events.sound('arrowHit', point);
+        effects.impact(pointAlong(start, travel, towerHit));
         arrow.deactivate();
       }
       return;
@@ -228,9 +226,7 @@ export class CombatSystem {
     });
     if (bowmanHit !== undefined) {
       this.events.bowmanDamaged(ENEMY_ARROW_DAMAGE);
-      const point = pointAlong(start, travel, bowmanHit);
-      effects.bloodBurst(point);
-      this.events.sound('arrowHit', point);
+      effects.bloodBurst(pointAlong(start, travel, bowmanHit));
       arrow.deactivate();
     }
   }
@@ -281,7 +277,6 @@ export class CombatSystem {
       this.explode(impactPoint, activeEnemies);
     } else {
       this.world.effects.impact(impactPoint);
-      this.events.sound('arrowHit', impactPoint);
     }
     arrow.deactivate();
   }
@@ -316,9 +311,6 @@ export class CombatSystem {
   ): void {
     const { effects, debug } = this.world;
     effects.bloodBurst(impactPoint);
-    if (arrow.type !== 'explosive') {
-      this.events.sound('arrowHit', impactPoint);
-    }
     if (SHOW_HITBOX_DEBUG) {
       debug.circle(impactPoint.x, impactPoint.y, 3).fill({ color: 0x55ff88, alpha: 1 });
     }
@@ -336,6 +328,10 @@ export class CombatSystem {
     enemy.applyHitReaction(fromLeft ? 6 : -4);
     const cause = arrow.type === 'explosive' ? 'blast' : headshot ? 'headshot' : 'arrow';
     enemy.takeDamage(damage, { cause, fromX: fromLeft ? enemy.x - 1 : enemy.x + 1, point: impactPoint });
+    // Arrow hits make the enemy cry out, unless a headshot or a blast killed it outright.
+    if (enemy.isAlive() || cause === 'arrow') {
+      this.events.sound('groan', impactPoint);
+    }
     hitEnemies.add(enemy);
     arrow.registerImpact();
 

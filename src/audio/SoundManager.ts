@@ -1,15 +1,25 @@
-import arrowHitSound from '../assets/sounds/arrow-hit.mp3';
+import bodyFallSound from '../assets/sounds/body-fall.mp3';
 import bowShotSound from '../assets/sounds/bow-shot.mp3';
 import explosionSound from '../assets/sounds/explosion.mp3';
+import groan1 from '../assets/sounds/groan-1.mp3';
+import groan2 from '../assets/sounds/groan-2.mp3';
+import groan3 from '../assets/sounds/groan-3.mp3';
+import groan4 from '../assets/sounds/groan-4.mp3';
+import groan5 from '../assets/sounds/groan-5.mp3';
+import groan6 from '../assets/sounds/groan-6.mp3';
+import groan7 from '../assets/sounds/groan-7.mp3';
+import groan8 from '../assets/sounds/groan-8.mp3';
 import { SOUND_DEFAULT_VOLUME, SOUND_MAX_VOICES, SOUND_PITCH_VARIATION, SOUND_VOLUMES } from '../config';
 import type { SpatialMix } from './spatial';
 
 export type SoundId = keyof typeof SOUND_VOLUMES;
 
-const SOURCES: Record<SoundId, string> = {
-  bowShot: bowShotSound,
-  arrowHit: arrowHitSound,
-  explosion: explosionSound,
+/** Every sound has one or more variants; a play picks one at random (never the same twice in a row). */
+const SOURCES: Record<SoundId, readonly string[]> = {
+  bowShot: [bowShotSound],
+  groan: [groan1, groan2, groan3, groan4, groan5, groan6, groan7, groan8],
+  bodyFall: [bodyFallSound],
+  explosion: [explosionSound],
 };
 
 const STORAGE_KEY = 'tower-guard.audio';
@@ -27,7 +37,8 @@ interface AudioSettings {
 export class SoundManager {
   private readonly context?: AudioContext;
   private readonly master?: GainNode;
-  private readonly buffers = new Map<SoundId, AudioBuffer>();
+  private readonly buffers = new Map<SoundId, AudioBuffer[]>();
+  private readonly lastVariant = new Map<SoundId, number>();
   private readonly voices = new Map<SoundId, number>();
   private settings: AudioSettings;
 
@@ -57,18 +68,20 @@ export class SoundManager {
       return;
     }
     await Promise.all((Object.keys(SOURCES) as SoundId[]).map(async (id) => {
-      try {
-        const data = await (await fetch(SOURCES[id])).arrayBuffer();
-        this.buffers.set(id, await context.decodeAudioData(data));
-      } catch {
-        // Missing or undecodable file: the game plays on without it.
-      }
+      const decoded = await Promise.all(SOURCES[id].map(async (url) => {
+        try {
+          return await context.decodeAudioData(await (await fetch(url)).arrayBuffer());
+        } catch {
+          return undefined; // Missing or undecodable file: the game plays on without it.
+        }
+      }));
+      this.buffers.set(id, decoded.filter((buffer): buffer is AudioBuffer => buffer !== undefined));
     }));
   }
 
   public play(id: SoundId, mix: SpatialMix = { gain: 1, pan: 0 }): void {
     const { context, master } = this;
-    const buffer = this.buffers.get(id);
+    const buffer = this.pickVariant(id);
     const playing = this.voices.get(id) ?? 0;
     if (!context || !master || !buffer || !this.settings.enabled || context.state !== 'running'
       || playing >= SOUND_MAX_VOICES) {
@@ -86,6 +99,20 @@ export class SoundManager {
     this.voices.set(id, playing + 1);
     source.addEventListener('ended', () => this.voices.set(id, (this.voices.get(id) ?? 1) - 1));
     source.start();
+  }
+
+  private pickVariant(id: SoundId): AudioBuffer | undefined {
+    const variants = this.buffers.get(id) ?? [];
+    if (variants.length <= 1) {
+      return variants[0];
+    }
+    const last = this.lastVariant.get(id);
+    let index = Math.floor(Math.random() * (variants.length - 1));
+    if (last !== undefined && index >= last) {
+      index += 1;
+    }
+    this.lastVariant.set(id, index);
+    return variants[index];
   }
 
   public get enabled(): boolean {

@@ -85,8 +85,11 @@ src/
   the keep while he hides, and never hit enemies. Tuning lives in `config.ts` (`ENEMY_ARCHER_*`, `ENEMY_ARROW_*`).
 - **Sound**: `ctx.sound` (`audio/SoundManager.ts`) plays the effects in `assets/sounds/` (the user's own
   recordings from `human/`, trimmed and normalized with ffmpeg). `CombatSystem` emits `sound(id, at)` events
-  and `GameScene` plays them through `spatialMix` (pan by screen position, quieter off screen). New sounds:
-  add the mp3, its id in `SOURCES` and its volume in `config.ts` (`SOUND_VOLUMES`). The enabled/volume
+  and `GameScene` plays them through `spatialMix` (pan by screen position, quieter off screen). Enemies
+  groan when hit by an arrow (8 random variants), and a falling body thuds when its torso hits the ground
+  (`Enemy.onBodyLanded`, timed by `bodyLandingProgress`). New sounds: add the mp3, its id in `SOURCES`
+  (an array of variants) and its volume in `config.ts` (`SOUND_VOLUMES`). Don't denoise or fade fricatives
+  (the "ch" in body-fall) when trimming. The enabled/volume
   settings in the drawer persist in localStorage.
 - **Coordinates**: the screen is 1024×540 and the world is wider (`WORLD_WIDTH`). `GameScene` scrolls the
   `world` container by `cameraX`. The ground is at `GROUND_Y`.

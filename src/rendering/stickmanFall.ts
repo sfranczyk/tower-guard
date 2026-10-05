@@ -367,6 +367,37 @@ export const getFallPose = (kind: FallKind, progress: number): FallPose => {
   };
 };
 
+/** A lying torso's shoulder rests around y 46; this close to the ground counts as hitting it. */
+const BODY_LANDING_MARGIN = 18;
+
+/**
+ * Progress (0..1) at which the falling torso first hits the ground (shoulder within
+ * BODY_LANDING_MARGIN of it), for the thud sound; undefined if it starts lying (getUp) or never lands.
+ */
+const landingCache = new Map<FallKind, number | undefined>();
+
+export const bodyLandingProgress = (kind: FallKind): number | undefined => {
+  if (!landingCache.has(kind)) {
+    landingCache.set(kind, findBodyLanding(kind));
+  }
+  return landingCache.get(kind);
+};
+
+const findBodyLanding = (kind: FallKind): number | undefined => {
+  const steps = 100;
+  const onGround = (progress: number): boolean =>
+    getFallPose(kind, progress).shoulder.y >= CONTACT_GROUND_Y - BODY_LANDING_MARGIN;
+  if (onGround(0)) {
+    return undefined;
+  }
+  for (let step = 1; step <= steps; step += 1) {
+    if (onGround(step / steps)) {
+      return step / steps;
+    }
+  }
+  return undefined;
+};
+
 /** Draws a fall animation frame with the skeleton look (same colours and widths as drawStickman). */
 export const drawStickmanFall = (sprite: Graphics, kind: FallKind, progress: number, originY = 0): void => {
   sprite.clear();
