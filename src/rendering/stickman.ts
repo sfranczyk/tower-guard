@@ -1,6 +1,6 @@
 import type { Graphics } from 'pixi.js';
 import type { Vec2 as Point } from '../types';
-import { drawBow, getArcherRig, toArcherLocalAngle } from './archer';
+import { drawBow, getArcherRig, toArcherLocalAngle, type FreeArm } from './archer';
 import { RUN_GROUND_Y, runArmSwing, runBounce, runFoot } from './runCycle';
 import { walkKneeBend } from './walkCycle';
 import { ARMOR_COLORS, drawArmor, drawArmoredBow, drawHood, drawPauldron, drawQuiver } from './armor';
@@ -23,8 +23,10 @@ export interface StickmanPose {
   attackPhase?: number;
   /** Replaces swinging arms with arms holding a bow (drawn too), pivoting at the neck. */
   archerPose?: boolean;
-  /** 0 = string at rest, 1 = fully drawn. */
+  /** 0 = string at rest, 1 = fully drawn. Only takes effect as the bow comes up (bowReady). */
   bowTension?: number;
+  /** Archer only: 0 = bow lowered (free arm swings), 1 = bow raised to aim. Defaults to 1. */
+  bowReady?: number;
   /** Aim angle in the sprite's parent space (radians, 0 = right). Lean and facing are compensated. */
   bowAngle?: number;
   /** 1 = facing right, -1 = facing left. Must match the sprite's scale.x sign. */
@@ -56,6 +58,7 @@ export const drawStickman: StickmanRenderer = (sprite, phase, pose = {}) => {
     attackPhase = 0,
     archerPose = false,
     bowTension = 0,
+    bowReady = 1,
     bowAngle = 0,
     facingDirection = 1,
     leanDirection = Math.sign(facingDirection || 1),
@@ -164,7 +167,8 @@ export const drawStickman: StickmanRenderer = (sprite, phase, pose = {}) => {
     );
   };
 
-  const drawArm = (angle: number, isRear: boolean, armed = false): Point => {
+  /** Elbow and hand of a swinging arm (no drawing). */
+  const armPoints = (angle: number, armed = false): FreeArm => {
     const elbow = {
       x: shoulder.x + Math.sin(angle) * 21,
       y: shoulder.y + Math.cos(angle) * 21,
@@ -174,6 +178,10 @@ export const drawStickman: StickmanRenderer = (sprite, phase, pose = {}) => {
       x: elbow.x + Math.sin(forearmAngle) * 21,
       y: elbow.y + Math.cos(forearmAngle) * 21,
     };
+    return { elbow, hand };
+  };
+  const drawArm = (angle: number, isRear: boolean, armed = false): Point => {
+    const { elbow, hand } = armPoints(angle, armed);
     line(shoulder, elbow, isRear);
     line(elbow, hand, isRear);
     joint(elbow, isRear);
@@ -225,8 +233,15 @@ export const drawStickman: StickmanRenderer = (sprite, phase, pose = {}) => {
 
   drawLeg(blendPoint(leftFoot, idleLeftFoot), leftKneeBend, true);
   // Rear gray arm follows the front white leg; the front white arm follows the rear gray leg.
+  const frontArmAngle = -armSwingAngle * (1 - idleBlend) + 0.1 * idleBlend + attackArmOffset;
+  // While the bow is lowered the string arm swings like a normal front arm.
   const archerRig = archerPose
-    ? getArcherRig(toArcherLocalAngle(bowAngle, sprite.rotation, facingDirection), bowTension)
+    ? getArcherRig(
+      toArcherLocalAngle(bowAngle, sprite.rotation, facingDirection),
+      bowTension,
+      bowReady,
+      armPoints(frontArmAngle),
+    )
     : undefined;
   // Archer: the rear (lower-layer) arm holds the bow, the front arm draws the string so the
   // drawing hand stays visible in front of the face.
@@ -257,7 +272,6 @@ export const drawStickman: StickmanRenderer = (sprite, phase, pose = {}) => {
     sprite.circle(STICKMAN_HEAD.x, STICKMAN_HEAD.y, STICKMAN_HEAD.radius).stroke({ width: 2, color: skeleton });
     drawLeg(blendPoint(rightFoot, idleRightFoot), rightKneeBend, false);
   }
-  const frontArmAngle = -armSwingAngle * (1 - idleBlend) + 0.1 * idleBlend + attackArmOffset;
   const weaponHand = archerPose
     ? { x: 0, y: 0 }
     : drawArm(frontArmAngle, false, armed);
@@ -285,7 +299,7 @@ export const drawStickman: StickmanRenderer = (sprite, phase, pose = {}) => {
   }
   if (archerRig) {
     if (armored) {
-      drawArmoredBow(sprite, archerRig, bowTension);
+      drawArmoredBow(sprite, archerRig, bowTension * bowReady * bowReady * (3 - 2 * bowReady));
     } else {
       drawBow(sprite, archerRig);
     }

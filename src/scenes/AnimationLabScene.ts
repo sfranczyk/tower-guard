@@ -11,8 +11,10 @@ const IDLE_BLEND_MS = 350;
 const RUN_BLEND_MS = 400;
 
 const LIST_TOP = 78;
-const ROW_COUNT = 8;
-const ROW_HEIGHT = (GAME_HEIGHT - LIST_TOP - 8) / ROW_COUNT;
+const LIST_BOTTOM = GAME_HEIGHT - 8;
+/** Rows visible at once; the rest scroll with the mouse wheel. */
+const VISIBLE_ROWS = 8;
+const ROW_HEIGHT = (LIST_BOTTOM - LIST_TOP) / VISIBLE_ROWS;
 /** Previews are drawn smaller so every full-height stickman fits one under another. */
 const PREVIEW_SCALE = 0.4;
 /** Fall animations hold the final pose this long before replaying. */
@@ -26,6 +28,18 @@ const ZOOM_FIGURE_X = 280;
 const ZOOM_TEXT_X = 520;
 
 type SequenceState = 'walkFirst' | 'stand' | 'walkSecond' | 'run' | 'runToWalk';
+type ArcherSequenceState =
+  | 'walkLowered' | 'stopLowered' | 'raise' | 'draw' | 'walkDrawn' | 'stopDrawn' | 'release' | 'lower' | 'hold';
+
+/** Archer ready sequence timings (ms) and the draw tension it walks with. */
+const ARCHER_STOP_MS = 400;
+const ARCHER_RAISE_MS = 350;
+const ARCHER_DRAW_MS = 500;
+const ARCHER_RELEASE_MS = 300;
+const ARCHER_LOWER_MS = 450;
+const ARCHER_HOLD_MS = 700;
+const ARCHER_SEQUENCE_TENSION = 0.85;
+const ARCHER_SEQUENCE_STEPS = 4;
 
 type PreviewRow = {
   /** Stable id used in the URL (?lab=<id>). */
@@ -67,6 +81,38 @@ export class AnimationLabScene extends Scene {
       }),
     },
     {
+      id: 'archer-lowered',
+      backdrop: SKY_BACKDROP,
+      title: 'Archer · standing, bow lowered',
+      description: 'Default stance in game: bow held low, pointing at the ground ahead; the other arm hangs free.',
+      render: (sprite) => drawStickman(sprite, 0, {
+        idleBlend: 1, archerPose: true, bowReady: 0, skin: 'armored', originY: 0,
+      }),
+    },
+    {
+      id: 'archer-lowered-walk',
+      backdrop: SKY_BACKDROP,
+      title: 'Archer · walking, bow lowered',
+      description: 'Walk cycle carrying the lowered bow; the free arm swings with the steps.',
+      render: (sprite) => drawStickman(sprite, this.archerWalkPhase, {
+        archerPose: true, bowReady: 0, skin: 'armored', originY: 0,
+      }),
+    },
+    {
+      id: 'archer-ready',
+      backdrop: SKY_BACKDROP,
+      title: 'Archer · walk → stop → raise & draw → walk drawn → stop → lower',
+      description: 'Bow comes up to aim and the string is drawn, walks with it drawn, then releases and lowers.',
+      render: (sprite) => drawStickman(sprite, this.archerSequence.phase, {
+        idleBlend: this.archerSequence.idle,
+        archerPose: true,
+        bowReady: this.archerSequence.ready,
+        bowTension: this.archerSequence.tension,
+        skin: 'armored',
+        originY: 0,
+      }),
+    },
+    {
       id: 'walk',
       title: 'Walk cycle with idle pauses',
       description: 'Walks 5 steps, blends into a standing pose and holds it for 3 s, then walks again.',
@@ -87,7 +133,7 @@ export class AnimationLabScene extends Scene {
     {
       id: 'enemy-walk',
       title: 'Enemy walk (armed)',
-      description: 'Walk cycle with a club in the front hand; pauses together with row 2.',
+      description: 'Walk cycle with a club in the front hand; pauses together with the plain walk.',
       render: (sprite) => drawStickman(sprite, this.walkPhase, { idleBlend: this.walkIdleBlend, armed: true, originY: 0 }),
     },
     {
@@ -124,6 +170,19 @@ export class AnimationLabScene extends Scene {
   private runPhase = 0;
   private attackPhase = 0;
   private fallTimeMs = 0;
+  private archerWalkPhase = 0;
+  private readonly archerSequence = {
+    state: 'walkLowered' as ArcherSequenceState,
+    timeMs: 0,
+    phase: 0,
+    steps: 0,
+    idle: 0,
+    ready: 0,
+    tension: 0,
+  };
+  private scrollY = 0;
+  private readonly listMask = new Graphics().rect(0, LIST_TOP, GAME_WIDTH, LIST_BOTTOM - LIST_TOP).fill({ color: 0xffffff });
+  private readonly scrollbar = new Graphics();
 
   private sequenceState: SequenceState = 'walkFirst';
   private sequencePhase = 0;
@@ -138,7 +197,14 @@ export class AnimationLabScene extends Scene {
     ui.showScreen('animationLab');
     this.createBackdrop();
     this.rows.forEach((row, index) => this.createRow(row, index));
-    root.addChild(this.list, this.zoomView);
+    this.list.mask = this.listMask;
+    root.addChild(this.listMask, this.list, this.scrollbar, this.zoomView);
+    this.listenWindow('wheel', (event) => {
+      if (!this.zoomed) {
+        this.scrollTo(this.scrollY + event.deltaY * 0.5);
+      }
+    });
+    this.scrollTo(0);
 
     ui.handlers.labBack = () => this.zoomTo(undefined);
     this.onExit(() => {
@@ -159,6 +225,8 @@ export class AnimationLabScene extends Scene {
     this.runPhase += deltaMs / RUN_PHASE_MS;
     this.attackPhase += deltaMs / 180;
     this.fallTimeMs += deltaMs;
+    this.archerWalkPhase += deltaMs / WALK_PHASE_MS;
+    this.updateArcherSequence(deltaMs);
     this.updateSequence(deltaMs);
     this.draw();
   }
@@ -209,6 +277,7 @@ export class AnimationLabScene extends Scene {
   private zoomTo(preview: PreviewRow | undefined): void {
     this.zoomed = preview;
     this.list.visible = !preview;
+    this.scrollbar.visible = !preview && this.maxScroll > 0;
     this.zoomView.visible = Boolean(preview);
     this.ctx.ui.setLabZoomed(Boolean(preview));
     setUrlParam(LAB_PARAM, preview?.id ?? '');
@@ -234,6 +303,80 @@ export class AnimationLabScene extends Scene {
     this.zoomView.addChild(AnimationLabScene.wrapped(preview.description, 14, ZOOM_TEXT_X, top + 100, GAME_WIDTH - ZOOM_TEXT_X - 40));
     this.zoomView.addChild(AnimationLabScene.wrapped('Esc or “All animations” returns to the list.', 12, ZOOM_TEXT_X, top + height - 24, GAME_WIDTH - ZOOM_TEXT_X - 40, 0x6f7d90));
     this.draw();
+  }
+
+  private get maxScroll(): number {
+    return Math.max(0, this.rows.length * ROW_HEIGHT - (LIST_BOTTOM - LIST_TOP));
+  }
+
+  private scrollTo(y: number): void {
+    this.scrollY = Math.max(0, Math.min(this.maxScroll, y));
+    this.list.y = -this.scrollY;
+    const trackHeight = LIST_BOTTOM - LIST_TOP;
+    const thumbHeight = trackHeight * (trackHeight / (trackHeight + this.maxScroll));
+    const thumbY = LIST_TOP + (this.maxScroll ? (this.scrollY / this.maxScroll) * (trackHeight - thumbHeight) : 0);
+    this.scrollbar.clear()
+      .roundRect(GAME_WIDTH - 10, LIST_TOP, 4, trackHeight, 2).fill({ color: 0xffffff, alpha: 0.06 })
+      .roundRect(GAME_WIDTH - 10, thumbY, 4, thumbHeight, 2).fill({ color: 0x5b8def, alpha: 0.8 });
+    this.scrollbar.visible = !this.zoomed && this.maxScroll > 0;
+  }
+
+  /**
+   * Archer ready sequence: walk with the bow lowered, stop, raise and draw, walk drawn, stop,
+   * release, lower, hold, repeat.
+   */
+  private updateArcherSequence(deltaMs: number): void {
+    const seq = this.archerSequence;
+    seq.timeMs += deltaMs;
+    const walking = seq.state === 'walkLowered' || seq.state === 'walkDrawn';
+    if (walking) {
+      const previousPhase = seq.phase;
+      seq.phase += deltaMs / WALK_PHASE_MS;
+      seq.steps += stepsBetween(previousPhase, seq.phase);
+      seq.idle = Math.max(0, seq.idle - deltaMs / IDLE_BLEND_MS);
+    } else {
+      seq.idle = Math.min(1, seq.idle + deltaMs / IDLE_BLEND_MS);
+    }
+    const next = (state: ArcherSequenceState): void => {
+      seq.state = state;
+      seq.timeMs = 0;
+      seq.steps = 0;
+    };
+    const progress = (duration: number): number => Math.min(1, seq.timeMs / duration);
+
+    switch (seq.state) {
+      case 'walkLowered':
+        if (seq.steps >= ARCHER_SEQUENCE_STEPS) next('stopLowered');
+        break;
+      case 'stopLowered':
+        if (seq.timeMs >= ARCHER_STOP_MS) next('raise');
+        break;
+      case 'raise':
+        seq.ready = progress(ARCHER_RAISE_MS);
+        if (seq.ready >= 1) next('draw');
+        break;
+      case 'draw':
+        seq.tension = ARCHER_SEQUENCE_TENSION * progress(ARCHER_DRAW_MS);
+        if (seq.timeMs >= ARCHER_DRAW_MS) next('walkDrawn');
+        break;
+      case 'walkDrawn':
+        if (seq.steps >= ARCHER_SEQUENCE_STEPS) next('stopDrawn');
+        break;
+      case 'stopDrawn':
+        if (seq.timeMs >= ARCHER_STOP_MS) next('release');
+        break;
+      case 'release':
+        seq.tension = ARCHER_SEQUENCE_TENSION * (1 - progress(ARCHER_RELEASE_MS));
+        if (seq.timeMs >= ARCHER_RELEASE_MS) next('lower');
+        break;
+      case 'lower':
+        seq.ready = 1 - progress(ARCHER_LOWER_MS);
+        if (seq.timeMs >= ARCHER_LOWER_MS) next('hold');
+        break;
+      case 'hold':
+        if (seq.timeMs >= ARCHER_HOLD_MS) next('walkLowered');
+        break;
+    }
   }
 
   /** Figure container (hip at x/hipY) plus a ground line under the feet from groundFrom to groundTo. */

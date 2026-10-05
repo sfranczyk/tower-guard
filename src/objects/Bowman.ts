@@ -220,7 +220,7 @@ export class Bowman extends Container {
   public getBowReleasePoint(): Vec2 {
     const body = this.bodySprite;
     const localAngle = toArcherLocalAngle(this.aimAngle, body.rotation, this.facingDirection);
-    const hand = getArcherRig(localAngle, this.aim.power).stringHand;
+    const hand = getArcherRig(localAngle, this.aim.power).stringNock;
     const cos = Math.cos(body.rotation);
     const sin = Math.sin(body.rotation);
     const x = hand.x * body.scale.x;

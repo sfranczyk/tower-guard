@@ -91,9 +91,9 @@ export const drawPauldron = (sprite: Graphics, shoulder: Vec2): void => {
 
 /** Thick dark recurve bow, string, and a nocked arrow while the bow is being drawn. */
 export const drawArmoredBow = (sprite: Graphics, rig: ArcherRig, tension: number): void => {
-  const { bowTop, bowBottom, bowControl, stringHand, woodHand } = rig;
+  const { bowTop, bowBottom, bowControl, stringNock, woodHand } = rig;
   sprite.moveTo(bowTop.x, bowTop.y)
-    .lineTo(stringHand.x, stringHand.y)
+    .lineTo(stringNock.x, stringNock.y)
     .lineTo(bowBottom.x, bowBottom.y)
     .stroke({ width: 1.5, color: ARMOR_COLORS.limbRear, join: 'round' });
   sprite.moveTo(bowTop.x, bowTop.y)
@@ -103,14 +103,14 @@ export const drawArmoredBow = (sprite: Graphics, rig: ArcherRig, tension: number
   if (tension <= 0.02) {
     return;
   }
-  const dx = woodHand.x - stringHand.x;
-  const dy = woodHand.y - stringHand.y;
+  const dx = woodHand.x - stringNock.x;
+  const dy = woodHand.y - stringNock.y;
   const length = Math.hypot(dx, dy) || 1;
   const ux = dx / length;
   const uy = dy / length;
   // Fixed length: the arrow slides back with the string hand instead of stretching.
-  const tip = { x: stringHand.x + ux * NOCKED_ARROW_LENGTH, y: stringHand.y + uy * NOCKED_ARROW_LENGTH };
-  sprite.moveTo(stringHand.x, stringHand.y).lineTo(tip.x, tip.y)
+  const tip = { x: stringNock.x + ux * NOCKED_ARROW_LENGTH, y: stringNock.y + uy * NOCKED_ARROW_LENGTH };
+  sprite.moveTo(stringNock.x, stringNock.y).lineTo(tip.x, tip.y)
     .stroke({ width: 2, color: ARMOR_COLORS.limb, cap: 'round' });
   // Arrowhead and fletching.
   sprite.poly([
@@ -119,8 +119,8 @@ export const drawArmoredBow = (sprite: Graphics, rig: ArcherRig, tension: number
     tip.x + uy * 3.5, tip.y - ux * 3.5,
   ]).fill({ color: ARMOR_COLORS.limb });
   sprite.poly([
-    stringHand.x + ux * 7, stringHand.y + uy * 7,
-    stringHand.x - uy * 3, stringHand.y + ux * 3,
-    stringHand.x + uy * 3, stringHand.y - ux * 3,
+    stringNock.x + ux * 7, stringNock.y + uy * 7,
+    stringNock.x - uy * 3, stringNock.y + ux * 3,
+    stringNock.x + uy * 3, stringNock.y - ux * 3,
   ]).fill({ color: ARMOR_COLORS.limbRear });
 };

@@ -60,3 +60,45 @@ describe('toArcherLocalAngle', () => {
     expect(toArcherLocalAngle(0.5, 0.2, 1)).toBeCloseTo(0.3);
   });
 });
+
+describe('getArcherRig bow ready blend', () => {
+  const freeArm = { elbow: { x: 3, y: -15 }, hand: { x: 9, y: 5 } };
+
+  it('lowered: string arm is the free arm and the string is at rest even with tension', () => {
+    const rig = getArcherRig(0, 1, 0, freeArm);
+    expect(rig.stringHand).toEqual(freeArm.hand);
+    expect(rig.stringElbow).toEqual(freeArm.elbow);
+    expect(rig.stringNock.x).toBeCloseTo((rig.bowTop.x + rig.bowBottom.x) / 2);
+    expect(rig.stringNock.y).toBeCloseTo((rig.bowTop.y + rig.bowBottom.y) / 2);
+  });
+
+  it('lowered: bow is held low, below the neck', () => {
+    const rig = getArcherRig(-0.5, 0, 0, freeArm);
+    expect(rig.woodHand.y).toBeGreaterThan(ARCHER_NECK.y + 30);
+  });
+
+  it('ready = 1 matches the aiming rig and puts the hand on the nock', () => {
+    const ready = getArcherRig(0.3, 0.6, 1, freeArm);
+    const aiming = getArcherRig(0.3, 0.6);
+    expect(ready).toEqual(aiming);
+    expect(ready.stringHand).toEqual(ready.stringNock);
+  });
+
+  it('moves continuously while raising the bow', () => {
+    let previous = getArcherRig(0.2, 0, 0, freeArm);
+    for (let step = 1; step <= 50; step += 1) {
+      const rig = getArcherRig(0.2, 0, step / 50, freeArm);
+      expect(Math.hypot(rig.woodHand.x - previous.woodHand.x, rig.woodHand.y - previous.woodHand.y)).toBeLessThan(4);
+      expect(Math.hypot(rig.stringHand.x - previous.stringHand.x, rig.stringHand.y - previous.stringHand.y)).toBeLessThan(4);
+      previous = rig;
+    }
+  });
+
+  it('keeps the front hand on the bow grip throughout the blend', () => {
+    [0, 0.25, 0.5, 0.75, 1].forEach((ready) => {
+      const { bowTop, bowBottom, bowControl, woodHand } = getArcherRig(0.4, 0.5, ready, freeArm);
+      expect(0.25 * bowTop.x + 0.5 * bowControl.x + 0.25 * bowBottom.x).toBeCloseTo(woodHand.x);
+      expect(0.25 * bowTop.y + 0.5 * bowControl.y + 0.25 * bowBottom.y).toBeCloseTo(woodHand.y);
+    });
+  });
+});
