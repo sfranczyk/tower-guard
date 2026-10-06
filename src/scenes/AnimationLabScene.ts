@@ -1,5 +1,5 @@
 import { Container, Graphics, Rectangle, Text } from 'pixi.js';
-import { GAME_HEIGHT, GAME_WIDTH } from '../config';
+import { GAME_HEIGHT, GAME_WIDTH, SHOW_HITBOX_DEBUG } from '../config';
 import { Scene } from '../core/Scene';
 import { LAB_PARAM, getUrlParam, setUrlParam } from '../core/urlState';
 import { drawStickman } from '../rendering/stickman';
@@ -111,7 +111,7 @@ export class AnimationLabScene extends Scene {
     {
       id: 'enemy-attack',
       title: 'Enemy club attack',
-      description: 'Standing club swing: wind-up, strike with a forward lean, then recovery.',
+      description: 'Whole-body club swing: winds the club up behind the head leaning back, strikes down with a forward lunge and dip, then recovers smoothly to the stance (no jump at either end).',
       render: (sprite) => drawStickman(sprite, 0, { idleBlend: 1, armed: true, attackPhase: this.attackPhase, originY: 0 }),
     },
     {
@@ -216,6 +216,13 @@ export class AnimationLabScene extends Scene {
   public enter(): void {
     const { ui, root } = this.ctx;
     ui.showScreen('animationLab');
+    if (SHOW_HITBOX_DEBUG) {
+      // Debug console hook (?debug), like GameScene's: e.g. set attackPhase with the ticker stopped.
+      (window as unknown as { __towerGuard?: unknown }).__towerGuard = { scene: this };
+      this.onExit(() => {
+        delete (window as unknown as { __towerGuard?: unknown }).__towerGuard;
+      });
+    }
     this.createBackdrop();
     this.rows.forEach((row, index) => this.createRow(row, index));
     this.list.mask = this.listMask;

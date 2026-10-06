@@ -1,6 +1,7 @@
 import type { Graphics } from 'pixi.js';
 import type { Vec2 as Point } from '../types';
 import { drawBow, getArcherRig, toArcherLocalAngle, type FreeArm } from './archer';
+import { ATTACK_REST, getAttackPose } from './attackSwing';
 import { RUN_GROUND_Y, runArmSwing, runBounce, runFoot } from './runCycle';
 import { walkKneeBend } from './walkCycle';
 import { ARMOR_COLORS, drawArmor, drawArmoredBow, drawHood, drawPauldron, drawQuiver } from './armor';
@@ -67,31 +68,28 @@ export const drawStickman: StickmanRenderer = (sprite, phase, pose = {}) => {
   const armored = skin === 'armored';
   sprite.clear();
   const motionBlend = running ? 1 : runningBlend;
-  const normalizedAttackPhase = ((attackPhase % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
-  const attackImpactEnd = Math.PI * 0.38;
-  const smoothAttack = (value: number): number => value * value * (3 - 2 * value);
-  const strikeProgress = normalizedAttackPhase < attackImpactEnd
-    ? smoothAttack(normalizedAttackPhase / attackImpactEnd)
-    : 1;
-  const recoveryProgress = normalizedAttackPhase >= attackImpactEnd
-    ? smoothAttack((normalizedAttackPhase - attackImpactEnd) / (Math.PI * 2 - attackImpactEnd))
-    : 0;
-  const attackLean = (0.12 - 0.34 * strikeProgress + 0.34 * recoveryProgress) * (1 - idleBlend);
+  // Club swing: whole-body keyframes (rendering/attackSwing.ts); attackPhase runs 0..2π per swing.
+  const attack = attackPhase === 0 ? undefined : getAttackPose(attackPhase / (Math.PI * 2));
   // Lean forward in the facing direction (a mirrored sprite needs the rotation flipped too).
-  sprite.rotation = ((0.06 + 0.04 * motionBlend) * (1 - idleBlend) + attackLean) * leanDirection;
+  sprite.rotation = (0.06 + 0.04 * motionBlend) * (1 - idleBlend) * leanDirection;
   const walkingBounce = (0.5 + Math.cos(phase * 2) * 0.5) * 1.4 * (1 - motionBlend) * (1 - idleBlend);
   const cycle = ((phase % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
   // Run cycle progress for the front (right) leg, shifted so its swing lines up with the walk's swing
   // and walk↔run blends don't pull the legs in opposite directions.
   const runProgress = cycle / (Math.PI * 2) + 0.4;
   const runningBounce = runBounce(runProgress) * motionBlend;
+  const attackDip = attack?.dip ?? 0;
   sprite.y = originY + 5 * motionBlend
     + walkingBounce
-    + runningBounce;
+    + runningBounce
+    + attackDip;
   const skeleton = 0xf4f7fb;
   const rear = 0xb7c1d1;
   const hip = { x: 0, y: 0 };
-  const shoulder = { x: 0, y: -35 };
+  // The swing tilts the torso about the hip (legs stay planted); otherwise it's upright.
+  const torsoLean = attack?.torsoLean ?? 0;
+  const along = (distance: number): Point => ({ x: Math.sin(torsoLean) * distance, y: -Math.cos(torsoLean) * distance });
+  const shoulder = along(35);
   const rightLegIsSwinging = cycle < Math.PI;
   const progress = rightLegIsSwinging ? cycle / Math.PI : (cycle - Math.PI) / Math.PI;
   const easedProgress = progress * progress * (3 - 2 * progress);
@@ -101,13 +99,7 @@ export const drawStickman: StickmanRenderer = (sprite, phase, pose = {}) => {
   const walkArmSwing = legSwing * 0.58;
   const runArm = runArmSwing(runProgress) * 0.9;
   const armSwingAngle = walkArmSwing + (runArm - walkArmSwing) * motionBlend;
-  const attackArmOffset = attackPhase === 0
-    ? 0
-    : (Math.PI - 0.1) + strikeProgress * (-Math.PI - 0.95)
-      + recoveryProgress * (Math.PI + 0.95);
-  const attackForearmBend = attackPhase === 0
-    ? 0.48
-    : 1.13 - 0.93 * strikeProgress + 0.93 * recoveryProgress;
+  const attackForearmBend = attack?.forearmBend ?? ATTACK_REST.forearmBend;
 
   const frontColor = armored ? ARMOR_COLORS.limb : skeleton;
   const rearColor = armored ? ARMOR_COLORS.limbRear : rear;
@@ -216,8 +208,9 @@ export const drawStickman: StickmanRenderer = (sprite, phase, pose = {}) => {
   const leftFoot = blendMotionPoint(rightLegIsSwinging ? walkStanceFoot : walkSwingFoot, runnerFootAt(runProgress + 0.5));
   // Running legs use the exact two-bone solution with the knee in front (bend −1).
   const runnerKneeBend = -1;
-  const idleLeftFoot = { x: -16, y: 55 };
-  const idleRightFoot = { x: 16, y: 55 };
+  // Feet stay on the ground when the swing dips the hips; the front foot steps into the strike.
+  const idleLeftFoot = { x: -16, y: 55 - attackDip };
+  const idleRightFoot = { x: 16 + (attack?.step ?? 0), y: 55 - attackDip };
   const blendPoint = (walking: Point, standing: Point): Point => ({
     x: walking.x + (standing.x - walking.x) * idleBlend,
     y: walking.y + (standing.y - walking.y) * idleBlend,
@@ -233,7 +226,7 @@ export const drawStickman: StickmanRenderer = (sprite, phase, pose = {}) => {
 
   drawLeg(blendPoint(leftFoot, idleLeftFoot), leftKneeBend, true);
   // Rear gray arm follows the front white leg; the front white arm follows the rear gray leg.
-  const frontArmAngle = -armSwingAngle * (1 - idleBlend) + 0.1 * idleBlend + attackArmOffset;
+  const frontArmAngle = attack?.armAngle ?? -armSwingAngle * (1 - idleBlend) + 0.1 * idleBlend;
   // While the bow is lowered the string arm swings like a normal front arm.
   const archerRig = archerPose
     ? getArcherRig(
@@ -251,7 +244,7 @@ export const drawStickman: StickmanRenderer = (sprite, phase, pose = {}) => {
       drawArcherArm(archerRig.stringElbow, archerRig.stringHand, false);
     }
   } else {
-    const rearArmAngle = armSwingAngle * (1 - idleBlend) + 0.1 * idleBlend;
+    const rearArmAngle = attack?.rearArmAngle ?? armSwingAngle * (1 - idleBlend) + 0.1 * idleBlend;
     drawArm(rearArmAngle, true);
   }
   if (armored) {
@@ -268,8 +261,9 @@ export const drawStickman: StickmanRenderer = (sprite, phase, pose = {}) => {
   } else {
     line(hip, shoulder);
     joint(hip);
-    line(shoulder, { x: 0, y: -43 });
-    sprite.circle(STICKMAN_HEAD.x, STICKMAN_HEAD.y, STICKMAN_HEAD.radius).stroke({ width: 2, color: skeleton });
+    line(shoulder, along(43));
+    const head = along(-STICKMAN_HEAD.y);
+    sprite.circle(head.x, head.y, STICKMAN_HEAD.radius).stroke({ width: 2, color: skeleton });
     drawLeg(blendPoint(rightFoot, idleRightFoot), rightKneeBend, false);
   }
   const weaponHand = archerPose
