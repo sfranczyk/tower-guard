@@ -6,6 +6,7 @@ import { BATTLEGROUNDS } from '../data/battlegrounds';
 import { Background } from '../rendering/Background';
 import { drawStickman } from '../rendering/stickman';
 import { drawDragonRider } from '../rendering/dragon';
+import { DRAGON_DEATH_MS, drawDragonDeath, type DragonDeathKind } from '../rendering/dragonDeath';
 import { drawStickmanCheer } from '../rendering/stickmanCheer';
 import { ArcherReadySequence, FallClock, GibReplay, PausingWalk, RUN_PHASE_MS, WALK_PHASE_MS, WalkRunSequence } from './labSequences';
 
@@ -15,6 +16,7 @@ const LIST_TOP = 84;
 const LIST_BOTTOM = PANEL.y + PANEL.height - 10;
 /** Rows visible at once; the rest scroll with the mouse wheel. */
 const VISIBLE_ROWS = 8;
+const DRAGON_DEATH_PAUSE_MS = 1200;
 const ROW_HEIGHT = (LIST_BOTTOM - LIST_TOP) / VISIBLE_ROWS;
 /** Previews are drawn smaller so every full-height stickman fits one under another. */
 const PREVIEW_SCALE = 0.4;
@@ -146,6 +148,36 @@ export class AnimationLabScene extends Scene {
       zoomScale: 1.15,
       offsetX: 25,
       render: (sprite) => drawDragonRider(sprite, this.cheerTime, 'archer'),
+    },
+    {
+      id: 'dragon-death',
+      title: 'Dragon death (rider thrown off)',
+      description: 'Hit mid-flight: the wings freeze, the dragon drops tipping nose-down and lands lying flat (neck, head and tail on the ground, the near wing draped over its side, the far wing folded out of sight). The archer is thrown off backwards with his arms and legs flung out, tumbles and ends lying flat on his back; his bow lands beside him.',
+      backdrop: SKY_BACKDROP,
+      previewScale: 0.12,
+      zoomScale: 1,
+      offsetX: 85,
+      render: (sprite) => this.drawDragonDeath(sprite, 'fall'),
+    },
+    {
+      id: 'dragon-explosion',
+      title: 'Dragon explosion',
+      description: 'An explosion blows the dragon into about twenty-five chunks (each wing in four, the body in six wedges, neck and tail in segments, the head) that bounce, tip over and settle flat on the ground, and the rider bursts apart with blood.',
+      backdrop: SKY_BACKDROP,
+      previewScale: 0.12,
+      zoomScale: 1,
+      offsetX: 85,
+      render: (sprite) => this.drawDragonDeath(sprite, 'explode'),
+    },
+    {
+      id: 'dragon-rider-explosion',
+      title: 'Dragon rider explosion',
+      description: 'Only the rider is blown apart (pieces and blood fall from the saddle height); the dragon dies and falls to lie flat as in the dragon death.',
+      backdrop: SKY_BACKDROP,
+      previewScale: 0.12,
+      zoomScale: 1,
+      offsetX: 85,
+      render: (sprite) => this.drawDragonDeath(sprite, 'riderExplode'),
     },
     {
       id: 'runner-run',
@@ -470,6 +502,11 @@ export class AnimationLabScene extends Scene {
     });
     text.position.set(x, y);
     return text;
+  }
+
+  /** Dragon deaths loop with a pause on the final pose. */
+  private drawDragonDeath(sprite: Graphics, kind: DragonDeathKind): void {
+    drawDragonDeath(sprite, this.cheerTime % (DRAGON_DEATH_MS + DRAGON_DEATH_PAUSE_MS), kind);
   }
 
   private draw(): void {

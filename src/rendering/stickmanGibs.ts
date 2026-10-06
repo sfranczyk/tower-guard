@@ -70,10 +70,15 @@ export class GibSimulation {
    * @param blast where the explosion hit, in sprite space (default: front of the chest)
    * @param seed  randomness seed
    * @param force how hard the pieces are thrown (1 = default; the game randomises it)
+   * @param lift  start this far above the standing pose (e.g. a rider blown off a flying dragon); the
+   *              ground stays at GIB_GROUND_Y, so the pieces fall that much further
    */
-  public constructor(blast: Vec2 = { x: 16, y: -20 }, seed = 1, force = 1) {
+  public constructor(blast: Vec2 = { x: 16, y: -20 }, seed = 1, force = 1, lift = 0) {
     const random = createRandom(seed);
-    const pose = getFallPose('death', 0);
+    const standing = getFallPose('death', 0);
+    const up = (point: Vec2): Vec2 => ({ x: point.x, y: point.y - lift });
+    const pose = Object.fromEntries(Object.entries(standing).map(([key, value]) => [key, typeof value === 'number' ? value : up(value)])) as unknown as typeof standing;
+    blast = up(blast);
     const shapes = [
       { ...segment(pose.hip, pose.neckTop), rear: false },
       { ...segment(pose.shoulder, pose.frontElbow) },
@@ -188,10 +193,12 @@ export class GibSimulation {
 }
 
 /** Draws the current state of a gib simulation with the skeleton look, plus blood. */
-export const drawStickmanGibs = (sprite: Graphics, simulation: GibSimulation, originY = 0): void => {
-  sprite.clear();
-  sprite.rotation = 0;
-  sprite.y = originY;
+export const drawStickmanGibs = (sprite: Graphics, simulation: GibSimulation, originY = 0, append = false): void => {
+  if (!append) {
+    sprite.clear();
+    sprite.rotation = 0;
+    sprite.y = originY;
+  }
   const skeleton = 0xf4f7fb;
   const rear = 0xb7c1d1;
 

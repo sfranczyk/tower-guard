@@ -121,6 +121,14 @@ src/
   hidden, the rest on top (`drawJointPose(..., { append: true, hideRearLeg: true })`). Riders: `'spear'` (reins
   and a raised spear) or `'archer'` (the player's archer rig, rotated with the torso lean and moved to the
   saddle, aiming down ahead, drawing and loosing every `DRAGON_ARCHER_SHOT_MS`).
+- **Dragon deaths** (lab only for now; `rendering/dragonDeath.ts`, pure functions of time, ground at `GIB_GROUND_Y`):
+  `fall` (the dragon drops nose-down and lies flat: neck, head and tail on the ground, near wing draped over
+  its side, far wing folded out of sight behind the body), `explode` and `riderExplode` (the rider through
+  `GibSimulation` with `lift`, the dragon falls as in `fall`). `drawDragon(g, pose, withRider)` and
+  `drawDragonRiderOnly` draw the parts separately. The thrown rider (`rendering/dragonRiderFall.ts`) blends
+  joint angles (limb lengths kept) from the saddle to limbs flung out, tumbles onto his back and settles
+  flat, kept above the ground every frame; his bow lands flat beside him. The exploded dragon
+  (`rendering/dragonGibs.ts`, seeded) is ~25 polygon chunks that bounce, tip over onto their broad side and stop.
 - **Explosive death** (`rendering/stickmanGibs.ts`): `GibSimulation` blows the standing stickman into
   10 pieces plus blood (seeded and deterministic, so it's testable), and `drawStickmanGibs` draws it.
   In the game an enemy is blown apart (random force 1–1.7×) when killed by a direct explosive hit (cause

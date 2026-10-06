@@ -19,7 +19,7 @@ export const DRAGON_ARCHER_SHOT_MS = 1600;
 /** What the rider holds: a raised spear, or a bow aimed down ahead of the dragon. */
 export type DragonRider = 'spear' | 'archer';
 
-const DRAGON = {
+export const DRAGON_COLORS = {
   body: 0xb5473a,
   bodyDark: 0x8e3a33,
   belly: 0xf0c38a,
@@ -280,9 +280,9 @@ const drawWing = (g: Graphics, wingPose: WingPose, membrane: number): void => {
   const { shoulder, wrist, tip, trail } = wingPose;
   g.poly([shoulder, wrist, tip, ...trail].flatMap((point) => [point.x, point.y])).fill({ color: membrane });
   g.moveTo(shoulder.x, shoulder.y).lineTo(wrist.x, wrist.y).lineTo(tip.x, tip.y)
-    .stroke({ width: 4, color: DRAGON.bone, cap: 'round', join: 'round' });
+    .stroke({ width: 4, color: DRAGON_COLORS.bone, cap: 'round', join: 'round' });
   // Finger bones fanning from the wrist to the trailing edge.
-  trail.slice(0, 2).forEach((point) => g.moveTo(wrist.x, wrist.y).lineTo(point.x, point.y).stroke({ width: 2, color: DRAGON.bone, cap: 'round' }));
+  trail.slice(0, 2).forEach((point) => g.moveTo(wrist.x, wrist.y).lineTo(point.x, point.y).stroke({ width: 2, color: DRAGON_COLORS.bone, cap: 'round' }));
 };
 
 /** Thick tapering stroke through `points` (width from `from` to `to`). */
@@ -298,17 +298,25 @@ const tapered = (g: Graphics, points: Vec2[], from: number, to: number, color: n
 export const drawDragonRider = (g: Graphics, timeMs: number, riderKind: DragonRider = 'spear', archer?: ArcherControl): DragonPose => {
   const pose = getDragonPose(timeMs, riderKind, archer);
   g.clear();
-  drawWing(g, pose.farWing, DRAGON.wingFar);
+  drawDragon(g, pose, true);
+  return pose;
+};
+
+/** Draws a dragon pose on top of what's in `g` (in its current transform), with or without the rider. */
+export const drawDragon = (g: Graphics, pose: DragonPose, withRider: boolean): void => {
+  drawWing(g, pose.farWing, DRAGON_COLORS.wingFar);
   // The rider's far leg is on the other side of the dragon: drawn before the body so it's hidden.
-  drawRearLeg(g, pose.rider);
+  if (withRider) {
+    drawRearLeg(g, pose.rider);
+  }
 
   // Tail: tapering from the body to a spade tip.
-  tapered(g, pose.tail, 4, 22, DRAGON.body);
+  tapered(g, pose.tail, 4, 22, DRAGON_COLORS.body);
   const tip = pose.tail[0];
   const back = pose.tail[1];
   const angle = Math.atan2(tip.y - back.y, tip.x - back.x);
   const spade = [{ x: 14, y: 0 }, { x: -2, y: -8 }, { x: 2, y: 0 }, { x: -2, y: 8 }].map((point) => add(tip, rotate(point, angle)));
-  g.poly(spade.flatMap((point) => [point.x, point.y])).fill({ color: DRAGON.bodyDark });
+  g.poly(spade.flatMap((point) => [point.x, point.y])).fill({ color: DRAGON_COLORS.bodyDark });
 
   // Legs tucked under the body.
   const y = pose.bob;
@@ -316,55 +324,59 @@ export const drawDragonRider = (g: Graphics, timeMs: number, riderKind: DragonRi
     const hipJoint = { x, y: 12 + y };
     const knee = limb(hipJoint, 0.8 + bend, 14);
     const foot = limb(knee, -0.6, 12);
-    g.moveTo(hipJoint.x, hipJoint.y).lineTo(knee.x, knee.y).lineTo(foot.x, foot.y).stroke({ width: 7, color: DRAGON.bodyDark, cap: 'round', join: 'round' });
+    g.moveTo(hipJoint.x, hipJoint.y).lineTo(knee.x, knee.y).lineTo(foot.x, foot.y).stroke({ width: 7, color: DRAGON_COLORS.bodyDark, cap: 'round', join: 'round' });
   });
 
   // Body with a pale belly and back ridge spikes.
-  g.ellipse(0, 4 + y, 66, 24).fill({ color: DRAGON.body });
-  g.ellipse(6, 14 + y, 52, 11).fill({ color: DRAGON.belly });
-  [-44, -28, -12, 20].forEach((x) => g.poly([x - 6, -16 + y, x, -28 + y, x + 6, -16 + y]).fill({ color: DRAGON.bodyDark }));
+  g.ellipse(0, 4 + y, 66, 24).fill({ color: DRAGON_COLORS.body });
+  g.ellipse(6, 14 + y, 52, 11).fill({ color: DRAGON_COLORS.belly });
+  [-44, -28, -12, 20].forEach((x) => g.poly([x - 6, -16 + y, x, -28 + y, x + 6, -16 + y]).fill({ color: DRAGON_COLORS.bodyDark }));
 
   // Neck and head.
-  tapered(g, [{ x: 30, y: -2 + y }, ...pose.neck], 26, 13, DRAGON.body);
+  tapered(g, [{ x: 30, y: -2 + y }, ...pose.neck], 26, 13, DRAGON_COLORS.body);
   const head = pose.head;
   const nose = rotate({ x: 1, y: 0 }, pose.headTilt);
   const along = (distance: number, side = 0): Vec2 => ({ x: head.x + nose.x * distance - nose.y * side, y: head.y + nose.y * distance + nose.x * side });
-  g.ellipse(head.x + nose.x * 4, head.y + nose.y * 4, 15, 10).fill({ color: DRAGON.body });
-  g.poly([along(6, -7), along(30, -2), along(31, 3), along(6, 8)].flatMap((point) => [point.x, point.y])).fill({ color: DRAGON.body });
-  g.poly([along(10, 5), along(29, 4), along(10, 9)].flatMap((point) => [point.x, point.y])).fill({ color: DRAGON.belly });
+  g.ellipse(head.x + nose.x * 4, head.y + nose.y * 4, 15, 10).fill({ color: DRAGON_COLORS.body });
+  g.poly([along(6, -7), along(30, -2), along(31, 3), along(6, 8)].flatMap((point) => [point.x, point.y])).fill({ color: DRAGON_COLORS.body });
+  g.poly([along(10, 5), along(29, 4), along(10, 9)].flatMap((point) => [point.x, point.y])).fill({ color: DRAGON_COLORS.belly });
   [[-4, -8], [-9, -6]].forEach(([distance, side]) => {
     const base = along(distance, side);
     const end = along(distance - 16, side - 9);
     g.moveTo(base.x, base.y).quadraticCurveTo(along(distance - 6, side - 10).x, along(distance - 6, side - 10).y, end.x, end.y)
-      .stroke({ width: 3.5, color: DRAGON.horn, cap: 'round' });
+      .stroke({ width: 3.5, color: DRAGON_COLORS.horn, cap: 'round' });
   });
   const eye = along(10, -4);
-  g.circle(eye.x, eye.y, 2.6).fill({ color: DRAGON.eye });
+  g.circle(eye.x, eye.y, 2.6).fill({ color: DRAGON_COLORS.eye });
   g.circle(eye.x + 0.6, eye.y, 1.1).fill({ color: 0x2b1a14 });
 
-  drawWing(g, pose.nearWing, DRAGON.wingNear);
+  drawWing(g, pose.nearWing, DRAGON_COLORS.wingNear);
+  if (withRider) {
+    drawDragonRiderOnly(g, pose);
+  }
+};
 
-  // The rider (skeleton look, near leg over the flank) and the weapon, on top of the dragon.
+/** The rider (skeleton look, near leg over the flank, far leg left out) and his weapon. */
+export const drawDragonRiderOnly = (g: Graphics, pose: DragonPose): void => {
   drawJointPose(g, pose.rider, 0, { append: true, hideRearLeg: true });
   if (pose.bow) {
     drawBow(g, pose.bow.rig);
     const { arrow } = pose.bow;
     if (arrow) {
-      g.moveTo(arrow.nock.x, arrow.nock.y).lineTo(arrow.tip.x, arrow.tip.y).stroke({ width: 1.6, color: DRAGON.spear, cap: 'round' });
-      g.circle(arrow.tip.x, arrow.tip.y, 1.8).fill({ color: DRAGON.spearTip });
+      g.moveTo(arrow.nock.x, arrow.nock.y).lineTo(arrow.tip.x, arrow.tip.y).stroke({ width: 1.6, color: DRAGON_COLORS.spear, cap: 'round' });
+      g.circle(arrow.tip.x, arrow.tip.y, 1.8).fill({ color: DRAGON_COLORS.spearTip });
     }
-    return pose;
+    return;
   }
   if (!pose.spear) {
-    return pose;
+    return;
   }
   const rider = g;
-  rider.moveTo(pose.spear.butt.x, pose.spear.butt.y).lineTo(pose.spear.tip.x, pose.spear.tip.y).stroke({ width: 3, color: DRAGON.spear, cap: 'round' });
+  rider.moveTo(pose.spear.butt.x, pose.spear.butt.y).lineTo(pose.spear.tip.x, pose.spear.tip.y).stroke({ width: 3, color: DRAGON_COLORS.spear, cap: 'round' });
   const direction = { x: pose.spear.tip.x - pose.spear.butt.x, y: pose.spear.tip.y - pose.spear.butt.y };
   const length = Math.hypot(direction.x, direction.y) || 1;
   const unit = { x: direction.x / length, y: direction.y / length };
   const point = pose.spear.tip;
   rider.poly([point.x + unit.x * 10, point.y + unit.y * 10, point.x - unit.y * 4, point.y + unit.x * 4, point.x + unit.y * 4, point.y - unit.x * 4])
-    .fill({ color: DRAGON.spearTip });
-  return pose;
+    .fill({ color: DRAGON_COLORS.spearTip });
 };
