@@ -234,12 +234,10 @@ const HEAD_ZONE = { snout: 26, radius: 11 };
 /** Neck and tail thickness (as drawn), for padding their zones. */
 const NECK_WIDTH = { base: 26, head: 13 };
 const TAIL_WIDTH = { tip: 4, base: 22 };
-/** Tail zones cover this many spine points each. */
-const TAIL_STEP = 2;
 
 /**
- * Every hit zone of a pose, in sprite space: the rider and the dragon's head are headshots; the body, the
- * neck (one zone per segment, from the chest to the head) and the curved tail are normal hits. Neighbouring
+ * The hit zones of a pose, in sprite space (seven in all): the rider and the dragon's head are headshots;
+ * the body, the neck (two halves, chest to head) and the tail (two halves) are normal hits. Neighbouring
  * zones overlap, so there's no gap an arrow can slip through.
  */
 export const dragonHitZones = (pose: DragonPose): DragonHitZone[] => {
@@ -262,16 +260,19 @@ export const dragonHitZones = (pose: DragonPose): DragonHitZone[] => {
       headshot: false,
     },
   ];
-  // The neck as drawn: from the chest (inside the body box) through every neck point to the head.
+  // Neck and tail: two zones each (the halves share their middle point, so they always touch), padded by
+  // the drawn thickness at the thicker end of each half.
   const neckSpine = [{ x: 30, y: -2 + bob }, ...neck];
-  for (let index = 1; index < neckSpine.length; index += 1) {
-    const width = NECK_WIDTH.base + (NECK_WIDTH.head - NECK_WIDTH.base) * (index / (neckSpine.length - 1));
-    zones.push({ part: 'neck', points: [neckSpine[index - 1], neckSpine[index]], padding: width / 2, headshot: false });
-  }
-  for (let index = 0; index + TAIL_STEP < tail.length; index += TAIL_STEP) {
-    const width = TAIL_WIDTH.tip + (TAIL_WIDTH.base - TAIL_WIDTH.tip) * ((index + TAIL_STEP) / (tail.length - 1));
-    zones.push({ part: 'tail', points: [tail[index], tail[index + TAIL_STEP]], padding: width / 2, headshot: false });
-  }
+  const neckMiddle = Math.floor(neckSpine.length / 2);
+  zones.push(
+    { part: 'neck', points: neckSpine.slice(0, neckMiddle + 1), padding: NECK_WIDTH.base / 2, headshot: false },
+    { part: 'neck', points: neckSpine.slice(neckMiddle), padding: (NECK_WIDTH.base + NECK_WIDTH.head) / 4, headshot: false },
+  );
+  const tailMiddle = Math.floor(tail.length / 2);
+  zones.push(
+    { part: 'tail', points: tail.slice(0, tailMiddle + 1), padding: (TAIL_WIDTH.tip + TAIL_WIDTH.base) / 4, headshot: false },
+    { part: 'tail', points: tail.slice(tailMiddle), padding: TAIL_WIDTH.base / 2, headshot: false },
+  );
   return zones;
 };
 

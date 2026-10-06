@@ -84,7 +84,9 @@ describe('dragonHitZones', () => {
       const head = zones.find((zone) => zone.part === 'head')!;
       const neck = zones.filter((zone) => zone.part === 'neck');
       const tail = zones.filter((zone) => zone.part === 'tail');
-      expect(neck.length).toBeGreaterThan(2);
+      expect(neck).toHaveLength(2);
+      expect(tail).toHaveLength(2);
+      expect(zones).toHaveLength(7);
       expect(overlaps(body, neck[0])).toBe(true);
       for (let index = 1; index < neck.length; index += 1) {
         expect(overlaps(neck[index - 1], neck[index])).toBe(true);
