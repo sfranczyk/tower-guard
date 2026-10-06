@@ -1,5 +1,7 @@
 export const GAME_WIDTH = 1024;
 export const GAME_HEIGHT = 540;
+/** Upper limit of the renderer resolution (backing pixels per game px) for big windows and browser zoom. */
+export const MAX_RENDER_RESOLUTION = 4;
 export const RENDER_SCALE = 1;
 export const WORLD_WIDTH = GAME_WIDTH * 1.171875;
 export const CAMERA_ZOOM = 1;

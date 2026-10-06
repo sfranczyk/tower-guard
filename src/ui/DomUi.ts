@@ -159,6 +159,7 @@ export class DomUi {
     this.musicVolumeInput.addEventListener('input', () => audioChange({ musicVolume: Number(this.musicVolumeInput.value) / 100 }));
 
     window.addEventListener('resize', () => this.fitCanvas());
+    this.watchPixelRatio();
     this.showScreen('menu');
   }
 
@@ -248,7 +249,22 @@ export class DomUi {
   }
 
   /** Largest canvas size with the game's aspect ratio that fits next to the visible HUD bars. */
-  private fitCanvas(): void {
+  /**
+   * Called after each fit with the CSS scale of the canvas (CSS px per game px), so the renderer can draw at
+   * the size it's shown (main.ts) instead of the browser stretching a fixed-size bitmap (blurry).
+   */
+  public onCanvasFit?: (cssScale: number) => void;
+
+  /** Browser zoom or moving the window to another screen changes devicePixelRatio: fit again. */
+  private watchPixelRatio(): void {
+    const query = window.matchMedia(`(resolution: ${window.devicePixelRatio}dppx)`);
+    query.addEventListener('change', () => {
+      this.fitCanvas();
+      this.watchPixelRatio();
+    }, { once: true });
+  }
+
+  public fitCanvas(): void {
     const viewport = document.documentElement;
     const availableWidth = viewport.clientWidth - PAGE_MARGIN * 2;
     this.host.style.width = `${availableWidth}px`;
@@ -263,6 +279,7 @@ export class DomUi {
       this.canvas.style.height = `${Math.max(1, Math.floor(GAME_HEIGHT * ratio))}px`;
       this.host.style.width = `${width}px`;
     }
+    this.onCanvasFit?.(this.canvas.offsetWidth / GAME_WIDTH || 1);
   }
 
   private static createElement(className: string, html: string): HTMLDivElement {
