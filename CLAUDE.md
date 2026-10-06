@@ -108,7 +108,10 @@ src/
   knees and loop continuity. `Enemy.celebrate()` picks one at random when the enemies win.
 - **Dragon rider** (`rendering/dragon.ts`, lab only for now): `getDragonPose` is pure (tested: loop, rider in the
   saddle, smooth wings); side-view wing beat with foreshortening, body bob, undulating neck and tail; the
-  rider is a JointPose drawn on top (`drawJointPose(..., { append: true })`) with reins and a spear.
+  rider is a JointPose sitting astride: the far leg is drawn before the dragon's body (`drawRearLeg`) so it's
+  hidden, the rest on top (`drawJointPose(..., { append: true, hideRearLeg: true })`). Riders: `'spear'` (reins
+  and a raised spear) or `'archer'` (the player's archer rig, rotated with the torso lean and moved to the
+  saddle, aiming down ahead, drawing and loosing every `DRAGON_ARCHER_SHOT_MS`).
 - **Explosive death** (`rendering/stickmanGibs.ts`): `GibSimulation` blows the standing stickman into
   10 pieces plus blood (seeded and deterministic, so it's testable), and `drawStickmanGibs` draws it.
   In the game an enemy is blown apart (random force 1–1.7×) when killed by a direct explosive hit (cause

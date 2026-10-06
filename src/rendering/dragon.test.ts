@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Vec2 } from '../types';
-import { DRAGON_FLAP_MS, getDragonPose } from './dragon';
+import { DRAGON_ARCHER_SHOT_MS, DRAGON_FLAP_MS, getDragonPose } from './dragon';
 
 const distance = (a: Vec2, b: Vec2): number => Math.hypot(a.x - b.x, a.y - b.y);
 
@@ -33,5 +33,34 @@ describe('getDragonPose', () => {
       expect(distance(pose.head, previous.head)).toBeLessThan(4);
       previous = pose;
     }
+  });
+});
+
+describe('rider legs', () => {
+  it('sits astride: both legs hang down from the saddle along the flank', () => {
+    const { rider, saddle } = getDragonPose(300);
+    expect(rider.frontFoot.y).toBeGreaterThan(saddle.y + 35);
+    expect(rider.rearFoot.y).toBeGreaterThan(saddle.y + 35);
+  });
+});
+
+describe('archer rider', () => {
+  it('stays in the saddle, has a bow and no spear', () => {
+    const pose = getDragonPose(500, 'archer');
+    expect(distance(pose.rider.hip, pose.saddle)).toBeLessThan(1e-9);
+    expect(pose.bow).toBeDefined();
+    expect(pose.spear).toBeUndefined();
+  });
+
+  it('draws the string, shoots, and holds an arrow only while drawing', () => {
+    const samples = Array.from({ length: 80 }, (_, index) => getDragonPose((index / 80) * DRAGON_ARCHER_SHOT_MS, 'archer').bow!);
+    const tensions = samples.map((bow) => bow.tension);
+    expect(Math.max(...tensions)).toBeGreaterThan(0.95);
+    expect(Math.min(...tensions)).toBe(0);
+    samples.forEach((bow) => expect(Boolean(bow.arrow)).toBe(bow.tension > 0.05));
+    // The arrow points down and ahead of the dragon.
+    const drawn = samples.find((bow) => bow.tension > 0.9)!;
+    expect(drawn.arrow!.tip.x).toBeGreaterThan(drawn.arrow!.nock.x);
+    expect(drawn.arrow!.tip.y).toBeGreaterThan(drawn.arrow!.nock.y);
   });
 });

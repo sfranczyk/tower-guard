@@ -30,10 +30,25 @@ export interface JointPoseOptions {
   club?: boolean;
   /** Draw on top of what's already in the sprite (no clear, no transform reset), e.g. a dragon's rider. */
   append?: boolean;
+  /** Leave out the rear leg (e.g. a rider's far leg hidden behind the mount, drawn separately). */
+  hideRearLeg?: boolean;
 }
 
 const SKELETON = 0xf4f7fb;
 const REAR = 0xb7c1d1;
+
+/** Draws only the rear leg of a pose (skeleton look), e.g. a rider's far leg before the mount's body. */
+export const drawRearLeg = (sprite: Graphics, pose: JointPose): void => {
+  const line = (a: Vec2, b: Vec2, width = 3): void => {
+    sprite.moveTo(a.x, a.y).lineTo(b.x, b.y).stroke({ width, color: REAR, cap: 'round', join: 'round' });
+  };
+  line(pose.hip, pose.rearKnee);
+  line(pose.rearKnee, pose.rearFoot);
+  sprite.circle(pose.rearKnee.x, pose.rearKnee.y, 3).stroke({ width: 1.5, color: REAR });
+  sprite.circle(pose.rearFoot.x, pose.rearFoot.y, 2.5).fill({ color: REAR });
+  const toe = { x: Math.cos(pose.rearShinAngle), y: -Math.sin(pose.rearShinAngle) };
+  line({ x: pose.rearFoot.x - toe.x * 2, y: pose.rearFoot.y - toe.y * 2 }, { x: pose.rearFoot.x + toe.x * 9, y: pose.rearFoot.y + toe.y * 9 }, 2.5);
+};
 
 /** Draws a joint pose with the skeleton look (same colours and widths as drawStickman). */
 export const drawJointPose = (sprite: Graphics, pose: JointPose, originY = 0, options: JointPoseOptions = {}): void => {
@@ -73,7 +88,9 @@ export const drawJointPose = (sprite: Graphics, pose: JointPose, originY = 0, op
     endpoint(hand, isRear);
   };
 
-  leg(pose.rearKnee, pose.rearFoot, pose.rearShinAngle, true);
+  if (!options.hideRearLeg) {
+    leg(pose.rearKnee, pose.rearFoot, pose.rearShinAngle, true);
+  }
   arm(pose.rearElbow, pose.rearHand, true);
   line(pose.hip, pose.shoulder, false);
   joint(pose.hip, false);

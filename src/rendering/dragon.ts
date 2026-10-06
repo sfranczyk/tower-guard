@@ -1,7 +1,8 @@
 import type { Graphics } from 'pixi.js';
 import type { Vec2 } from '../types';
 import { STICKMAN_HEAD } from './stickman';
-import { drawJointPose, type JointPose } from './stickmanPose';
+import { drawBow, getArcherRig, type ArcherRig } from './archer';
+import { drawJointPose, drawRearLeg, type JointPose } from './stickmanPose';
 
 /**
  * A flying dragon with a stickman rider, in the flat landscape style. `getDragonPose` is pure (tested):
@@ -12,6 +13,11 @@ import { drawJointPose, type JointPose } from './stickmanPose';
  */
 
 export const DRAGON_FLAP_MS = 900;
+/** Archer rider: one draw-and-release cycle. */
+export const DRAGON_ARCHER_SHOT_MS = 1600;
+
+/** What the rider holds: a raised spear, or a bow aimed down ahead of the dragon. */
+export type DragonRider = 'spear' | 'archer';
 
 const DRAGON = {
   body: 0xb5473a,
@@ -48,8 +54,10 @@ export interface DragonPose {
   /** Where the rider's hip sits. */
   saddle: Vec2;
   rider: JointPose;
-  /** Spear from the rider's raised hand to its point. */
-  spear: { butt: Vec2; tip: Vec2 };
+  /** Spear rider: from the raised hand to its point. */
+  spear?: { butt: Vec2; tip: Vec2 };
+  /** Archer rider: the bow rig in sprite space, and the nocked arrow while the string is drawn. */
+  bow?: { rig: ArcherRig; tension: number; arrow?: { nock: Vec2; tip: Vec2 } };
 }
 
 const rotate = (point: Vec2, angle: number): Vec2 => ({
@@ -93,8 +101,40 @@ const reach = (shoulder: Vec2, target: Vec2): { elbow: Vec2; hand: Vec2 } => {
   return { elbow, hand: limb(elbow, Math.atan2(target.x - elbow.x, target.y - elbow.y), length) };
 };
 
-/** Pose at `timeMs` (loops every DRAGON_FLAP_MS). */
-export const getDragonPose = (timeMs: number): DragonPose => {
+/** Archer rider's aim: down and ahead of the dragon (radians, + = below horizontal). */
+const ARCHER_AIM = 0.55;
+
+/** Archer rig placed on the rider: rotated by the torso lean about the hip, then moved to the saddle. */
+const placeRig = (rig: ArcherRig, hip: Vec2, lean: number): ArcherRig => {
+  const place = (point: Vec2): Vec2 => add(hip, rotate(point, lean));
+  return {
+    woodHand: place(rig.woodHand),
+    woodElbow: place(rig.woodElbow),
+    stringHand: place(rig.stringHand),
+    stringElbow: place(rig.stringElbow),
+    stringNock: place(rig.stringNock),
+    bowTop: place(rig.bowTop),
+    bowBottom: place(rig.bowBottom),
+    bowControl: place(rig.bowControl),
+  };
+};
+
+/** Draw then release: tension rises over most of the cycle and snaps back at the shot. */
+const archerTension = (timeMs: number): number => {
+  const t = ((timeMs % DRAGON_ARCHER_SHOT_MS) + DRAGON_ARCHER_SHOT_MS) % DRAGON_ARCHER_SHOT_MS / DRAGON_ARCHER_SHOT_MS;
+  if (t < 0.15) {
+    return 0;
+  }
+  if (t < 0.8) {
+    const p = (t - 0.15) / 0.65;
+    return p * p * (3 - 2 * p);
+  }
+  // Released: the string springs back quickly.
+  return Math.max(0, 1 - (t - 0.8) / 0.06);
+};
+
+/** Pose at `timeMs` (wings loop every DRAGON_FLAP_MS). */
+export const getDragonPose = (timeMs: number, riderKind: DragonRider = 'spear'): DragonPose => {
   const phase = ((timeMs % DRAGON_FLAP_MS) + DRAGON_FLAP_MS) % DRAGON_FLAP_MS / DRAGON_FLAP_MS * Math.PI * 2;
   const flap = Math.sin(phase);
   // The body rises on the downstroke (a quarter period after the wings peak).
@@ -117,15 +157,19 @@ export const getDragonPose = (timeMs: number): DragonPose => {
   const hip = saddle;
   const shoulder = { x: hip.x + Math.sin(lean) * 35, y: hip.y - Math.cos(lean) * 35 };
   const headUp = { x: Math.sin(lean), y: -Math.cos(lean) };
-  const frontKnee = limb(hip, 1.1, 30);
-  const frontFoot = limb(frontKnee, 0.15, 30);
-  const rearKnee = limb(hip, 0.95, 30);
-  const rearFoot = limb(rearKnee, 0.05, 30);
-  // Front hand on the reins at the base of the neck; rear hand holds the spear up.
+  // Astride: the near leg hangs along the flank with the foot back under the belly; the far leg mirrors it
+  // on the other side, hidden behind the body.
+  const frontKnee = limb(hip, 0.8, 30);
+  const frontFoot = limb(frontKnee, -0.35, 30);
+  const rearKnee = limb({ x: hip.x + 3, y: hip.y }, 0.7, 30);
+  const rearFoot = limb(rearKnee, -0.45, 30);
+  // Spear rider: front hand on the reins, rear hand holds the spear up. Archer: both hands on the bow.
   const reins = reach(shoulder, { x: neck[1].x - 4, y: neck[1].y - 6 });
   const spearArm = reach(shoulder, { x: shoulder.x - 2, y: shoulder.y - 34 + Math.sin(phase) * 2 });
   const spearAngle = -1.05 + Math.sin(phase - 0.6) * 0.04;
   const spearDirection = { x: Math.cos(spearAngle), y: Math.sin(spearAngle) };
+  const tension = riderKind === 'archer' ? archerTension(timeMs) : 0;
+  const rig = riderKind === 'archer' ? placeRig(getArcherRig(ARCHER_AIM - lean, tension, 1), hip, lean) : undefined;
   const rider: JointPose = {
     hip,
     shoulder,
@@ -135,10 +179,11 @@ export const getDragonPose = (timeMs: number): DragonPose => {
     frontFoot,
     rearKnee,
     rearFoot,
-    frontElbow: reins.elbow,
-    frontHand: reins.hand,
-    rearElbow: spearArm.elbow,
-    rearHand: spearArm.hand,
+    // Like drawStickman's archer: the rear arm holds the bow, the front arm draws the string.
+    frontElbow: rig ? rig.stringElbow : reins.elbow,
+    frontHand: rig ? rig.stringHand : reins.hand,
+    rearElbow: rig ? rig.woodElbow : spearArm.elbow,
+    rearHand: rig ? rig.woodHand : spearArm.hand,
     frontShinAngle: 0.15,
     rearShinAngle: 0.05,
   };
@@ -153,10 +198,17 @@ export const getDragonPose = (timeMs: number): DragonPose => {
     farWing: wing({ x: 20, y: -20 + bob }, Math.sin(phase - 0.35), 0.85),
     saddle,
     rider,
-    spear: {
+    spear: rig ? undefined : {
       butt: { x: spearArm.hand.x - spearDirection.x * 26, y: spearArm.hand.y - spearDirection.y * 26 },
       tip: { x: spearArm.hand.x + spearDirection.x * 74, y: spearArm.hand.y + spearDirection.y * 74 },
     },
+    bow: rig ? {
+      rig,
+      tension,
+      arrow: tension > 0.05
+        ? { nock: rig.stringNock, tip: add(rig.stringNock, rotate({ x: 36, y: 0 }, ARCHER_AIM)) }
+        : undefined,
+    } : undefined,
   };
 };
 
@@ -178,11 +230,13 @@ const tapered = (g: Graphics, points: Vec2[], from: number, to: number, color: n
   }
 };
 
-/** Draws the dragon and, on top, its rider with the spear, at `timeMs`. */
-export const drawDragonRider = (g: Graphics, timeMs: number): void => {
-  const pose = getDragonPose(timeMs);
+/** Draws the dragon and its rider (spear or bow), at `timeMs`. */
+export const drawDragonRider = (g: Graphics, timeMs: number, riderKind: DragonRider = 'spear'): void => {
+  const pose = getDragonPose(timeMs, riderKind);
   g.clear();
   drawWing(g, pose.farWing, DRAGON.wingFar);
+  // The rider's far leg is on the other side of the dragon: drawn before the body so it's hidden.
+  drawRearLeg(g, pose.rider);
 
   // Tail: tapering from the body to a spade tip.
   tapered(g, pose.tail, 4, 22, DRAGON.body);
@@ -226,8 +280,20 @@ export const drawDragonRider = (g: Graphics, timeMs: number): void => {
 
   drawWing(g, pose.nearWing, DRAGON.wingNear);
 
-  // The rider (skeleton look) and the spear, on top of the dragon.
-  drawJointPose(g, pose.rider, 0, { append: true });
+  // The rider (skeleton look, near leg over the flank) and the weapon, on top of the dragon.
+  drawJointPose(g, pose.rider, 0, { append: true, hideRearLeg: true });
+  if (pose.bow) {
+    drawBow(g, pose.bow.rig);
+    const { arrow } = pose.bow;
+    if (arrow) {
+      g.moveTo(arrow.nock.x, arrow.nock.y).lineTo(arrow.tip.x, arrow.tip.y).stroke({ width: 1.6, color: DRAGON.spear, cap: 'round' });
+      g.circle(arrow.tip.x, arrow.tip.y, 1.8).fill({ color: DRAGON.spearTip });
+    }
+    return;
+  }
+  if (!pose.spear) {
+    return;
+  }
   const rider = g;
   rider.moveTo(pose.spear.butt.x, pose.spear.butt.y).lineTo(pose.spear.tip.x, pose.spear.tip.y).stroke({ width: 3, color: DRAGON.spear, cap: 'round' });
   const direction = { x: pose.spear.tip.x - pose.spear.butt.x, y: pose.spear.tip.y - pose.spear.butt.y };
