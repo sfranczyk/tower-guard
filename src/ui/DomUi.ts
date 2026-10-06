@@ -145,7 +145,11 @@ export class DomUi {
     this.onClick('[data-close-options]', () => this.handlers.toggleOptions?.());
     this.endButton.addEventListener('click', () => this.onEndButton?.());
     this.projectileButtons.forEach((button) => {
-      button.addEventListener('click', () => this.handlers.selectProjectile?.(button.dataset.projectile as ProjectileType));
+      button.addEventListener('click', () => {
+        this.handlers.selectProjectile?.(button.dataset.projectile as ProjectileType);
+        // Drop focus so Space (shrapnel burst) doesn't press the slot again.
+        button.blur();
+      });
     });
     this.trajectoryInput.addEventListener('change', () => this.handlers.trajectoryChange?.(this.trajectoryInput.checked));
     const audioChange = (changes: Partial<AudioSettings>): void => this.handlers.audioChange?.(changes);

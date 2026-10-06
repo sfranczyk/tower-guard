@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="72" height="12" viewBox="0 0 72 12">
+  <path d="M5 6h48" stroke="#27354e" stroke-width="3.5" stroke-linecap="round"/>
+  <path d="M5 6h48" stroke="#8fa2a8" stroke-width="1.5" stroke-linecap="round"/>
+  <!-- Canister of three small heads, with grooves where it bursts -->
+  <path d="M50 2.5h10l7 3.5-7 3.5H50z" fill="#5f8f8b" stroke="#24333a" stroke-width="1.3" stroke-linejoin="round"/>
+  <path d="M54 2.8v6.4M58 2.8v6.4" stroke="#24333a" stroke-width="1.2"/>
+  <path d="M60 4l5 2-5 2" fill="#cfe3df"/>
+  <path d="M4 2c5 1 10 1 16 2L16 6l4 2c-6 1-11 1-16 2l4-4z" fill="#9cc8c2" stroke="#24333a" stroke-width="1.2" stroke-linejoin="round"/>
+  <path d="M8 3.5L11 6 8 8.5M13 4L16 6 13 8" fill="none" stroke="#5f8f8b" stroke-width="1" stroke-linecap="round"/>
+</svg>

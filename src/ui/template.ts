@@ -55,6 +55,7 @@ const WEAPONS: ReadonlyArray<{ type: keyof typeof ICON_WEAPONS; name: string }> 
   { type: 'normal', name: 'Normal arrow' },
   { type: 'explosive', name: 'Explosive bolt' },
   { type: 'piercing', name: 'Piercing arrow' },
+  { type: 'shrapnel', name: 'Shrapnel arrow (Space in flight to burst)' },
 ];
 const weaponSlot = (index: number): string => {
   const weapon = WEAPONS[index];

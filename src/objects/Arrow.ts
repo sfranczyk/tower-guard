@@ -134,6 +134,11 @@ export default class Arrow extends Sprite {
     return this;
   }
 
+  /** Current velocity (px/s), e.g. for a shrapnel burst. */
+  public get velocityVector(): Vec2 {
+    return { x: this.velocity.x, y: this.velocity.y };
+  }
+
   public get isStuck(): boolean {
     return this.stuck;
   }

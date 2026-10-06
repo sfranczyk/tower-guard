@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { simulateTrajectory } from '../systems/ballistics';
 import type { ProjectileType } from '../types';
-import { bowSpeed, flightParams, launchSpeed } from './projectiles';
+import { SHRAPNEL_FRAGMENTS, SHRAPNEL_SPEED_FACTOR, SHRAPNEL_SPREAD } from '../config';
+import { bowSpeed, flightParams, launchSpeed, shrapnelBurst } from './projectiles';
 
 const GRAVITY = 700;
 const WORLD = { groundY: 490, minX: -1e6, maxX: 1e6 };
@@ -45,5 +46,25 @@ describe('projectile physics', () => {
       angle += 0.5;
     }
     expect(shoot('piercing', angle).apex).toBeLessThan(shoot('explosive', 30).apex);
+  });
+});
+
+describe('shrapnelBurst', () => {
+  const velocity = { x: 600, y: -200 };
+  const fragments = shrapnelBurst(velocity);
+  const heading = Math.atan2(velocity.y, velocity.x);
+
+  it('fans the fragments evenly around the heading', () => {
+    expect(fragments).toHaveLength(SHRAPNEL_FRAGMENTS);
+    const angles = fragments.map((fragment) => Math.atan2(fragment.y, fragment.x) - heading);
+    expect(angles[0]).toBeCloseTo(-SHRAPNEL_SPREAD);
+    expect(angles[1]).toBeCloseTo(0);
+    expect(angles[2]).toBeCloseTo(SHRAPNEL_SPREAD);
+  });
+
+  it('keeps the speed (a little boost from the burst)', () => {
+    fragments.forEach((fragment) => {
+      expect(Math.hypot(fragment.x, fragment.y)).toBeCloseTo(Math.hypot(velocity.x, velocity.y) * SHRAPNEL_SPEED_FACTOR);
+    });
   });
 });

@@ -24,6 +24,11 @@ export const SOUND_INFO: Readonly<Record<SoundId, SoundInfo>> = {
     description: 'Explosive arrows bursting on enemies, the ground or the enemy keep.',
     source: 'Bum.m4a',
   },
+  shrapnelBurst: {
+    title: 'Shrapnel burst',
+    description: 'A shrapnel arrow bursting into three small arrows (Space in flight).',
+    source: 'Pciu.m4a, played faster',
+  },
   thunder: {
     title: 'Thunder',
     description: 'Lightning on storm battlegrounds: loud for ground strikes, a distant rumble for sky flashes.',

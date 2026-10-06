@@ -22,6 +22,7 @@ const SOURCES: Record<SoundId, readonly string[]> = {
   groan: [groan1, groan2, groan3, groan4, groan5, groan6, groan7, groan8],
   explosion: [explosionSound],
   thunder: [explosionSound],
+  shrapnelBurst: [bowShotSound],
 };
 
 /**

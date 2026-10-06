@@ -15,6 +15,7 @@ import {
   PIERCING_DAMAGE_MULTIPLIER,
   PROJECTILE_DAMAGE,
   SHOW_HITBOX_DEBUG,
+  SHRAPNEL_FRAGMENT_DAMAGE,
 } from '../config';
 import type { SoundId } from '../audio/SoundManager';
 import Arrow from '../objects/Arrow';
@@ -343,7 +344,7 @@ export class CombatSystem {
 
     const baseDamage = arrow.type === 'piercing'
       ? PROJECTILE_DAMAGE * Math.pow(PIERCING_DAMAGE_MULTIPLIER, arrow.impacts)
-      : PROJECTILE_DAMAGE;
+      : arrow.type === 'fragment' ? PROJECTILE_DAMAGE * SHRAPNEL_FRAGMENT_DAMAGE : PROJECTILE_DAMAGE;
     const arrowDamage = headshot ? baseDamage * HEADSHOT_DAMAGE_MULTIPLIER : baseDamage;
     // A direct explosive hit also takes the blast; a kill blows the body apart.
     const damage = arrow.type === 'explosive' ? arrowDamage + EXPLOSION_DAMAGE : arrowDamage;

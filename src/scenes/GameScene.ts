@@ -22,7 +22,7 @@ import { spatialMix } from '../audio/spatial';
 import { Scene, type GameContext } from '../core/Scene';
 import { BATTLEGROUNDS, aimColorsOf, type Battleground } from '../data/battlegrounds';
 import { getEnemyStats } from '../data/enemies';
-import { launchSpeed } from '../data/projectiles';
+import { launchSpeed, shrapnelBurst } from '../data/projectiles';
 import { waveEnemyTotal, waveSpawnOrder, type WaveSetup } from '../data/sandbox';
 import InputManager, { type AimInput } from '../managers/InputManager';
 import Arrow from '../objects/Arrow';
@@ -51,13 +51,19 @@ const PROJECTILE_LABELS: Record<ProjectileType, string> = {
   normal: 'Normal arrow · reliable damage',
   explosive: 'Explosive bolt · heavy, short high arc, area damage on impact',
   piercing: 'Piercing arrow · light and fast, flat and long, passes through enemies',
+  shrapnel: 'Shrapnel arrow · press Space in flight to burst it into three small arrows',
+  fragment: 'Shrapnel fragment',
 };
 
 const PROJECTILE_KEYS: Record<string, ProjectileType> = {
   Digit1: 'normal',
   Digit2: 'explosive',
   Digit3: 'piercing',
+  Digit4: 'shrapnel',
 };
+
+/** Fragments from a shrapnel burst are drawn at this scale (normal arrows: 0.5). */
+const FRAGMENT_SCALE = 0.32;
 
 /**
  * One wave of a sandbox run: the bowman defends the left keep on the wave's battleground. Clearing
@@ -240,8 +246,13 @@ export class GameScene extends Scene {
       if (event.code === 'KeyO') {
         this.toggleEnemiesVisible();
       }
-      if (this.gameEnded && event.code === 'Space') {
-        this.endAction?.();
+      if (event.code === 'Space') {
+        event.preventDefault();
+        if (this.gameEnded) {
+          this.endAction?.();
+        } else {
+          this.burstShrapnel();
+        }
       }
     });
   }
@@ -322,19 +333,42 @@ export class GameScene extends Scene {
 
   private fireArrow(aim: AimInput, power: number): void {
     this.arrows.forEach((arrow) => arrow.ageTrail());
+    const releasePoint = this.bowman.getBowReleasePoint();
+    const type = this.selectedProjectile;
+    this.launchPlayerArrow(type, releasePoint, Math.atan2(aim.direction.y, aim.direction.x), launchSpeed(type, power));
+    this.playSound('bowShot', releasePoint);
+  }
 
+  /** A player arrow (with a trail in the battleground's colours) flying from `from`. */
+  private launchPlayerArrow(type: ProjectileType, from: Vec2, angle: number, speed: number): Arrow {
     const trail = new Graphics();
     trail.zIndex = 1;
     this.world.addChild(trail);
-
-    const releasePoint = this.bowman.getBowReleasePoint();
-    const type = this.selectedProjectile;
     const { trailGlow, trailCore } = aimColorsOf(this.battleground);
-    const arrow = new Arrow(releasePoint.x, releasePoint.y, this.ctx.textures.arrows[type], trail, { glow: trailGlow, core: trailCore });
-    arrow.fire(Math.atan2(aim.direction.y, aim.direction.x), launchSpeed(type, power), type);
+    const arrow = new Arrow(from.x, from.y, this.ctx.textures.arrows[type], trail, { glow: trailGlow, core: trailCore });
+    if (type === 'fragment') {
+      arrow.scale.set(FRAGMENT_SCALE);
+    }
+    arrow.fire(angle, speed, type);
     this.arrows.push(arrow);
     this.world.addChild(arrow);
-    this.playSound('bowShot', releasePoint);
+    return arrow;
+  }
+
+  /** Space: every shrapnel arrow still in flight bursts into small arrows fanned around its heading. */
+  private burstShrapnel(): void {
+    this.arrows
+      .filter((arrow) => arrow.isActive && !arrow.isStuck && !arrow.hostile && arrow.type === 'shrapnel')
+      .forEach((arrow) => {
+        const point = { x: arrow.x, y: arrow.y };
+        const fragments = shrapnelBurst(arrow.velocityVector);
+        arrow.deactivate();
+        fragments.forEach((velocity) => {
+          this.launchPlayerArrow('fragment', point, Math.atan2(velocity.y, velocity.x), Math.hypot(velocity.x, velocity.y));
+        });
+        this.effects.impact(point);
+        this.playSound('shrapnelBurst', point);
+      });
   }
 
   /** An enemy archer's arrow: reddish, hurts the bowman (or the keep while he hides). */

@@ -1,5 +1,6 @@
 export type EnemyType = 'basic' | 'fast' | 'tank' | 'archer';
-export type ProjectileType = 'normal' | 'explosive' | 'piercing';
+/** 'fragment' is one of the small arrows a shrapnel arrow bursts into (not selectable). */
+export type ProjectileType = 'normal' | 'explosive' | 'piercing' | 'shrapnel' | 'fragment';
 
 export interface IPushStrength {
   readonly value: number;

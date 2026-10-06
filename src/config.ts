@@ -37,6 +37,14 @@ export const HEADSHOT_DAMAGE_MULTIPLIER = 2;
 export const EXPLOSION_RADIUS = 72;
 export const EXPLOSION_DAMAGE = 14;
 /**
+ * Shrapnel arrow: Space in flight bursts it into SHRAPNEL_FRAGMENTS small arrows fanned SHRAPNEL_SPREAD
+ * radians apart around its heading, each dealing SHRAPNEL_FRAGMENT_DAMAGE × PROJECTILE_DAMAGE.
+ */
+export const SHRAPNEL_FRAGMENTS = 3;
+export const SHRAPNEL_SPREAD = 0.16;
+export const SHRAPNEL_SPEED_FACTOR = 1.05;
+export const SHRAPNEL_FRAGMENT_DAMAGE = 0.55;
+/**
  * A splash explosion kill that dealt more than SPLASH_GIB_THRESHOLD of the enemy's max health may blow
  * the body apart: SPLASH_GIB_BASE_CHANCE plus one percentage point per point of damage % above the
  * threshold, up to 100% (a direct explosive hit always does).
@@ -75,9 +83,9 @@ export const WAVE_START_DELAY_MS = 800;
 
 /** Sound effects: default effects volume (0..1) and the base volume of each sound. */
 export const SOUND_DEFAULT_VOLUME = 0.7;
-export const SOUND_VOLUMES = { bowShot: 0.7, groan: 0.75, explosion: 1, thunder: 1 } as const;
+export const SOUND_VOLUMES = { bowShot: 0.7, groan: 0.75, explosion: 1, thunder: 1, shrapnelBurst: 0.6 } as const;
 /** Base playback rate per sound (thunder is the explosion recording slowed down). */
-export const SOUND_RATES: Partial<Record<keyof typeof SOUND_VOLUMES, number>> = { thunder: 0.5 };
+export const SOUND_RATES: Partial<Record<keyof typeof SOUND_VOLUMES, number>> = { thunder: 0.5, shrapnelBurst: 1.7 };
 /** Theme music volume (0..1), loop range in the file (see MusicPlayer) and fade time when toggled. */
 export const MUSIC_DEFAULT_VOLUME = 0.35;
 export const MUSIC_LOOP_START_S = 10.5;

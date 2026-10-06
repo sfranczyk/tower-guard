@@ -109,6 +109,9 @@ src/
   preview simulates with the same functions, so any flight change goes there to keep both in sync.
   Each projectile type has a mass, head drag and speed multiplier in `data/projectiles.ts`: launch speed
   ∝ speedMultiplier/√mass and drag ∝ dragMultiplier/mass. Gravity is the same for every type (keep it so).
+  Shrapnel arrows (slot 4) burst on Space in flight into `SHRAPNEL_FRAGMENTS` small `'fragment'` arrows
+  fanned around the heading (`shrapnelBurst`, pure), each dealing `SHRAPNEL_FRAGMENT_DAMAGE` of a normal hit;
+  `GameScene.burstShrapnel` swaps them in.
   Enemy archers shoot at the plain `bowSpeed`, so player arrow tuning doesn't change them. Piercing is light (fast, flat, long) and explosive is heavy (short high arc).
 - **Enemy archers** (`EnemyType 'archer'`): `CombatSystem.updateArcher` walks them into
   `ENEMY_ARCHER_RANGE`, aims with `solveLaunchAngle` (same ballistics as the player, cached ~250 ms) and
