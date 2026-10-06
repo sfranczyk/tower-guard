@@ -80,7 +80,9 @@ src/
   each wave's map from thumbnails (`ui/mapThumbnail.ts`, a tiny SVG landscape built from the palette). The page backdrop and accent follow the map:
   each battleground has `ui: { accent, backdrop }` and scenes call `DomUi.setTheme`. The menu is drawn over
   a live battlefield (`MenuScene`), with the labs under "Dev tools"; the settings drawer works in the menu
-  and in game (its handlers live in `SceneManager`). The in-game HUD sits *outside* the canvas
+  and in game (its handlers live in `SceneManager`). Trajectory preview (off by default) and arrow trails (how
+  many of the latest shots keep their trail, 1–3, default `DEFAULT_ARROW_TRAILS` = 1; `Arrow.ageTrail(keep)`) live
+  in `ctx.session` for the browser session. The in-game HUD sits *outside* the canvas
   (bar above, status line below) and `DomUi.fitCanvas()` scales the canvas into the remaining space.
   The renderer resolution follows the shown size (`onCanvasFit` in `main.ts`: CSS scale × devicePixelRatio,
   capped by `MAX_RENDER_RESOLUTION`, refit on browser zoom), so big windows stay sharp.

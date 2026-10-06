@@ -52,6 +52,8 @@ export interface UiHandlers {
   sandboxStart?: () => void;
   sandboxBack?: () => void;
   trajectoryChange?: (enabled: boolean) => void;
+  /** Number of shots that keep their trail (1..3) picked in the settings drawer. */
+  arrowTrailsChange?: (count: number) => void;
   /** A music or effects toggle/volume (0..1) changed in the settings drawer. */
   audioChange?: (changes: Partial<AudioSettings>) => void;
   soundLabPlay?: (id: SoundId, variant?: number) => void;
@@ -90,6 +92,7 @@ export class DomUi {
   private readonly soundLabPanel: SoundLabPanel;
   private readonly projectileButtons: HTMLButtonElement[];
   private readonly trajectoryInput: HTMLInputElement;
+  private readonly trailButtons: HTMLButtonElement[];
   private readonly soundInput: HTMLInputElement;
   private readonly volumeInput: HTMLInputElement;
   private readonly musicInput: HTMLInputElement;
@@ -135,6 +138,7 @@ export class DomUi {
     });
     this.projectileButtons = Array.from(this.host.querySelectorAll<HTMLButtonElement>('[data-projectile]'));
     this.trajectoryInput = this.query<HTMLInputElement>('[data-trajectory]');
+    this.trailButtons = Array.from(this.host.querySelectorAll<HTMLButtonElement>('[data-trail-count]'));
     this.soundInput = this.query<HTMLInputElement>('[data-sound]');
     this.volumeInput = this.query<HTMLInputElement>('[data-volume]');
     this.musicInput = this.query<HTMLInputElement>('[data-music]');
@@ -158,6 +162,11 @@ export class DomUi {
       });
     });
     this.trajectoryInput.addEventListener('change', () => this.handlers.trajectoryChange?.(this.trajectoryInput.checked));
+    this.trailButtons.forEach((button) => button.addEventListener('click', () => {
+      this.handlers.arrowTrailsChange?.(Number(button.dataset.trailCount));
+      // Drop focus so Space (shrapnel burst) doesn't press it again.
+      button.blur();
+    }));
     const audioChange = (changes: Partial<AudioSettings>): void => this.handlers.audioChange?.(changes);
     this.soundInput.addEventListener('change', () => audioChange({ effectsEnabled: this.soundInput.checked }));
     this.volumeInput.addEventListener('input', () => audioChange({ effectsVolume: Number(this.volumeInput.value) / 100 }));
@@ -228,6 +237,14 @@ export class DomUi {
 
   public setTrajectoryOption(showTrajectory: boolean): void {
     this.trajectoryInput.checked = showTrajectory;
+  }
+
+  public setArrowTrailsOption(count: number): void {
+    this.trailButtons.forEach((button) => {
+      const active = Number(button.dataset.trailCount) === count;
+      button.classList.toggle('active', active);
+      button.setAttribute('aria-checked', `${active}`);
+    });
   }
 
   public setAudioOptions(settings: Readonly<AudioSettings>): void {

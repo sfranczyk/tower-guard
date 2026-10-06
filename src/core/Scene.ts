@@ -24,8 +24,10 @@ export interface GameSession {
   /** Setup from the sandbox screen (remembered in localStorage). */
   sandbox: SandboxSettings;
   run: RunState;
-  /** Draw the predicted arrow path while aiming (settings drawer). */
+  /** Draw the predicted arrow path while aiming (settings drawer, off by default). */
   showTrajectory: boolean;
+  /** How many of the latest shots keep their trail (settings drawer, 1..MAX_ARROW_TRAILS). */
+  arrowTrails: number;
 }
 
 export interface GameContext {

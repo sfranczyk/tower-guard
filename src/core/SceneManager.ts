@@ -6,7 +6,7 @@ import { GameScene } from '../scenes/GameScene';
 import { MenuScene } from '../scenes/MenuScene';
 import { SandboxScene } from '../scenes/SandboxScene';
 import { SoundLabScene } from '../scenes/SoundLabScene';
-import { ENEMY_KEEP_HEALTH } from '../config';
+import { DEFAULT_ARROW_TRAILS, ENEMY_KEEP_HEALTH, MAX_ARROW_TRAILS } from '../config';
 import { loadSandbox } from './sandboxStorage';
 import type { GameContext, GameTextures, Scene, SceneName } from './Scene';
 import { LAB_PARAM, SOUND_LAB_PARAM, getUrlParam, setUrlParam } from './urlState';
@@ -31,7 +31,8 @@ export class SceneManager {
       session: {
         sandbox,
         run: { waveIndex: 0, bowmanHealth: sandbox.bowmanHealth, keepHealth: sandbox.keepHealth, enemyKeepHealth: ENEMY_KEEP_HEALTH },
-        showTrajectory: true,
+        showTrajectory: false,
+        arrowTrails: DEFAULT_ARROW_TRAILS,
       },
       goTo: (scene) => this.goTo(scene),
     };
@@ -44,8 +45,13 @@ export class SceneManager {
     ui.handlers.trajectoryChange = (enabled) => {
       this.ctx.session.showTrajectory = enabled;
     };
+    ui.handlers.arrowTrailsChange = (count) => {
+      this.ctx.session.arrowTrails = Math.max(1, Math.min(MAX_ARROW_TRAILS, Math.round(count)));
+      ui.setArrowTrailsOption(this.ctx.session.arrowTrails);
+    };
     ui.handlers.audioChange = (changes) => sound.updateSettings(changes);
     ui.setTrajectoryOption(this.ctx.session.showTrajectory);
+    ui.setArrowTrailsOption(this.ctx.session.arrowTrails);
     ui.setAudioOptions(sound.settings);
 
     app.ticker.add((ticker) => this.current?.update(ticker.deltaMS));

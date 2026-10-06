@@ -27,7 +27,10 @@ export const OVERLAY_TEMPLATE = `
       </section>
       <div class="drawer" data-drawer hidden>
         <div class="drawer-header"><h2>Settings</h2><button class="round-button" data-close-options aria-label="Close settings">×</button></div>
-        <label class="field toggle-field"><span>Trajectory preview</span><input data-trajectory type="checkbox" checked></label>
+        <label class="field toggle-field"><span>Trajectory preview</span><input data-trajectory type="checkbox"></label>
+        <div class="field toggle-field"><span>Arrow trails</span><div class="segmented" data-arrow-trails role="radiogroup" aria-label="Arrow trails">
+          <button class="chip-button" data-trail-count="1" role="radio">1</button><button class="chip-button" data-trail-count="2" role="radio">2</button><button class="chip-button" data-trail-count="3" role="radio">3</button>
+        </div></div>
         <label class="field toggle-field"><span>Music</span><input data-music type="checkbox" checked></label>
         <label class="field"><span>Music volume</span><input data-music-volume type="range" min="0" max="100" step="5" value="35"></label>
         <label class="field toggle-field"><span>Sound effects</span><input data-sound type="checkbox" checked></label>

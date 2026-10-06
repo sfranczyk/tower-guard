@@ -158,20 +158,21 @@ export default class Arrow extends Sprite {
     };
   }
 
-  public ageTrail(): void {
+  /** Called when a new shot is fired: the trail fades and is gone once `keep` newer shots have been fired. */
+  public ageTrail(keep: number): void {
     if (!this.trailVisible) {
       return;
     }
 
     this.trailAge += 1;
-    if (this.trailAge >= 3) {
+    if (this.trailAge >= keep) {
       this.trail.clear();
       this.trail.visible = false;
       this.trailVisible = false;
       return;
     }
 
-    this.trail.alpha = 1 - this.trailAge / 3;
+    this.trail.alpha = 1 - this.trailAge / keep;
   }
 
   public deactivate(): this {

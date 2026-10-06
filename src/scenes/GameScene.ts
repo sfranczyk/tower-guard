@@ -361,7 +361,7 @@ export class GameScene extends Scene {
   }
 
   private fireArrow(aim: AimInput, power: number): void {
-    this.arrows.forEach((arrow) => arrow.ageTrail());
+    this.arrows.forEach((arrow) => arrow.ageTrail(this.ctx.session.arrowTrails));
     const releasePoint = this.bowman.getBowReleasePoint();
     const type = this.selectedProjectile;
     this.launchPlayerArrow(type, releasePoint, Math.atan2(aim.direction.y, aim.direction.x), launchSpeed(type, power));

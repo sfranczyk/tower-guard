@@ -29,6 +29,10 @@ export const TOWER_ENTRY_ZONE_WIDTH = 30;
 export const TOWER_ENTRY_ZONE_HEIGHT = 90;
 export const TOWER_EXIT_X_OFFSET = 20;
 
+/** How many of the latest shots keep their trail (settings drawer, 1..MAX_ARROW_TRAILS). */
+export const DEFAULT_ARROW_TRAILS = 1;
+export const MAX_ARROW_TRAILS = 3;
+
 export const ARROW_RELEASE_Y = 0;
 export const ARROW_SPEED_FACTOR = 1.6;
 export const ARROW_BASE_SPEED = 180;
