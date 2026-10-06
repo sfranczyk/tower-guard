@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ENEMY_HEALTH, ENEMY_SPEED } from '../config';
-import { blowsApart, getEnemyStats, splashGibChance } from './enemies';
+import { ENEMY_LOOKS, blowsApart, getEnemyStats, splashGibChance } from './enemies';
 
 describe('getEnemyStats', () => {
   it('returns base stats at difficulty 1', () => {
@@ -67,5 +67,13 @@ describe('splashGibChance', () => {
   it('is certain from 125% up', () => {
     expect(splashGibChance(125, 100)).toBe(1);
     expect(splashGibChance(300, 100)).toBe(1);
+  });
+});
+
+describe('ENEMY_LOOKS', () => {
+  it('makes runners run with an uppercut and brutes 1.5× tall with a two-handed club', () => {
+    expect(ENEMY_LOOKS.fast).toEqual({ size: 1, attackStyle: 'uppercut', runs: true });
+    expect(ENEMY_LOOKS.tank).toEqual({ size: 1.5, attackStyle: 'twoHanded', runs: false });
+    expect(ENEMY_LOOKS.basic.size).toBe(1);
   });
 });

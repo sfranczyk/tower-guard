@@ -1,4 +1,5 @@
 import { ENEMY_HEALTH, ENEMY_SPEED, SPLASH_GIB_BASE_CHANCE, SPLASH_GIB_THRESHOLD } from '../config';
+import type { AttackStyle } from '../rendering/attackSwing';
 import type { EnemyType } from '../types';
 
 export interface EnemyStats {
@@ -42,3 +43,19 @@ export const splashGibChance = (damage: number, maxHealth: number): number => {
  */
 export const blowsApart = (cause: string, damage: number, maxHealth: number, roll = Math.random()): boolean =>
   cause === 'blast' || (cause === 'explosion' && roll < splashGibChance(damage, maxHealth));
+
+/** How each enemy type looks and moves: body size (1 = a normal stickman), club swing, run or walk. */
+export interface EnemyLook {
+  size: number;
+  attackStyle: AttackStyle;
+  runs: boolean;
+}
+
+export const ENEMY_LOOKS: Readonly<Record<EnemyType, EnemyLook>> = {
+  basic: { size: 1, attackStyle: 'overhead', runs: false },
+  // Runners sprint in and swing a short club from below.
+  fast: { size: 1, attackStyle: 'uppercut', runs: true },
+  // Brutes stand half again as tall and chop with a long club in both hands.
+  tank: { size: 1.5, attackStyle: 'twoHanded', runs: false },
+  archer: { size: 1, attackStyle: 'overhead', runs: false },
+};

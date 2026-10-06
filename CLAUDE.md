@@ -83,6 +83,9 @@ src/
   the reaction: a headshot gives `deathStiff`, an explosion gives `knockback` (survivors get up and fight
   on), and other kills pick `death` or `deathCrumple` at random. `getFallPose()` is
   pure; feet and hands are kept on the ground by `groundedAngle`, and tests check every frame.
+- **Enemy looks** (`ENEMY_LOOKS` in `data/enemies.ts`): size, club swing and gait per type. Runners run (run
+  cycle) and swing a short club from below; Brutes are 1.5× tall (container scale, so hitboxes and arrow
+  anchors scale too; the health bar keeps its size) and chop two-handed with a long club.
 - **Club attacks** (`rendering/attackSwing.ts`, pure keyframes by progress, `pose.attackStyle`): `overhead`
   (one-handed, enemies in the game), `twoHanded` (longer club in both hands; the rear hand reaches the shaft
   by IK) and `uppercut` (short club from below); `CLUBS` sets each club's length. Wind-up, a fast strike
@@ -102,7 +105,7 @@ src/
   get `knockback`. The lab uses force 1, and every lab figure is clipped to its frame.
 - **Bow ready**: `pose.bowReady` blends the archer between the lowered bow (0) and aiming (1). `Bowman`
   raises the bow while the player draws (aim power > 0) and lowers it after the shot.
-- **Animation lab** rows live in `scenes/AnimationLabScene.ts`, and scripted sequences in
+- **Animation lab** (drawn in Pixi on a cream panel over the meadow, matching the HTML UI) rows live in `scenes/AnimationLabScene.ts`, and scripted sequences in
   `scenes/labSequences.ts`. Add new animations there so they can be previewed and zoomed.
 - **Archer pose**: bow, hands and elbows come from `getArcherRig()` in `rendering/archer.ts`. It pivots
   at the neck and is drawn inside the stickman sprite, so the hands can't drift from the bow.

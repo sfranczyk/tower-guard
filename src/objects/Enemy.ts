@@ -6,7 +6,7 @@ import { FALL_DURATION_MS, drawStickmanFall, getFallPose, type FallKind, type Fa
 import { CHEER_KINDS, drawStickmanCheer, type CheerKind } from '../rendering/stickmanCheer';
 import { GibSimulation, drawStickmanGibs } from '../rendering/stickmanGibs';
 import { fromBodyAnchor, spriteToWorld, toBodyAnchor, worldToSprite, type BodyAnchor, type BodyTransform, type Torso } from '../systems/bodyAnchor';
-import { blowsApart } from '../data/enemies';
+import { ENEMY_LOOKS, blowsApart, type EnemyLook } from '../data/enemies';
 import { groundAt } from '../systems/terrain';
 import type { Bounds, EnemyType, Vec2 } from '../types';
 
@@ -55,8 +55,15 @@ const GIB_FORCE_MAX = 1.7;
 const TORSO_TO_NECK = 43;
 const TORSO_TO_SHOULDER = 35;
 
+/** Container scale of a normal-sized enemy (bigger types multiply it by their size). */
+const ENEMY_SCALE = 2 / 3;
+/** Run cycle phase speed for running enemies (walking uses 150 ms per radian). */
+const RUN_PHASE_MS = 105;
+const RUN_LEAN = 0.14;
+
 export default class Enemy extends Container {
   private readonly body: Graphics;
+  private readonly look: EnemyLook;
   private readonly healthBar: Graphics;
   private readonly maxHealth: number;
   private health: number;
@@ -87,6 +94,7 @@ export default class Enemy extends Container {
     public readonly kind: EnemyType = 'basic',
   ) {
     super();
+    this.look = ENEMY_LOOKS[kind];
     this.body = new Graphics();
     this.drawPlaceholder();
     this.addChild(this.body);
@@ -96,7 +104,9 @@ export default class Enemy extends Container {
     this.maxHealth = Math.max(1, health);
     this.speed = Math.max(0, speed);
     this.target = target;
-    this.scale.set(2 / 3, 2 / 3);
+    this.scale.set(ENEMY_SCALE * this.look.size);
+    // The health bar keeps its normal size on big enemies.
+    this.healthBar.scale.set(1 / this.look.size);
     this.position.set(x, groundAt(x));
     this.zIndex = 1;
     this.velocity.x = -this.speed;
@@ -151,7 +161,7 @@ export default class Enemy extends Container {
   /** Pose options for the current look: club fighters carry a club, archers a bow. */
   private pose(extra: StickmanPose): StickmanPose {
     if (!this.isArcher) {
-      return { ...ENEMY_POSE, ...extra };
+      return { ...ENEMY_POSE, attackStyle: this.look.attackStyle, ...extra };
     }
     return {
       ...ENEMY_POSE,
@@ -272,11 +282,10 @@ export default class Enemy extends Container {
     if (this.attackTimerMs > 0) {
       this.attackTimerMs = Math.max(0, this.attackTimerMs - deltaMs);
       const attackProgress = 1 - this.attackTimerMs / ATTACK_ANIMATION_DURATION_MS;
-      drawStickman(this.body, this.animationTime, {
-        ...ENEMY_POSE,
+      drawStickman(this.body, this.animationTime, this.pose({
         idleBlend: 1,
         attackPhase: Math.max(0.001, attackProgress * Math.PI * 2),
-      });
+      }));
       if (this.attackTimerMs === 0) {
         this.body.rotation = 0;
       }
@@ -292,10 +301,12 @@ export default class Enemy extends Container {
 
     this.animationTime += deltaMs;
     this.body.scale.x = this.velocity.x < 0 ? -BODY_SCALE.x : BODY_SCALE.x;
-    drawStickman(this.body, this.animationTime / 150, this.pose({}));
+    const { runs } = this.look;
+    drawStickman(this.body, this.animationTime / (runs ? RUN_PHASE_MS : 150), this.pose({ running: runs }));
     if (!this.isArcher) {
       // Archers keep drawStickman's own lean so the bow rig stays consistent.
-      this.body.rotation = this.velocity.x < 0 ? -0.06 : 0.06;
+      const lean = runs ? RUN_LEAN : 0.06;
+      this.body.rotation = this.velocity.x < 0 ? -lean : lean;
     }
   }
 
@@ -316,9 +327,9 @@ export default class Enemy extends Container {
         .map(toWorld);
       return Enemy.boundsAround(points, 2);
     }
-    const width = 14;
+    const width = 14 * this.look.size;
     // Reach up to (and 1 px into) the head box so there's no gap at the neck for arrows to slip through.
-    const y = Math.min(this.y - 28, this.getHeadBounds().bottom - 1);
+    const y = Math.min(this.y - 28 * this.look.size, this.getHeadBounds().bottom - 1);
     const height = this.y - y;
     const x = this.x - width / 2;
     return {

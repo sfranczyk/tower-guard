@@ -2,20 +2,27 @@ import { Container, Graphics, Rectangle, Text } from 'pixi.js';
 import { GAME_HEIGHT, GAME_WIDTH, SHOW_HITBOX_DEBUG } from '../config';
 import { Scene } from '../core/Scene';
 import { LAB_PARAM, getUrlParam, setUrlParam } from '../core/urlState';
+import { BATTLEGROUNDS } from '../data/battlegrounds';
+import { Background } from '../rendering/Background';
 import { drawStickman } from '../rendering/stickman';
 import { drawStickmanCheer } from '../rendering/stickmanCheer';
 import { ArcherReadySequence, FallClock, GibReplay, PausingWalk, RUN_PHASE_MS, WALK_PHASE_MS, WalkRunSequence } from './labSequences';
 
-const LIST_TOP = 78;
-const LIST_BOTTOM = GAME_HEIGHT - 8;
+/** The cream panel the lab sits on (same look as the HTML panels), over the meadow. */
+const PANEL = { x: 14, y: 12, width: GAME_WIDTH - 28, height: GAME_HEIGHT - 24, radius: 20 };
+const LIST_TOP = 84;
+const LIST_BOTTOM = PANEL.y + PANEL.height - 10;
 /** Rows visible at once; the rest scroll with the mouse wheel. */
 const VISIBLE_ROWS = 8;
 const ROW_HEIGHT = (LIST_BOTTOM - LIST_TOP) / VISIBLE_ROWS;
 /** Previews are drawn smaller so every full-height stickman fits one under another. */
 const PREVIEW_SCALE = 0.4;
-const PREVIEW_X = 120;
-const TEXT_X = 250;
-const FONT = 'Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif';
+const PREVIEW_X = 132;
+const TEXT_X = 262;
+const DISPLAY_FONT = 'Fredoka, ui-rounded, system-ui, sans-serif';
+const BODY_FONT = 'ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif';
+/** UI palette (index.html tokens). */
+const COLORS = { panel: 0xf6f1e4, panelEdge: 0xded3ba, panelSunk: 0xebe3d0, ink: 0x2c3a38, inkSoft: 0x66756f, accent: 0x3f6965 } as const;
 
 const ZOOM_SCALE = 2.4;
 const ZOOM_FIGURE_X = 280;
@@ -37,7 +44,8 @@ type PreviewRow = {
   zoomScale?: number;
 };
 
-const DEFAULT_BACKDROP = 0x16243a;
+/** Preview tiles: dark slate so the white skeletons read; the armored archer gets the sky. */
+const DEFAULT_BACKDROP = 0x2c4448;
 const SKY_BACKDROP = 0x80b8d1;
 
 /**
@@ -113,6 +121,18 @@ export class AnimationLabScene extends Scene {
       title: 'Enemy club attack',
       description: 'Whole-body club swing: winds the club up behind the head leaning back, strikes down with a forward lunge and dip, then recovers smoothly to the stance (no jump at either end).',
       render: (sprite) => drawStickman(sprite, 0, { idleBlend: 1, armed: true, attackPhase: this.attackPhase, originY: 0 }),
+    },
+    {
+      id: 'runner-run',
+      title: 'Runner: run with a short club',
+      description: 'Runners sprint in with the full run cycle, carrying the short club they swing from below.',
+      render: (sprite) => drawStickman(sprite, this.runPhase, { running: true, armed: true, attackStyle: 'uppercut', originY: 0 }),
+    },
+    {
+      id: 'brute-walk',
+      title: 'Brute: walk with a long club',
+      description: 'Brutes are half again as tall in the game and carry a long club in both hands (shown at normal size here).',
+      render: (sprite) => drawStickman(sprite, this.pausingWalk.phase, { idleBlend: this.pausingWalk.idleBlend, armed: true, attackStyle: 'twoHanded', originY: 0 }),
     },
     {
       id: 'enemy-attack-two-handed',
@@ -275,11 +295,17 @@ export class AnimationLabScene extends Scene {
 
   private createBackdrop(): void {
     const { root } = this.ctx;
-    root.addChild(new Graphics().rect(0, 0, GAME_WIDTH, GAME_HEIGHT).fill({ color: 0x0d1728 }));
-    root.addChild(AnimationLabScene.text('Animation lab', 22, 0xf5f7fb, 700, 32, 20));
+    const meadow = new Container();
+    meadow.sortableChildren = true;
+    new Background(meadow, BATTLEGROUNDS.greenMeadow);
+    root.addChild(meadow);
+    root.addChild(new Graphics()
+      .roundRect(PANEL.x, PANEL.y + 5, PANEL.width, PANEL.height, PANEL.radius).fill({ color: COLORS.panelEdge })
+      .roundRect(PANEL.x, PANEL.y, PANEL.width, PANEL.height, PANEL.radius).fill({ color: COLORS.panel, alpha: 0.97 }));
+    root.addChild(AnimationLabScene.text('Animation lab', 26, COLORS.ink, 700, 36, 22, DISPLAY_FONT));
     root.addChild(AnimationLabScene.text(
       'Every stickman animation, one per row. Click a row to zoom in.',
-      12, 0xaeb9c9, 400, 32, 50,
+      12, COLORS.inkSoft, 400, 36, 56,
     ));
   }
 
@@ -290,22 +316,22 @@ export class AnimationLabScene extends Scene {
     row.position.set(0, top);
     row.eventMode = 'static';
     row.cursor = 'pointer';
-    row.hitArea = new Rectangle(16, 0, GAME_WIDTH - 32, ROW_HEIGHT);
+    row.hitArea = new Rectangle(PANEL.x + 10, 0, PANEL.width - 20, ROW_HEIGHT);
     row.on('pointertap', () => this.zoomTo(preview));
 
-    const highlight = new Graphics().rect(16, 0, GAME_WIDTH - 32, ROW_HEIGHT)
-      .fill({ color: 0xffffff, alpha: index % 2 === 0 ? 0.025 : 0 });
+    const highlight = new Graphics().roundRect(PANEL.x + 10, 1, PANEL.width - 34, ROW_HEIGHT - 2, 12).fill({ color: COLORS.panelSunk });
+    highlight.alpha = 0;
     row.addChild(highlight);
-    row.on('pointerover', () => { highlight.tint = 0x5b8def; highlight.alpha = 4; });
-    row.on('pointerout', () => { highlight.tint = 0xffffff; highlight.alpha = 1; });
-    row.addChild(new Graphics().moveTo(16, ROW_HEIGHT).lineTo(GAME_WIDTH - 16, ROW_HEIGHT)
-      .stroke({ width: 1, color: 0x1c2b43 }));
+    row.on('pointerover', () => { highlight.alpha = 1; });
+    row.on('pointerout', () => { highlight.alpha = 0; });
+    row.addChild(new Graphics().moveTo(PANEL.x + 20, ROW_HEIGHT).lineTo(PANEL.x + PANEL.width - 34, ROW_HEIGHT)
+      .stroke({ width: 1, color: COLORS.panelEdge }));
 
-    row.addChild(new Graphics().roundRect(PREVIEW_X - 62, 3, 124, ROW_HEIGHT - 6, 6).fill({ color: backdrop }));
+    row.addChild(new Graphics().roundRect(PREVIEW_X - 62, 4, 124, ROW_HEIGHT - 8, 9).fill({ color: backdrop }));
     const sprite = new Graphics();
     this.listSprites.set(preview, sprite);
     // Clip the figure to its backdrop so wide animations (e.g. flying body parts) stay inside it.
-    const clip = new Graphics().roundRect(PREVIEW_X - 62, 3, 124, ROW_HEIGHT - 6, 6).fill({ color: 0xffffff });
+    const clip = new Graphics().roundRect(PREVIEW_X - 62, 4, 124, ROW_HEIGHT - 8, 9).fill({ color: 0xffffff });
     row.addChild(clip);
     const [rowGround, rowFigure] = AnimationLabScene.createFigure(
       sprite,
@@ -318,9 +344,12 @@ export class AnimationLabScene extends Scene {
     rowFigure.mask = clip;
     row.addChild(rowGround, rowFigure);
 
-    row.addChild(AnimationLabScene.text(`${index + 1}`, 12, 0x5b8def, 700, 32, ROW_HEIGHT / 2 - 8));
-    row.addChild(AnimationLabScene.text(title, 14, 0xf5f7fb, 700, TEXT_X, ROW_HEIGHT / 2 - 18));
-    row.addChild(AnimationLabScene.text(description, 12, 0xaeb9c9, 400, TEXT_X, ROW_HEIGHT / 2 + 2));
+    row.addChild(new Graphics().circle(46, ROW_HEIGHT / 2, 11).fill({ color: COLORS.accent }));
+    const number = AnimationLabScene.text(`${index + 1}`, 11, 0xffffff, 700, 46, ROW_HEIGHT / 2, DISPLAY_FONT);
+    number.anchor.set(0.5);
+    row.addChild(number);
+    row.addChild(AnimationLabScene.text(title, 15, COLORS.ink, 700, TEXT_X, ROW_HEIGHT / 2 - 19, DISPLAY_FONT));
+    row.addChild(AnimationLabScene.text(description, 12, COLORS.inkSoft, 400, TEXT_X, ROW_HEIGHT / 2 + 2));
 
     this.list.addChild(row);
   }
@@ -359,10 +388,10 @@ export class AnimationLabScene extends Scene {
     );
     zoomFigure.mask = clip;
     this.zoomView.addChild(zoomGround, zoomFigure);
-    this.zoomView.addChild(AnimationLabScene.text(`Animation ${index + 1} of ${this.rows.length}`, 12, 0x5b8def, 700, ZOOM_TEXT_X, top + 8));
-    this.zoomView.addChild(AnimationLabScene.wrapped(preview.title, 22, ZOOM_TEXT_X, top + 30, GAME_WIDTH - ZOOM_TEXT_X - 40, 0xf5f7fb, 700));
-    this.zoomView.addChild(AnimationLabScene.wrapped(preview.description, 14, ZOOM_TEXT_X, top + 100, GAME_WIDTH - ZOOM_TEXT_X - 40));
-    this.zoomView.addChild(AnimationLabScene.wrapped('Esc or “All animations” returns to the list.', 12, ZOOM_TEXT_X, top + height - 24, GAME_WIDTH - ZOOM_TEXT_X - 40, 0x6f7d90));
+    this.zoomView.addChild(AnimationLabScene.text(`Animation ${index + 1} of ${this.rows.length}`, 13, COLORS.accent, 700, ZOOM_TEXT_X, top + 8, DISPLAY_FONT));
+    this.zoomView.addChild(AnimationLabScene.wrapped(preview.title, 26, ZOOM_TEXT_X, top + 30, GAME_WIDTH - ZOOM_TEXT_X - 44, COLORS.ink, 700, DISPLAY_FONT));
+    this.zoomView.addChild(AnimationLabScene.wrapped(preview.description, 14, ZOOM_TEXT_X, top + 104, GAME_WIDTH - ZOOM_TEXT_X - 44));
+    this.zoomView.addChild(AnimationLabScene.wrapped('Esc or “All animations” returns to the list.', 12, ZOOM_TEXT_X, top + height - 24, GAME_WIDTH - ZOOM_TEXT_X - 44, COLORS.inkSoft));
     this.draw();
   }
 
@@ -377,8 +406,8 @@ export class AnimationLabScene extends Scene {
     const thumbHeight = trackHeight * (trackHeight / (trackHeight + this.maxScroll));
     const thumbY = LIST_TOP + (this.maxScroll ? (this.scrollY / this.maxScroll) * (trackHeight - thumbHeight) : 0);
     this.scrollbar.clear()
-      .roundRect(GAME_WIDTH - 10, LIST_TOP, 4, trackHeight, 2).fill({ color: 0xffffff, alpha: 0.06 })
-      .roundRect(GAME_WIDTH - 10, thumbY, 4, thumbHeight, 2).fill({ color: 0x5b8def, alpha: 0.8 });
+      .roundRect(PANEL.x + PANEL.width - 16, LIST_TOP, 5, trackHeight, 2.5).fill({ color: COLORS.panelSunk })
+      .roundRect(PANEL.x + PANEL.width - 16, thumbY, 5, thumbHeight, 2.5).fill({ color: COLORS.accent });
     this.scrollbar.visible = !this.zoomed && this.maxScroll > 0;
   }
 
@@ -392,22 +421,25 @@ export class AnimationLabScene extends Scene {
     figure.addChild(sprite);
     const feetY = figure.y + 58 * scale;
     const ground = new Graphics().moveTo(groundFrom, feetY).lineTo(groundTo, feetY)
-      .stroke({ width: 2, color: 0x42617f });
+      .stroke({ width: 2, color: 0x6d8f86 });
     return [ground, figure];
   }
 
-  private static wrapped(content: string, size: number, x: number, y: number, width: number, color = 0xaeb9c9, weight: 400 | 700 = 400): Text {
-    const text = AnimationLabScene.text(content, size, color, weight, x, y);
+  private static wrapped(
+    content: string, size: number, x: number, y: number, width: number,
+    color: number = COLORS.inkSoft, weight: 400 | 700 = 400, font = BODY_FONT,
+  ): Text {
+    const text = AnimationLabScene.text(content, size, color, weight, x, y, font);
     text.style.wordWrap = true;
     text.style.wordWrapWidth = width;
     text.style.lineHeight = Math.round(size * 1.45);
     return text;
   }
 
-  private static text(content: string, size: number, color: number, weight: 400 | 700, x: number, y: number): Text {
+  private static text(content: string, size: number, color: number, weight: 400 | 700, x: number, y: number, font = BODY_FONT): Text {
     const text = new Text({
       text: content,
-      style: { fill: color, fontSize: size, fontFamily: FONT, fontWeight: weight === 700 ? '700' : '400' },
+      style: { fill: color, fontSize: size, fontFamily: font, fontWeight: weight === 700 ? (font === DISPLAY_FONT ? '600' : '700') : '400' },
     });
     text.position.set(x, y);
     return text;
