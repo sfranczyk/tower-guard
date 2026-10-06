@@ -20,6 +20,17 @@ const HIT_FLASH_MS = 120;
 const HEALTH_BAR = { width: 70, height: 8, y: -112 };
 /** Body box of the dragon in local space: the body up to its back ridge (the rider above is the "head"). */
 const BODY_BOX = { left: -66, right: 66, top: -28, bottom: 28 };
+/** Dragon head hit zone (local units): from the skull centre to this far along the snout, padded. */
+const DRAGON_HEAD = { snout: 26, radius: 11 };
+/** Tail hit boxes cover this many spine points each. */
+const TAIL_STEP = 2;
+
+/** One hit zone of the dragon (world space). */
+export interface HitBox {
+  bounds: Bounds;
+  headshot: boolean;
+}
+
 /** The corpse lies with its belly this far above the ground (local units). */
 const LYING_CLEARANCE = 26;
 
@@ -181,6 +192,32 @@ export default class DragonEnemy extends Container {
     const { head, shoulder } = this.pose.rider;
     const radius = STICKMAN_HEAD.radius * DRAGON_SCALE;
     return DragonEnemy.boundsAround([this.toWorld(head), this.toWorld(shoulder)], radius);
+  }
+
+  /**
+   * Every hit zone, in world space: the rider and the dragon's head are headshots; the body and the curved
+   * tail (a few boxes along it) are normal hits.
+   */
+  public getHitBoxes(): HitBox[] {
+    const { head, headTilt, tail } = this.pose;
+    const nose = { x: Math.cos(headTilt), y: Math.sin(headTilt) };
+    const snout = { x: head.x + nose.x * DRAGON_HEAD.snout, y: head.y + nose.y * DRAGON_HEAD.snout };
+    const dragonHead = DragonEnemy.boundsAround([this.toWorld(head), this.toWorld(snout)], DRAGON_HEAD.radius * DRAGON_SCALE);
+    const tailBoxes: HitBox[] = [];
+    // Pairs of spine points from the tip towards the body, padded by the tail's thickness there.
+    for (let index = 0; index + TAIL_STEP < tail.length; index += TAIL_STEP) {
+      const thickness = 4 + (18 * (index + TAIL_STEP)) / (tail.length - 1);
+      tailBoxes.push({
+        bounds: DragonEnemy.boundsAround([this.toWorld(tail[index]), this.toWorld(tail[index + TAIL_STEP])], (thickness / 2) * DRAGON_SCALE),
+        headshot: false,
+      });
+    }
+    return [
+      { bounds: this.getHeadBounds(), headshot: true },
+      { bounds: dragonHead, headshot: true },
+      { bounds: this.getPhysicsBounds(), headshot: false },
+      ...tailBoxes,
+    ];
   }
 
   /** Arrows stick at a local point (stored in BodyAnchor's along/side) and follow the dragon. */

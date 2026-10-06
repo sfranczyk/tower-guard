@@ -108,9 +108,10 @@ src/
   knees and loop continuity. `Enemy.celebrate()` picks one at random when the enemies win.
 - **Dragon archer enemy** (`EnemyType 'dragon'`, `objects/DragonEnemy.ts`): flies at `DRAGON_ALTITUDE`, hovers
   `DRAGON_HOVER_OFFSET` in front of the bowman (`systems/dragonFlight.ts`, pure), and `CombatSystem.updateDragon`
-  aims the rider's bow like an enemy archer (same ballistics and wind) and fires hostile arrows. Hitboxes: the
-  dragon's body, and the rider (head and shoulders) as the headshot zone, reachable with lobbed arrows since
-  the body shields him from below. Arrows stick into it. Killed, it falls out of the sky and lies on the
+  aims the rider's bow like an enemy archer (same ballistics and wind) and fires hostile arrows. Hit zones
+  (`getHitBoxes`): the rider and the dragon's head are headshots (the rider needs a lobbed arrow, the body
+  shields him from below); the body and a few boxes along the curved tail are normal hits. CombatSystem's
+  hit test takes the earliest zone hit (headshot wins ties); `?debug` draws them yellow/red. Arrows stick into it. Killed, it falls out of the sky and lies on the
   ground; ground lightning skips it (`isFlying`). Combat code takes `Foe = Enemy | DragonEnemy`.
 - **Dragon rider** (`rendering/dragon.ts`, also used by the lab): `getDragonPose` is pure (tested: loop, rider in the
   saddle, smooth wings); side-view wing beat with foreshortening, body bob, undulating neck and tail; the

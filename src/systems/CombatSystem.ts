@@ -22,7 +22,7 @@ import type { SoundId } from '../audio/SoundManager';
 import Arrow from '../objects/Arrow';
 import { bowSpeed } from '../data/projectiles';
 import type Bowman from '../objects/Bowman';
-import DragonEnemy from '../objects/DragonEnemy';
+import DragonEnemy, { type HitBox } from '../objects/DragonEnemy';
 import type Enemy from '../objects/Enemy';
 import { TOWER_HEIGHT } from '../objects/Tower';
 import type Tower from '../objects/Tower';
@@ -186,10 +186,10 @@ export class CombatSystem {
       return;
     }
     const { debug } = this.world;
-    const hitbox = enemy.getPhysicsBounds();
-    debug.rect(hitbox.x, hitbox.y, hitbox.width, hitbox.height).stroke({ width: 1, color: 0xff5555, alpha: 0.9 });
-    const head = enemy.getHeadBounds();
-    debug.rect(head.x, head.y, head.width, head.height).stroke({ width: 1, color: 0xffd23f, alpha: 0.9 });
+    // Yellow: headshot zones, red: normal hits.
+    CombatSystem.hitBoxes(enemy).forEach(({ bounds, headshot }) => {
+      debug.rect(bounds.x, bounds.y, bounds.width, bounds.height).stroke({ width: 1, color: headshot ? 0xffd23f : 0xff5555, alpha: 0.9 });
+    });
   }
 
   /**
@@ -340,13 +340,23 @@ export class CombatSystem {
   }
 
   /** Earliest hit of the segment on an enemy's head or body; the head wins ties. */
+  /** Earliest hit of the segment on any of the enemy's hit zones; a headshot zone wins ties. */
   private static hitTest(start: Vec2, travel: Vec2, enemy: Foe): EnemyHit | undefined {
-    const headTime = segmentHitTime(start, travel, enemy.getHeadBounds());
-    const bodyTime = segmentHitTime(start, travel, enemy.getPhysicsBounds());
-    if (headTime !== undefined && (bodyTime === undefined || headTime <= bodyTime)) {
-      return { enemy, time: headTime, headshot: true };
-    }
-    return bodyTime === undefined ? undefined : { enemy, time: bodyTime, headshot: false };
+    let best: EnemyHit | undefined;
+    CombatSystem.hitBoxes(enemy).forEach(({ bounds, headshot }) => {
+      const time = segmentHitTime(start, travel, bounds);
+      if (time !== undefined && (!best || time < best.time || (time === best.time && headshot))) {
+        best = { enemy, time, headshot };
+      }
+    });
+    return best;
+  }
+
+  /** Stickmen: head and body. Dragons: rider and dragon head (headshots), body and tail. */
+  private static hitBoxes(enemy: Foe): HitBox[] {
+    return enemy instanceof DragonEnemy
+      ? enemy.getHitBoxes()
+      : [{ bounds: enemy.getHeadBounds(), headshot: true }, { bounds: enemy.getPhysicsBounds(), headshot: false }];
   }
 
   private hitTower(arrow: Arrow, impactPoint: Vec2, activeEnemies: readonly Foe[]): void {
