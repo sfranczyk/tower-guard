@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ATTACK_REST, getAttackPose, type AttackPose } from './attackSwing';
+import { ATTACK_REST, getAttackPose, type AttackPose, type AttackStyle } from './attackSwing';
 
 const KEYS: (keyof AttackPose)[] = ['armAngle', 'forearmBend', 'rearArmAngle', 'torsoLean', 'dip', 'step'];
 
@@ -37,5 +37,34 @@ describe('getAttackPose', () => {
     for (let p = 0.5; p <= 1; p += 0.01) {
       expect(getAttackPose(p).armAngle).toBeLessThan(1.1);
     }
+  });
+});
+
+describe('attack styles', () => {
+  const styles: AttackStyle[] = ['overhead', 'twoHanded', 'uppercut'];
+
+  it('all start and end at the standing pose and move without jumps', () => {
+    styles.forEach((style) => {
+      KEYS.forEach((key) => {
+        expect(getAttackPose(0, style)[key]).toBeCloseTo(ATTACK_REST[key], 9);
+        expect(getAttackPose(0.9999, style)[key]).toBeCloseTo(ATTACK_REST[key], 2);
+      });
+      for (let index = 1; index <= 600; index += 1) {
+        const a = getAttackPose((index - 1) / 600, style);
+        const b = getAttackPose(index / 600, style);
+        expect(Math.abs(b.armAngle - a.armAngle)).toBeLessThan(0.15);
+        expect(Math.abs(b.step - a.step)).toBeLessThan(0.7);
+      }
+    });
+  });
+
+  it('two-handed winds up further and lunges harder than one-handed', () => {
+    expect(getAttackPose(0.38, 'twoHanded').armAngle).toBeGreaterThan(getAttackPose(0.34, 'overhead').armAngle);
+    expect(getAttackPose(0.55, 'twoHanded').step).toBeGreaterThan(getAttackPose(0.5, 'overhead').step);
+  });
+
+  it('uppercut winds up low behind and strikes upwards', () => {
+    expect(getAttackPose(0.3, 'uppercut').armAngle).toBeLessThan(0);
+    expect(getAttackPose(0.48, 'uppercut').armAngle).toBeGreaterThan(Math.PI / 2);
   });
 });

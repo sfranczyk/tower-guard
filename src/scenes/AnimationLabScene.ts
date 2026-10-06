@@ -115,6 +115,18 @@ export class AnimationLabScene extends Scene {
       render: (sprite) => drawStickman(sprite, 0, { idleBlend: 1, armed: true, attackPhase: this.attackPhase, originY: 0 }),
     },
     {
+      id: 'enemy-attack-two-handed',
+      title: 'Enemy two-handed attack',
+      description: 'A longer club gripped with both hands: a big wind-up far behind the head, then a heavy chop into a deep lunge.',
+      render: (sprite) => drawStickman(sprite, 0, { idleBlend: 1, armed: true, attackStyle: 'twoHanded', attackPhase: this.attackPhase, originY: 0 }),
+    },
+    {
+      id: 'enemy-attack-uppercut',
+      title: 'Enemy uppercut attack',
+      description: 'A short club swung from below: crouched wind-up low behind the hip, then up and forward while rising and stepping in.',
+      render: (sprite) => drawStickman(sprite, 0, { idleBlend: 1, armed: true, attackStyle: 'uppercut', attackPhase: this.attackPhase, originY: 0 }),
+    },
+    {
       id: 'enemy-archer',
       title: 'Enemy archer · draw and shoot',
       description: 'Red-tinted enemy with a bow: raises it, draws, looses and repeats from range.',

@@ -1,7 +1,7 @@
 import type { Graphics } from 'pixi.js';
 import type { Vec2 as Point } from '../types';
 import { drawBow, getArcherRig, toArcherLocalAngle, type FreeArm } from './archer';
-import { ATTACK_REST, getAttackPose } from './attackSwing';
+import { ATTACK_REST, CLUBS, getAttackPose, type AttackStyle } from './attackSwing';
 import { RUN_GROUND_Y, runArmSwing, runBounce, runFoot } from './runCycle';
 import { walkKneeBend } from './walkCycle';
 import { ARMOR_COLORS, drawArmor, drawArmoredBow, drawHood, drawPauldron, drawQuiver } from './armor';
@@ -22,6 +22,8 @@ export interface StickmanPose {
   originY?: number;
   /** 0 = no attack, otherwise radians through the club swing. */
   attackPhase?: number;
+  /** How the club is swung (and its length; two-handed grips it with both hands). Default 'overhead'. */
+  attackStyle?: AttackStyle;
   /** Replaces swinging arms with arms holding a bow (drawn too), pivoting at the neck. */
   archerPose?: boolean;
   /** 0 = string at rest, 1 = fully drawn. Only takes effect as the bow comes up (bowReady). */
@@ -40,6 +42,22 @@ export interface StickmanPose {
   skin?: StickmanSkin;
 }
 
+/** Two-handed grip: the rear hand holds the shaft this far behind the front fist. */
+const TWO_HAND_GRIP = 9;
+
+/** Elbow and hand of a 21+21 arm reaching from the shoulder towards `target`, elbow hanging down. */
+const reachArm = (shoulder: Point, target: Point): { elbow: Point; hand: Point } => {
+  const length = 21;
+  const distance = Math.max(1, Math.min(length * 2 - 0.01, Math.hypot(target.x - shoulder.x, target.y - shoulder.y)));
+  const base = Math.atan2(target.x - shoulder.x, target.y - shoulder.y);
+  const bend = Math.acos(distance / (length * 2));
+  const elbowAt = (angle: number): Point => ({ x: shoulder.x + Math.sin(angle) * length, y: shoulder.y + Math.cos(angle) * length });
+  const [a, b] = [elbowAt(base + bend), elbowAt(base - bend)];
+  const elbow = a.y >= b.y ? a : b;
+  const toTarget = Math.atan2(target.x - elbow.x, target.y - elbow.y);
+  return { elbow, hand: { x: elbow.x + Math.sin(toTarget) * length, y: elbow.y + Math.cos(toTarget) * length } };
+};
+
 /** Knee bend while standing: soft knees pointing slightly forward. */
 const IDLE_KNEE_BEND = -0.35;
 
@@ -57,6 +75,7 @@ export const drawStickman: StickmanRenderer = (sprite, phase, pose = {}) => {
     runningBlend = running ? 1 : 0,
     originY = 430,
     attackPhase = 0,
+    attackStyle = 'overhead',
     archerPose = false,
     bowTension = 0,
     bowReady = 1,
@@ -69,7 +88,8 @@ export const drawStickman: StickmanRenderer = (sprite, phase, pose = {}) => {
   sprite.clear();
   const motionBlend = running ? 1 : runningBlend;
   // Club swing: whole-body keyframes (rendering/attackSwing.ts); attackPhase runs 0..2π per swing.
-  const attack = attackPhase === 0 ? undefined : getAttackPose(attackPhase / (Math.PI * 2));
+  const attack = attackPhase === 0 ? undefined : getAttackPose(attackPhase / (Math.PI * 2), attackStyle);
+  const club = CLUBS[attackStyle];
   // Lean forward in the facing direction (a mirrored sprite needs the rotation flipped too).
   sprite.rotation = (0.06 + 0.04 * motionBlend) * (1 - idleBlend) * leanDirection;
   const walkingBounce = (0.5 + Math.cos(phase * 2) * 0.5) * 1.4 * (1 - motionBlend) * (1 - idleBlend);
@@ -244,8 +264,17 @@ export const drawStickman: StickmanRenderer = (sprite, phase, pose = {}) => {
       drawArcherArm(archerRig.stringElbow, archerRig.stringHand, false);
     }
   } else {
-    const rearArmAngle = attack?.rearArmAngle ?? armSwingAngle * (1 - idleBlend) + 0.1 * idleBlend;
-    drawArm(rearArmAngle, true);
+    if (armed && club.twoHanded) {
+      // Both hands on the club: the rear hand reaches the shaft just behind the front fist.
+      const front = armPoints(frontArmAngle, true);
+      const forearm = frontArmAngle + attackForearmBend;
+      const grip = { x: front.hand.x - Math.cos(forearm) * TWO_HAND_GRIP, y: front.hand.y + Math.sin(forearm) * TWO_HAND_GRIP };
+      const rearArm = reachArm(shoulder, grip);
+      drawArcherArm(rearArm.elbow, rearArm.hand, true);
+    } else {
+      const rearArmAngle = attack?.rearArmAngle ?? armSwingAngle * (1 - idleBlend) + 0.1 * idleBlend;
+      drawArm(rearArmAngle, true);
+    }
   }
   if (armored) {
     // Back to front: quiver, torso, front leg, armor over the legs, hood, drawing arm, shoulder plate.
@@ -272,24 +301,10 @@ export const drawStickman: StickmanRenderer = (sprite, phase, pose = {}) => {
   if (armed) {
     const forearmAngle = frontArmAngle + attackForearmBend;
     const weaponDirection = { x: Math.cos(forearmAngle), y: -Math.sin(forearmAngle) };
-    sprite.moveTo(
-      weaponHand.x - weaponDirection.x * 8,
-      weaponHand.y - weaponDirection.y * 8,
-    )
-      .lineTo(
-        weaponHand.x + weaponDirection.x * 28,
-        weaponHand.y + weaponDirection.y * 28,
-      )
-      .stroke({ width: 5, color: 0x30243a, cap: 'round' });
-    sprite.moveTo(
-      weaponHand.x - weaponDirection.x * 8,
-      weaponHand.y - weaponDirection.y * 8,
-    )
-      .lineTo(
-        weaponHand.x + weaponDirection.x * 28,
-        weaponHand.y + weaponDirection.y * 28,
-      )
-      .stroke({ width: 2.5, color: 0xe3ad4f, cap: 'round' });
+    const butt = { x: weaponHand.x - weaponDirection.x * club.butt, y: weaponHand.y - weaponDirection.y * club.butt };
+    const tip = { x: weaponHand.x + weaponDirection.x * club.reach, y: weaponHand.y + weaponDirection.y * club.reach };
+    sprite.moveTo(butt.x, butt.y).lineTo(tip.x, tip.y).stroke({ width: club.width, color: 0x30243a, cap: 'round' });
+    sprite.moveTo(butt.x, butt.y).lineTo(tip.x, tip.y).stroke({ width: club.width / 2, color: 0xe3ad4f, cap: 'round' });
   }
   if (archerRig) {
     if (armored) {

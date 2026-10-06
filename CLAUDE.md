@@ -83,9 +83,11 @@ src/
   the reaction: a headshot gives `deathStiff`, an explosion gives `knockback` (survivors get up and fight
   on), and other kills pick `death` or `deathCrumple` at random. `getFallPose()` is
   pure; feet and hands are kept on the ground by `groundedAngle`, and tests check every frame.
-- **Club attack** (`rendering/attackSwing.ts`, pure keyframes by progress): wind-up behind the head with the
-  torso leaning back, a fast strike with a forward lunge and dip, then recovery. Progress 0 and 1 equal the
-  standing pose, so the swing never jumps; drawStickman tilts the torso about the hip so the feet stay put.
+- **Club attacks** (`rendering/attackSwing.ts`, pure keyframes by progress, `pose.attackStyle`): `overhead`
+  (one-handed, enemies in the game), `twoHanded` (longer club in both hands; the rear hand reaches the shaft
+  by IK) and `uppercut` (short club from below); `CLUBS` sets each club's length. Wind-up, a fast strike
+  with a wrist snap, a lunge and dip, then recovery. Progress 0 and 1 equal the standing pose, so a swing
+  never jumps; drawStickman tilts the torso about the hip so the feet stay put.
 - **Joint poses** (`rendering/stickmanPose.ts`): `JointPose` + `drawJointPose` draw a stickman from explicit
   joint positions (skeleton look, optional club). Falls and cheers produce JointPoses.
 - **Cheers** (`rendering/stickmanCheer.ts`): three looping victory animations (`cheerJump`, `cheerFist`,
