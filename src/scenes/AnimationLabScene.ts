@@ -1,6 +1,7 @@
 import { Container, Graphics, Rectangle, Text } from 'pixi.js';
 import { GAME_HEIGHT, GAME_WIDTH, SHOW_HITBOX_DEBUG } from '../config';
 import { Scene } from '../core/Scene';
+import { centeredCameraX, viewWidth } from '../core/viewport';
 import { LAB_PARAM, getUrlParam, setUrlParam } from '../core/urlState';
 import { BATTLEGROUNDS } from '../data/battlegrounds';
 import { Background } from '../rendering/Background';
@@ -293,6 +294,9 @@ export class AnimationLabScene extends Scene {
   private attackPhase = 0;
   private archerWalkPhase = 0;
   private cheerTime = 0;
+  /** The panel and everything on it, centred in views wider than GAME_WIDTH (the meadow fills the rest). */
+  private readonly content = new Container();
+  private meadow?: Container;
   private readonly pausingWalk = new PausingWalk();
   private readonly walkRunSequence = new WalkRunSequence();
   private readonly archerSequence = new ArcherReadySequence();
@@ -303,7 +307,7 @@ export class AnimationLabScene extends Scene {
   private readonly scrollbar = new Graphics();
 
   public enter(): void {
-    const { ui, root } = this.ctx;
+    const { ui } = this.ctx;
     ui.showScreen('animationLab');
     if (SHOW_HITBOX_DEBUG) {
       // Debug console hook (?debug), like GameScene's: e.g. set attackPhase with the ticker stopped.
@@ -315,7 +319,7 @@ export class AnimationLabScene extends Scene {
     this.createBackdrop();
     this.rows.forEach((row, index) => this.createRow(row, index));
     this.list.mask = this.listMask;
-    root.addChild(this.listMask, this.list, this.scrollbar, this.zoomView);
+    this.content.addChild(this.listMask, this.list, this.scrollbar, this.zoomView);
     this.listenWindow('wheel', (event) => {
       if (!this.zoomed) {
         this.scrollTo(this.scrollY + event.deltaY * 0.5);
@@ -337,6 +341,10 @@ export class AnimationLabScene extends Scene {
   }
 
   public update(deltaMs: number): void {
+    this.content.x = (viewWidth() - GAME_WIDTH) / 2;
+    if (this.meadow) {
+      this.meadow.x = -centeredCameraX();
+    }
     this.archerPhase += deltaMs / 900;
     this.runPhase += deltaMs / RUN_PHASE_MS;
     this.attackPhase += deltaMs / 180;
@@ -355,12 +363,13 @@ export class AnimationLabScene extends Scene {
     const meadow = new Container();
     meadow.sortableChildren = true;
     new Background(meadow, BATTLEGROUNDS.greenMeadow);
-    root.addChild(meadow);
-    root.addChild(new Graphics()
+    root.addChild(meadow, this.content);
+    this.meadow = meadow;
+    this.content.addChild(new Graphics()
       .roundRect(PANEL.x, PANEL.y + 5, PANEL.width, PANEL.height, PANEL.radius).fill({ color: COLORS.panelEdge })
       .roundRect(PANEL.x, PANEL.y, PANEL.width, PANEL.height, PANEL.radius).fill({ color: COLORS.panel, alpha: 0.97 }));
-    root.addChild(AnimationLabScene.text('Animation lab', 26, COLORS.ink, 700, 36, 22, DISPLAY_FONT));
-    root.addChild(AnimationLabScene.text(
+    this.content.addChild(AnimationLabScene.text('Animation lab', 26, COLORS.ink, 700, 36, 22, DISPLAY_FONT));
+    this.content.addChild(AnimationLabScene.text(
       'Every stickman animation, one per row. Click a row to zoom in.',
       12, COLORS.inkSoft, 400, 36, 56,
     ));

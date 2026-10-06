@@ -5,6 +5,7 @@ import arrowPiercingAsset from './assets/arrow-piercing.svg';
 import arrowShrapnelAsset from './assets/arrow-shrapnel.svg';
 import { SoundManager } from './audio/SoundManager';
 import { GAME_HEIGHT, GAME_WIDTH, MAX_RENDER_RESOLUTION } from './config';
+import { setViewWidth } from './core/viewport';
 import type { GameTextures } from './core/Scene';
 import { SceneManager } from './core/SceneManager';
 import { DomUi } from './ui/DomUi';
@@ -39,13 +40,14 @@ const bootstrap = async (): Promise<void> => {
   const sound = new SoundManager();
   const [textures] = await Promise.all([loadTextures(), sound.load()]);
   const ui = new DomUi(host, app.canvas);
-  // Draw at the canvas's on-screen pixel size (CSS scale × devicePixelRatio), so a big window or browser
-  // zoom stays sharp instead of stretching a 1024×540 bitmap.
-  ui.onCanvasFit = (cssScale) => {
-    const resolution = Math.min(MAX_RENDER_RESOLUTION, Math.max(1, cssScale * (window.devicePixelRatio || 1)));
-    if (Math.abs(resolution - app.renderer.resolution) > 0.01) {
-      app.renderer.resize(GAME_WIDTH, GAME_HEIGHT, resolution);
+  // The view widens with the window (core/viewport.ts), and it's drawn at its on-screen pixel size (CSS
+  // scale × devicePixelRatio), so a big window or browser zoom stays sharp.
+  ui.onCanvasFit = ({ scale, viewWidth }) => {
+    const resolution = Math.min(MAX_RENDER_RESOLUTION, Math.max(1, scale * (window.devicePixelRatio || 1)));
+    if (Math.abs(resolution - app.renderer.resolution) > 0.01 || viewWidth !== app.screen.width) {
+      app.renderer.resize(viewWidth, GAME_HEIGHT, resolution);
     }
+    setViewWidth(viewWidth);
   };
   ui.fitCanvas();
   new SceneManager(app, ui, textures, sound).start();

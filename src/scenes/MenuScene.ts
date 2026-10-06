@@ -1,20 +1,21 @@
 import { Container } from 'pixi.js';
 import { GAME_HEIGHT, WORLD_WIDTH } from '../config';
 import { Scene } from '../core/Scene';
+import { centeredCameraX } from '../core/viewport';
 import { BATTLEGROUNDS } from '../data/battlegrounds';
 import Bowman from '../objects/Bowman';
 import Tower from '../objects/Tower';
 import { Background } from '../rendering/Background';
 import { groundAt } from '../systems/terrain';
 
-/** The menu shows the middle of the battlefield, with both keeps pulled into view. */
-const MENU_CAMERA_X = 88;
+/** The menu shows the middle of the battlefield (centred in the view), with both keeps pulled into view. */
 const MENU_KEEPS = { player: 190, enemy: 1010 } as const;
 const MENU_BOWMAN_X = 285;
 
 /** Main menu over a live battlefield (drifting clouds, flickering torches, the bowman at ease). */
 export class MenuScene extends Scene {
   private background?: Background;
+  private world?: Container;
   private keeps: Tower[] = [];
   private bowman?: Bowman;
   private optionsVisible = false;
@@ -41,6 +42,9 @@ export class MenuScene extends Scene {
   }
 
   public update(deltaMs: number): void {
+    if (this.world) {
+      this.world.x = -centeredCameraX();
+    }
     this.background?.update(deltaMs);
     this.keeps.forEach((keep) => keep.update(deltaMs));
     this.bowman?.updateAnimation(deltaMs, false);
@@ -49,7 +53,7 @@ export class MenuScene extends Scene {
   private createScenery(battleground: (typeof BATTLEGROUNDS)[keyof typeof BATTLEGROUNDS]): void {
     const world = new Container();
     world.sortableChildren = true;
-    world.x = -MENU_CAMERA_X;
+    this.world = world;
     this.ctx.root.addChild(world);
     this.background = new Background(world, battleground);
     const hillColor = battleground.hills[0];

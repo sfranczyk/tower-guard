@@ -3,6 +3,7 @@ import { MUSIC_LOOP_END_S } from '../config';
 import { MUSIC_INFO, SOUND_INFO } from '../audio/soundCatalog';
 import type { SoundId } from '../audio/SoundManager';
 import { Scene } from '../core/Scene';
+import { centeredCameraX } from '../core/viewport';
 import { BATTLEGROUNDS } from '../data/battlegrounds';
 import { Background } from '../rendering/Background';
 
@@ -14,6 +15,8 @@ const SEAM_LEAD_S = 4;
  * seam, and adjusts the volumes. The panel is HTML (DomUi); a battleground is drawn behind it.
  */
 export class SoundLabScene extends Scene {
+  private background?: Container;
+
   public enter(): void {
     const { ui, sound } = this.ctx;
     ui.showScreen('soundLab');
@@ -22,6 +25,7 @@ export class SoundLabScene extends Scene {
     background.sortableChildren = true;
     new Background(background, BATTLEGROUNDS.greenMeadow);
     this.ctx.root.addChild(background);
+    this.background = background;
 
     const rows = (Object.keys(SOUND_INFO) as SoundId[]).map((id) => ({ id, ...SOUND_INFO[id], durations: sound.variantDurations(id) }));
     ui.renderSoundLab(rows, MUSIC_INFO, sound.settings);
@@ -52,6 +56,9 @@ export class SoundLabScene extends Scene {
   }
 
   public update(): void {
+    if (this.background) {
+      this.background.x = -centeredCameraX();
+    }
     this.ctx.ui.updateSoundLabMusic(this.ctx.sound.musicState);
   }
 }

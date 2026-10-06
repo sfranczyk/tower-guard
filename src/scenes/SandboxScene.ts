@@ -1,6 +1,7 @@
 import { Container } from 'pixi.js';
 import { ENEMY_KEEP_HEALTH } from '../config';
 import { Scene } from '../core/Scene';
+import { centeredCameraX } from '../core/viewport';
 import { saveSandbox } from '../core/sandboxStorage';
 import { BATTLEGROUNDS } from '../data/battlegrounds';
 import { normalizeSandbox, type SandboxSettings } from '../data/sandbox';
@@ -13,6 +14,12 @@ import { Background } from '../rendering/Background';
 export class SandboxScene extends Scene {
   private preview?: Container;
   private previewId?: string;
+
+  public update(): void {
+    if (this.preview) {
+      this.preview.x = -centeredCameraX();
+    }
+  }
 
   public enter(): void {
     const { ui, session } = this.ctx;

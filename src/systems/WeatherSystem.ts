@@ -1,5 +1,6 @@
 import { Graphics, type Container } from 'pixi.js';
-import { GAME_HEIGHT, GAME_WIDTH, LIGHTNING_FIRST_DELAY_MS, LIGHTNING_GROUND_CHANCE, LIGHTNING_WARNING_MS, WORLD_WIDTH } from '../config';
+import { viewWidth } from '../core/viewport';
+import { GAME_HEIGHT, LIGHTNING_FIRST_DELAY_MS, MAX_VIEW_WIDTH, LIGHTNING_GROUND_CHANCE, LIGHTNING_WARNING_MS, WORLD_WIDTH } from '../config';
 import type { Background } from '../rendering/Background';
 import { Rain } from '../rendering/Rain';
 import type { Vec2 } from '../types';
@@ -57,7 +58,7 @@ export class WeatherSystem {
     private readonly events: WeatherEvents,
   ) {
     this.rain = new Rain(screen);
-    this.flashOverlay = new Graphics().rect(0, 0, GAME_WIDTH, GAME_HEIGHT).fill({ color: 0xe6eeff });
+    this.flashOverlay = new Graphics().rect(0, 0, MAX_VIEW_WIDTH, GAME_HEIGHT).fill({ color: 0xe6eeff });
     this.flashOverlay.alpha = 0;
     this.flashOverlay.zIndex = 100;
     screen.addChild(this.flashOverlay);
@@ -89,7 +90,7 @@ export class WeatherSystem {
   }
 
   private trigger(plan: StrikePlan, cameraX: number): void {
-    const view = { left: cameraX, right: cameraX + GAME_WIDTH };
+    const view = { left: Math.max(0, cameraX), right: Math.min(WORLD_WIDTH, cameraX + viewWidth()) };
     if (plan.reachesGround) {
       const targetX = Math.min(WORLD_WIDTH - 20, Math.max(20, random(view.left + 60, view.right - 60)));
       const target = { x: targetX, y: groundAt(targetX) };

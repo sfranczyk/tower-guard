@@ -146,10 +146,11 @@ export const createCloudShape = (kind: CloudKind, width: number, seed: number): 
  * A sky's worth of clouds for the weather, spread evenly over the world width (with jitter) in a
  * shuffled order of kinds. The same seed always gives the same sky; a clear sky has none.
  */
-export const layoutClouds = (worldWidth: number, seed: number, weather: Weather = 'fair'): CloudPlacement[] => {
+/** `density` scales each kind's count (e.g. a sky wider than the world keeps the same cloud density). */
+export const layoutClouds = (worldWidth: number, seed: number, weather: Weather = 'fair', density = 1): CloudPlacement[] => {
   const random = createRandom(seed);
   const sky = SKIES[weather];
-  const kinds = (Object.keys(sky) as CloudKind[]).flatMap((kind) => Array<CloudKind>(sky[kind]?.count ?? 0).fill(kind));
+  const kinds = (Object.keys(sky) as CloudKind[]).flatMap((kind) => Array<CloudKind>(Math.round((sky[kind]?.count ?? 0) * density)).fill(kind));
   if (kinds.length === 0) {
     return [];
   }

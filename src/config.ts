@@ -1,9 +1,20 @@
-export const GAME_WIDTH = 1024;
+/**
+ * The view (screen) in game px: always GAME_HEIGHT tall and at least GAME_WIDTH wide (2.1:1). A wider
+ * window, or one big enough to pass MAX_VIEW_SCALE, widens the view (more landscape) instead of scaling
+ * everything up, up to MAX_VIEW_WIDTH (see core/viewport.ts).
+ */
+export const GAME_WIDTH = 1134;
 export const GAME_HEIGHT = 540;
+export const MAX_VIEW_WIDTH = 1800;
+/** Largest on-screen scale (CSS px per game px) before the view widens instead of growing. */
+export const MAX_VIEW_SCALE = 1.4;
 /** Upper limit of the renderer resolution (backing pixels per game px) for big windows and browser zoom. */
 export const MAX_RENDER_RESOLUTION = 4;
 export const RENDER_SCALE = 1;
-export const WORLD_WIDTH = GAME_WIDTH * 1.171875;
+/** The battlefield, keep to keep (independent of the view width). */
+export const WORLD_WIDTH = 1200;
+/** Landscape (sky, hills, trees, ground) is drawn this far beyond both ends of the world for wide views. */
+export const SCENERY_MARGIN = Math.ceil((MAX_VIEW_WIDTH - WORLD_WIDTH) / 2) + 40;
 export const CAMERA_ZOOM = 1;
 
 export const GROUND_Y = 490;

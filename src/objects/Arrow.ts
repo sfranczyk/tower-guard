@@ -1,5 +1,5 @@
 import { Graphics, Sprite, Texture } from 'pixi.js';
-import { ARROW_GRAVITY, GAME_HEIGHT, WORLD_WIDTH } from '../config';
+import { ARROW_GRAVITY, GAME_HEIGHT, SCENERY_MARGIN, WORLD_WIDTH } from '../config';
 import { DEFAULT_AIM_COLORS } from '../data/battlegrounds';
 import { flightParams } from '../data/projectiles';
 import { advanceProjectile, type FlightParams } from '../systems/ballistics';
@@ -109,8 +109,9 @@ export default class Arrow extends Sprite {
       this.rotation = Math.atan2(this.velocity.y, this.velocity.x);
     }
 
+    // Off the drawn landscape (wide views show past the world's ends).
     const margin = 48;
-    if (this.x < -margin || this.x > WORLD_WIDTH + margin || this.y > GAME_HEIGHT + margin) {
+    if (this.x < -SCENERY_MARGIN || this.x > WORLD_WIDTH + SCENERY_MARGIN || this.y > GAME_HEIGHT + margin) {
       this.deactivate();
     }
   }

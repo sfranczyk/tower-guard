@@ -1,5 +1,5 @@
 import { Graphics, type Container } from 'pixi.js';
-import { GAME_WIDTH, GROUND_Y, RAIN_ALPHA, RAIN_DROPS, RAIN_SLANT, RAIN_SPEED } from '../config';
+import { GAME_WIDTH, GROUND_Y, MAX_VIEW_WIDTH, RAIN_ALPHA, RAIN_DROPS, RAIN_SLANT, RAIN_SPEED } from '../config';
 import { groundAt } from '../systems/terrain';
 
 type Drop = { x: number; y: number; length: number; speed: number };
@@ -21,7 +21,7 @@ export class Rain {
   public constructor(container: Container) {
     this.graphics.zIndex = 90;
     container.addChild(this.graphics);
-    this.drops = Array.from({ length: RAIN_DROPS }, () => Rain.newDrop(random(-40, GROUND_Y)));
+    this.drops = Array.from({ length: Math.round(RAIN_DROPS * MAX_VIEW_WIDTH / GAME_WIDTH) }, () => Rain.newDrop(random(-40, GROUND_Y)));
   }
 
   public update(deltaMs: number, cameraX: number): void {
@@ -37,10 +37,10 @@ export class Rain {
           this.splashes.push({ x: drop.x, y: ground, ageMs: 0 });
         }
         this.drops[index] = Rain.newDrop(random(-60, -10));
-      } else if (drop.x > GAME_WIDTH + 20) {
-        drop.x -= GAME_WIDTH + 40;
+      } else if (drop.x > MAX_VIEW_WIDTH + 20) {
+        drop.x -= MAX_VIEW_WIDTH + 40;
       } else if (drop.x < -20) {
-        drop.x += GAME_WIDTH + 40;
+        drop.x += MAX_VIEW_WIDTH + 40;
       }
     });
     this.splashes = this.splashes.filter((splash) => (splash.ageMs += deltaMs) < SPLASH_MS);
@@ -68,6 +68,6 @@ export class Rain {
   }
 
   private static newDrop(y: number): Drop {
-    return { x: random(-20, GAME_WIDTH + 20), y, length: random(9, 16), speed: random(RAIN_SPEED[0], RAIN_SPEED[1]) };
+    return { x: random(-20, MAX_VIEW_WIDTH + 20), y, length: random(9, 16), speed: random(RAIN_SPEED[0], RAIN_SPEED[1]) };
   }
 }

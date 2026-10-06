@@ -90,20 +90,25 @@ const drawCactus = (graphics: Graphics, x: number, height: number, colors: reado
   graphics.roundRect(x - 2.5, top + 4, 2, height - 6, 1).fill({ color: light });
 };
 
-/** The row of trees (round, pine) or sparse cacti standing on the horizon. */
-export const drawVegetation = ({ trees }: Battleground): Graphics => {
+/** The row of trees (round, pine) or sparse cacti standing on the horizon, from x `left` to `right`. */
+export const drawVegetation = ({ trees }: Battleground, left = 0, right = WORLD_WIDTH): Graphics => {
   const forest = new Graphics();
   const [main, light, dark] = trees.colors;
   if (trees.style === 'cactus') {
-    for (let index = 0, x = 60; x < WORLD_WIDTH; index += 1) {
+    for (let index = 0, x = 60; x < right; index += 1) {
       drawCactus(forest, x, 34 + (index % 3) * 11, trees.colors, index % 3 === 1 ? 1 : 2);
       x += 150 + ((index * 53) % 70);
+    }
+    // Past the left end, spaced the same way going left.
+    for (let index = 1, x = 60 - 160; x > left; index += 1) {
+      drawCactus(forest, x, 34 + (index % 3) * 11, trees.colors, index % 3 === 1 ? 1 : 2);
+      x -= 150 + ((index * 53) % 70);
     }
     forest.zIndex = 0;
     return forest;
   }
-  for (let x = 20; x < WORLD_WIDTH; x += 92) {
-    const height = 38 + ((x / 92) % 3) * 14;
+  for (let x = 20 - Math.ceil(-Math.min(0, left) / 92) * 92; x < right; x += 92) {
+    const height = 38 + ((((x / 92) % 3) + 3) % 3) * 14;
     if (trees.style === 'snowPine') {
       // Pines with snow on every layer's top.
       forest.rect(x - 2, GROUND_Y - 12, 4, 12).fill({ color: trees.trunk });

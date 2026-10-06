@@ -5,7 +5,6 @@ import {
   ENEMY_KEEP_HEALTH,
   ENEMY_TOWER_X,
   GAME_HEIGHT,
-  GAME_WIDTH,
   GROUND_Y,
   HEADSHOT_DAMAGE_MULTIPLIER,
   PLAYER_TOWER_X,
@@ -21,6 +20,7 @@ import {
 import type { SoundId } from '../audio/SoundManager';
 import { spatialMix } from '../audio/spatial';
 import { Scene, type GameContext } from '../core/Scene';
+import { centeredCameraX, viewWidth } from '../core/viewport';
 import { BATTLEGROUNDS, aimColorsOf, type Battleground } from '../data/battlegrounds';
 import { getEnemyStats } from '../data/enemies';
 import { launchSpeed, shrapnelBurst } from '../data/projectiles';
@@ -103,6 +103,8 @@ export class GameScene extends Scene {
   private input?: InputManager;
 
   private cameraX = 0;
+  /** The camera starts on its target, then follows it smoothly. */
+  private cameraPlaced = false;
   private bowmanHealth: number;
   private spawnedEnemies = 0;
   private selectedProjectile: ProjectileType = 'normal';
@@ -182,7 +184,7 @@ export class GameScene extends Scene {
         // After the wave is decided lightning still flashes but no longer hurts anyone.
         groundStrike: (point) => (this.gameEnded ? this.effects.lightningStrike(point) : this.combat.lightningStrike(point)),
         thunder: (at, close) => {
-          const mix = spatialMix(at.x, this.cameraX);
+          const mix = spatialMix(at.x, this.cameraX, viewWidth());
           this.ctx.sound.play('thunder', { ...mix, gain: mix.gain * (close ? 1 : 0.45) });
         },
       });
@@ -229,7 +231,7 @@ export class GameScene extends Scene {
       eventTarget: this.ctx.app.canvas,
       worldPointFromScreen: (point) => ({ x: point.x + this.cameraX, y: point.y }),
       maxDragDistance: 200,
-      screenSize: { x: GAME_WIDTH, y: GAME_HEIGHT },
+      screenSize: () => ({ x: viewWidth(), y: GAME_HEIGHT }),
     });
 
     this.input.on(InputManager.Events.AIM, (aim: AimInput) => {
@@ -411,7 +413,7 @@ export class GameScene extends Scene {
 
   /** Panned and faded by where it happens relative to the camera. */
   private playSound(id: SoundId, at: Vec2): void {
-    this.ctx.sound.play(id, spatialMix(at.x, this.cameraX));
+    this.ctx.sound.play(id, spatialMix(at.x, this.cameraX, viewWidth()));
   }
 
   private selectProjectile(type: ProjectileType): void {
@@ -472,8 +474,11 @@ export class GameScene extends Scene {
   }
 
   private updateCamera(): void {
-    const target = clamp(this.bowman.x - GAME_WIDTH / 2, 0, WORLD_WIDTH - GAME_WIDTH);
-    this.cameraX += (target - this.cameraX) * CAMERA_SMOOTHING;
+    // Follows the bowman; a view wider than the world shows all of it, centred, with landscape either side.
+    const width = viewWidth();
+    const target = width >= WORLD_WIDTH ? centeredCameraX(width) : clamp(this.bowman.x - width / 2, 0, WORLD_WIDTH - width);
+    this.cameraX = this.cameraPlaced ? this.cameraX + (target - this.cameraX) * CAMERA_SMOOTHING : target;
+    this.cameraPlaced = true;
     const shake = this.effects.cameraShake;
     this.world.position.set(-this.cameraX + shake.x, shake.y);
   }

@@ -77,7 +77,15 @@ src/
   and in game (its handlers live in `SceneManager`). The in-game HUD sits *outside* the canvas
   (bar above, status line below) and `DomUi.fitCanvas()` scales the canvas into the remaining space.
   The renderer resolution follows the shown size (`onCanvasFit` in `main.ts`: CSS scale × devicePixelRatio,
-  capped by `MAX_RENDER_RESOLUTION`, refit on browser zoom), so big windows stay sharp; the game stays 1024×540.
+  capped by `MAX_RENDER_RESOLUTION`, refit on browser zoom), so big windows stay sharp.
+- **View size** (`core/viewport.ts`, `fitView` is pure and tested): the view is `GAME_HEIGHT` (540) tall and at
+  least `GAME_WIDTH` (1134, 2.1:1) wide. A window wider than 2.1:1, or one big enough to pass `MAX_VIEW_SCALE`
+  (1.4 CSS px per game px), widens the view (up to `MAX_VIEW_WIDTH`) instead of scaling everything up. Read the
+  current width with `viewWidth()` every frame, never `GAME_WIDTH`, for anything that spans the screen. The
+  battlefield stays `WORLD_WIDTH` (1200); `GameScene` follows the bowman while the view is narrower and centres
+  the world once it fits (`centeredCameraX`); menus and labs centre their backdrop and content. The landscape
+  (sky, hills mirrored past both ends, trees, ground, clouds) extends `SCENERY_MARGIN` beyond the world, and
+  rain and snow cover `MAX_VIEW_WIDTH`.
   Never place HUD elements over the play field. Only menus, the settings drawer and the end screen
   overlay the canvas. Scenes never touch the DOM directly. They call `DomUi` methods and assign
   `ui.handlers.*` callbacks.
@@ -178,8 +186,8 @@ src/
   (`keepTones`), and `keepDamageStage` (pure, tested) picks the look from health: cracks (≤60%), broken
   merlons, torn banners and rubble (≤30%), fire and smoke (≤10%). `Tower` redraws only when the stage changes
   and animates the torch, fire and smoke in `update(deltaMs)`.
-- **Coordinates**: the screen is 1024×540 and the world is wider (`WORLD_WIDTH`). `GameScene` scrolls the
-  `world` container by `cameraX`.
+- **Coordinates**: the view is `viewWidth()`×540 (see View size) and the battlefield `WORLD_WIDTH`. `GameScene`
+  scrolls the `world` container by `cameraX` (negative when the view is wider than the world).
 - **Terrain**: the ground surface is `groundAt(x)` (`systems/terrain.ts`, pure): gentle waves of
   `TERRAIN_AMPLITUDE` around `GROUND_Y`, flat at both keeps. The ground fill and grass edge are drawn along
   it, and the bowman, enemies, arrows sticking in the ground, explosions, blood, scorch marks, lightning,

@@ -1,4 +1,5 @@
-import { GAME_HEIGHT, GAME_WIDTH } from '../config';
+import { GAME_WIDTH } from '../config';
+import { fitView, type ViewFit } from '../core/viewport';
 import type { ProjectileType } from '../types';
 import type { AudioSettings } from '../audio/audioSettings';
 import type { SoundId } from '../audio/SoundManager';
@@ -250,10 +251,10 @@ export class DomUi {
 
   /** Largest canvas size with the game's aspect ratio that fits next to the visible HUD bars. */
   /**
-   * Called after each fit with the CSS scale of the canvas (CSS px per game px), so the renderer can draw at
-   * the size it's shown (main.ts) instead of the browser stretching a fixed-size bitmap (blurry).
+   * Called after each fit (core/viewport.ts): main.ts resizes the renderer to the view width and draws at
+   * the size it's shown, instead of the browser stretching a fixed-size bitmap (blurry).
    */
-  public onCanvasFit?: (cssScale: number) => void;
+  public onCanvasFit?: (fit: ViewFit) => void;
 
   /** Browser zoom or moving the window to another screen changes devicePixelRatio: fit again. */
   private watchPixelRatio(): void {
@@ -268,18 +269,20 @@ export class DomUi {
     const viewport = document.documentElement;
     const availableWidth = viewport.clientWidth - PAGE_MARGIN * 2;
     this.host.style.width = `${availableWidth}px`;
+    let fit = fitView(availableWidth, viewport.clientHeight);
     // Two passes: the HUD height depends on the width it wraps in, which depends on the canvas width.
     for (let pass = 0; pass < 2; pass += 1) {
       const hudHeight = (this.hudTop.hidden ? 0 : this.hudTop.offsetHeight)
         + (this.hudBottom.hidden ? 0 : this.hudBottom.offsetHeight);
       const availableHeight = viewport.clientHeight - PAGE_MARGIN * 2 - hudHeight;
-      const ratio = Math.max(0, Math.min(availableWidth / GAME_WIDTH, availableHeight / GAME_HEIGHT));
-      const width = Math.max(1, Math.floor(GAME_WIDTH * ratio));
-      this.canvas.style.width = `${width}px`;
-      this.canvas.style.height = `${Math.max(1, Math.floor(GAME_HEIGHT * ratio))}px`;
-      this.host.style.width = `${width}px`;
+      fit = fitView(availableWidth, availableHeight);
+      this.canvas.style.width = `${Math.max(1, fit.cssWidth)}px`;
+      this.canvas.style.height = `${Math.max(1, fit.cssHeight)}px`;
+      this.host.style.width = `${Math.max(1, fit.cssWidth)}px`;
     }
-    this.onCanvasFit?.(this.canvas.offsetWidth / GAME_WIDTH || 1);
+    // How far the base-width area (e.g. the animation lab's panel) sits in from the edges of a wider view.
+    this.host.style.setProperty('--view-inset', `${((fit.viewWidth - GAME_WIDTH) / 2) * fit.scale}px`);
+    this.onCanvasFit?.(fit);
   }
 
   private static createElement(className: string, html: string): HTMLDivElement {

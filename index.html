@@ -158,8 +158,8 @@
         .end-stats strong { font-family: var(--display); font-weight: 600; font-size: 17px; }
         .end-stats span { font-size: 11px; color: var(--ink-soft); }
 
-        /* ---------- Animation lab buttons (over its own canvas backdrop) ---------- */
-        .test-screen { position: absolute; top: 14px; right: 14px; display: flex; gap: 8px; pointer-events: none; }
+        /* ---------- Animation lab buttons (over its own canvas backdrop; --view-inset keeps them on the centred panel in wide views) ---------- */
+        .test-screen { position: absolute; top: 14px; right: calc(14px + var(--view-inset, 0px)); display: flex; gap: 8px; pointer-events: none; }
 
         @media (max-width: 760px) {
             .hud { flex-wrap: wrap; justify-content: center; }

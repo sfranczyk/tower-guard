@@ -1,9 +1,14 @@
 import { Graphics, type Container } from 'pixi.js';
-import { GAME_HEIGHT, GROUND_Y, WORLD_WIDTH } from '../config';
+import { GAME_HEIGHT, GROUND_Y, SCENERY_MARGIN, WORLD_WIDTH } from '../config';
 import type { Battleground } from '../data/battlegrounds';
 import { layoutClouds, mixColor, type CloudLayer, type CloudShape } from './clouds';
 import { drawHills, drawVegetation } from './landscape';
 import { groundAt, useTerrain } from '../systems/terrain';
+
+/** The landscape spans the world plus SCENERY_MARGIN on both sides (seen when the view is wider). */
+const LEFT = -SCENERY_MARGIN;
+const RIGHT = WORLD_WIDTH + SCENERY_MARGIN;
+const SCENERY_WIDTH = RIGHT - LEFT;
 
 type Cloud = {
   sprite: Graphics;
@@ -32,7 +37,7 @@ export class Background {
   public constructor(container: Container, battleground: Battleground) {
     // Everything that touches the ground (drawing, walking, arrows) uses this map's wave height.
     useTerrain(battleground.terrainAmplitude);
-    container.addChild(new Graphics().rect(0, 0, WORLD_WIDTH, GAME_HEIGHT).fill({ color: 0x10233a }));
+    container.addChild(new Graphics().rect(LEFT, 0, SCENERY_WIDTH, GAME_HEIGHT).fill({ color: 0x10233a }));
     container.addChild(Background.createSky(battleground));
 
     const { sun } = battleground;
@@ -43,9 +48,10 @@ export class Background {
     }
 
     // Clouds float behind the hills (but in front of the sun).
-    this.clouds = layoutClouds(WORLD_WIDTH, skySeed(battleground.name), battleground.weather).map(({ shape, x, y, speed, alpha }) => {
+    const clouds = layoutClouds(SCENERY_WIDTH, skySeed(battleground.name), battleground.weather, SCENERY_WIDTH / WORLD_WIDTH);
+    this.clouds = clouds.map(({ shape, x, y, speed, alpha }) => {
       const cloud = Background.createCloud(shape, battleground);
-      cloud.position.set(x, y);
+      cloud.position.set(LEFT + x, y);
       // Rendered once to a texture so the alpha applies to the whole cloud; otherwise every
       // overlapping blob would show through the others.
       cloud.cacheAsTexture({ resolution: Math.max(1, window.devicePixelRatio || 1), antialias: true });
@@ -54,17 +60,31 @@ export class Background {
       container.addChild(cloud);
       return { sprite: cloud, speed, width: shape.width };
     });
-    container.addChild(drawHills(battleground), drawVegetation(battleground));
+    container.addChild(...Background.mirroredBeyondWorld(drawHills(battleground)), drawVegetation(battleground, LEFT, RIGHT));
     container.addChild(Background.createTerrain(battleground));
   }
 
-  /** Drifts the clouds right; one that leaves the world on the right comes back in on the left. */
+  /**
+   * The hills are drawn across the world; mirrored copies (sharing the drawing) continue them past both
+   * ends, so the skyline stays continuous at the seams.
+   */
+  private static mirroredBeyondWorld(hills: Graphics): Graphics[] {
+    const left = new Graphics(hills.context);
+    left.scale.x = -1;
+    const right = new Graphics(hills.context);
+    right.scale.x = -1;
+    right.x = WORLD_WIDTH * 2;
+    [left, right].forEach((copy) => { copy.zIndex = hills.zIndex; });
+    return [left, hills, right];
+  }
+
+  /** Drifts the clouds right; one that leaves the scenery on the right comes back in on the left. */
   public update(deltaMs: number): void {
     const deltaSeconds = deltaMs / 1000;
     this.clouds.forEach(({ sprite, speed, width }) => {
       sprite.x += speed * deltaSeconds;
-      if (sprite.x - width / 2 > WORLD_WIDTH) {
-        sprite.x = -width / 2;
+      if (sprite.x - width / 2 > RIGHT) {
+        sprite.x = LEFT - width / 2;
       }
     });
   }
@@ -94,7 +114,7 @@ export class Background {
     const graphics = new Graphics();
     const bandHeight = GROUND_Y / sky.length;
     sky.forEach((color, index) => {
-      graphics.rect(0, index * bandHeight, WORLD_WIDTH, bandHeight + 1).fill({ color });
+      graphics.rect(LEFT, index * bandHeight, SCENERY_WIDTH, bandHeight + 1).fill({ color });
     });
     return graphics;
   }
@@ -103,17 +123,17 @@ export class Background {
     const ground = new Graphics();
     // Fill and grass edge follow the same surface line, so there's never a gap between them.
     const surface: number[] = [];
-    for (let x = 0; x <= WORLD_WIDTH + TERRAIN_STEP; x += TERRAIN_STEP) {
+    for (let x = LEFT; x <= RIGHT + TERRAIN_STEP; x += TERRAIN_STEP) {
       surface.push(x, groundAt(x));
     }
-    ground.poly([...surface, WORLD_WIDTH + TERRAIN_STEP, GAME_HEIGHT, 0, GAME_HEIGHT]).fill({ color: colors.fill });
+    ground.poly([...surface, RIGHT + TERRAIN_STEP, GAME_HEIGHT, LEFT, GAME_HEIGHT]).fill({ color: colors.fill });
     ground.moveTo(surface[0], surface[1]);
     for (let index = 2; index < surface.length; index += 2) {
       ground.lineTo(surface[index], surface[index + 1]);
     }
     ground.stroke({ width: 8, color: colors.edge, join: 'round' });
-    for (let x = 25; x < WORLD_WIDTH; x += 70) {
-      ground.ellipse(x, groundAt(x) + 32 + (x % 3) * 8, 22, 6).fill({ color: colors.tufts, alpha: 0.35 });
+    for (let x = 25 - Math.ceil(SCENERY_MARGIN / 70) * 70; x < RIGHT; x += 70) {
+      ground.ellipse(x, groundAt(x) + 32 + (((x % 3) + 3) % 3) * 8, 22, 6).fill({ color: colors.tufts, alpha: 0.35 });
     }
     ground.zIndex = 0;
     return ground;

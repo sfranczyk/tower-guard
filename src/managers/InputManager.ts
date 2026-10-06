@@ -27,7 +27,8 @@ export interface InputManagerConfig {
   isPointerBlocked?: (point: Vec2) => boolean;
   worldPointFromScreen: (point: Vec2) => Vec2;
   eventTarget: HTMLElement;
-  screenSize: Vec2;
+  /** The view size in game px (its width changes with the window, see core/viewport.ts). */
+  screenSize: () => Vec2;
 }
 
 const normalize = (vector: Vec2): Vec2 => {
@@ -49,7 +50,7 @@ export class InputManager extends EventEmitter {
   private readonly isPointerBlocked?: (point: Vec2) => boolean;
   private readonly worldPointFromScreen: (point: Vec2) => Vec2;
   private readonly eventTarget: HTMLElement;
-  private readonly screenSize: Vec2;
+  private readonly screenSize: () => Vec2;
   private readonly keyState = new Set<string>();
   private dragStart: Vec2 | undefined;
   private lastAim: AimInput | undefined;
@@ -108,7 +109,7 @@ export class InputManager extends EventEmitter {
     this.isPointerBlocked = config.isPointerBlocked;
     this.worldPointFromScreen = config.worldPointFromScreen;
     this.eventTarget = config.eventTarget;
-    this.screenSize = { ...config.screenSize };
+    this.screenSize = config.screenSize;
     this.leftKey = config.leftKey ?? 'ArrowLeft';
     this.rightKey = config.rightKey ?? 'ArrowRight';
     this.upKey = config.upKey ?? 'KeyW';
@@ -171,8 +172,9 @@ export class InputManager extends EventEmitter {
 
   private toScreenPoint(event: PointerEvent): Vec2 {
     const rect = this.eventTarget.getBoundingClientRect();
-    const x = ((event.clientX - rect.left) / rect.width) * this.screenSize.x;
-    const y = ((event.clientY - rect.top) / rect.height) * this.screenSize.y;
+    const size = this.screenSize();
+    const x = ((event.clientX - rect.left) / rect.width) * size.x;
+    const y = ((event.clientY - rect.top) / rect.height) * size.y;
     return { x, y };
   }
 
