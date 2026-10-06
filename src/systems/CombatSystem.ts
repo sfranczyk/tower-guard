@@ -156,10 +156,11 @@ export class CombatSystem {
     const bowmanAirborne = bowman.y < groundAt(bowman.x) - 20;
     if (!bowman.isInTower && !bowman.isDead && !bowmanAirborne && overlapsBowman && Math.abs(enemy.y - bowman.y) <= 45) {
       if (enemy.canAttack()) {
-        // Damage lands with the club: a bowman who jumps away or hides in the keep mid-swing dodges it.
+        // Damage lands with the club: to dodge, the bowman has to get beyond this enemy's strike reach
+        // (or into the keep) before it lands; jumping on the spot doesn't help.
         enemy.playAttackAnimation(() => {
-          const stillInReach = Math.abs(enemy.x - bowman.x) <= MELEE_REACH && Math.abs(enemy.y - bowman.y) <= 45;
-          if (stillInReach && !bowman.isInTower && !bowman.isDead && bowman.y >= groundAt(bowman.x) - 20) {
+          const stillInReach = Math.abs(enemy.x - bowman.x) <= enemy.strikeReach && Math.abs(enemy.y - bowman.y) <= 45 * enemy.size;
+          if (stillInReach && !bowman.isInTower && !bowman.isDead) {
             this.events.bowmanDamaged(randomEnemyDamage());
             this.world.effects.bloodBurst({ x: bowman.x, y: bowman.y - 20 });
           }

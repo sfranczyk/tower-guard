@@ -41,34 +41,28 @@ export class AimOverlay extends Graphics {
     const visualRadius = aim.strength.distance * AIM_VISUAL_RADIUS_FACTOR;
     const cursorRadius = Math.hypot(aim.start.x - aim.current.x, aim.start.y - aim.current.y);
 
-    this.circle(origin.x, origin.y, 4).fill({ color: aimColor, alpha: 1 });
-    this.moveTo(origin.x, origin.y)
-      .lineTo(origin.x + aim.direction.x * visualRadius, origin.y + aim.direction.y * visualRadius)
-      .stroke({ width: 1.5, color: aimColor, alpha: 0.9 });
-    this.circle(aim.start.x, aim.start.y, visualRadius).stroke({ width: 1, color: aimColor, alpha: 0.8 });
-    this.circle(origin.x, origin.y, visualRadius).stroke({ width: 1, color: aimColor, alpha: 0.8 });
-    this.circle(aim.start.x, aim.start.y, 4).fill({ color: aimColor, alpha: 0.35 });
     this.circle(aim.start.x, aim.start.y, visualRadius).fill({ color: aimColor, alpha: 0.1 });
     this.circle(origin.x, origin.y, visualRadius).fill({ color: aimColor, alpha: 0.1 });
-    this.circle(aim.start.x, aim.start.y, cursorRadius).stroke({ width: 1, color: aimColor, alpha: 0.45 });
+    this.ring(aim.start, visualRadius, aimColor, 0.8);
+    this.ring(origin, visualRadius, aimColor, 0.8);
+    this.ring(aim.start, cursorRadius, aimColor, 0.45);
+    this.segment(origin, { x: origin.x + aim.direction.x * visualRadius, y: origin.y + aim.direction.y * visualRadius }, aimColor, 0.9, 1.5);
+    this.dot(origin, 4, aimColor, 1);
+    this.dot(aim.start, 4, aimColor, 0.35);
 
     const dx = aim.current.x - aim.start.x;
     const dy = aim.current.y - aim.start.y;
     const length = Math.hypot(dx, dy);
     if (length > Number.EPSILON) {
-      this.moveTo(aim.start.x, aim.start.y).lineTo(
-        aim.start.x + (dx / length) * cursorRadius,
-        aim.start.y + (dy / length) * cursorRadius,
-      ).stroke({ width: 1, color: aimColor, alpha: 0.7 });
+      this.segment(aim.start, { x: aim.start.x + (dx / length) * cursorRadius, y: aim.start.y + (dy / length) * cursorRadius }, aimColor, 0.7);
     }
   }
 
   /** Dotted predicted path, fading towards the landing point. */
   private drawTrajectory(points: readonly Vec2[]): void {
     for (let index = TRAJECTORY_DOT_EVERY - 1; index < points.length; index += TRAJECTORY_DOT_EVERY) {
-      const { x, y } = points[index];
       const alpha = 0.85 - 0.55 * (index / points.length);
-      this.circle(x, y, 2).fill({ color: this.colors.trajectory, alpha });
+      this.dot(points[index], 2, this.colors.trajectory, alpha);
     }
   }
 
@@ -78,11 +72,30 @@ export class AimOverlay extends Graphics {
     }
     const radius = this.lastReleaseRadius;
     const previousColor = this.colors.previousShot;
-    this.circle(origin.x, origin.y, radius).stroke({ width: 1, color: previousColor, alpha: 0.55 });
-    this.moveTo(origin.x, origin.y).lineTo(
-      origin.x + this.lastReleaseDirection.x * radius,
-      origin.y + this.lastReleaseDirection.y * radius,
-    ).stroke({ width: 1, color: previousColor, alpha: 0.55 });
     this.circle(origin.x, origin.y, radius).fill({ color: previousColor, alpha: 0.12 });
+    this.ring(origin, radius, previousColor, 0.55);
+    this.segment(origin, { x: origin.x + this.lastReleaseDirection.x * radius, y: origin.y + this.lastReleaseDirection.y * radius }, previousColor, 0.55);
+  }
+
+  /** Circle outline, over a dark halo when the battleground asks for one. */
+  private ring(center: Vec2, radius: number, color: number, alpha: number, width = 1): void {
+    if (this.colors.halo !== undefined) {
+      this.circle(center.x, center.y, radius).stroke({ width: width + 2.5, color: this.colors.halo, alpha: alpha * 0.6 });
+    }
+    this.circle(center.x, center.y, radius).stroke({ width: width + (this.colors.halo !== undefined ? 0.5 : 0), color, alpha });
+  }
+
+  private segment(from: Vec2, to: Vec2, color: number, alpha: number, width = 1): void {
+    if (this.colors.halo !== undefined) {
+      this.moveTo(from.x, from.y).lineTo(to.x, to.y).stroke({ width: width + 2.5, color: this.colors.halo, alpha: alpha * 0.6, cap: 'round' });
+    }
+    this.moveTo(from.x, from.y).lineTo(to.x, to.y).stroke({ width: width + (this.colors.halo !== undefined ? 0.5 : 0), color, alpha, cap: 'round' });
+  }
+
+  private dot(center: Vec2, radius: number, color: number, alpha: number): void {
+    if (this.colors.halo !== undefined) {
+      this.circle(center.x, center.y, radius + 1.2).fill({ color: this.colors.halo, alpha: alpha * 0.7 });
+    }
+    this.circle(center.x, center.y, radius).fill({ color, alpha });
   }
 }

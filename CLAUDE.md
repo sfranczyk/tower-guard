@@ -65,7 +65,8 @@ src/
   (scaled per projectile like drag), so arrows, the trajectory preview and enemy archer aim all use it;
   the status line shows its direction and strength.
 - **Aim colours**: aim circles, the predicted path and the player's arrow trails use `aimColorsOf(battleground)`
-  (`DEFAULT_AIM_COLORS`, overridden per map, e.g. deep violet on the desert where gold disappears).
+  (`DEFAULT_AIM_COLORS`, overridden per map, e.g. deep violet on the desert where gold disappears; an
+  optional `halo` adds a dark outline, used on Frostpeak Pass).
 - **UI** is HTML (`ui/template.ts`, styles in `index.html`) in the landscape style: flat shapes, cream panels,
   chunky gold/cream buttons (`primary-button`, `secondary-button`), the Fredoka display font, flat SVG icons
   (`ui/icons.ts`) and health bars in the HUD (`ui/Hud.ts`). Weapons are square slots (up to `WEAPON_SLOTS` = 5 in
@@ -98,7 +99,8 @@ src/
   never jumps; drawStickman tilts the torso about the hip so the feet stay put.
   Melee damage lands with the club: `Enemy.playAttackAnimation(onImpact)` runs `onImpact` at
   `attackImpactProgress(style)` (the strike key) and drops it if the enemy is knocked down, killed or starts
-  cheering first; a bowman who jumps away or hides mid-swing dodges the hit.
+  cheering first. The hit lands if the bowman is still within the enemy's `strikeReach` (ENEMY_LOOKS:
+  runner 45, fighter 55, brute 85 px) and not in the keep; jumping on the spot doesn't dodge.
 - **Joint poses** (`rendering/stickmanPose.ts`): `JointPose` + `drawJointPose` draw a stickman from explicit
   joint positions (skeleton look, optional club). Falls and cheers produce JointPoses.
 - **Cheers** (`rendering/stickmanCheer.ts`): three looping victory animations (`cheerJump`, `cheerFist`,

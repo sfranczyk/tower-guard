@@ -16,6 +16,8 @@ export interface AimColors {
   trajectory: number;
   trailGlow: number;
   trailCore: number;
+  /** Optional dark outline under the aim lines, circles and path dots, for busy or pale backgrounds. */
+  halo?: number;
 }
 
 export const DEFAULT_AIM_COLORS: Readonly<AimColors> = {
@@ -135,13 +137,14 @@ export const BATTLEGROUNDS: Readonly<Record<BattlegroundId, Battleground>> = {
     ground: { fill: 0x8b9479, edge: 0xeef3f5, tufts: 0xdfe7ea },
     terrainAmplitude: 16,
     wind: 150,
-    // Gold vanishes against snow and the pale sky: deep red, with dark blue for the previous shot.
+    // Gold vanishes against snow, grey-blue rock and the pale sky: vivid crimson outlined in dark navy.
     aimColors: {
-      aim: 0xc0182e,
-      previousShot: 0x1d3f7a,
-      trajectory: 0xb0122a,
+      aim: 0xff1f45,
+      previousShot: 0x2b6fd6,
+      trajectory: 0xff1f45,
       trailGlow: 0xff5a6e,
       trailCore: 0x9a0f24,
+      halo: 0x141c2b,
     },
     ui: { accent: '#5b6f8c', backdrop: '#1c2533' },
   },

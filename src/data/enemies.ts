@@ -44,18 +44,23 @@ export const splashGibChance = (damage: number, maxHealth: number): number => {
 export const blowsApart = (cause: string, damage: number, maxHealth: number, roll = Math.random()): boolean =>
   cause === 'blast' || (cause === 'explosion' && roll < splashGibChance(damage, maxHealth));
 
-/** How each enemy type looks and moves: body size (1 = a normal stickman), club swing, run or walk. */
+/** How each enemy type looks, moves and swings: body size (1 = a normal stickman), club swing, run or walk. */
 export interface EnemyLook {
   size: number;
   attackStyle: AttackStyle;
   runs: boolean;
+  /**
+   * How far (px) the club reaches when it lands: a bowman closer than this takes the hit, so to dodge he
+   * has to get this far away during the swing (jumping on the spot doesn't help).
+   */
+  strikeReach: number;
 }
 
 export const ENEMY_LOOKS: Readonly<Record<EnemyType, EnemyLook>> = {
-  basic: { size: 1, attackStyle: 'overhead', runs: false },
+  basic: { size: 1, attackStyle: 'overhead', runs: false, strikeReach: 55 },
   // Runners sprint in and swing a short club from below.
-  fast: { size: 1, attackStyle: 'uppercut', runs: true },
-  // Brutes stand half again as tall and chop with a long club in both hands.
-  tank: { size: 1.5, attackStyle: 'twoHanded', runs: false },
-  archer: { size: 1, attackStyle: 'overhead', runs: false },
+  fast: { size: 1, attackStyle: 'uppercut', runs: true, strikeReach: 45 },
+  // Brutes stand half again as tall and chop with a long club in both hands: hard to step away from.
+  tank: { size: 1.5, attackStyle: 'twoHanded', runs: false, strikeReach: 85 },
+  archer: { size: 1, attackStyle: 'overhead', runs: false, strikeReach: 55 },
 };

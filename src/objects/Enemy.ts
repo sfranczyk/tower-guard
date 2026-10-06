@@ -119,6 +119,16 @@ export default class Enemy extends Container {
     this.drawHealthBar();
   }
 
+  /** Body size (1 = a normal stickman; brutes are 1.5). */
+  public get size(): number {
+    return this.look.size;
+  }
+
+  /** How far the club reaches when it lands (see EnemyLook.strikeReach). */
+  public get strikeReach(): number {
+    return this.look.strikeReach;
+  }
+
   public get isArcher(): boolean {
     return this.kind === 'archer';
   }

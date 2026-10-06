@@ -72,8 +72,17 @@ describe('splashGibChance', () => {
 
 describe('ENEMY_LOOKS', () => {
   it('makes runners run with an uppercut and brutes 1.5× tall with a two-handed club', () => {
-    expect(ENEMY_LOOKS.fast).toEqual({ size: 1, attackStyle: 'uppercut', runs: true });
-    expect(ENEMY_LOOKS.tank).toEqual({ size: 1.5, attackStyle: 'twoHanded', runs: false });
+    expect(ENEMY_LOOKS.fast).toMatchObject({ size: 1, attackStyle: 'uppercut', runs: true });
+    expect(ENEMY_LOOKS.tank).toMatchObject({ size: 1.5, attackStyle: 'twoHanded', runs: false });
     expect(ENEMY_LOOKS.basic.size).toBe(1);
+  });
+});
+
+describe('strike reach', () => {
+  it('is longest for the brute and shortest for the runner, all beyond where a swing starts', () => {
+    expect(ENEMY_LOOKS.tank.strikeReach).toBeGreaterThan(ENEMY_LOOKS.basic.strikeReach);
+    expect(ENEMY_LOOKS.basic.strikeReach).toBeGreaterThan(ENEMY_LOOKS.fast.strikeReach);
+    // Swings start within 25 px (CombatSystem MELEE_REACH), so the bowman always has to move to dodge.
+    Object.values(ENEMY_LOOKS).forEach((look) => expect(look.strikeReach).toBeGreaterThan(25));
   });
 });
