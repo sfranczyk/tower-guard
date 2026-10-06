@@ -56,4 +56,9 @@ export const ICON_ENEMIES = {
     <path d="M18 15l6-9" stroke="#c4932f" stroke-width="4.2"/>`),
   archer: figure(`<circle cx="11" cy="6" r="3" stroke-width="2"/><path d="M11 9v9M11 18l-4 7M11 18l4 7M11 12l6 1M11 13l6 0" stroke-width="2"/>
     <path d="M18 5c4 5 4 11 0 16" stroke="#8a6238" stroke-width="2"/><path d="M18 5v16" stroke="#9aa4ae" stroke-width="1"/>`),
+  dragon: `<svg class="icon" viewBox="0 0 28 28" aria-hidden="true">
+    <path d="M12 13L5 3l2 9z" fill="#8e3a33"/><path d="M13 13l1-11 5 10z" fill="#9c3d35"/>
+    <ellipse cx="13" cy="17" rx="8" ry="4" fill="#b5473a"/><ellipse cx="14" cy="18.5" rx="6" ry="1.8" fill="#f0c38a"/>
+    <path d="M19 15l4-5 3 1-2 3z" fill="#b5473a"/><path d="M5 18l-4 3 5-1z" fill="#8e3a33"/>
+    <circle cx="12" cy="10" r="1.8" fill="none" stroke="#2c3a38" stroke-width="1.4"/><path d="M12 12v2" stroke="#2c3a38" stroke-width="1.4"/></svg>`,
 } as const;

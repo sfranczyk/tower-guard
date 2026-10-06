@@ -133,8 +133,14 @@ const archerTension = (timeMs: number): number => {
   return Math.max(0, 1 - (t - 0.8) / 0.06);
 };
 
+/** Game control of the archer rider: aim (local radians, + = down) and draw (0..1), instead of the lab loop. */
+export interface ArcherControl {
+  aim: number;
+  tension: number;
+}
+
 /** Pose at `timeMs` (wings loop every DRAGON_FLAP_MS). */
-export const getDragonPose = (timeMs: number, riderKind: DragonRider = 'spear'): DragonPose => {
+export const getDragonPose = (timeMs: number, riderKind: DragonRider = 'spear', archer?: ArcherControl): DragonPose => {
   const phase = ((timeMs % DRAGON_FLAP_MS) + DRAGON_FLAP_MS) % DRAGON_FLAP_MS / DRAGON_FLAP_MS * Math.PI * 2;
   const flap = Math.sin(phase);
   // The body rises on the downstroke (a quarter period after the wings peak).
@@ -168,8 +174,9 @@ export const getDragonPose = (timeMs: number, riderKind: DragonRider = 'spear'):
   const spearArm = reach(shoulder, { x: shoulder.x - 2, y: shoulder.y - 34 + Math.sin(phase) * 2 });
   const spearAngle = -1.05 + Math.sin(phase - 0.6) * 0.04;
   const spearDirection = { x: Math.cos(spearAngle), y: Math.sin(spearAngle) };
-  const tension = riderKind === 'archer' ? archerTension(timeMs) : 0;
-  const rig = riderKind === 'archer' ? placeRig(getArcherRig(ARCHER_AIM - lean, tension, 1), hip, lean) : undefined;
+  const tension = riderKind === 'archer' ? (archer?.tension ?? archerTension(timeMs)) : 0;
+  const aim = archer?.aim ?? ARCHER_AIM;
+  const rig = riderKind === 'archer' ? placeRig(getArcherRig(aim - lean, tension, 1), hip, lean) : undefined;
   const rider: JointPose = {
     hip,
     shoulder,
@@ -206,7 +213,7 @@ export const getDragonPose = (timeMs: number, riderKind: DragonRider = 'spear'):
       rig,
       tension,
       arrow: tension > 0.05
-        ? { nock: rig.stringNock, tip: add(rig.stringNock, rotate({ x: 36, y: 0 }, ARCHER_AIM)) }
+        ? { nock: rig.stringNock, tip: add(rig.stringNock, rotate({ x: 36, y: 0 }, aim)) }
         : undefined,
     } : undefined,
   };
@@ -231,8 +238,8 @@ const tapered = (g: Graphics, points: Vec2[], from: number, to: number, color: n
 };
 
 /** Draws the dragon and its rider (spear or bow), at `timeMs`. */
-export const drawDragonRider = (g: Graphics, timeMs: number, riderKind: DragonRider = 'spear'): void => {
-  const pose = getDragonPose(timeMs, riderKind);
+export const drawDragonRider = (g: Graphics, timeMs: number, riderKind: DragonRider = 'spear', archer?: ArcherControl): DragonPose => {
+  const pose = getDragonPose(timeMs, riderKind, archer);
   g.clear();
   drawWing(g, pose.farWing, DRAGON.wingFar);
   // The rider's far leg is on the other side of the dragon: drawn before the body so it's hidden.
@@ -289,10 +296,10 @@ export const drawDragonRider = (g: Graphics, timeMs: number, riderKind: DragonRi
       g.moveTo(arrow.nock.x, arrow.nock.y).lineTo(arrow.tip.x, arrow.tip.y).stroke({ width: 1.6, color: DRAGON.spear, cap: 'round' });
       g.circle(arrow.tip.x, arrow.tip.y, 1.8).fill({ color: DRAGON.spearTip });
     }
-    return;
+    return pose;
   }
   if (!pose.spear) {
-    return;
+    return pose;
   }
   const rider = g;
   rider.moveTo(pose.spear.butt.x, pose.spear.butt.y).lineTo(pose.spear.tip.x, pose.spear.tip.y).stroke({ width: 3, color: DRAGON.spear, cap: 'round' });
@@ -302,4 +309,5 @@ export const drawDragonRider = (g: Graphics, timeMs: number, riderKind: DragonRi
   const point = pose.spear.tip;
   rider.poly([point.x + unit.x * 10, point.y + unit.y * 10, point.x - unit.y * 4, point.y + unit.x * 4, point.x + unit.y * 4, point.y - unit.x * 4])
     .fill({ color: DRAGON.spearTip });
+  return pose;
 };

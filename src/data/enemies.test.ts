@@ -83,6 +83,6 @@ describe('strike reach', () => {
     expect(ENEMY_LOOKS.tank.strikeReach).toBeGreaterThan(ENEMY_LOOKS.basic.strikeReach);
     expect(ENEMY_LOOKS.basic.strikeReach).toBeGreaterThan(ENEMY_LOOKS.fast.strikeReach);
     // Swings start within 25 px (CombatSystem MELEE_REACH), so the bowman always has to move to dodge.
-    Object.values(ENEMY_LOOKS).forEach((look) => expect(look.strikeReach).toBeGreaterThan(25));
+    (['basic', 'fast', 'tank', 'archer'] as const).forEach((type) => expect(ENEMY_LOOKS[type].strikeReach).toBeGreaterThan(25));
   });
 });

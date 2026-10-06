@@ -60,6 +60,17 @@ export const ENEMY_ARCHER_COOLDOWN_MS = 1700;
 export const ENEMY_ARCHER_SPREAD = 0.07;
 /** Draw power (0..1) of enemy shots and the damage they deal to the bowman or the keep. */
 export const ENEMY_ARROW_POWER = 0.75;
+/**
+ * Dragon archer: flies at DRAGON_ALTITUDE (y), hovers DRAGON_HOVER_OFFSET in front of the bowman, shoots
+ * within DRAGON_RANGE, drawing for DRAGON_DRAW_MS once every DRAGON_SHOT_INTERVAL_MS.
+ */
+export const DRAGON_ALTITUDE = 180;
+export const DRAGON_HOVER_OFFSET = 260;
+export const DRAGON_RANGE = 520;
+export const DRAGON_DRAW_MS = 900;
+export const DRAGON_SHOT_INTERVAL_MS = 2800;
+/** Dragon drawn at this scale (its art is ~300 px long with the tail). */
+export const DRAGON_SCALE = 0.42;
 export const ENEMY_ARROW_DAMAGE = 8;
 export const ENEMY_GROUND_Y = GROUND_Y;
 

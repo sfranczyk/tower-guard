@@ -6,12 +6,13 @@ import type { EnemyType } from '../types';
  * fought, and the starting health of the bowman and the keep. Pure data + validation.
  */
 
-export const ENEMY_TYPES: readonly EnemyType[] = ['basic', 'fast', 'tank', 'archer'];
+export const ENEMY_TYPES: readonly EnemyType[] = ['basic', 'fast', 'tank', 'archer', 'dragon'];
 export const ENEMY_TYPE_LABELS: Readonly<Record<EnemyType, string>> = {
   basic: 'Fighter',
   fast: 'Runner',
   tank: 'Brute',
   archer: 'Archer',
+  dragon: 'Dragon',
 };
 
 export const MIN_WAVES = 1;
@@ -39,11 +40,11 @@ export interface SandboxSettings {
 
 /** Default waves get a little harder each time and alternate battlegrounds. */
 const DEFAULT_WAVE_ENEMIES: readonly WaveEnemyCounts[] = [
-  { basic: 4, fast: 0, tank: 0, archer: 1 },
-  { basic: 4, fast: 2, tank: 0, archer: 1 },
-  { basic: 4, fast: 3, tank: 1, archer: 2 },
-  { basic: 5, fast: 3, tank: 2, archer: 2 },
-  { basic: 6, fast: 4, tank: 3, archer: 3 },
+  { basic: 4, fast: 0, tank: 0, archer: 1, dragon: 0 },
+  { basic: 4, fast: 2, tank: 0, archer: 1, dragon: 0 },
+  { basic: 4, fast: 3, tank: 1, archer: 2, dragon: 0 },
+  { basic: 5, fast: 3, tank: 2, archer: 2, dragon: 1 },
+  { basic: 6, fast: 4, tank: 3, archer: 3, dragon: 1 },
 ];
 
 export const createDefaultSandbox = (): SandboxSettings => ({

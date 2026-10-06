@@ -28,11 +28,12 @@ import { waveEnemyTotal, waveSpawnOrder, type WaveSetup } from '../data/sandbox'
 import InputManager, { type AimInput } from '../managers/InputManager';
 import Arrow from '../objects/Arrow';
 import Bowman from '../objects/Bowman';
+import DragonEnemy from '../objects/DragonEnemy';
 import Enemy from '../objects/Enemy';
 import Tower, { TOWER_HEIGHT } from '../objects/Tower';
 import { AimOverlay } from '../rendering/AimOverlay';
 import { Background } from '../rendering/Background';
-import { CombatSystem } from '../systems/CombatSystem';
+import { CombatSystem, type Foe } from '../systems/CombatSystem';
 import { EffectsSystem } from '../systems/EffectsSystem';
 import { Snow } from '../rendering/Snow';
 import { WeatherSystem } from '../systems/WeatherSystem';
@@ -83,7 +84,7 @@ export class GameScene extends Scene {
   private readonly battleground: Battleground;
   private readonly totalEnemies: number;
   private readonly world = new Container();
-  private readonly enemies: Enemy[] = [];
+  private readonly enemies: Foe[] = [];
   private readonly arrows: Arrow[] = [];
   private readonly debugGraphics = new Graphics();
   private readonly aimOverlay = new AimOverlay();
@@ -344,7 +345,9 @@ export class GameScene extends Scene {
       return;
     }
     const stats = getEnemyStats(type, 1);
-    const enemy = new Enemy(ENEMY_SPAWN_X, stats.health, stats.speed, 'bowman', type);
+    const enemy = type === 'dragon'
+      ? new DragonEnemy(ENEMY_SPAWN_X, stats.health, stats.speed)
+      : new Enemy(ENEMY_SPAWN_X, stats.health, stats.speed, 'bowman', type);
     enemy.visible = this.enemiesVisible;
     this.enemies.push(enemy);
     this.spawnedEnemies += 1;

@@ -1,6 +1,7 @@
 import type { Graphics } from 'pixi.js';
 import {
   BOWMAN_Y,
+  DRAGON_RANGE,
   ENEMY_ARCHER_RANGE,
   ENEMY_ARCHER_SPREAD,
   ENEMY_ARROW_DAMAGE,
@@ -21,6 +22,7 @@ import type { SoundId } from '../audio/SoundManager';
 import Arrow from '../objects/Arrow';
 import { bowSpeed } from '../data/projectiles';
 import type Bowman from '../objects/Bowman';
+import DragonEnemy from '../objects/DragonEnemy';
 import type Enemy from '../objects/Enemy';
 import { TOWER_HEIGHT } from '../objects/Tower';
 import type Tower from '../objects/Tower';
@@ -46,7 +48,7 @@ export interface CombatWorld {
   readonly bowman: Bowman;
   readonly playerTower: Tower;
   readonly enemyTower: Tower;
-  readonly enemies: readonly Enemy[];
+  readonly enemies: readonly Foe[];
   readonly arrows: readonly Arrow[];
   readonly effects: EffectsSystem;
   readonly debug: Graphics;
@@ -64,7 +66,7 @@ export interface CombatEvents {
 }
 
 interface EnemyHit {
-  enemy: Enemy;
+  enemy: Foe;
   time: number;
   headshot: boolean;
 }
@@ -76,13 +78,16 @@ const pointAlong = (start: Vec2, travel: Vec2, time: number): Vec2 => ({
   y: start.y + travel.y * time,
 });
 
+/** A ground enemy (stickman) or a flying dragon archer. */
+export type Foe = Enemy | DragonEnemy;
+
 /** Enemy movement and melee attacks, arrow flight and every arrow hit (enemies and enemy tower). */
 export class CombatSystem {
   /** Enemies the bowman has jumped over; they no longer hit him. */
   /** Enemies each arrow has already hit, so piercing arrows hit each enemy once. */
-  private readonly arrowHits = new Map<Arrow, Set<Enemy>>();
+  private readonly arrowHits = new Map<Arrow, Set<Foe>>();
   /** Cached aim per enemy archer. */
-  private readonly archerAim = new Map<Enemy, { angle: number; ageMs: number }>();
+  private readonly archerAim = new Map<Foe, { angle: number; ageMs: number }>();
 
   public constructor(
     private readonly world: CombatWorld,
@@ -113,9 +118,14 @@ export class CombatSystem {
       });
   }
 
-  private updateEnemy(enemy: Enemy, deltaMs: number): void {
+  private updateEnemy(enemy: Foe, deltaMs: number): void {
     if (enemy.isCelebrating) {
       enemy.updateAnimation(deltaMs, false);
+      this.drawDebugHitboxes(enemy);
+      return;
+    }
+    if (enemy instanceof DragonEnemy) {
+      this.updateDragon(enemy, deltaMs);
       this.drawDebugHitboxes(enemy);
       return;
     }
@@ -171,7 +181,7 @@ export class CombatSystem {
     enemy.clearHitTint();
   }
 
-  private drawDebugHitboxes(enemy: Enemy): void {
+  private drawDebugHitboxes(enemy: Foe): void {
     if (!SHOW_HITBOX_DEBUG) {
       return;
     }
@@ -216,13 +226,47 @@ export class CombatSystem {
   }
 
   /**
+   * Dragon archer: flies to its hover point in front of the bowman (or the keep, if he's hiding), and
+   * while the target is in range below it the rider aims with the same ballistics and wind and shoots.
+   */
+  private updateDragon(dragon: DragonEnemy, deltaMs: number): void {
+    const { bowman, playerTower } = this.world;
+    const aimPoint = bowman.isInTower
+      ? { x: playerTower.x, y: GROUND_Y - TOWER_HEIGHT * 0.55 }
+      : { x: bowman.x, y: bowman.y - BOWMAN_CHEST };
+    dragon.update(deltaMs, aimPoint.x);
+    const release = dragon.getBowReleasePoint();
+    const inRange = release.x > aimPoint.x && release.x - aimPoint.x <= DRAGON_RANGE;
+    if (!inRange || bowman.isDead) {
+      dragon.relax(deltaMs);
+      this.archerAim.delete(dragon);
+    } else {
+      const speed = bowSpeed(ENEMY_ARROW_POWER);
+      const cached = this.archerAim.get(dragon);
+      let angle = cached?.angle;
+      if (!cached || cached.ageMs >= ARCHER_AIM_REFRESH_MS) {
+        angle = solveLaunchAngle(release, aimPoint, speed, Arrow.getFlightParams('normal', this.world.wind), GROUND_Y);
+        this.archerAim.set(dragon, { angle, ageMs: 0 });
+      } else {
+        cached.ageMs += deltaMs;
+      }
+      if (dragon.aim(angle ?? Math.PI, deltaMs)) {
+        const spread = (Math.random() * 2 - 1) * ENEMY_ARCHER_SPREAD;
+        this.events.enemyShot(dragon.getBowReleasePoint(), (angle ?? Math.PI) + spread, speed * (0.97 + Math.random() * 0.06));
+      }
+    }
+    dragon.updateAnimation(deltaMs);
+  }
+
+  /**
    * A lightning bolt hit the ground at `point`: everyone within LIGHTNING_RADIUS takes LIGHTNING_DAMAGE
    * (enemies are knocked down or killed stiff). The bowman is safe inside the keep.
    */
   public lightningStrike(point: Vec2): void {
     const { bowman, enemies, effects } = this.world;
     effects.lightningStrike(point);
-    struckBy(point.x, LIGHTNING_RADIUS, enemies.filter((enemy) => enemy.isAlive()))
+    // Ground strikes don't reach flying dragons.
+    struckBy(point.x, LIGHTNING_RADIUS, enemies.filter((enemy) => enemy.isAlive() && !enemy.isFlying))
       .forEach((enemy) => enemy.takeDamage(LIGHTNING_DAMAGE, { cause: 'lightning', fromX: point.x }));
     if (!bowman.isInTower && !bowman.isDead && struckBy(point.x, LIGHTNING_RADIUS, [bowman]).length > 0) {
       this.events.bowmanDamaged(LIGHTNING_DAMAGE);
@@ -266,10 +310,10 @@ export class CombatSystem {
     }
   }
 
-  private resolveArrow(arrow: Arrow, activeEnemies: readonly Enemy[]): void {
+  private resolveArrow(arrow: Arrow, activeEnemies: readonly Foe[]): void {
     const { start, end } = arrow.getTravelSegment();
     const travel = { x: end.x - start.x, y: end.y - start.y };
-    const hitEnemies = this.arrowHits.get(arrow) ?? new Set<Enemy>();
+    const hitEnemies = this.arrowHits.get(arrow) ?? new Set<Foe>();
     this.arrowHits.set(arrow, hitEnemies);
 
     const enemyHit = activeEnemies
@@ -296,7 +340,7 @@ export class CombatSystem {
   }
 
   /** Earliest hit of the segment on an enemy's head or body; the head wins ties. */
-  private static hitTest(start: Vec2, travel: Vec2, enemy: Enemy): EnemyHit | undefined {
+  private static hitTest(start: Vec2, travel: Vec2, enemy: Foe): EnemyHit | undefined {
     const headTime = segmentHitTime(start, travel, enemy.getHeadBounds());
     const bodyTime = segmentHitTime(start, travel, enemy.getPhysicsBounds());
     if (headTime !== undefined && (bodyTime === undefined || headTime <= bodyTime)) {
@@ -305,7 +349,7 @@ export class CombatSystem {
     return bodyTime === undefined ? undefined : { enemy, time: bodyTime, headshot: false };
   }
 
-  private hitTower(arrow: Arrow, impactPoint: Vec2, activeEnemies: readonly Enemy[]): void {
+  private hitTower(arrow: Arrow, impactPoint: Vec2, activeEnemies: readonly Foe[]): void {
     const explosive = arrow.type === 'explosive';
     this.world.enemyTower.takeDamage(ENEMY_TOWER_DAMAGE * (explosive ? 1.25 : 1));
     if (explosive) {
@@ -320,7 +364,7 @@ export class CombatSystem {
    * Explosion visuals plus splash damage and knockback for every living enemy whose body centre is
    * within EXPLOSION_RADIUS (except `directHit`, which already took the arrow's damage).
    */
-  private explode(point: Vec2, activeEnemies: readonly Enemy[], directHit?: Enemy): void {
+  private explode(point: Vec2, activeEnemies: readonly Foe[], directHit?: Foe): void {
     this.world.effects.explosion(point);
     this.events.sound('explosion', point);
     activeEnemies
@@ -341,8 +385,8 @@ export class CombatSystem {
     arrow: Arrow,
     { enemy, headshot }: EnemyHit,
     impactPoint: Vec2,
-    hitEnemies: Set<Enemy>,
-    activeEnemies: readonly Enemy[],
+    hitEnemies: Set<Foe>,
+    activeEnemies: readonly Foe[],
   ): void {
     const { effects, debug } = this.world;
     effects.bloodBurst(impactPoint);

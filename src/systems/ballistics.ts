@@ -103,7 +103,8 @@ const heightAtX = (start: Vec2, velocity: Vec2, params: FlightParams, targetX: n
 export const solveLaunchAngle = (start: Vec2, target: Vec2, speed: number, params: FlightParams, groundY: number): number => {
   const direction = Math.sign(target.x - start.x) || 1;
   let best = { angle: direction > 0 ? 0 : Math.PI, miss: Number.POSITIVE_INFINITY };
-  for (let elevation = -0.6; elevation <= 1.3; elevation += 0.01) {
+  // From −1 (steeply down, e.g. a dragon rider shooting from the air) to 1.3 (high lob).
+  for (let elevation = -1; elevation <= 1.3; elevation += 0.01) {
     const velocity = { x: direction * Math.cos(elevation) * speed, y: -Math.sin(elevation) * speed };
     const y = heightAtX(start, velocity, params, target.x, groundY);
     const miss = y === undefined ? Number.POSITIVE_INFINITY : Math.abs(y - target.y);

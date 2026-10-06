@@ -119,6 +119,9 @@ export default class Enemy extends Container {
     this.drawHealthBar();
   }
 
+  /** Ground enemies walk; only dragons fly (lightning strikes the ground, not the sky). */
+  public readonly isFlying = false;
+
   /** Body size (1 = a normal stickman; brutes are 1.5). */
   public get size(): number {
     return this.look.size;

@@ -1,4 +1,5 @@
-export type EnemyType = 'basic' | 'fast' | 'tank' | 'archer';
+/** 'dragon' is a flying dragon with an archer rider (objects/DragonEnemy.ts). */
+export type EnemyType = 'basic' | 'fast' | 'tank' | 'archer' | 'dragon';
 /** 'fragment' is one of the small arrows a shrapnel arrow bursts into (not selectable). */
 export type ProjectileType = 'normal' | 'explosive' | 'piercing' | 'shrapnel' | 'fragment';
 

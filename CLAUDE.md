@@ -106,7 +106,13 @@ src/
 - **Cheers** (`rendering/stickmanCheer.ts`): three looping victory animations (`cheerJump`, `cheerFist`,
   `cheerWave`), legs solved with two-bone IK so planted feet don't slide; tests check limb lengths, ground,
   knees and loop continuity. `Enemy.celebrate()` picks one at random when the enemies win.
-- **Dragon rider** (`rendering/dragon.ts`, lab only for now): `getDragonPose` is pure (tested: loop, rider in the
+- **Dragon archer enemy** (`EnemyType 'dragon'`, `objects/DragonEnemy.ts`): flies at `DRAGON_ALTITUDE`, hovers
+  `DRAGON_HOVER_OFFSET` in front of the bowman (`systems/dragonFlight.ts`, pure), and `CombatSystem.updateDragon`
+  aims the rider's bow like an enemy archer (same ballistics and wind) and fires hostile arrows. Hitboxes: the
+  dragon's body, and the rider (head and shoulders) as the headshot zone, reachable with lobbed arrows since
+  the body shields him from below. Arrows stick into it. Killed, it falls out of the sky and lies on the
+  ground; ground lightning skips it (`isFlying`). Combat code takes `Foe = Enemy | DragonEnemy`.
+- **Dragon rider** (`rendering/dragon.ts`, also used by the lab): `getDragonPose` is pure (tested: loop, rider in the
   saddle, smooth wings); side-view wing beat with foreshortening, body bob, undulating neck and tail; the
   rider is a JointPose sitting astride: the far leg is drawn before the dragon's body (`drawRearLeg`) so it's
   hidden, the rest on top (`drawJointPose(..., { append: true, hideRearLeg: true })`). Riders: `'spear'` (reins

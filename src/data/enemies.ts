@@ -13,6 +13,8 @@ const BASE_STATS: Readonly<Record<EnemyType, EnemyStats>> = {
   tank: { health: Math.round(ENEMY_HEALTH * 2.6), speed: ENEMY_SPEED * 0.62 },
   // Fragile, keeps its distance and shoots.
   archer: { health: Math.round(ENEMY_HEALTH * 0.8), speed: ENEMY_SPEED * 0.9 },
+  // Flying archer mount: tough, flies in steadily (speed is its horizontal flight speed).
+  dragon: { health: Math.round(ENEMY_HEALTH * 3.5), speed: ENEMY_SPEED * 1.2 },
 };
 
 /** Stats for an enemy type scaled by the level's difficulty multiplier. */
@@ -63,4 +65,6 @@ export const ENEMY_LOOKS: Readonly<Record<EnemyType, EnemyLook>> = {
   // Brutes stand half again as tall and chop with a long club in both hands: hard to step away from.
   tank: { size: 1.5, attackStyle: 'twoHanded', runs: false, strikeReach: 85 },
   archer: { size: 1, attackStyle: 'overhead', runs: false, strikeReach: 55 },
+  // Never melees (it shoots from the air); see DragonEnemy.
+  dragon: { size: 1, attackStyle: 'overhead', runs: false, strikeReach: 0 },
 };
