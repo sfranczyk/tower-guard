@@ -1,6 +1,7 @@
 import { Container, Graphics } from 'pixi.js';
 import { ENEMY_ARCHER_COOLDOWN_MS, ENEMY_ARCHER_DRAW_MS, ENEMY_ATTACK_INTERVAL_MS } from '../config';
 import { getArcherRig, toArcherLocalAngle } from '../rendering/archer';
+import { attackImpactProgress } from '../rendering/attackSwing';
 import { STICKMAN_HEAD, drawStickman, type StickmanPose } from '../rendering/stickman';
 import { FALL_DURATION_MS, drawStickmanFall, getFallPose, type FallKind, type FallPose } from '../rendering/stickmanFall';
 import { CHEER_KINDS, drawStickmanCheer, type CheerKind } from '../rendering/stickmanCheer';
@@ -75,6 +76,8 @@ export default class Enemy extends Container {
   private velocity = { x: 0, y: 0 };
   private alive = true;
   private fall?: FallState;
+  /** Damage to deal when the current swing lands. */
+  private pendingImpact?: () => void;
   /** Set when the enemies win: a looping cheer (played at a slightly random tempo). */
   private cheer?: { kind: CheerKind; timeMs: number; tempo: number };
   /** Set when blown apart by a direct explosive hit. */
@@ -225,6 +228,7 @@ export default class Enemy extends Container {
     this.velocity = { x: 0, y: 0 };
     this.attackTimerMs = 0;
     this.hitStaggerMs = 0;
+    this.pendingImpact = undefined;
   }
 
   public get isCelebrating(): boolean {
@@ -251,9 +255,13 @@ export default class Enemy extends Container {
     this.x += Math.max(-6, Math.min(8, pushX));
   }
 
-  public playAttackAnimation(): void {
+  /**
+   * Swings the club; `onImpact` runs when the club lands (mid-swing), unless the enemy is knocked down,
+   * killed or starts cheering first.
+   */
+  public playAttackAnimation(onImpact?: () => void): void {
     this.attackTimerMs = ATTACK_ANIMATION_DURATION_MS;
-    this.body.rotation = -0.18;
+    this.pendingImpact = onImpact;
   }
 
   public updateAnimation(deltaMs: number, moving: boolean): void {
@@ -282,6 +290,11 @@ export default class Enemy extends Container {
     if (this.attackTimerMs > 0) {
       this.attackTimerMs = Math.max(0, this.attackTimerMs - deltaMs);
       const attackProgress = 1 - this.attackTimerMs / ATTACK_ANIMATION_DURATION_MS;
+      if (this.pendingImpact && attackProgress >= attackImpactProgress(this.look.attackStyle)) {
+        const impact = this.pendingImpact;
+        this.pendingImpact = undefined;
+        impact();
+      }
       drawStickman(this.body, this.animationTime, this.pose({
         idleBlend: 1,
         attackPhase: Math.max(0.001, attackProgress * Math.PI * 2),
@@ -432,6 +445,7 @@ export default class Enemy extends Container {
 
   /** Explosive kill: the body bursts into pieces thrown away from the impact point. */
   private blowApart(fromX: number, point: Vec2): void {
+    this.pendingImpact = undefined;
     const facing = fromX >= this.x ? 1 : -1;
     this.fall = undefined;
     this.attackTimerMs = 0;
@@ -446,6 +460,7 @@ export default class Enemy extends Container {
 
   /** Turns to face the hit (so backwards falls go away from it) and starts a fall animation. */
   private startFall(kind: FallKind, fromX: number, getUpAfterMs?: number): void {
+    this.pendingImpact = undefined;
     const facing = fromX >= this.x ? 1 : -1;
     this.fall = { kind, timeMs: 0, facing, getUpAfterMs };
     this.attackTimerMs = 0;

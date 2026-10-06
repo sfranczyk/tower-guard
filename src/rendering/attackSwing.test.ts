@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ATTACK_REST, getAttackPose, type AttackPose, type AttackStyle } from './attackSwing';
+import { ATTACK_REST, attackImpactProgress, getAttackPose, type AttackPose, type AttackStyle } from './attackSwing';
 
 const KEYS: (keyof AttackPose)[] = ['armAngle', 'forearmBend', 'clubTilt', 'rearArmAngle', 'torsoLean', 'dip', 'step'];
 
@@ -77,5 +77,19 @@ describe('attack styles', () => {
   it('uppercut winds up low behind and strikes upwards', () => {
     expect(getAttackPose(0.3, 'uppercut').armAngle).toBeLessThan(0);
     expect(getAttackPose(0.48, 'uppercut').armAngle).toBeGreaterThan(Math.PI / 2);
+  });
+});
+
+describe('attackImpactProgress', () => {
+  it('lands mid-swing, when the strike pose is reached (after the wind-up)', () => {
+    (['overhead', 'twoHanded', 'uppercut'] as AttackStyle[]).forEach((style) => {
+      const impact = attackImpactProgress(style);
+      expect(impact).toBeGreaterThan(0.4);
+      expect(impact).toBeLessThan(0.6);
+      // The club is still travelling fast just before the impact and has slowed right after it.
+      const before = Math.abs(getAttackPose(impact, style).armAngle - getAttackPose(impact - 0.02, style).armAngle);
+      const after = Math.abs(getAttackPose(impact + 0.02, style).armAngle - getAttackPose(impact, style).armAngle);
+      expect(before).toBeGreaterThan(after);
+    });
   });
 });

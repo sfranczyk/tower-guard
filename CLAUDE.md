@@ -96,6 +96,9 @@ src/
   by IK) and `uppercut` (short club from below); `CLUBS` sets each club's length. Wind-up, a fast strike
   with a wrist snap (`clubTilt`; `forearmBend` stays ≥ 0 so elbows never bend backwards, tested), a lunge and dip, then recovery. Progress 0 and 1 equal the standing pose, so a swing
   never jumps; drawStickman tilts the torso about the hip so the feet stay put.
+  Melee damage lands with the club: `Enemy.playAttackAnimation(onImpact)` runs `onImpact` at
+  `attackImpactProgress(style)` (the strike key) and drops it if the enemy is knocked down, killed or starts
+  cheering first; a bowman who jumps away or hides mid-swing dodges the hit.
 - **Joint poses** (`rendering/stickmanPose.ts`): `JointPose` + `drawJointPose` draw a stickman from explicit
   joint positions (skeleton look, optional club). Falls and cheers produce JointPoses.
 - **Cheers** (`rendering/stickmanCheer.ts`): three looping victory animations (`cheerJump`, `cheerFist`,

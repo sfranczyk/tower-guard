@@ -79,6 +79,12 @@ const STYLE_KEYS: Readonly<Record<AttackStyle, readonly Key[]>> = {
   ],
 };
 
+/**
+ * Progress at which the club lands (the strike key of the style): damage and hit effects happen here,
+ * not when the swing starts.
+ */
+export const attackImpactProgress = (style: AttackStyle): number => STYLE_KEYS[style][2].t;
+
 const smooth = (t: number): number => t * t * (3 - 2 * t);
 
 /** Attack pose at `progress` (0..1, wraps) for a swing style. */

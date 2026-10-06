@@ -143,8 +143,11 @@ export class CombatSystem {
 
     if (enemy.target === 'tower') {
       if (enemy.x <= playerTower.x + TOWER_ATTACK_REACH && enemy.canAttack(deltaMs)) {
-        enemy.playAttackAnimation();
-        playerTower.takeDamage(randomEnemyDamage());
+        // The keep takes the hit when the club lands, with a chip of stone flying off the wall.
+        enemy.playAttackAnimation(() => {
+          playerTower.takeDamage(randomEnemyDamage());
+          this.world.effects.impact({ x: playerTower.x + TOWER_HALF_WIDTH - 4, y: enemy.y - 30 * enemy.scale.y });
+        });
       }
       return;
     }
@@ -156,9 +159,14 @@ export class CombatSystem {
 
     if (!bowman.isInTower && !this.jumpedEnemies.has(enemy) && overlapsBowman && Math.abs(enemy.y - bowman.y) <= 45) {
       if (enemy.canAttack(deltaMs)) {
-        enemy.playAttackAnimation();
-        this.events.bowmanDamaged(randomEnemyDamage());
-        this.world.effects.bloodBurst({ x: bowman.x, y: bowman.y - 20 });
+        // Damage lands with the club: a bowman who jumps away or hides in the keep mid-swing dodges it.
+        enemy.playAttackAnimation(() => {
+          const stillInReach = Math.abs(enemy.x - bowman.x) <= MELEE_REACH && Math.abs(enemy.y - bowman.y) <= 45;
+          if (stillInReach && !bowman.isInTower && !bowman.isDead && bowman.y >= groundAt(bowman.x) - 20) {
+            this.events.bowmanDamaged(randomEnemyDamage());
+            this.world.effects.bloodBurst({ x: bowman.x, y: bowman.y - 20 });
+          }
+        });
       }
     }
 
