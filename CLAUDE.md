@@ -158,7 +158,9 @@ src/
   `Bowman.getBowReleasePoint()` uses the same rig (string hand). Don't add a separately positioned bow.
 - **Skins**: `pose.skin` picks the look. `'skeleton'` is the thin white bones used by enemies and previews.
   `'armored'` is the player's armored archer: thick dark limbs, plus hood, armor, quiver and bow from
-  `rendering/armor.ts`, drawn on the same skeleton so every animation still works.
+  `rendering/armor.ts`, drawn on the same skeleton so every animation still works. Its colours are an
+  `ArmorPalette` (`pose.armorColors`, default `ARMOR_COLORS`): each battleground has a `player` palette picked
+  to contrast with the map (tested), and `Bowman` takes it via `BowmanConfig.armorColors`.
 - **Arrow flight** uses `systems/ballistics.ts` (gravity + quadratic drag `ARROW_DRAG`). The trajectory
   preview simulates with the same functions, so any flight change goes there to keep both in sync.
   Each projectile type has a mass, head drag and speed multiplier in `data/projectiles.ts`: launch speed

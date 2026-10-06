@@ -1,3 +1,5 @@
+import type { ArmorPalette } from '../rendering/armor';
+
 /**
  * Battlegrounds: the look of the field a wave is fought on (sky, sun, hills, trees, ground) and its
  * weather. Pure data; rendering/Background.ts draws them and systems/WeatherSystem.ts adds lightning.
@@ -52,11 +54,46 @@ export interface Battleground {
   aimColors?: AimColors;
   /** Page backdrop behind the game and the UI accent (bars, highlights) for this map (CSS colours). */
   ui: { accent: string; backdrop: string };
+  /** The bowman's armor colours, picked to stand out against this map. */
+  player: ArmorPalette;
 }
+
+/**
+ * The bowman's look per map: cloth in a colour opposite the map's dominant hue, plates darker on pale maps
+ * and brighter on dark ones, so he never blends into the background.
+ */
+const PLAYER_COLORS: Readonly<Record<BattlegroundId, ArmorPalette>> = {
+  // Crimson cloth and bright steel against the green grass, trees and blue-teal hills.
+  greenMeadow: {
+    limb: 0x9a2230, limbRear: 0x6e1a24, outline: 0x22151a, plate: 0xa9afb8, plateLight: 0xe1e4e8,
+    gold: 0xf2b632, leather: 0x5a3b28, face: 0x2a1b1f, bow: 0x2b1d17, bowString: 0x4a3a33,
+  },
+  // Teal cloth, pale steel and aqua trim against the dusky red and purple pass.
+  crimsonPass: {
+    limb: 0x1f7a80, limbRear: 0x175a5f, outline: 0x0f1c20, plate: 0xc8d3da, plateLight: 0xf2f6f8,
+    gold: 0x7fe6df, leather: 0x3a2a22, face: 0x10282b, bow: 0x14262a, bowString: 0x6aa9a8,
+  },
+  // Deep navy cloth, dark steel and red trim against the pale sand and hazy sky.
+  sunscorchDunes: {
+    limb: 0x262c6e, limbRear: 0x1d225a, outline: 0x13152c, plate: 0x5f687c, plateLight: 0x8f99ad,
+    gold: 0xe0442c, leather: 0x4a2e22, face: 0x161a3f, bow: 0x1a1c36, bowString: 0x3b3f66,
+  },
+  // Amber cloth, bright steel and a light bow against the near-black storm.
+  thunderRidge: {
+    limb: 0xd08a2c, limbRear: 0xa06820, outline: 0x24180c, plate: 0xd6dce3, plateLight: 0xffffff,
+    gold: 0xffd75a, leather: 0x8a5a33, face: 0x3a2610, bow: 0xe9c48a, bowString: 0xf6e7c8,
+  },
+  // Rust-orange cloth and dark steel against the snow, pale sky and grey-blue rock.
+  frostpeakPass: {
+    limb: 0xb8432a, limbRear: 0x8b3220, outline: 0x1d1820, plate: 0x566074, plateLight: 0x8790a4,
+    gold: 0xf2b632, leather: 0x4e3426, face: 0x2b1a14, bow: 0x2b1d17, bowString: 0x4a3a33,
+  },
+};
 
 export const BATTLEGROUNDS: Readonly<Record<BattlegroundId, Battleground>> = {
   greenMeadow: {
     id: 'greenMeadow',
+    player: PLAYER_COLORS.greenMeadow,
     name: 'Green Meadow',
     sky: [0x80b8d1],
     sun: { x: 790, y: 105, radius: 68, color: 0xf8dc9b },
@@ -71,6 +108,7 @@ export const BATTLEGROUNDS: Readonly<Record<BattlegroundId, Battleground>> = {
   },
   crimsonPass: {
     id: 'crimsonPass',
+    player: PLAYER_COLORS.crimsonPass,
     name: 'Crimson Pass',
     // Sunset: deep violet at the top fading to warm orange at the horizon.
     sky: [0x3b2a52, 0x5e3456, 0x8e4152, 0xc65c45, 0xe8894a],
@@ -86,6 +124,7 @@ export const BATTLEGROUNDS: Readonly<Record<BattlegroundId, Battleground>> = {
   },
   sunscorchDunes: {
     id: 'sunscorchDunes',
+    player: PLAYER_COLORS.sunscorchDunes,
     name: 'Sunscorch Dunes',
     // Hot, hazy desert sky: pale blue at the top bleaching to sandy haze at the horizon.
     sky: [0x7fb6d4, 0x9cc6d6, 0xbdd3cc, 0xdcd8b4, 0xeed9a2],
@@ -110,6 +149,7 @@ export const BATTLEGROUNDS: Readonly<Record<BattlegroundId, Battleground>> = {
   },
   thunderRidge: {
     id: 'thunderRidge',
+    player: PLAYER_COLORS.thunderRidge,
     name: 'Thunder Ridge',
     // Storm: no sun, slate sky under heavy clouds; lightning strikes now and then.
     sky: [0x1b222d, 0x232c39, 0x2c3645, 0x364252],
@@ -124,6 +164,7 @@ export const BATTLEGROUNDS: Readonly<Record<BattlegroundId, Battleground>> = {
   },
   frostpeakPass: {
     id: 'frostpeakPass',
+    player: PLAYER_COLORS.frostpeakPass,
     name: 'Frostpeak Pass',
     // Cold, bright winter sky over snow-capped peaks; it snows and the wind pushes arrows aside.
     sky: [0x8fa9c4, 0xa9bfd4, 0xc4d4e2, 0xdde6ee],

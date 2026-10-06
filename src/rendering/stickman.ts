@@ -4,7 +4,7 @@ import { drawBow, getArcherRig, toArcherLocalAngle, type FreeArm } from './arche
 import { ATTACK_REST, CLUBS, getAttackPose, type AttackStyle } from './attackSwing';
 import { RUN_GROUND_Y, runArmSwing, runBounce, runFoot } from './runCycle';
 import { walkKneeBend } from './walkCycle';
-import { ARMOR_COLORS, drawArmor, drawArmoredBow, drawHood, drawPauldron, drawQuiver } from './armor';
+import { ARMOR_COLORS, type ArmorPalette, drawArmor, drawArmoredBow, drawHood, drawPauldron, drawQuiver } from './armor';
 
 /** skeleton = thin white bones (enemies, previews); armored = the player's armored archer look. */
 export type StickmanSkin = 'skeleton' | 'armored';
@@ -40,6 +40,8 @@ export interface StickmanPose {
    */
   leanDirection?: number;
   skin?: StickmanSkin;
+  /** Colours of the armored skin (default ARMOR_COLORS); the bowman's follow the battleground. */
+  armorColors?: ArmorPalette;
 }
 
 /** Two-handed grip: the rear hand holds the shaft this far behind the front fist. */
@@ -87,6 +89,7 @@ export const drawStickman: StickmanRenderer = (sprite, phase, pose = {}) => {
     facingDirection = 1,
     leanDirection = Math.sign(facingDirection || 1),
     skin = 'skeleton',
+    armorColors = ARMOR_COLORS,
   } = pose;
   const armored = skin === 'armored';
   sprite.clear();
@@ -128,8 +131,8 @@ export const drawStickman: StickmanRenderer = (sprite, phase, pose = {}) => {
   /** Direction of the club out of the fist for a forearm angle: across the fist, tilted by the wrist. */
   const clubDirection = (forearmAngle: number): Point => ({ x: Math.cos(clubTilt - forearmAngle), y: Math.sin(clubTilt - forearmAngle) });
 
-  const frontColor = armored ? ARMOR_COLORS.limb : skeleton;
-  const rearColor = armored ? ARMOR_COLORS.limbRear : rear;
+  const frontColor = armored ? armorColors.limb : skeleton;
+  const rearColor = armored ? armorColors.limbRear : rear;
   // Armored limbs are drawn about 2.3× thicker, without joint rings.
   const widthScale = armored ? 2.3 : 1;
   const line = (a: Point, b: Point, isRear = false, width = 3.5): void => {
@@ -285,15 +288,15 @@ export const drawStickman: StickmanRenderer = (sprite, phase, pose = {}) => {
   }
   if (armored) {
     // Back to front: quiver, torso, front leg, armor over the legs, hood, drawing arm, shoulder plate.
-    drawQuiver(sprite);
+    drawQuiver(sprite, armorColors);
     line(hip, shoulder);
     drawLeg(blendPoint(rightFoot, idleRightFoot), rightKneeBend, false);
-    drawArmor(sprite);
-    drawHood(sprite, STICKMAN_HEAD);
+    drawArmor(sprite, armorColors);
+    drawHood(sprite, STICKMAN_HEAD, armorColors);
     if (archerRig) {
       drawArcherArm(archerRig.stringElbow, archerRig.stringHand, false);
     }
-    drawPauldron(sprite, shoulder);
+    drawPauldron(sprite, shoulder, armorColors);
   } else {
     line(hip, shoulder);
     joint(hip);
@@ -314,7 +317,7 @@ export const drawStickman: StickmanRenderer = (sprite, phase, pose = {}) => {
   }
   if (archerRig) {
     if (armored) {
-      drawArmoredBow(sprite, archerRig, bowTension * bowReady * bowReady * (3 - 2 * bowReady));
+      drawArmoredBow(sprite, archerRig, bowTension * bowReady * bowReady * (3 - 2 * bowReady), armorColors);
     } else {
       drawBow(sprite, archerRig);
     }

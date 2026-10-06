@@ -3,6 +3,7 @@ import type { IPushStrength, Rect, Vec2 } from '../types';
 import { groundAt } from '../systems/terrain';
 import { approach, clamp } from '../utils/math';
 import { getArcherRig, toArcherLocalAngle } from '../rendering/archer';
+import type { ArmorPalette } from '../rendering/armor';
 import { drawStickman } from '../rendering/stickman';
 import {
   GRAVITY,
@@ -41,9 +42,12 @@ export interface BowmanConfig {
   height?: number;
   movementSpeed?: number;
   maxHealth?: number;
+  /** Armor colours (the battleground's `player` palette). */
+  armorColors?: ArmorPalette;
 }
 
 export class Bowman extends Container {
+  private readonly armorColors?: ArmorPalette;
   public readonly maxHealth: number;
   public health: number;
   /** Time since death; undefined while alive. */
@@ -83,6 +87,7 @@ export class Bowman extends Container {
     this.boardBounds = { ...boardBounds };
     this.movementSpeed = config.movementSpeed ?? 120;
     this.maxHealth = config.maxHealth ?? 100;
+    this.armorColors = config.armorColors;
     this.health = this.maxHealth;
 
     this.bodySprite = new Graphics();
@@ -302,6 +307,7 @@ export class Bowman extends Container {
       facingDirection: this.facingDirection,
       leanDirection: this.leanDirection,
       skin: 'armored',
+      armorColors: this.armorColors,
     });
   }
 

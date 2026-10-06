@@ -64,7 +64,9 @@ export class MenuScene extends Scene {
       new Tower(MENU_KEEPS.player, groundAt(MENU_KEEPS.player), { hillColor, enemy: false }),
       new Tower(MENU_KEEPS.enemy, groundAt(MENU_KEEPS.enemy), { hillColor, enemy: true }),
     ];
-    this.bowman = new Bowman(MENU_BOWMAN_X, groundAt(MENU_BOWMAN_X), { x: 0, y: 0, width: WORLD_WIDTH, height: GAME_HEIGHT });
+    this.bowman = new Bowman(MENU_BOWMAN_X, groundAt(MENU_BOWMAN_X), { x: 0, y: 0, width: WORLD_WIDTH, height: GAME_HEIGHT }, {
+      armorColors: battleground.player,
+    });
     world.addChild(...this.keeps, this.bowman);
   }
 

@@ -142,7 +142,9 @@ export class GameScene extends Scene {
     const hillColor = this.battleground.hills[0];
     this.playerTower = new Tower(PLAYER_TOWER_X, GROUND_Y, { hillColor, enemy: false }, sandbox.keepHealth, run.keepHealth);
     this.enemyTower = new Tower(ENEMY_TOWER_X, GROUND_Y, { hillColor, enemy: true }, ENEMY_KEEP_HEALTH, run.enemyKeepHealth);
-    this.bowman = new Bowman(BOWMAN_START_X, BOWMAN_Y, { x: 50, y: 0, width: WORLD_WIDTH - 100, height: GAME_HEIGHT });
+    this.bowman = new Bowman(BOWMAN_START_X, BOWMAN_Y, { x: 50, y: 0, width: WORLD_WIDTH - 100, height: GAME_HEIGHT }, {
+      armorColors: this.battleground.player,
+    });
     this.debugGraphics.zIndex = 4;
     this.world.addChild(this.playerTower, this.enemyTower, this.bowman, this.aimOverlay, this.debugGraphics);
 
