@@ -28,6 +28,8 @@ export interface JointPose {
 export interface JointPoseOptions {
   /** Draw a club in the front hand along the forearm (like drawStickman's armed enemies). */
   club?: boolean;
+  /** Draw on top of what's already in the sprite (no clear, no transform reset), e.g. a dragon's rider. */
+  append?: boolean;
 }
 
 const SKELETON = 0xf4f7fb;
@@ -35,9 +37,11 @@ const REAR = 0xb7c1d1;
 
 /** Draws a joint pose with the skeleton look (same colours and widths as drawStickman). */
 export const drawJointPose = (sprite: Graphics, pose: JointPose, originY = 0, options: JointPoseOptions = {}): void => {
-  sprite.clear();
-  sprite.rotation = 0;
-  sprite.y = originY;
+  if (!options.append) {
+    sprite.clear();
+    sprite.rotation = 0;
+    sprite.y = originY;
+  }
 
   const line = (a: Vec2, b: Vec2, isRear: boolean, width = 3.5): void => {
     sprite.moveTo(a.x, a.y).lineTo(b.x, b.y).stroke({

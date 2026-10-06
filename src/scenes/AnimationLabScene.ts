@@ -5,6 +5,7 @@ import { LAB_PARAM, getUrlParam, setUrlParam } from '../core/urlState';
 import { BATTLEGROUNDS } from '../data/battlegrounds';
 import { Background } from '../rendering/Background';
 import { drawStickman } from '../rendering/stickman';
+import { drawDragonRider } from '../rendering/dragon';
 import { drawStickmanCheer } from '../rendering/stickmanCheer';
 import { ArcherReadySequence, FallClock, GibReplay, PausingWalk, RUN_PHASE_MS, WALK_PHASE_MS, WalkRunSequence } from './labSequences';
 
@@ -39,6 +40,8 @@ type PreviewRow = {
   render: (sprite: Graphics) => void;
   /** Shifts the figure right (unscaled units) for animations that travel left, so they stay centred. */
   offsetX?: number;
+  /** Flying animations get no ground line under them. */
+  flying?: boolean;
   /** Scale overrides for animations that spread wide (default PREVIEW_SCALE / ZOOM_SCALE). */
   previewScale?: number;
   zoomScale?: number;
@@ -121,6 +124,17 @@ export class AnimationLabScene extends Scene {
       title: 'Enemy club attack',
       description: 'Whole-body club swing: winds the club up behind the head leaning back, strikes down with a forward lunge and dip, then recovers smoothly to the stance (no jump at either end).',
       render: (sprite) => drawStickman(sprite, 0, { idleBlend: 1, armed: true, attackPhase: this.attackPhase, originY: 0 }),
+    },
+    {
+      id: 'dragon-rider',
+      title: 'Dragon rider (flying)',
+      description: 'A red dragon beating its wings in a loop (the far wing a beat behind), bobbing up on each downstroke with its neck and tail undulating; the stickman rider sits in the saddle with the reins and a raised spear.',
+      backdrop: SKY_BACKDROP,
+      flying: true,
+      previewScale: 0.17,
+      zoomScale: 1.15,
+      offsetX: 25,
+      render: (sprite) => drawDragonRider(sprite, this.cheerTime),
     },
     {
       id: 'runner-run',
@@ -342,6 +356,7 @@ export class AnimationLabScene extends Scene {
       PREVIEW_X + 55,
     );
     rowFigure.mask = clip;
+    rowGround.visible = !preview.flying;
     row.addChild(rowGround, rowFigure);
 
     row.addChild(new Graphics().circle(46, ROW_HEIGHT / 2, 11).fill({ color: COLORS.accent }));
@@ -387,6 +402,7 @@ export class AnimationLabScene extends Scene {
       ZOOM_TEXT_X - 50,
     );
     zoomFigure.mask = clip;
+    zoomGround.visible = !preview.flying;
     this.zoomView.addChild(zoomGround, zoomFigure);
     this.zoomView.addChild(AnimationLabScene.text(`Animation ${index + 1} of ${this.rows.length}`, 13, COLORS.accent, 700, ZOOM_TEXT_X, top + 8, DISPLAY_FONT));
     this.zoomView.addChild(AnimationLabScene.wrapped(preview.title, 26, ZOOM_TEXT_X, top + 30, GAME_WIDTH - ZOOM_TEXT_X - 44, COLORS.ink, 700, DISPLAY_FONT));
