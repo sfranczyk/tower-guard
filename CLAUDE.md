@@ -126,15 +126,19 @@ src/
   dragon's head are headshots (the rider needs a lobbed arrow, the body shields him from below); the body
   and two halves each of the neck and the tail are normal hits (seven zones). A test checks the zones chain
   tail → body → neck → head with no gap through the whole wing beat. CombatSystem's
-  hit test takes the earliest zone hit (headshot wins ties); `?debug` draws them yellow/red. Arrows stick into it. Killed, it falls out of the sky and lies on the
-  ground; ground lightning skips it (`isFlying`). Combat code takes `Foe = Enemy | DragonEnemy`.
+  hit test takes the earliest zone hit (headshot wins ties); `?debug` draws them yellow/red. Arrows stick into it. Killed, it plays the
+  lab's `fall` death in "death space" (its sprite space with the ground at `GIB_GROUND_Y`, from its height above
+  `groundAt(x)`): the dragon falls and lies flat (its `art` moves, and `toWorld` follows it so stuck arrows
+  stay put) and the rider is thrown off in `riderArt`; a kill by a direct explosive hit (cause `'blast'`) blows
+  the rider apart instead (`riderGibSimulation`, stepped per frame). The explosive dragon death isn't in the game yet; ground lightning skips it (`isFlying`). Combat code takes `Foe = Enemy | DragonEnemy`.
 - **Dragon rider** (`rendering/dragon.ts`, also used by the lab): `getDragonPose` is pure (tested: loop, rider in the
   saddle, smooth wings); side-view wing beat with foreshortening, body bob, undulating neck and tail; the
   rider is a JointPose sitting astride: the far leg is drawn before the dragon's body (`drawRearLeg`) so it's
   hidden, the rest on top (`drawJointPose(..., { append: true, hideRearLeg: true })`). Riders: `'spear'` (reins
   and a raised spear) or `'archer'` (the player's archer rig, rotated with the torso lean and moved to the
   saddle, aiming down ahead, drawing and loosing every `DRAGON_ARCHER_SHOT_MS`).
-- **Dragon deaths** (lab only for now; `rendering/dragonDeath.ts`, pure functions of time, ground at `GIB_GROUND_Y`):
+- **Dragon deaths** (`rendering/dragonDeath.ts`, pure functions of time, ground at `GIB_GROUND_Y`; `dragonFallState` takes the
+  start height, so the game can drop it from its real altitude):
   `fall` (the dragon drops nose-down and lies flat: neck, head and tail on the ground, near wing draped over
   its side, far wing folded out of sight behind the body), `explode` and `riderExplode` (the rider through
   `GibSimulation` with `lift`, the dragon falls as in `fall`). `drawDragon(g, pose, withRider)` and

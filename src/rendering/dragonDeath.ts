@@ -44,15 +44,18 @@ export interface DragonFall {
   lying: number;
 }
 
-/** The dragon dropping out of the sky after the hit and settling flat. */
-export const dragonFallState = (timeMs: number): DragonFall => {
+/**
+ * The dragon dropping out of the sky after the hit and settling flat. `startY` is the height of its origin
+ * when hit (the lab uses FLY_Y; the game passes its real height above the ground, see DragonEnemy).
+ */
+export const dragonFallState = (timeMs: number, startY = FLY_Y): DragonFall => {
   if (timeMs <= DRAGON_HIT_MS) {
-    return { y: FLY_Y, rotation: 0, lying: 0 };
+    return { y: startY, rotation: 0, lying: 0 };
   }
   const t = (timeMs - DRAGON_HIT_MS) / 1000;
-  const land = landingTime(FLY_Y, DRAGON_DROP_SPEED, DRAGON_LYING_Y);
+  const land = landingTime(startY, DRAGON_DROP_SPEED, DRAGON_LYING_Y);
   if (t < land) {
-    return { y: FLY_Y + DRAGON_DROP_SPEED * t + (DEATH_GRAVITY * t * t) / 2, rotation: Math.min(NOSE_DOWN, t * 1.2), lying: 0 };
+    return { y: startY + DRAGON_DROP_SPEED * t + (DEATH_GRAVITY * t * t) / 2, rotation: Math.min(NOSE_DOWN, t * 1.2), lying: 0 };
   }
   const since = (t - land) * 1000;
   const tiltAtLanding = Math.min(NOSE_DOWN, land * 1.2);
@@ -119,32 +122,41 @@ const drawFlash = (g: Graphics, at: Vec2, sinceMs: number, size: number): void =
   g.circle(at.x, at.y, size * 0.5 * (0.6 + t)).fill({ color: 0xfff3c4, alpha: 0.9 * (1 - t) });
 };
 
-const lifted = (point: Vec2): Vec2 => ({ x: point.x, y: point.y + FLY_Y });
+const lifted = (point: Vec2, startY: number): Vec2 => ({ x: point.x, y: point.y + startY });
 
-/** The rider's pose at the hit in sprite space (the dragon flies at FLY_Y). */
-const seatedRider = (pose: DragonPose): JointPose => {
+/** The rider's pose at the hit in death space (the dragon's origin at height `startY`). */
+const seatedRider = (pose: DragonPose, startY: number): JointPose => {
   const rider = { ...pose.rider };
   (['hip', 'shoulder', 'neckTop', 'head', 'frontKnee', 'frontFoot', 'rearKnee', 'rearFoot', 'frontElbow', 'frontHand', 'rearElbow', 'rearHand'] as const)
-    .forEach((key) => { rider[key] = lifted(pose.rider[key]); });
+    .forEach((key) => { rider[key] = lifted(pose.rider[key], startY); });
   return rider;
 };
 
+/**
+ * The rider blown apart in the saddle: a GibSimulation in stickman space (hip at x 0) lifted to the saddle
+ * height, so draw it shifted by the rider's hip x. Step it yourself (the game keeps one per dragon).
+ */
+export const riderGibSimulation = (pose: DragonPose, startY: number, seed = 7, force = 1.2): GibSimulation =>
+  new GibSimulation({ x: 4, y: -20 }, seed, force, -(startY + pose.rider.hip.y));
+
 const drawRiderGibs = (g: Graphics, pose: DragonPose, sinceMs: number): void => {
-  const simulation = new GibSimulation({ x: 4, y: -20 }, 7, 1.2, -(FLY_Y + pose.rider.hip.y));
+  const simulation = riderGibSimulation(pose, FLY_Y);
   simulation.step(sinceMs);
   place(g, 0, pose.rider.hip.x, 0);
   drawStickmanGibs(g, simulation, 0, true);
   g.resetTransform();
 };
 
-const drawThrownRider = (g: Graphics, pose: DragonPose, sinceMs: number): void => {
+/** Draws (appends) the thrown rider and his bow `sinceMs` after the hit, in death space. */
+export const drawThrownRider = (g: Graphics, pose: DragonPose, sinceMs: number, startY = FLY_Y): void => {
   if (pose.bow) {
     const rig = pose.bow.rig;
-    const bow = thrownBow({ ...rig, bowTop: lifted(rig.bowTop), bowBottom: lifted(rig.bowBottom), bowControl: lifted(rig.bowControl) }, sinceMs);
+    const lift = (point: Vec2): Vec2 => lifted(point, startY);
+    const bow = thrownBow({ ...rig, bowTop: lift(rig.bowTop), bowBottom: lift(rig.bowBottom), bowControl: lift(rig.bowControl) }, sinceMs);
     const nock = { x: (bow.bowTop.x + bow.bowBottom.x) / 2, y: (bow.bowTop.y + bow.bowBottom.y) / 2 };
     drawBow(g, { ...rig, ...bow, stringNock: nock });
   }
-  drawJointPose(g, thrownRider(seatedRider(pose), sinceMs).pose, 0, { append: true });
+  drawJointPose(g, thrownRider(seatedRider(pose, startY), sinceMs).pose, 0, { append: true });
 };
 
 /** Draws a dragon death at `timeMs` (0 = still flying, the hit comes at DRAGON_HIT_MS). */
@@ -184,5 +196,5 @@ export const drawDragonDeath = (g: Graphics, timeMs: number, kind: DragonDeathKi
     return;
   }
   drawRiderGibs(g, hitPose, since);
-  drawFlash(g, lifted({ x: hitPose.rider.hip.x, y: hitPose.rider.hip.y - 20 }), since, 30);
+  drawFlash(g, lifted({ x: hitPose.rider.hip.x, y: hitPose.rider.hip.y - 20 }, FLY_Y), since, 30);
 };

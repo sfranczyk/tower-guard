@@ -1,8 +1,10 @@
 import { Container, Graphics } from 'pixi.js';
 import { DRAGON_DRAW_MS, DRAGON_SCALE, DRAGON_SHOT_INTERVAL_MS } from '../config';
-import { dragonHitZones, drawDragonRider, type DragonHitZone, type DragonPose } from '../rendering/dragon';
+import { dragonHitZones, drawDragon, drawDragonRider, type DragonHitZone, type DragonPose } from '../rendering/dragon';
+import { DRAGON_HIT_MS, dragonFallState, drawThrownRider, lyingDragonPose, riderGibSimulation } from '../rendering/dragonDeath';
+import { GIB_GROUND_Y, drawStickmanGibs, type GibSimulation } from '../rendering/stickmanGibs';
 import type { BodyAnchor } from '../systems/bodyAnchor';
-import { cruiseAltitude, fallStep, flyTowards, hoverX, type FallState } from '../systems/dragonFlight';
+import { cruiseAltitude, flyTowards, hoverX } from '../systems/dragonFlight';
 import { groundAt } from '../systems/terrain';
 import type { Bounds, Vec2 } from '../types';
 import type { HitInfo } from './Enemy';
@@ -24,14 +26,27 @@ export interface HitBox {
   headshot: boolean;
 }
 
-/** The corpse lies with its belly this far above the ground (local units). */
-const LYING_CLEARANCE = 26;
+/** Force range of the rider's explosive death (like enemies blown apart). */
+const RIDER_GIB_FORCE = { min: 1, max: 1.7 };
+
+/**
+ * A killed dragon (rendering/dragonDeath.ts): it falls in "death space", the dragon's own sprite space with
+ * the ground at GIB_GROUND_Y, where its origin started at `startY` (from its height above the ground).
+ */
+interface DragonDeath {
+  timeMs: number;
+  startY: number;
+  /** The pose it was killed in (wings freeze; the rider is thrown off from here). */
+  pose: DragonPose;
+  /** Killed by a direct explosive hit: the rider is blown apart instead of thrown off. */
+  riderGibs?: GibSimulation;
+}
 
 /**
  * Flying dragon with an archer rider. Flies in high, hovers in front of the bowman (systems/dragonFlight),
  * and the rider draws and shoots hostile arrows like an enemy archer (CombatSystem aims for it). Arrows hit
  * the dragon's body or, for a headshot, the rider's head, and stick into it. A killed dragon falls out of
- * the sky and stays on the ground. Offers the same interface as Enemy where the combat code shares it.
+ * the sky and lies flat on the ground; its rider is thrown off, or blown apart by a killing explosive hit. Offers the same interface as Enemy where the combat code shares it.
  */
 export default class DragonEnemy extends Container {
   public readonly kind = 'dragon' as const;
@@ -41,6 +56,8 @@ export default class DragonEnemy extends Container {
   public readonly size = 1;
   public readonly strikeReach = 0;
   private readonly art = new Graphics();
+  /** The rider once he's off the dragon (thrown or blown apart), in death space. */
+  private readonly riderArt = new Graphics();
   private readonly healthBar = new Graphics();
   private readonly maxHealth: number;
   private health: number;
@@ -52,7 +69,7 @@ export default class DragonEnemy extends Container {
   private tension = 0;
   private shotTimerMs = DRAGON_SHOT_INTERVAL_MS * 0.5;
   private flashMs = 0;
-  private fall?: FallState;
+  private death?: DragonDeath;
   private cheering = false;
   private paused = false;
 
@@ -66,7 +83,7 @@ export default class DragonEnemy extends Container {
     this.position.set(x, cruiseAltitude(this.timeMs));
     this.zIndex = 1;
     this.healthBar.scale.set(1 / this.scale.x, 1 / this.scale.y);
-    this.addChild(this.art, this.healthBar);
+    this.addChild(this.art, this.riderArt, this.healthBar);
     this.pose = this.redraw();
     this.drawHealthBar();
   }
@@ -91,14 +108,21 @@ export default class DragonEnemy extends Container {
     return this.isAlive();
   }
 
-  public takeDamage(amount: number, _hit?: HitInfo): number {
+  public takeDamage(amount: number, hit?: HitInfo): number {
     if (!this.isAlive()) {
       return this.health;
     }
     this.health = Math.max(0, this.health - Math.max(0, amount));
     this.drawHealthBar();
     if (this.health === 0) {
-      this.fall = { y: this.y, vy: -60, rotation: 0, landed: false };
+      const startY = GIB_GROUND_Y - (groundAt(this.x) - this.y) / DRAGON_SCALE;
+      const force = RIDER_GIB_FORCE.min + Math.random() * (RIDER_GIB_FORCE.max - RIDER_GIB_FORCE.min);
+      this.death = {
+        timeMs: 0,
+        startY,
+        pose: this.pose,
+        riderGibs: hit?.cause === 'blast' ? riderGibSimulation(this.pose, startY, Math.floor(Math.random() * 1e9), force) : undefined,
+      };
       this.healthBar.visible = false;
       this.tension = 0;
     }
@@ -160,16 +184,17 @@ export default class DragonEnemy extends Container {
 
   public updateAnimation(deltaMs: number): void {
     this.flashMs = Math.max(0, this.flashMs - deltaMs);
-    if (this.fall) {
-      // Wings stop beating; it drops, tipping nose-down, and comes to rest on the ground.
-      this.fall = fallStep(this.fall, groundAt(this.x) - LYING_CLEARANCE * DRAGON_SCALE, deltaMs);
-      this.y = this.fall.y;
-      this.rotation = -this.fall.rotation;
-    } else if (!this.paused) {
-      this.timeMs += deltaMs;
+    if (this.death) {
+      this.drawDeath(deltaMs);
+    } else {
+      if (!this.paused) {
+        this.timeMs += deltaMs;
+      }
+      this.pose = this.redraw();
     }
-    this.pose = this.redraw();
-    this.art.tint = this.flashMs > 0 ? 0xffb0a8 : 0xffffff;
+    const tint = this.flashMs > 0 ? 0xffb0a8 : 0xffffff;
+    this.art.tint = tint;
+    this.riderArt.tint = tint;
   }
 
   /** The dragon's body (used for splash distance and the like; arrows test every zone). */
@@ -205,6 +230,29 @@ export default class DragonEnemy extends Container {
     return { position: this.toWorld({ x: anchor.along, y: anchor.side }), rotation: this.rotation + Math.PI - anchor.angle };
   }
 
+  /**
+   * Wings frozen, it drops tipping nose-down and settles flat (the art moves, so stuck arrows follow it via
+   * toWorld); the rider tumbles to the ground on his back, or his pieces fly.
+   */
+  private drawDeath(deltaMs: number): void {
+    const death = this.death!;
+    death.timeMs += deltaMs;
+    const fall = dragonFallState(DRAGON_HIT_MS + death.timeMs, death.startY);
+    this.art.clear();
+    drawDragon(this.art, lyingDragonPose(death.pose, fall.lying), false);
+    this.art.position.set(0, fall.y - death.startY);
+    this.art.rotation = fall.rotation;
+    if (death.riderGibs) {
+      death.riderGibs.step(deltaMs);
+      drawStickmanGibs(this.riderArt, death.riderGibs, -death.startY);
+      this.riderArt.x = death.pose.rider.hip.x;
+    } else {
+      this.riderArt.clear();
+      this.riderArt.position.set(0, -death.startY);
+      drawThrownRider(this.riderArt, death.pose, death.timeMs, death.startY);
+    }
+  }
+
   private redraw(): DragonPose {
     // The sprite faces left (mirrored) and tilts while falling: turn the world aim into the rider's local aim.
     const local = normalizeAngle(Math.PI - (this.aimAngle - this.rotation));
@@ -213,9 +261,14 @@ export default class DragonEnemy extends Container {
     return drawDragonRider(this.art, this.timeMs, 'archer', { aim, tension: this.tension });
   }
 
+  /** Local (sprite) point to world, through the art's own transform (moved while the corpse falls). */
   private toWorld(local: Vec2): Vec2 {
-    const x = local.x * this.scale.x;
-    const y = local.y * this.scale.y;
+    const art = this.art;
+    const artCos = Math.cos(art.rotation);
+    const artSin = Math.sin(art.rotation);
+    const moved = { x: art.x + local.x * artCos - local.y * artSin, y: art.y + local.x * artSin + local.y * artCos };
+    const x = moved.x * this.scale.x;
+    const y = moved.y * this.scale.y;
     const cos = Math.cos(this.rotation);
     const sin = Math.sin(this.rotation);
     return { x: this.x + x * cos - y * sin, y: this.y + x * sin + y * cos };
@@ -226,7 +279,10 @@ export default class DragonEnemy extends Container {
     const dy = world.y - this.y;
     const cos = Math.cos(-this.rotation);
     const sin = Math.sin(-this.rotation);
-    return { x: (dx * cos - dy * sin) / this.scale.x, y: (dx * sin + dy * cos) / this.scale.y };
+    const moved = { x: (dx * cos - dy * sin) / this.scale.x - this.art.x, y: (dx * sin + dy * cos) / this.scale.y - this.art.y };
+    const artCos = Math.cos(-this.art.rotation);
+    const artSin = Math.sin(-this.art.rotation);
+    return { x: moved.x * artCos - moved.y * artSin, y: moved.x * artSin + moved.y * artCos };
   }
 
   private drawHealthBar(): void {

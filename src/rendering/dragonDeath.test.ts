@@ -15,6 +15,14 @@ describe('dragon death', () => {
     expect(dragonFallState(DRAGON_HIT_MS + 450).rotation).toBeGreaterThan(0.3);
   });
 
+  it('falls from any height (the game passes its real one) to the same lying pose', () => {
+    const high = -700;
+    expect(dragonFallState(DRAGON_HIT_MS, high).y).toBe(high);
+    const end = dragonFallState(DRAGON_HIT_MS + 3000, high);
+    expect(end.y).toBe(DRAGON_LYING_Y);
+    expect(end.lying).toBeCloseTo(1);
+  });
+
   it('falls smoothly (no jumps)', () => {
     for (let time = 10; time <= DRAGON_DEATH_MS; time += 10) {
       const a = dragonFallState(time - 10);

@@ -2,7 +2,7 @@ import { DRAGON_ALTITUDE, DRAGON_HOVER_OFFSET, WORLD_WIDTH } from '../config';
 
 /**
  * Dragon archer flight as pure functions (objects/DragonEnemy.ts uses them): where it hovers, how it
- * flies there, and how a killed dragon falls out of the sky.
+ * flies there (a killed dragon's fall is rendering/dragonDeath.ts).
  */
 
 /** Keep at least this far in front of the bowman, and this far inside the right edge of the world. */
@@ -21,30 +21,4 @@ export const flyTowards = (current: number, target: number, speed: number, delta
   const step = (speed * deltaMs) / 1000;
   const gap = target - current;
   return Math.abs(gap) <= step ? target : current + Math.sign(gap) * step;
-};
-
-export interface FallState {
-  y: number;
-  vy: number;
-  /** Nose-down tilt in radians. */
-  rotation: number;
-  landed: boolean;
-}
-
-const FALL_GRAVITY = 900;
-/** Tilt it ends up with, lying on the ground. */
-const LANDED_TILT = 0.32;
-
-/** One step of a killed dragon falling: accelerates down, tips nose-down, comes to rest at `groundY`. */
-export const fallStep = (state: FallState, groundY: number, deltaMs: number): FallState => {
-  if (state.landed) {
-    return state;
-  }
-  const dt = deltaMs / 1000;
-  const vy = state.vy + FALL_GRAVITY * dt;
-  const y = state.y + vy * dt;
-  if (y >= groundY) {
-    return { y: groundY, vy: 0, rotation: LANDED_TILT, landed: true };
-  }
-  return { y, vy, rotation: Math.min(0.9, state.rotation + dt * 1.6), landed: false };
 };
