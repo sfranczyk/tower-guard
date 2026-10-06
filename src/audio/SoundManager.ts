@@ -1,5 +1,7 @@
 import bowShotSound from '../assets/sounds/bow-shot.mp3';
-import explosionSound from '../assets/sounds/explosion.mp3';
+import explosion1 from '../assets/sounds/explosion-1.mp3';
+import explosion2 from '../assets/sounds/explosion-2.mp3';
+import explosion3 from '../assets/sounds/explosion-3.mp3';
 import groan1 from '../assets/sounds/groan-1.mp3';
 import groan2 from '../assets/sounds/groan-2.mp3';
 import groan3 from '../assets/sounds/groan-3.mp3';
@@ -9,6 +11,7 @@ import groan6 from '../assets/sounds/groan-6.mp3';
 import groan7 from '../assets/sounds/groan-7.mp3';
 import groan8 from '../assets/sounds/groan-8.mp3';
 import themeMusic from '../assets/sounds/theme.mp3';
+import thunderSound from '../assets/sounds/thunder.mp3';
 import { SOUND_MAX_VOICES, SOUND_PITCH_VARIATION, SOUND_RATES, SOUND_VOLUMES } from '../config';
 import { loadAudioSettings, normalizeAudioSettings, saveAudioSettings, type AudioSettings } from './audioSettings';
 import { MusicPlayer } from './MusicPlayer';
@@ -20,8 +23,8 @@ export type SoundId = keyof typeof SOUND_VOLUMES;
 const SOURCES: Record<SoundId, readonly string[]> = {
   bowShot: [bowShotSound],
   groan: [groan1, groan2, groan3, groan4, groan5, groan6, groan7, groan8],
-  explosion: [explosionSound],
-  thunder: [explosionSound],
+  explosion: [explosion1, explosion2, explosion3],
+  thunder: [thunderSound],
   shrapnelBurst: [bowShotSound],
 };
 

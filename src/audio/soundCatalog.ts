@@ -4,7 +4,7 @@ import type { SoundId } from './SoundManager';
 export interface SoundInfo {
   title: string;
   description: string;
-  /** The user's recording in human/ it was cut from. */
+  /** The user's recording in human/ it was cut from (or how it was made). */
   source: string;
 }
 
@@ -16,13 +16,13 @@ export const SOUND_INFO: Readonly<Record<SoundId, SoundInfo>> = {
   },
   groan: {
     title: 'Enemy groan',
-    description: 'An enemy hit by an arrow (not on headshot or blast kills). One of eight takes, never the same twice in a row.',
+    description: 'An enemy hit by an arrow, kills and headshots included (not when an explosive arrow kills). One of eight takes, never the same twice in a row.',
     source: 'Aj.m4a',
   },
   explosion: {
     title: 'Explosion',
-    description: 'Explosive arrows bursting on enemies, the ground or the enemy keep.',
-    source: 'Bum.m4a',
+    description: 'Explosive arrows bursting on enemies, the ground or the enemy keep. Three takes to choose from: 1 deep boom, 2 sharp crack, 3 long rumble.',
+    source: 'Synthesized with ffmpeg (low thump, brown-noise blast, crackle)',
   },
   shrapnelBurst: {
     title: 'Shrapnel burst',
@@ -32,7 +32,7 @@ export const SOUND_INFO: Readonly<Record<SoundId, SoundInfo>> = {
   thunder: {
     title: 'Thunder',
     description: 'Lightning on storm battlegrounds: loud for ground strikes, a distant rumble for sky flashes.',
-    source: 'Bum.m4a, played at half speed',
+    source: 'Bum.m4a (thunder.mp3), played at half speed',
   },
 };
 

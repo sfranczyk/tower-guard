@@ -62,7 +62,8 @@ src/
   range) and `systems/WeatherSystem.ts` draws it: sky flashes between clouds, and now and then a ground
   strike that crackles at the spot for `LIGHTNING_WARNING_MS` first. `CombatSystem.lightningStrike` deals
   `LIGHTNING_DAMAGE` within `LIGHTNING_RADIUS` (enemies: cause `'lightning'`, stiff death or knockdown; the
-  bowman is safe inside the keep). Thunder is the explosion recording slowed down (`SOUND_RATES`).
+  bowman is safe inside the keep). Thunder is the old "Bum" recording (`thunder.mp3`) slowed down (`SOUND_RATES`);
+  the explosion itself is three synthesized takes (`explosion-1..3.mp3`, ffmpeg: low thump, brown-noise blast, crackle).
   Storms also have light rain (`rendering/Rain.ts`, screen space, shifts with the camera; `RAIN_*`).
 - **Frostpeak Pass** (weather `snow`): snow-capped mountains with mist (`hillShape: 'mountains'`), snowy pines,
   snowfall (`rendering/Snow.ts`, `SNOW_*`), bigger ground waves (`terrainAmplitude`; `Background` calls
