@@ -6,12 +6,14 @@
  *   strike down into a forward lunge and dip;
  * - twoHanded: a longer club gripped with both hands, a bigger wind-up and a heavier lunge;
  * - uppercut: a short club swung from below: crouched wind-up low behind, then up and forward while
- *   rising.
+ *   rising;
+ * - grab: the zombie's unarmed attack, from its arms-out stance (ZOMBIE_REST): lunges reaching further,
+ *   then yanks both hands back to its chest as if dragging the bowman in.
  *
  * Angles use drawStickman's arm convention (0 = hanging down, π/2 = forward, π = straight up,
  * above π = behind the head); `torsoLean` tilts the shoulder forward (+) or back (−) about the hip.
  */
-export type AttackStyle = 'overhead' | 'twoHanded' | 'uppercut';
+export type AttackStyle = 'overhead' | 'twoHanded' | 'uppercut' | 'grab';
 
 export interface AttackPose {
   /** Front (club) upper arm angle. */
@@ -45,12 +47,17 @@ export const CLUBS: Readonly<Record<AttackStyle, ClubShape>> = {
   overhead: { reach: 28, butt: 8, width: 5, twoHanded: false },
   twoHanded: { reach: 42, butt: 14, width: 5.5, twoHanded: true },
   uppercut: { reach: 17, butt: 5, width: 5, twoHanded: false },
+  // No club: the zombie grabs with its hands.
+  grab: { reach: 0, butt: 0, width: 0, twoHanded: false },
 };
 
 type Key = AttackPose & { t: number };
 
 /** Standing pose: matches drawStickman's idle arms (0.1) and forearm bend for an armed hand. */
 export const ATTACK_REST: AttackPose = { armAngle: 0.1, forearmBend: 0.48, clubTilt: 0, rearArmAngle: 0.1, torsoLean: 0, dip: 0, step: 0 };
+
+/** Zombie stance: both arms held out in front, nearly straight, leaning forward. */
+export const ZOMBIE_REST: AttackPose = { armAngle: 1.42, forearmBend: 0.12, clubTilt: 0, rearArmAngle: 1.34, torsoLean: 0.14, dip: 0, step: 0 };
 
 const STYLE_KEYS: Readonly<Record<AttackStyle, readonly Key[]>> = {
   overhead: [
@@ -76,6 +83,15 @@ const STYLE_KEYS: Readonly<Record<AttackStyle, readonly Key[]>> = {
     { t: 0.48, armAngle: 1.95, forearmBend: 0.1, clubTilt: 1.05, rearArmAngle: -0.7, torsoLean: -0.18, dip: -2, step: 7 },
     { t: 0.58, armAngle: 2.1, forearmBend: 0.1, clubTilt: 0.95, rearArmAngle: -0.55, torsoLean: -0.12, dip: -1, step: 7 },
     { t: 1, ...ATTACK_REST },
+  ],
+  grab: [
+    { t: 0, ...ZOMBIE_REST },
+    // Lunge: lean in and reach further, arms straight and a little higher.
+    { t: 0.36, armAngle: 1.72, forearmBend: 0.04, clubTilt: 0, rearArmAngle: 1.64, torsoLean: 0.34, dip: 2, step: 9 },
+    // Yank: elbows fold and both hands come back to the chest while it leans back.
+    { t: 0.58, armAngle: 0.45, forearmBend: 1.6, clubTilt: 0, rearArmAngle: 0.4, torsoLean: -0.08, dip: 0, step: 3 },
+    { t: 0.74, armAngle: 0.5, forearmBend: 1.55, clubTilt: 0, rearArmAngle: 0.45, torsoLean: -0.05, dip: 0, step: 3 },
+    { t: 1, ...ZOMBIE_REST },
   ],
 };
 

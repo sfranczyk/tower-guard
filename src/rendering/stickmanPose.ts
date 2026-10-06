@@ -1,5 +1,6 @@
 import type { Graphics } from 'pixi.js';
 import type { Vec2 } from '../types';
+import { HUMAN_BODY, type BodyColors } from './bodyColors';
 import { STICKMAN_HEAD } from './stickman';
 
 /**
@@ -32,10 +33,11 @@ export interface JointPoseOptions {
   append?: boolean;
   /** Leave out the rear leg (e.g. a rider's far leg hidden behind the mount, drawn separately). */
   hideRearLeg?: boolean;
+  /** Bone colours (default HUMAN_BODY; zombies are greenish). */
+  colors?: BodyColors;
 }
 
-const SKELETON = 0xf4f7fb;
-const REAR = 0xb7c1d1;
+const REAR = HUMAN_BODY.boneRear;
 
 /** Draws only the rear leg of a pose (skeleton look), e.g. a rider's far leg before the mount's body. */
 export const drawRearLeg = (sprite: Graphics, pose: JointPose): void => {
@@ -57,6 +59,8 @@ export const drawJointPose = (sprite: Graphics, pose: JointPose, originY = 0, op
     sprite.rotation = 0;
     sprite.y = originY;
   }
+  const SKELETON = options.colors?.bone ?? HUMAN_BODY.bone;
+  const REAR = options.colors?.boneRear ?? HUMAN_BODY.boneRear;
 
   const line = (a: Vec2, b: Vec2, isRear: boolean, width = 3.5): void => {
     sprite.moveTo(a.x, a.y).lineTo(b.x, b.y).stroke({

@@ -3,6 +3,7 @@ import { DRAGON_DRAW_MS, DRAGON_SCALE, DRAGON_SHOT_INTERVAL_MS } from '../config
 import { dragonHitZones, drawDragon, drawDragonRider, type DragonHitZone, type DragonPose } from '../rendering/dragon';
 import { DRAGON_HIT_MS, dragonFallState, drawThrownRider, lyingDragonPose, riderGibSimulation } from '../rendering/dragonDeath';
 import { GIB_GROUND_Y, drawStickmanGibs, type GibSimulation } from '../rendering/stickmanGibs';
+import { HUMAN_BODY } from '../rendering/bodyColors';
 import type { BodyAnchor } from '../systems/bodyAnchor';
 import { cruiseAltitude, flyTowards, hoverX } from '../systems/dragonFlight';
 import { groundAt } from '../systems/terrain';
@@ -55,6 +56,8 @@ export default class DragonEnemy extends Container {
   public readonly isDown = false;
   public readonly size = 1;
   public readonly strikeReach = 0;
+  /** Arrows draw red blood from the dragon and its rider. */
+  public readonly bodyColors = HUMAN_BODY;
   private readonly art = new Graphics();
   /** The rider once he's off the dragon (thrown or blown apart), in death space. */
   private readonly riderArt = new Graphics();

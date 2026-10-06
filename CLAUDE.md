@@ -117,6 +117,15 @@ src/
   dragon 170. `ENEMY_DAMAGE` gives each type a random range (`rollDamage`) for club swings at the bowman and at
   the keep (the keep takes more; it has 2000 by default), and for shooters their arrows (`Arrow.shooter` tells
   CombatSystem whose arrow hit).
+- **Kamikaze** (`EnemyType 'kamikaze'`): runs in unarmed with a bomb on its chest (`pose.bomb`, sparking fuse) and
+  dies to one arrow. On reaching the bowman (jumping doesn't save him) or the keep, `CombatSystem.detonate` blows
+  it apart (cause `'blast'`), runs the same `explode` as an explosive arrow (splash and knockback on nearby
+  enemies) and hurts the bowman (unless he's in the keep) and the keep within `KAMIKAZE_REACH` × the radius.
+- **Zombie** (`EnemyType 'zombie'`): shuffles slowly (`stepMs`) with its arms held out (`pose.zombie`,
+  `ZOMBIE_REST`), attacks with the `'grab'` style (lunge, then yank both hands back to the chest; the hit lands
+  on the yank) and is pale green with green blood: `BodyColors` (`rendering/bodyColors.ts`, `HUMAN_BODY` /
+  `ZOMBIE_BODY`) colour drawStickman, joint poses (falls, cheers), gibs and `EffectsSystem.bloodBurst`
+  (`enemy.bodyColors`). Lab rows: `kamikaze-run`, `zombie-walk`, `zombie-attack`.
 - **Enemy looks** (`ENEMY_LOOKS` in `data/enemies.ts`): size, club swing and gait per type. Runners run (run
   cycle) and swing a short club from below; Brutes are 1.5× tall (container scale, so hitboxes and arrow
   anchors scale too; the health bar keeps its size) and chop two-handed with a long club.

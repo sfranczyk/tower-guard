@@ -5,6 +5,7 @@ import { centeredCameraX, viewWidth } from '../core/viewport';
 import { LAB_PARAM, getUrlParam, setUrlParam } from '../core/urlState';
 import { BATTLEGROUNDS } from '../data/battlegrounds';
 import { Background } from '../rendering/Background';
+import { ZOMBIE_BODY } from '../rendering/bodyColors';
 import { drawStickman } from '../rendering/stickman';
 import { drawDragonRider } from '../rendering/dragon';
 import { DRAGON_DEATH_MS, drawDragonDeath, type DragonDeathKind } from '../rendering/dragonDeath';
@@ -205,6 +206,24 @@ export class AnimationLabScene extends Scene {
       render: (sprite) => drawStickman(sprite, 0, { idleBlend: 1, armed: true, attackStyle: 'uppercut', attackPhase: this.attackPhase, originY: 0 }),
     },
     {
+      id: 'kamikaze-run',
+      title: 'Kamikaze: run with a bomb',
+      description: 'Sprints in unarmed with a bomb strapped to its chest and the fuse sparking; it blows up when it reaches the bowman or the keep.',
+      render: (sprite) => drawStickman(sprite, this.runPhase, { running: true, bomb: true, originY: 0 }),
+    },
+    {
+      id: 'zombie-walk',
+      title: 'Zombie: shuffle with arms out',
+      description: 'Pale green, leaning forward, both arms held out in front and swaying a little while it shuffles slowly.',
+      render: (sprite) => drawStickman(sprite, this.cheerTime / 240, { zombie: true, bodyColors: ZOMBIE_BODY, originY: 0 }),
+    },
+    {
+      id: 'zombie-attack',
+      title: 'Zombie grab attack',
+      description: 'Lunges in reaching further, then yanks both hands back to its chest as if dragging the bowman in; the hit lands on the yank.',
+      render: (sprite) => drawStickman(sprite, this.cheerTime / 240, { idleBlend: 1, zombie: true, bodyColors: ZOMBIE_BODY, attackPhase: this.zombieAttackPhase, originY: 0 }),
+    },
+    {
       id: 'enemy-archer',
       title: 'Enemy archer · draw and shoot',
       description: 'Red-tinted enemy with a bow: raises it, draws, looses and repeats from range.',
@@ -294,6 +313,11 @@ export class AnimationLabScene extends Scene {
   private attackPhase = 0;
   private archerWalkPhase = 0;
   private cheerTime = 0;
+  /** Zombie grab: a bit slower than the club swings, with a pause in the stance between grabs. */
+  private get zombieAttackPhase(): number {
+    const cycle = (this.cheerTime % 2200) / 1500;
+    return cycle >= 1 ? 0 : Math.max(0.001, cycle * Math.PI * 2);
+  }
   /** The panel and everything on it, centred in views wider than GAME_WIDTH (the meadow fills the rest). */
   private readonly content = new Container();
   private meadow?: Container;

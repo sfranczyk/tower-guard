@@ -10,6 +10,7 @@ export interface EnemyStats {
 /**
  * Health per type, against a normal arrow's 20 (headshot ×1.25 = 25, explosive direct hit 34): fighters take
  * two arrows, runners and archers drop to one headshot (two body hits), brutes about six, dragons about nine.
+ * Kamikazes die to any arrow (they must be stopped before they reach you); zombies shamble but take three.
  */
 const BASE_STATS: Readonly<Record<EnemyType, EnemyStats>> = {
   basic: { health: 35, speed: ENEMY_SPEED },
@@ -19,6 +20,10 @@ const BASE_STATS: Readonly<Record<EnemyType, EnemyStats>> = {
   archer: { health: 24, speed: ENEMY_SPEED * 0.9 },
   // Flying archer mount: tough, flies in steadily (speed is its horizontal flight speed).
   dragon: { health: 170, speed: ENEMY_SPEED * 1.2 },
+  // Sprints at the bowman with a bomb and blows up on contact.
+  kamikaze: { health: 18, speed: ENEMY_SPEED * 1.5 },
+  // Slow, arms out, hard to put down.
+  zombie: { health: 60, speed: ENEMY_SPEED * 0.45 },
 };
 
 /** Inclusive min..max of a random hit. */
@@ -26,7 +31,7 @@ export type DamageRange = readonly [number, number];
 
 /** What one hit of this type deals to the bowman and to the keep (club swings, or arrows for shooters). */
 export interface EnemyDamage {
-  /** Club swing (archers too, when caught up close). */
+  /** Club swing (archers too, when caught up close; the zombie's grab; the kamikaze's own explosion). */
   melee: { bowman: DamageRange; keep: DamageRange };
   /** Arrows of shooting types (archer on foot, dragon rider). */
   arrow?: { bowman: DamageRange; keep: DamageRange };
@@ -42,6 +47,8 @@ export const ENEMY_DAMAGE: Readonly<Record<EnemyType, EnemyDamage>> = {
   tank: { melee: { bowman: [14, 22], keep: [40, 60] } },
   archer: { melee: { bowman: [3, 5], keep: [8, 12] }, arrow: { bowman: [7, 10], keep: [10, 14] } },
   dragon: { melee: { bowman: [0, 0], keep: [0, 0] }, arrow: { bowman: [12, 16], keep: [16, 22] } },
+  kamikaze: { melee: { bowman: [24, 32], keep: [120, 160] } },
+  zombie: { melee: { bowman: [8, 12], keep: [22, 32] } },
 };
 
 /** A random hit within `range` (`roll` 0..1, passed in so tests can pin it). */
@@ -91,6 +98,8 @@ export interface EnemyLook {
    * has to get this far away during the swing (jumping on the spot doesn't help).
    */
   strikeReach: number;
+  /** Walk cycle speed (ms per phase radian, default 150): zombies shuffle slower. */
+  stepMs?: number;
 }
 
 export const ENEMY_LOOKS: Readonly<Record<EnemyType, EnemyLook>> = {
@@ -102,4 +111,8 @@ export const ENEMY_LOOKS: Readonly<Record<EnemyType, EnemyLook>> = {
   archer: { size: 1, attackStyle: 'overhead', runs: false, strikeReach: 55 },
   // Never melees (it shoots from the air); see DragonEnemy.
   dragon: { size: 1, attackStyle: 'overhead', runs: false, strikeReach: 0 },
+  // Runs in unarmed with a bomb on its chest and detonates on contact (CombatSystem.detonate).
+  kamikaze: { size: 1, attackStyle: 'overhead', runs: true, strikeReach: 0 },
+  // Shuffles with its arms out; grabs and yanks its hands back (hits within arm's reach).
+  zombie: { size: 1, attackStyle: 'grab', runs: false, strikeReach: 50, stepMs: 240 },
 };

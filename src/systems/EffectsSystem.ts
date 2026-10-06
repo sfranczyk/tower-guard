@@ -1,5 +1,6 @@
 import { Graphics, type Container } from 'pixi.js';
 import { EXPLOSION_RADIUS, LIGHTNING_RADIUS } from '../config';
+import { HUMAN_BODY, type BodyColors } from '../rendering/bodyColors';
 import type { Vec2 } from '../types';
 import { groundAt } from './terrain';
 
@@ -7,6 +8,8 @@ type BloodParticle = {
   sprite: Graphics;
   velocity: Vec2;
   lifeMs: number;
+  /** Colour of the stain it leaves where it lands. */
+  stain: number;
 };
 
 /** Generic fading particle: moves, slows with drag, falls (or rises) and grows while fading out. */
@@ -55,11 +58,12 @@ export class EffectsSystem {
     return this.shake;
   }
 
-  public bloodBurst(point: Vec2): void {
+  /** Spray of blood (red for humans, green for zombies) and a stain on the ground. */
+  public bloodBurst(point: Vec2, colors: BodyColors = HUMAN_BODY): void {
     for (let index = 0; index < 8; index += 1) {
       const particle = new Graphics()
         .circle(0, 0, 1.5 + Math.random() * 2)
-        .fill({ color: index % 3 === 0 ? 0x8f2035 : 0xc33d48 });
+        .fill({ color: index % 3 === 0 ? colors.bloodDark : colors.blood });
       particle.position.set(point.x, point.y);
       particle.zIndex = 3;
       this.container.addChild(particle);
@@ -70,10 +74,11 @@ export class EffectsSystem {
           y: -80 - Math.random() * 170,
         },
         lifeMs: 480 + Math.random() * 420,
+        stain: colors.stain,
       });
     }
     const stainX = point.x + (Math.random() - 0.5) * 12;
-    this.bloodStain(stainX, groundAt(stainX) - 1);
+    this.bloodStain(stainX, groundAt(stainX) - 1, colors.stain);
   }
 
   public impact(point: Vec2): void {
@@ -172,7 +177,7 @@ export class EffectsSystem {
       const landed = particle.sprite.y >= groundAt(particle.sprite.x) - 2;
       if (landed || particle.lifeMs <= 0) {
         if (landed) {
-          this.bloodStain(particle.sprite.x, groundAt(particle.sprite.x) - 1);
+          this.bloodStain(particle.sprite.x, groundAt(particle.sprite.x) - 1, particle.stain);
         }
         this.remove(particle.sprite);
         return false;
@@ -211,10 +216,10 @@ export class EffectsSystem {
   }
 
   /** Stains stay on the ground until the scene is torn down. */
-  private bloodStain(x: number, y: number): void {
+  private bloodStain(x: number, y: number, color: number = HUMAN_BODY.stain): void {
     const stain = new Graphics()
       .ellipse(0, 0, 3 + Math.random() * 6, 1.5 + Math.random() * 2)
-      .fill({ color: 0x7e2637, alpha: 0.72 });
+      .fill({ color, alpha: 0.72 });
     stain.position.set(x, y);
     stain.rotation = (Math.random() - 0.5) * 0.8;
     stain.zIndex = 0;

@@ -61,4 +61,9 @@ export const ICON_ENEMIES = {
     <ellipse cx="13" cy="17" rx="8" ry="4" fill="#b5473a"/><ellipse cx="14" cy="18.5" rx="6" ry="1.8" fill="#f0c38a"/>
     <path d="M19 15l4-5 3 1-2 3z" fill="#b5473a"/><path d="M5 18l-4 3 5-1z" fill="#8e3a33"/>
     <circle cx="12" cy="10" r="1.8" fill="none" stroke="#2c3a38" stroke-width="1.4"/><path d="M12 12v2" stroke="#2c3a38" stroke-width="1.4"/></svg>`,
+  kamikaze: figure(`<circle cx="15" cy="5" r="3" stroke-width="2"/><path d="M14 8l-3 8M11 16l-5 4M11 16l5 3 1 5M13 11l-5 2M13 11l5 3" stroke-width="2"/>
+    <circle cx="16" cy="14" r="4" fill="#2c2c34" stroke="none"/><path d="M17 10q1-3 3-4" stroke="#c9b48a" stroke-width="1.3"/>
+    <circle cx="20.5" cy="5.5" r="2" fill="#ff8a33" stroke="none"/>`),
+  zombie: figure(`<circle cx="10" cy="7" r="3" stroke="#5f8a3e" stroke-width="2"/><path d="M10 10l1 8M11 18l-4 7M11 18l3 7M10 12l12-1M10 13l11 2" stroke="#5f8a3e" stroke-width="2"/>
+    <circle cx="23" cy="20" r="1.4" fill="#72c43c" stroke="none"/><circle cx="20" cy="23" r="1" fill="#72c43c" stroke="none"/>`),
 } as const;

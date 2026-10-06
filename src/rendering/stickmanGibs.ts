@@ -1,3 +1,4 @@
+import { HUMAN_BODY, type BodyColors } from './bodyColors';
 import type { Graphics } from 'pixi.js';
 import type { Vec2 } from '../types';
 import { createRandom } from '../utils/math';
@@ -193,17 +194,17 @@ export class GibSimulation {
 }
 
 /** Draws the current state of a gib simulation with the skeleton look, plus blood. */
-export const drawStickmanGibs = (sprite: Graphics, simulation: GibSimulation, originY = 0, append = false): void => {
+export const drawStickmanGibs = (sprite: Graphics, simulation: GibSimulation, originY = 0, append = false, colors: BodyColors = HUMAN_BODY): void => {
   if (!append) {
     sprite.clear();
     sprite.rotation = 0;
     sprite.y = originY;
   }
-  const skeleton = 0xf4f7fb;
-  const rear = 0xb7c1d1;
+  const skeleton = colors.bone;
+  const rear = colors.boneRear;
 
   simulation.stains.forEach((stain) => {
-    sprite.ellipse(stain.x, GIB_GROUND_Y, stain.width, 1.6).fill({ color: 0x7e2637, alpha: 0.75 });
+    sprite.ellipse(stain.x, GIB_GROUND_Y, stain.width, 1.6).fill({ color: colors.stain, alpha: 0.75 });
   });
 
   // Rear pieces first, like drawStickman's layering.
@@ -221,11 +222,11 @@ export const drawStickmanGibs = (sprite: Graphics, simulation: GibSimulation, or
     sprite.moveTo(ax, ay).lineTo(bx, by)
       .stroke({ width: piece.rear ? 3 : 3.5, color, cap: 'round' });
     // Bloody stumps at both ends.
-    sprite.circle(ax, ay, 2.2).fill({ color: 0xc33d48 });
-    sprite.circle(bx, by, 2.2).fill({ color: 0xc33d48 });
+    sprite.circle(ax, ay, 2.2).fill({ color: colors.blood });
+    sprite.circle(bx, by, 2.2).fill({ color: colors.blood });
   });
 
   simulation.blood.forEach((drop) => {
-    sprite.circle(drop.x, drop.y, drop.size).fill({ color: 0xc33d48 });
+    sprite.circle(drop.x, drop.y, drop.size).fill({ color: colors.blood });
   });
 };

@@ -6,6 +6,7 @@ import { STICKMAN_HEAD, drawStickman, type StickmanPose } from '../rendering/sti
 import { FALL_DURATION_MS, drawStickmanFall, getFallPose, type FallKind, type FallPose } from '../rendering/stickmanFall';
 import { CHEER_KINDS, drawStickmanCheer, type CheerKind } from '../rendering/stickmanCheer';
 import { GibSimulation, drawStickmanGibs } from '../rendering/stickmanGibs';
+import { HUMAN_BODY, ZOMBIE_BODY, type BodyColors } from '../rendering/bodyColors';
 import { fromBodyAnchor, spriteToWorld, toBodyAnchor, worldToSprite, type BodyAnchor, type BodyTransform, type Torso } from '../systems/bodyAnchor';
 import { ENEMY_LOOKS, blowsApart, knockbackPush, type EnemyLook } from '../data/enemies';
 import { groundAt } from '../systems/terrain';
@@ -150,6 +151,21 @@ export default class Enemy extends Container {
     return this.look.strikeReach;
   }
 
+  /** Bone and blood colours: zombies are greenish and bleed green. */
+  public get bodyColors(): BodyColors {
+    return this.kind === 'zombie' ? ZOMBIE_BODY : HUMAN_BODY;
+  }
+
+  /** Animation phase for standing poses (zombie arm sway, kamikaze fuse flicker). */
+  private get walkPhase(): number {
+    return this.animationTime / (this.look.stepMs ?? 150);
+  }
+
+  /** Club fighters carry a club; archers, kamikazes and zombies don't. */
+  private get carriesClub(): boolean {
+    return !this.isArcher && this.kind !== 'kamikaze' && this.kind !== 'zombie';
+  }
+
   public get isArcher(): boolean {
     return this.kind === 'archer';
   }
@@ -192,8 +208,14 @@ export default class Enemy extends Container {
     return spriteToWorld(nock, this.bodyTransform());
   }
 
-  /** Pose options for the current look: club fighters carry a club, archers a bow. */
+  /** Pose options for the current look: club fighters carry a club, archers a bow, kamikazes a bomb, zombies reach out. */
   private pose(extra: StickmanPose): StickmanPose {
+    if (this.kind === 'zombie') {
+      return { ...ENEMY_POSE, armed: false, zombie: true, bodyColors: ZOMBIE_BODY, attackStyle: 'grab', ...extra };
+    }
+    if (this.kind === 'kamikaze') {
+      return { ...ENEMY_POSE, armed: false, bomb: true, ...extra };
+    }
     if (!this.isArcher) {
       return { ...ENEMY_POSE, attackStyle: this.look.attackStyle, ...extra };
     }
@@ -211,7 +233,7 @@ export default class Enemy extends Container {
   }
 
   private drawPlaceholder(): void {
-    drawStickman(this.body, 0, { ...ENEMY_POSE, idleBlend: 1 });
+    drawStickman(this.body, 0, this.pose({ idleBlend: 1 }));
     this.body.position.set(0, -29);
     this.body.scale.set(-BODY_SCALE.x, BODY_SCALE.y);
   }
@@ -301,7 +323,7 @@ export default class Enemy extends Container {
   public updateAnimation(deltaMs: number, moving: boolean): void {
     if (this.gibs) {
       this.gibs.step(deltaMs);
-      drawStickmanGibs(this.body, this.gibs, BODY_ORIGIN_Y);
+      drawStickmanGibs(this.body, this.gibs, BODY_ORIGIN_Y, false, this.bodyColors);
       return;
     }
     this.positionHealthBar();
@@ -317,7 +339,7 @@ export default class Enemy extends Container {
     if (this.cheer) {
       this.cheer.timeMs += deltaMs * this.cheer.tempo;
       this.body.scale.set(-BODY_SCALE.x, BODY_SCALE.y);
-      drawStickmanCheer(this.body, this.cheer.kind, this.cheer.timeMs, BODY_ORIGIN_Y, { club: !this.isArcher });
+      drawStickmanCheer(this.body, this.cheer.kind, this.cheer.timeMs, BODY_ORIGIN_Y, { club: this.carriesClub, colors: this.bodyColors });
       return;
     }
 
@@ -329,7 +351,7 @@ export default class Enemy extends Container {
         this.pendingImpact = undefined;
         impact();
       }
-      drawStickman(this.body, this.animationTime, this.pose({
+      drawStickman(this.body, this.walkPhase, this.pose({
         idleBlend: 1,
         attackPhase: Math.max(0.001, attackProgress * Math.PI * 2),
       }));
@@ -342,14 +364,14 @@ export default class Enemy extends Container {
     if (!moving) {
       this.body.rotation = 0;
       this.body.y = -29;
-      drawStickman(this.body, this.animationTime, this.pose({ idleBlend: 1 }));
+      drawStickman(this.body, this.walkPhase, this.pose({ idleBlend: 1 }));
       return;
     }
 
     this.animationTime += deltaMs;
     this.body.scale.x = this.velocity.x < 0 ? -BODY_SCALE.x : BODY_SCALE.x;
     const { runs } = this.look;
-    drawStickman(this.body, this.animationTime / (runs ? RUN_PHASE_MS : 150), this.pose({ running: runs }));
+    drawStickman(this.body, this.animationTime / (runs ? RUN_PHASE_MS : this.look.stepMs ?? 150), this.pose({ running: runs }));
     if (!this.isArcher) {
       // Archers keep drawStickman's own lean so the bow rig stays consistent.
       const lean = runs ? RUN_LEAN : 0.06;
@@ -495,7 +517,7 @@ export default class Enemy extends Container {
     const blast = worldToSprite(point, this.bodyTransform());
     const force = GIB_FORCE_MIN + Math.random() * (GIB_FORCE_MAX - GIB_FORCE_MIN);
     this.gibs = new GibSimulation(blast, Math.floor(Math.random() * 1e9), force);
-    drawStickmanGibs(this.body, this.gibs, BODY_ORIGIN_Y);
+    drawStickmanGibs(this.body, this.gibs, BODY_ORIGIN_Y, false, this.bodyColors);
   }
 
   /** Turns to face the hit (so backwards falls go away from it) and starts a fall animation. */
@@ -515,7 +537,7 @@ export default class Enemy extends Container {
 
   private drawFall(): void {
     if (this.fall) {
-      drawStickmanFall(this.body, this.fall.kind, this.fallProgress, BODY_ORIGIN_Y);
+      drawStickmanFall(this.body, this.fall.kind, this.fallProgress, BODY_ORIGIN_Y, this.bodyColors);
     }
   }
 
@@ -542,7 +564,7 @@ export default class Enemy extends Container {
       const endHipX = getFallPose('getUp', 1).hip.x;
       this.x += endHipX * BODY_SCALE.x * fall.facing * this.scale.x;
       this.fall = undefined;
-      drawStickman(this.body, this.animationTime, { ...ENEMY_POSE, idleBlend: 1 });
+      drawStickman(this.body, this.walkPhase, this.pose({ idleBlend: 1 }));
       return;
     }
     this.drawFall();

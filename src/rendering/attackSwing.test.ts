@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ATTACK_REST, attackImpactProgress, getAttackPose, type AttackPose, type AttackStyle } from './attackSwing';
+import { ATTACK_REST, ZOMBIE_REST, attackImpactProgress, getAttackPose, type AttackPose, type AttackStyle } from './attackSwing';
 
 const KEYS: (keyof AttackPose)[] = ['armAngle', 'forearmBend', 'clubTilt', 'rearArmAngle', 'torsoLean', 'dip', 'step'];
 
@@ -91,5 +91,30 @@ describe('attackImpactProgress', () => {
       const after = Math.abs(getAttackPose(impact + 0.02, style).armAngle - getAttackPose(impact, style).armAngle);
       expect(before).toBeGreaterThan(after);
     });
+  });
+});
+
+describe('zombie grab', () => {
+  const keys: (keyof AttackPose)[] = ['armAngle', 'forearmBend', 'rearArmAngle', 'torsoLean', 'dip', 'step'];
+
+  it('starts and ends in the arms-out stance, so it never jumps', () => {
+    keys.forEach((key) => {
+      expect(getAttackPose(0, 'grab')[key]).toBeCloseTo(ZOMBIE_REST[key], 9);
+      expect(getAttackPose(0.9999, 'grab')[key]).toBeCloseTo(ZOMBIE_REST[key], 2);
+    });
+    // Arms out in front, not hanging down.
+    expect(ZOMBIE_REST.armAngle).toBeGreaterThan(1.2);
+    expect(ZOMBIE_REST.rearArmAngle).toBeGreaterThan(1.2);
+  });
+
+  it('reaches out first, then pulls both hands back to the chest at the impact', () => {
+    const reach = getAttackPose(0.36, 'grab');
+    const pull = getAttackPose(attackImpactProgress('grab'), 'grab');
+    expect(reach.armAngle).toBeGreaterThan(ZOMBIE_REST.armAngle);
+    expect(pull.forearmBend).toBeGreaterThan(1.5);
+    expect(pull.armAngle).toBeLessThan(ZOMBIE_REST.armAngle);
+    for (let p = 0; p <= 1; p += 0.01) {
+      expect(getAttackPose(p, 'grab').forearmBend).toBeGreaterThanOrEqual(0);
+    }
   });
 });

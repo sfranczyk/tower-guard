@@ -1,7 +1,8 @@
 import type { Graphics } from 'pixi.js';
 import type { Vec2 as Point } from '../types';
 import { drawBow, getArcherRig, toArcherLocalAngle, type FreeArm } from './archer';
-import { ATTACK_REST, CLUBS, getAttackPose, type AttackStyle } from './attackSwing';
+import { HUMAN_BODY, type BodyColors } from './bodyColors';
+import { ATTACK_REST, CLUBS, ZOMBIE_REST, getAttackPose, type AttackStyle } from './attackSwing';
 import { RUN_GROUND_Y, runArmSwing, runBounce, runFoot } from './runCycle';
 import { walkKneeBend } from './walkCycle';
 import { ARMOR_COLORS, type ArmorPalette, drawArmor, drawArmoredBow, drawHood, drawPauldron, drawQuiver } from './armor';
@@ -42,7 +43,26 @@ export interface StickmanPose {
   skin?: StickmanSkin;
   /** Colours of the armored skin (default ARMOR_COLORS); the bowman's follow the battleground. */
   armorColors?: ArmorPalette;
+  /** Bone colours of the skeleton skin (default HUMAN_BODY; zombies are greenish). */
+  bodyColors?: BodyColors;
+  /** Zombie: both arms held out in front (swaying), leaning forward; attacks with the 'grab' style. */
+  zombie?: boolean;
+  /** Kamikaze: a bomb strapped to the chest with a lit, sparking fuse. */
+  bomb?: boolean;
 }
+
+/** Bomb strapped to a kamikaze's chest, with the fuse sparking (flickers with `phase`). */
+const drawBomb = (sprite: Graphics, center: Point, phase: number): void => {
+  sprite.circle(center.x, center.y, 9).fill({ color: 0x2c2c34 }).stroke({ width: 1.5, color: 0x141418 });
+  sprite.circle(center.x - 3, center.y - 3, 2.6).fill({ color: 0x6a6a78 });
+  sprite.rect(center.x - 2.5, center.y - 11.5, 5, 3).fill({ color: 0x8a8a96 });
+  const fuseEnd = { x: center.x + 6, y: center.y - 17 };
+  sprite.moveTo(center.x, center.y - 11).quadraticCurveTo(center.x + 1, center.y - 16, fuseEnd.x, fuseEnd.y)
+    .stroke({ width: 1.6, color: 0xc9b48a, cap: 'round' });
+  const flicker = 0.75 + 0.25 * Math.sin(phase * 9.7) * Math.sin(phase * 4.3 + 1);
+  sprite.circle(fuseEnd.x, fuseEnd.y, 4.2 * flicker).fill({ color: 0xff7a2a, alpha: 0.75 });
+  sprite.circle(fuseEnd.x, fuseEnd.y, 2.2 * flicker).fill({ color: 0xffe27a });
+};
 
 /** Two-handed grip: the rear hand holds the shaft this far behind the front fist. */
 const TWO_HAND_GRIP = 9;
@@ -90,12 +110,19 @@ export const drawStickman: StickmanRenderer = (sprite, phase, pose = {}) => {
     leanDirection = Math.sign(facingDirection || 1),
     skin = 'skeleton',
     armorColors = ARMOR_COLORS,
+    bodyColors = HUMAN_BODY,
+    zombie = false,
+    bomb = false,
   } = pose;
   const armored = skin === 'armored';
   sprite.clear();
   const motionBlend = running ? 1 : runningBlend;
   // Club swing: whole-body keyframes (rendering/attackSwing.ts); attackPhase runs 0..2π per swing.
-  const attack = attackPhase === 0 ? undefined : getAttackPose(attackPhase / (Math.PI * 2), attackStyle);
+  // Zombies hold their arms out (swaying a little) whenever they aren't grabbing.
+  const zombieStance = zombie
+    ? { ...ZOMBIE_REST, armAngle: ZOMBIE_REST.armAngle + Math.sin(phase) * 0.07, rearArmAngle: ZOMBIE_REST.rearArmAngle + Math.sin(phase + 1.3) * 0.07 }
+    : undefined;
+  const attack = attackPhase === 0 ? zombieStance : getAttackPose(attackPhase / (Math.PI * 2), zombie ? 'grab' : attackStyle);
   const club = CLUBS[attackStyle];
   // Lean forward in the facing direction (a mirrored sprite needs the rotation flipped too).
   sprite.rotation = (0.06 + 0.04 * motionBlend) * (1 - idleBlend) * leanDirection;
@@ -110,8 +137,8 @@ export const drawStickman: StickmanRenderer = (sprite, phase, pose = {}) => {
     + walkingBounce
     + runningBounce
     + attackDip;
-  const skeleton = 0xf4f7fb;
-  const rear = 0xb7c1d1;
+  const skeleton = bodyColors.bone;
+  const rear = bodyColors.boneRear;
   const hip = { x: 0, y: 0 };
   // The swing tilts the torso about the hip (legs stay planted); otherwise it's upright.
   const torsoLean = attack?.torsoLean ?? 0;
@@ -283,7 +310,7 @@ export const drawStickman: StickmanRenderer = (sprite, phase, pose = {}) => {
       drawArcherArm(rearArm.elbow, rearArm.hand, true);
     } else {
       const rearArmAngle = attack?.rearArmAngle ?? armSwingAngle * (1 - idleBlend) + 0.1 * idleBlend;
-      drawArm(rearArmAngle, true);
+      drawArm(rearArmAngle, true, zombie);
     }
   }
   if (armored) {
@@ -304,10 +331,15 @@ export const drawStickman: StickmanRenderer = (sprite, phase, pose = {}) => {
     const head = along(-STICKMAN_HEAD.y);
     sprite.circle(head.x, head.y, STICKMAN_HEAD.radius).stroke({ width: 2, color: skeleton });
     drawLeg(blendPoint(rightFoot, idleRightFoot), rightKneeBend, false);
+    if (bomb) {
+      // On the chest, just in front of the spine.
+      const chest = along(19);
+      drawBomb(sprite, { x: chest.x + Math.cos(torsoLean) * 7, y: chest.y + Math.sin(torsoLean) * 7 }, phase);
+    }
   }
   const weaponHand = archerPose
     ? { x: 0, y: 0 }
-    : drawArm(frontArmAngle, false, armed);
+    : drawArm(frontArmAngle, false, armed || zombie);
   if (armed) {
     const weaponDirection = clubDirection(frontArmAngle + attackForearmBend);
     const butt = { x: weaponHand.x - weaponDirection.x * club.butt, y: weaponHand.y - weaponDirection.y * club.butt };

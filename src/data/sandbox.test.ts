@@ -17,12 +17,13 @@ describe('sandbox settings', () => {
       waveCount: 9,
       bowmanHealth: -5,
       keepHealth: 'lots' as unknown as number,
-      waves: [{ enemies: { basic: 99, fast: -2, tank: 1.6, archer: 1, dragon: 0 }, battleground: 'moon' as never }],
+      waves: [{ enemies: { basic: 99, fast: -2, tank: 1.6, archer: 1, dragon: 0 } as never, battleground: 'moon' as never }],
     });
     expect(settings.waveCount).toBe(MAX_WAVES);
     expect(settings.bowmanHealth).toBe(20);
     expect(settings.keepHealth).toBe(createDefaultSandbox().keepHealth);
-    expect(settings.waves[0].enemies).toEqual({ basic: 20, fast: 0, tank: 2, archer: 1, dragon: 0 });
+    // Types missing from a stored wave (added later) default to none.
+    expect(settings.waves[0].enemies).toEqual({ basic: 20, fast: 0, tank: 2, archer: 1, dragon: 0, kamikaze: 0, zombie: 0 });
     expect(settings.waves[0].battleground).toBe(createDefaultSandbox().waves[0].battleground);
     expect(settings.waves).toHaveLength(MAX_WAVES);
   });

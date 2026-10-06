@@ -17,7 +17,7 @@ import type { EnemyType } from '../types';
  */
 
 /** Where in the wave (0..1) each type starts to appear: fighters first, brutes and dragons later. */
-const TYPE_START: Readonly<Record<EnemyType, number>> = { basic: 0, fast: 0.05, archer: 0.15, tank: 0.3, dragon: 0.35 };
+const TYPE_START: Readonly<Record<EnemyType, number>> = { basic: 0, fast: 0.05, zombie: 0.1, archer: 0.15, kamikaze: 0.25, tank: 0.3, dragon: 0.35 };
 const TYPES = Object.keys(TYPE_START) as EnemyType[];
 
 /** Every enemy of the wave in spawn order, cut into groups. */

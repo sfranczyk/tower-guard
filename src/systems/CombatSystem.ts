@@ -43,6 +43,8 @@ const BOWMAN_HEIGHT = 40;
 const BOWMAN_CHEST = 22;
 /** Enemy archers re-solve their aim this often (the solver simulates many trajectories). */
 const ARCHER_AIM_REFRESH_MS = 250;
+/** A kamikaze's blast reaches the bowman and the keep within this many explosion radii. */
+const KAMIKAZE_REACH = 1.2;
 
 export interface CombatWorld {
   readonly bowman: Bowman;
@@ -151,6 +153,16 @@ export class CombatSystem {
 
     // Knocked down by an explosion: no moving or attacking until it gets back up.
     if (enemy.isDown) {
+      return;
+    }
+
+    // Kamikaze: no swing, it blows itself up on reaching the bowman (jumping doesn't help) or the keep.
+    if (enemy.kind === 'kamikaze') {
+      const atKeep = enemy.target === 'tower' && enemy.x <= playerTower.x + TOWER_ATTACK_REACH;
+      const atBowman = enemy.target === 'bowman' && !bowman.isDead && Math.abs(enemy.x - bowman.x) <= MELEE_REACH && Math.abs(enemy.y - bowman.y) <= 60;
+      if (atKeep || atBowman) {
+        this.detonate(enemy);
+      }
       return;
     }
 
@@ -375,6 +387,26 @@ export class CombatSystem {
   }
 
   /**
+   * A kamikaze blows up: it bursts apart, the blast hurts the enemies around it like an explosive arrow,
+   * and the bowman (unless he's in the keep) and the keep take its damage if they're close.
+   */
+  private detonate(kamikaze: Enemy): void {
+    const { bowman, playerTower, effects } = this.world;
+    const body = kamikaze.getPhysicsBounds();
+    const point = { x: body.x + body.width / 2, y: body.y + body.height / 2 };
+    const damage = ENEMY_DAMAGE.kamikaze.melee;
+    kamikaze.takeDamage(Number.MAX_SAFE_INTEGER, { cause: 'blast', fromX: point.x, point });
+    this.explode(point, this.world.enemies.filter((enemy) => enemy.isAlive()), kamikaze);
+    if (!bowman.isInTower && !bowman.isDead && Math.hypot(bowman.x - point.x, bowman.y - BOWMAN_CHEST - point.y) <= EXPLOSION_RADIUS * KAMIKAZE_REACH) {
+      this.events.bowmanDamaged(rollDamage(damage.bowman));
+      effects.bloodBurst({ x: bowman.x, y: bowman.y - BOWMAN_CHEST });
+    }
+    if (point.x - (playerTower.x + TOWER_HALF_WIDTH) <= EXPLOSION_RADIUS * KAMIKAZE_REACH) {
+      playerTower.takeDamage(rollDamage(damage.keep));
+    }
+  }
+
+  /**
    * Explosion visuals plus splash damage and knockback for every living enemy whose body centre is
    * within EXPLOSION_RADIUS (except `directHit`, which already took the arrow's damage).
    */
@@ -403,7 +435,7 @@ export class CombatSystem {
     activeEnemies: readonly Foe[],
   ): void {
     const { effects, debug } = this.world;
-    effects.bloodBurst(impactPoint);
+    effects.bloodBurst(impactPoint, enemy.bodyColors);
     if (SHOW_HITBOX_DEBUG) {
       debug.circle(impactPoint.x, impactPoint.y, 3).fill({ color: 0x55ff88, alpha: 1 });
     }

@@ -1,3 +1,4 @@
+import type { BodyColors } from './bodyColors';
 import type { Graphics } from 'pixi.js';
 import type { Vec2 } from '../types';
 import { STICKMAN_HEAD } from './stickman';
@@ -354,6 +355,6 @@ export const getFallPose = (kind: FallKind, progress: number): FallPose => {
 };
 
 /** Draws a fall animation frame with the skeleton look (same colours and widths as drawStickman). */
-export const drawStickmanFall = (sprite: Graphics, kind: FallKind, progress: number, originY = 0): void => {
-  drawJointPose(sprite, getFallPose(kind, progress), originY);
+export const drawStickmanFall = (sprite: Graphics, kind: FallKind, progress: number, originY = 0, colors?: BodyColors): void => {
+  drawJointPose(sprite, getFallPose(kind, progress), originY, { colors });
 };
