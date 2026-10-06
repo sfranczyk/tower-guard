@@ -11,6 +11,11 @@ import { HUD_BOTTOM_TEMPLATE, HUD_TOP_TEMPLATE, OVERLAY_TEMPLATE } from './templ
 
 /** Breathing room kept around the canvas + HUD stack inside the window. */
 const PAGE_MARGIN = 16;
+/**
+ * Overlay zoom relative to the canvas scale: a bit larger than the canvas on small screens (`boost`) so text
+ * stays readable, within `min`..`max`.
+ */
+const UI_SCALE = { min: 0.6, max: 1.15, boost: 1.12 };
 
 export type UiScreen = 'menu' | 'sandbox' | 'animationLab' | 'soundLab' | 'game';
 
@@ -282,6 +287,8 @@ export class DomUi {
     }
     // How far the base-width area (e.g. the animation lab's panel) sits in from the edges of a wider view.
     this.host.style.setProperty('--view-inset', `${((fit.viewWidth - GAME_WIDTH) / 2) * fit.scale}px`);
+    // Overlays (menu, panels, end screen, drawer) are designed for a canvas at scale 1 and zoom with it.
+    this.host.style.setProperty('--ui-scale', `${Math.min(UI_SCALE.max, Math.max(UI_SCALE.min, fit.scale * UI_SCALE.boost))}`);
     this.onCanvasFit?.(fit);
   }
 

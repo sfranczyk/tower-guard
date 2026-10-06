@@ -86,6 +86,9 @@ src/
   the world once it fits (`centeredCameraX`); menus and labs centre their backdrop and content. The landscape
   (sky, hills mirrored past both ends, trees, ground, clouds) extends `SCENERY_MARGIN` beyond the world, and
   rain and snow cover `MAX_VIEW_WIDTH`.
+  Overlays on the canvas (menu, sandbox/sound panels, end screen, drawer) are laid out for a canvas at
+  scale 1 and zoom with it (`--ui-scale`, set in `fitCanvas`, `UI_SCALE` limits); the sandbox's buttons stay
+  pinned at the bottom of its card. The menu moves the meadow's sun over the enemy keep, clear of the logo.
   Never place HUD elements over the play field. Only menus, the settings drawer and the end screen
   overlay the canvas. Scenes never touch the DOM directly. They call `DomUi` methods and assign
   `ui.handlers.*` callbacks.

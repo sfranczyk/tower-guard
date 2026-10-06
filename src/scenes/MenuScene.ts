@@ -11,6 +11,7 @@ import { groundAt } from '../systems/terrain';
 /** The menu shows the middle of the battlefield (centred in the view), with both keeps pulled into view. */
 const MENU_KEEPS = { player: 190, enemy: 1010 } as const;
 const MENU_BOWMAN_X = 285;
+const MENU_SUN = { x: 975, y: 95 };
 
 /** Main menu over a live battlefield (drifting clouds, flickering torches, the bowman at ease). */
 export class MenuScene extends Scene {
@@ -22,7 +23,9 @@ export class MenuScene extends Scene {
 
   public enter(): void {
     const { ui } = this.ctx;
-    const battleground = BATTLEGROUNDS.greenMeadow;
+    // The sun moves out from behind the logo, over the enemy keep.
+    const meadow = BATTLEGROUNDS.greenMeadow;
+    const battleground = { ...meadow, sun: meadow.sun && { ...meadow.sun, ...MENU_SUN } };
     ui.showScreen('menu');
     ui.setTheme(battleground.ui);
     this.createScenery(battleground);
