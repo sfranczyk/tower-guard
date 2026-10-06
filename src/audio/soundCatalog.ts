@@ -21,8 +21,8 @@ export const SOUND_INFO: Readonly<Record<SoundId, SoundInfo>> = {
   },
   explosion: {
     title: 'Explosion',
-    description: 'Explosive arrows bursting on enemies, the ground or the enemy keep. Three takes to choose from: 1 deep boom, 2 sharp crack, 3 long rumble.',
-    source: 'Synthesized with ffmpeg (low thump, brown-noise blast, crackle)',
+    description: 'Explosive arrows bursting on enemies, the ground or the enemy keep. A long, rumbling boom.',
+    source: 'Synthesized with ffmpeg (low thump, brown-noise blast, crackle, long rumble)',
   },
   shrapnelBurst: {
     title: 'Shrapnel burst',
