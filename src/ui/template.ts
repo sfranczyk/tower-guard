@@ -1,4 +1,4 @@
-import { ICON_ARROWS, ICON_BOWMAN, ICON_GEAR, ICON_KEEP, ICON_WAVE } from './icons';
+import { ICON_BOWMAN, ICON_GEAR, ICON_KEEP, ICON_WAVE, ICON_WEAPONS } from './icons';
 
 /**
  * Static DOM markup. Elements are looked up by their data-* attributes in DomUi.
@@ -49,19 +49,29 @@ export const OVERLAY_TEMPLATE = `
       </section>
 `;
 
-const ammoCard = (type: keyof typeof ICON_ARROWS, key: number, label: string, active = false): string =>
-  `<button class="ammo-card${active ? ' active' : ''}" data-projectile="${type}"><span class="ammo-key">${key}</span>${ICON_ARROWS[type]}${label}</button>`;
+/** Weapon slots: up to five, icon only (name in the tooltip), key in the corner, ammo count underneath. */
+export const WEAPON_SLOTS = 5;
+const WEAPONS: ReadonlyArray<{ type: keyof typeof ICON_WEAPONS; name: string }> = [
+  { type: 'normal', name: 'Normal arrow' },
+  { type: 'explosive', name: 'Explosive bolt' },
+  { type: 'piercing', name: 'Piercing arrow' },
+];
+const weaponSlot = (index: number): string => {
+  const weapon = WEAPONS[index];
+  if (!weapon) {
+    return `<div class="weapon"><div class="weapon-slot empty" aria-hidden="true"><span class="weapon-key">${index + 1}</span></div><span class="weapon-ammo">–</span></div>`;
+  }
+  return `<div class="weapon"><button class="weapon-slot${index === 0 ? ' active' : ''}" data-projectile="${weapon.type}" title="${weapon.name} (${index + 1})" aria-label="${weapon.name}">`
+    + `<span class="weapon-key">${index + 1}</span>${ICON_WEAPONS[weapon.type]}</button>`
+    + `<span class="weapon-ammo" data-ammo="${weapon.type}">∞</span></div>`;
+};
 
 export const HUD_TOP_TEMPLATE = `
   <div class="hud-chip">${ICON_KEEP}<div><div class="chip-label">Keep</div><div class="meter"><i data-tower-bar></i></div><div class="chip-value" data-tower-health>600 / 600</div></div></div>
   <div class="hud-chip">${ICON_BOWMAN}<div><div class="chip-label">Bowman</div><div class="meter"><i data-bowman-bar></i></div><div class="chip-value" data-bowman-health>100 / 100</div></div></div>
   <div class="hud-chip">${ICON_WAVE}<div><div class="chip-label">Wave <span data-wave>1 / 1</span></div><div class="pips" data-enemy-pips></div><div class="meter" hidden><i data-wave-bar></i></div><div class="chip-value" data-enemy-count>0 of 0 defeated</div></div></div>
   <div class="hud-spacer"></div>
-  <div class="ammo-cards" data-projectiles>
-    ${ammoCard('normal', 1, 'Normal', true)}
-    ${ammoCard('explosive', 2, 'Explosive')}
-    ${ammoCard('piercing', 3, 'Piercing')}
-  </div>
+  <div class="weapons" data-projectiles>${Array.from({ length: WEAPON_SLOTS }, (_, index) => weaponSlot(index)).join('')}</div>
   <div class="hud-spacer"></div>
   <button class="round-button" data-options aria-label="Open settings">${ICON_GEAR}</button>
 `;

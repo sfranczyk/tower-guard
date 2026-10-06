@@ -20,11 +20,20 @@ export const ICON_GEAR = `<svg viewBox="0 0 24 24" width="22" height="22" aria-h
 export const ICON_ENEMY_PIP = `<svg viewBox="0 0 14 14" aria-hidden="true"><circle cx="7" cy="6" r="5"/>
   <circle cx="5" cy="6" r="1.2" class="pip-eye"/><circle cx="9" cy="6" r="1.2" class="pip-eye"/><rect x="5" y="10" width="4" height="3" rx="1"/></svg>`;
 
-const arrow = (head: string, shaft = '#5a3c23'): string => `<svg class="ammo-art" viewBox="0 0 64 16" aria-hidden="true">
-  <rect x="6" y="7" width="44" height="2.4" rx="1.2" fill="${shaft}"/><path d="M2 3l8 5-8 5 3-5z" fill="#c9d3dc"/>${head}</svg>`;
+/** A weapon icon: the arrow drawn diagonally (pointing up-right) to fill a square slot, plus an optional badge. */
+const weapon = (head: string, badge = '', shaft = '#5a3c23'): string => `<svg class="weapon-art" viewBox="0 0 40 40" aria-hidden="true">
+  <g transform="rotate(-45 20 20)"><rect x="5" y="18.8" width="24" height="2.4" rx="1.2" fill="${shaft}"/>
+  <path d="M2 15l6 5-6 5 2.5-5z" fill="#c9d3dc"/><path d="M5 15.5l5 4.5-5 4.5z" fill="#e3e8ec"/>${head}</g>${badge}</svg>`;
 
-export const ICON_ARROWS = {
-  normal: arrow('<path d="M50 3l12 5-12 5z" fill="#8c96a0"/>'),
-  explosive: arrow('<circle cx="55" cy="8" r="6" fill="#d8614f"/><circle cx="53" cy="6" r="2" fill="#f6c27a"/>'),
-  piercing: arrow('<path d="M48 5.5l15 2.5-15 2.5z" fill="#6c7a88"/>', '#7a5a38'),
+/** Explosion burst badge (bottom-right corner of the slot). */
+const BURST = `<g transform="translate(29 29)"><path d="M0-9l2.6 5.2L8.4-6 5.6-.8 9.6 2.8 3.8 3.4 3 9.4-1 5-6 8.4-4.8 2.6-9.6-.6-4.4-3.2-6.4-8.4-1.2-5.2z" fill="#f08a3a"/>
+  <circle r="3.2" fill="#ffe27a"/></g>`;
+/** Piercing badge: a double chevron. */
+const PIERCE = `<g transform="translate(29 29)"><circle r="8" fill="#3f6965"/>
+  <path d="M-4.5-4 0 0l-4.5 4M0.5-4 5 0 0.5 4" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></g>`;
+
+export const ICON_WEAPONS = {
+  normal: weapon('<path d="M29 15.5l9 4.5-9 4.5z" fill="#8c96a0"/>'),
+  explosive: weapon('<circle cx="32" cy="20" r="5" fill="#d8614f"/><circle cx="30.5" cy="18.5" r="1.6" fill="#f6c27a"/>', BURST),
+  piercing: weapon('<path d="M28 17.5l11 2.5-11 2.5z" fill="#6c7a88"/>', PIERCE, '#7a5a38'),
 } as const;

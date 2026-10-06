@@ -63,7 +63,8 @@ src/
   (`DEFAULT_AIM_COLORS`, overridden per map, e.g. deep violet on the desert where gold disappears).
 - **UI** is HTML (`ui/template.ts`, styles in `index.html`) in the landscape style: flat shapes, cream panels,
   chunky gold/cream buttons (`primary-button`, `secondary-button`), the Fredoka display font, flat SVG icons
-  (`ui/icons.ts`) and health bars in the HUD (`ui/Hud.ts`). The page backdrop and accent follow the map:
+  (`ui/icons.ts`) and health bars in the HUD (`ui/Hud.ts`). Weapons are square slots (up to `WEAPON_SLOTS` = 5 in
+  `ui/template.ts`): icon only (name in the tooltip), key in the corner, ammo count underneath (∞ for now). The page backdrop and accent follow the map:
   each battleground has `ui: { accent, backdrop }` and scenes call `DomUi.setTheme`. The menu is drawn over
   a live battlefield (`MenuScene`), with the labs under "Dev tools"; the settings drawer works in the menu
   and in game (its handlers live in `SceneManager`). The in-game HUD sits *outside* the canvas
