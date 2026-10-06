@@ -164,10 +164,11 @@ src/
 - **Explosive death** (`rendering/stickmanGibs.ts`): `GibSimulation` blows the standing stickman into
   10 pieces plus blood (seeded and deterministic, so it's testable), and `drawStickmanGibs` draws it.
   In the game an enemy is blown apart (random force 1–1.7×) when killed by a direct explosive hit (cause
-  `'blast'`: arrow plus `EXPLOSION_DAMAGE`), or by chance by a splash explosion that dealt more than 75% of
-  its max health: 50% plus a point per damage-% above 75%, certain from 125% (`splashGibChance` /
-  `blowsApart` in `data/enemies.ts`, `SPLASH_GIB_*`). Other kills by splash
-  get `knockback`. The lab uses force 1, and every lab figure is clipped to its frame.
+  `'blast'`: arrow plus `EXPLOSION_DAMAGE`), or by chance by a splash explosion, by distance from the blast
+  (`HitInfo.blastDistance`, fraction of `EXPLOSION_RADIUS`): ~95% near the centre, 50% halfway, ~5% at the edge
+  (`splashGibChance` / `blowsApart` in `data/enemies.ts`, `SPLASH_GIB_CHANCE`). Other kills by splash get
+  `knockback`, and knocked-back enemies (dead or alive) slide up to `KNOCKBACK_PUSH_MAX` px further the closer
+  they were (`knockbackPush`, applied over the fall in `Enemy.updateFall`). The lab uses force 1, and every lab figure is clipped to its frame.
 - **Bow ready**: `pose.bowReady` blends the archer between the lowered bow (0) and aiming (1). `Bowman`
   raises the bow while the player draws (aim power > 0) and lowers it after the shot.
 - **Animation lab** (drawn in Pixi on a cream panel over the meadow, matching the HTML UI) rows live in `scenes/AnimationLabScene.ts`, and scripted sequences in

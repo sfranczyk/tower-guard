@@ -1,4 +1,4 @@
-import { ENEMY_SPEED, SPLASH_GIB_BASE_CHANCE, SPLASH_GIB_THRESHOLD } from '../config';
+import { ENEMY_SPEED, KNOCKBACK_PUSH_MAX, SPLASH_GIB_CHANCE } from '../config';
 import type { AttackStyle } from '../rendering/attackSwing';
 import type { EnemyType } from '../types';
 
@@ -56,25 +56,30 @@ export const getEnemyStats = (type: EnemyType, difficulty: number): EnemyStats =
   };
 };
 
+const smoothstep = (from: number, to: number, value: number): number => {
+  const t = Math.max(0, Math.min(1, (value - from) / (to - from)));
+  return t * t * (3 - 2 * t);
+};
+
 /**
- * Chance (0..1) that a killing splash explosion blows the body apart: none up to SPLASH_GIB_THRESHOLD
- * of max health, then SPLASH_GIB_BASE_CHANCE plus a point per damage-% above it (76% → 51%,
- * 100% → 75%, 125%+ → certain).
+ * Chance (0..1) that a killing splash explosion blows the body apart, by distance from the blast as a
+ * fraction of the radius: near the centre almost certain, at the edge only a small chance (SPLASH_GIB_CHANCE).
  */
-export const splashGibChance = (damage: number, maxHealth: number): number => {
-  const share = damage / maxHealth;
-  if (share <= SPLASH_GIB_THRESHOLD) {
-    return 0;
-  }
-  return Math.min(1, SPLASH_GIB_BASE_CHANCE + (share - SPLASH_GIB_THRESHOLD));
+export const splashGibChance = (distance: number): number => {
+  const { near, far, max, min } = SPLASH_GIB_CHANCE;
+  return min + (max - min) * (1 - smoothstep(near, far, distance));
 };
 
 /**
  * Whether a killing blow blows the body apart: always for a direct explosive hit ('blast'), by
- * splashGibChance for a splash explosion. `roll` is a random 0..1, passed in so tests can pin it.
+ * splashGibChance for a splash explosion (`distance` = fraction of the radius, edge if unknown).
+ * `roll` is a random 0..1, passed in so tests can pin it.
  */
-export const blowsApart = (cause: string, damage: number, maxHealth: number, roll = Math.random()): boolean =>
-  cause === 'blast' || (cause === 'explosion' && roll < splashGibChance(damage, maxHealth));
+export const blowsApart = (cause: string, distance = 1, roll = Math.random()): boolean =>
+  cause === 'blast' || (cause === 'explosion' && roll < splashGibChance(distance));
+
+/** Extra push (px) on top of the knockback fall for an enemy `distance` (fraction of the radius) from a blast. */
+export const knockbackPush = (distance: number): number => KNOCKBACK_PUSH_MAX * Math.max(0, 1 - distance) ** 1.5;
 
 /** How each enemy type looks, moves and swings: body size (1 = a normal stickman), club swing, run or walk. */
 export interface EnemyLook {

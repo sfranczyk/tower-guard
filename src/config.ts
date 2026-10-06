@@ -60,12 +60,13 @@ export const SHRAPNEL_SPREAD = 0.16;
 export const SHRAPNEL_SPEED_FACTOR = 1.05;
 export const SHRAPNEL_FRAGMENT_DAMAGE = 0.55;
 /**
- * A splash explosion kill that dealt more than SPLASH_GIB_THRESHOLD of the enemy's max health may blow
- * the body apart: SPLASH_GIB_BASE_CHANCE plus one percentage point per point of damage % above the
- * threshold, up to 100% (a direct explosive hit always does).
+ * Splash explosions, by distance from the blast as a fraction of EXPLOSION_RADIUS (0 = centre, 1 = edge).
+ * A kill blows the body apart with SPLASH_GIB_CHANCE.max up to SPLASH_GIB_CHANCE.near, easing down to
+ * SPLASH_GIB_CHANCE.min from SPLASH_GIB_CHANCE.far out (a direct explosive hit always does). Knocked-back
+ * enemies are also pushed up to KNOCKBACK_PUSH_MAX px further the closer they were.
  */
-export const SPLASH_GIB_THRESHOLD = 0.75;
-export const SPLASH_GIB_BASE_CHANCE = 0.5;
+export const SPLASH_GIB_CHANCE = { near: 0.3, far: 0.7, max: 0.95, min: 0.05 } as const;
+export const KNOCKBACK_PUSH_MAX = 110;
 export const PIERCING_DAMAGE_MULTIPLIER = 0.62;
 export const ENEMY_TOWER_DAMAGE = 16;
 /** Enemy archers: stop and shoot from this distance, draw time, pause between shots, aim error. */

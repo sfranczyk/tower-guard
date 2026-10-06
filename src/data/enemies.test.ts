@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ENEMY_SPEED, HEADSHOT_DAMAGE_MULTIPLIER, PROJECTILE_DAMAGE } from '../config';
-import { ENEMY_DAMAGE, ENEMY_LOOKS, blowsApart, getEnemyStats, rollDamage, splashGibChance } from './enemies';
+import { ENEMY_DAMAGE, ENEMY_LOOKS, blowsApart, getEnemyStats, knockbackPush, rollDamage, splashGibChance } from './enemies';
 
 describe('getEnemyStats', () => {
   it('returns base stats at difficulty 1', () => {
@@ -60,44 +60,49 @@ describe('blowsApart', () => {
   const UNLUCKY = 0.99;
 
   it('always blows apart on a direct explosive hit', () => {
-    expect(blowsApart('blast', 1, 100, UNLUCKY)).toBe(true);
+    expect(blowsApart('blast', 1, UNLUCKY)).toBe(true);
   });
 
-  it('may blow apart on a splash explosion above 75% of max health', () => {
-    expect(blowsApart('explosion', 76, 100, LUCKY)).toBe(true);
-    expect(blowsApart('explosion', 76, 100, UNLUCKY)).toBe(false);
-    expect(blowsApart('explosion', 75, 100, LUCKY)).toBe(false);
-    // Runner (14 max hp) hit by a 14 splash: 100% > 75%.
-    expect(blowsApart('explosion', 14, 14, LUCKY)).toBe(true);
+  it('usually blows apart near the blast, rarely at the edge', () => {
+    expect(blowsApart('explosion', 0.1, 0.9)).toBe(true);
+    expect(blowsApart('explosion', 0.1, UNLUCKY)).toBe(false);
+    expect(blowsApart('explosion', 0.95, 0.5)).toBe(false);
+    expect(blowsApart('explosion', 0.95, 0.01)).toBe(true);
   });
 
   it('follows the splash chance for random rolls', () => {
-    const hits = Array.from({ length: 1000 }, (_, index) => blowsApart('explosion', 20, 20, index / 1000)).filter(Boolean).length;
-    expect(hits).toBe(750);
+    const hits = Array.from({ length: 1000 }, (_, index) => blowsApart('explosion', 0.5, index / 1000)).filter(Boolean).length;
+    expect(hits).toBe(500);
   });
 
   it('never for other causes', () => {
-    expect(blowsApart('arrow', 500, 20, LUCKY)).toBe(false);
-    expect(blowsApart('headshot', 500, 20, LUCKY)).toBe(false);
-    expect(blowsApart('lightning', 500, 20, LUCKY)).toBe(false);
+    expect(blowsApart('arrow', 0, LUCKY)).toBe(false);
+    expect(blowsApart('headshot', 0, LUCKY)).toBe(false);
+    expect(blowsApart('lightning', 0, LUCKY)).toBe(false);
   });
 });
 
 describe('splashGibChance', () => {
-  it('is zero up to 75% of max health', () => {
-    expect(splashGibChance(75, 100)).toBe(0);
-    expect(splashGibChance(14, 20)).toBe(0);
+  it('is almost certain near the centre and small at the edge', () => {
+    expect(splashGibChance(0)).toBeCloseTo(0.95);
+    expect(splashGibChance(0.3)).toBeCloseTo(0.95);
+    expect(splashGibChance(0.5)).toBeCloseTo(0.5);
+    expect(splashGibChance(0.7)).toBeCloseTo(0.05);
+    expect(splashGibChance(1)).toBeCloseTo(0.05);
   });
 
-  it('starts at 50% and adds a point per damage-% above 75%', () => {
-    expect(splashGibChance(76, 100)).toBeCloseTo(0.51);
-    expect(splashGibChance(100, 100)).toBeCloseTo(0.75);
-    expect(splashGibChance(14, 16)).toBeCloseTo(0.625);
+  it('falls off steadily with distance', () => {
+    for (let distance = 0.05; distance <= 1; distance += 0.05) {
+      expect(splashGibChance(distance)).toBeLessThanOrEqual(splashGibChance(distance - 0.05));
+    }
   });
+});
 
-  it('is certain from 125% up', () => {
-    expect(splashGibChance(125, 100)).toBe(1);
-    expect(splashGibChance(300, 100)).toBe(1);
+describe('knockbackPush', () => {
+  it('throws closer enemies further, none at the edge', () => {
+    expect(knockbackPush(0)).toBeGreaterThan(knockbackPush(0.5));
+    expect(knockbackPush(0.5)).toBeGreaterThan(knockbackPush(0.9));
+    expect(knockbackPush(1)).toBe(0);
   });
 });
 

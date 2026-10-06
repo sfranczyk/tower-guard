@@ -1,5 +1,5 @@
 import { Container, Graphics } from 'pixi.js';
-import { ENEMY_ARCHER_COOLDOWN_MS, ENEMY_ARCHER_DRAW_MS, ENEMY_ATTACK_INTERVAL_MS } from '../config';
+import { ENEMY_ARCHER_COOLDOWN_MS, ENEMY_ARCHER_DRAW_MS, ENEMY_ATTACK_INTERVAL_MS, PLAYER_TOWER_X, WORLD_WIDTH } from '../config';
 import { getArcherRig, toArcherLocalAngle } from '../rendering/archer';
 import { attackImpactProgress } from '../rendering/attackSwing';
 import { STICKMAN_HEAD, drawStickman, type StickmanPose } from '../rendering/stickman';
@@ -7,7 +7,7 @@ import { FALL_DURATION_MS, drawStickmanFall, getFallPose, type FallKind, type Fa
 import { CHEER_KINDS, drawStickmanCheer, type CheerKind } from '../rendering/stickmanCheer';
 import { GibSimulation, drawStickmanGibs } from '../rendering/stickmanGibs';
 import { fromBodyAnchor, spriteToWorld, toBodyAnchor, worldToSprite, type BodyAnchor, type BodyTransform, type Torso } from '../systems/bodyAnchor';
-import { ENEMY_LOOKS, blowsApart, type EnemyLook } from '../data/enemies';
+import { ENEMY_LOOKS, blowsApart, knockbackPush, type EnemyLook } from '../data/enemies';
 import { groundAt } from '../systems/terrain';
 import type { Bounds, EnemyType, Vec2 } from '../types';
 
@@ -23,6 +23,8 @@ export interface HitInfo {
   fromX: number;
   /** World point of impact (used for 'blast' to throw the pieces away from it). */
   point?: Vec2;
+  /** Splash explosions: distance from the blast as a fraction of its radius (0 centre .. 1 edge). */
+  blastDistance?: number;
 }
 
 /** A playing fall animation. Dead enemies stay in their last frame. */
@@ -33,7 +35,23 @@ interface FallState {
   facing: number;
   /** Knockback only: get up after lying down this long, then fight on. */
   getUpAfterMs?: number;
+  /** Knockback only: extra world px it slides away from the blast over the fall, and how much is done. */
+  push?: { total: number; applied: number };
 }
+
+/** Share (0..1) of a knockback's extra push done at fall progress `p`: mostly in the flight, a little slide. */
+const pushShare = (p: number): number => {
+  const smooth = (value: number): number => value * value * (3 - 2 * value);
+  if (p <= 0.12) {
+    return 0.1 * smooth(p / 0.12);
+  }
+  if (p <= 0.72) {
+    return 0.1 + 0.8 * ((p - 0.12) / 0.6);
+  }
+  return 0.9 + 0.1 * smooth(Math.min(1, (p - 0.72) / 0.28));
+};
+/** Pushed enemies stay this far inside the world and out of the player's keep. */
+const PUSH_MARGIN = 30;
 
 /** Time a knocked-down (surviving) enemy lies on the ground before getting up. */
 const KNOCKDOWN_LIE_MS = 450;
@@ -209,17 +227,20 @@ export default class Enemy extends Container {
 
     this.health = Math.max(0, this.health - Math.max(0, amount));
     this.drawHealthBar();
+    // Explosions throw the closer ones further (a direct hit counts as the centre).
+    const blastDistance = hit.blastDistance ?? (hit.cause === 'blast' ? 0 : 1);
+    const push = hit.cause === 'explosion' || hit.cause === 'blast' ? knockbackPush(blastDistance) : 0;
     if (this.health === 0) {
       this.alive = false;
       this.velocity = { x: 0, y: 0 };
       this.healthBar.visible = false;
-      if (blowsApart(hit.cause, amount, this.maxHealth)) {
+      if (blowsApart(hit.cause, blastDistance)) {
         this.blowApart(hit.fromX, hit.point ?? { x: this.x, y: this.y - 20 });
       } else {
-        this.startFall(Enemy.deathKind(hit.cause), hit.fromX);
+        this.startFall(Enemy.deathKind(hit.cause), hit.fromX, undefined, push);
       }
     } else if (hit.cause === 'explosion' || hit.cause === 'blast' || hit.cause === 'lightning') {
-      this.startFall('knockback', hit.fromX, KNOCKDOWN_LIE_MS);
+      this.startFall('knockback', hit.fromX, KNOCKDOWN_LIE_MS, push);
     }
 
     return this.health;
@@ -478,10 +499,10 @@ export default class Enemy extends Container {
   }
 
   /** Turns to face the hit (so backwards falls go away from it) and starts a fall animation. */
-  private startFall(kind: FallKind, fromX: number, getUpAfterMs?: number): void {
+  private startFall(kind: FallKind, fromX: number, getUpAfterMs?: number, push = 0): void {
     this.pendingImpact = undefined;
     const facing = fromX >= this.x ? 1 : -1;
-    this.fall = { kind, timeMs: 0, facing, getUpAfterMs };
+    this.fall = { kind, timeMs: 0, facing, getUpAfterMs, push: kind === 'knockback' && push > 0 ? { total: push, applied: 0 } : undefined };
     this.attackTimerMs = 0;
     this.hitStaggerMs = 0;
     this.body.scale.set(BODY_SCALE.x * facing, BODY_SCALE.y);
@@ -506,6 +527,14 @@ export default class Enemy extends Container {
     }
     fall.timeMs += deltaMs;
     const duration = FALL_DURATION_MS[fall.kind];
+    if (fall.push) {
+      // Slide away from the blast (it faced the blast, so away is −facing), following the ground.
+      const target = fall.push.total * pushShare(Math.min(1, fall.timeMs / duration));
+      const step = target - fall.push.applied;
+      fall.push.applied = target;
+      this.x = Math.max(PLAYER_TOWER_X + PUSH_MARGIN, Math.min(WORLD_WIDTH - PUSH_MARGIN, this.x - fall.facing * step));
+      this.y = groundAt(this.x);
+    }
     if (fall.kind === 'knockback' && fall.getUpAfterMs !== undefined && fall.timeMs >= duration + fall.getUpAfterMs) {
       this.fall = { kind: 'getUp', timeMs: 0, facing: fall.facing };
     } else if (fall.kind === 'getUp' && fall.timeMs >= duration) {
