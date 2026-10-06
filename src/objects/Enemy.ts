@@ -376,7 +376,16 @@ export default class Enemy extends Container {
   }
 
   public update(deltaMs: number, target?: Vec2, stopDistance = 0): void {
+    // The pause between swings runs down all the time, also while the bowman is out of reach.
+    this.attackCooldown = Math.max(0, this.attackCooldown - deltaMs);
     if (!this.isAlive() || this.fall) {
+      return;
+    }
+    // Planted while swinging (the club is moving, the feet aren't).
+    if (this.attackTimerMs > 0) {
+      this.velocity.x = 0;
+      this.velocity.y = 0;
+      this.y = groundAt(this.x);
       return;
     }
 
@@ -410,12 +419,9 @@ export default class Enemy extends Container {
     this.y = groundAt(this.x);
   }
 
-  public canAttack(deltaMs: number): boolean {
-    if (this.fall) {
-      return false;
-    }
-    this.attackCooldown = Math.max(0, this.attackCooldown - deltaMs);
-    if (this.attackCooldown > 0) {
+  /** Ready to start a swing (not down, not mid-swing, pause over); starting one restarts the pause. */
+  public canAttack(): boolean {
+    if (this.fall || this.attackTimerMs > 0 || this.attackCooldown > 0) {
       return false;
     }
     this.attackCooldown = ENEMY_ATTACK_INTERVAL_MS;

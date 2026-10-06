@@ -79,7 +79,6 @@ const pointAlong = (start: Vec2, travel: Vec2, time: number): Vec2 => ({
 /** Enemy movement and melee attacks, arrow flight and every arrow hit (enemies and enemy tower). */
 export class CombatSystem {
   /** Enemies the bowman has jumped over; they no longer hit him. */
-  private readonly jumpedEnemies = new Set<Enemy>();
   /** Enemies each arrow has already hit, so piercing arrows hit each enemy once. */
   private readonly arrowHits = new Map<Arrow, Set<Enemy>>();
   /** Cached aim per enemy archer. */
@@ -142,7 +141,7 @@ export class CombatSystem {
     }
 
     if (enemy.target === 'tower') {
-      if (enemy.x <= playerTower.x + TOWER_ATTACK_REACH && enemy.canAttack(deltaMs)) {
+      if (enemy.x <= playerTower.x + TOWER_ATTACK_REACH && enemy.canAttack()) {
         // The keep takes the hit when the club lands, with a chip of stone flying off the wall.
         enemy.playAttackAnimation(() => {
           playerTower.takeDamage(randomEnemyDamage());
@@ -152,13 +151,11 @@ export class CombatSystem {
       return;
     }
 
+    // No swing at a bowman who is in the air; once he lands in reach, the enemy swings again.
     const overlapsBowman = Math.abs(enemy.x - bowman.x) <= MELEE_REACH;
-    if (!bowman.isInTower && bowman.y < groundAt(bowman.x) - 20 && overlapsBowman) {
-      this.jumpedEnemies.add(enemy);
-    }
-
-    if (!bowman.isInTower && !this.jumpedEnemies.has(enemy) && overlapsBowman && Math.abs(enemy.y - bowman.y) <= 45) {
-      if (enemy.canAttack(deltaMs)) {
+    const bowmanAirborne = bowman.y < groundAt(bowman.x) - 20;
+    if (!bowman.isInTower && !bowman.isDead && !bowmanAirborne && overlapsBowman && Math.abs(enemy.y - bowman.y) <= 45) {
+      if (enemy.canAttack()) {
         // Damage lands with the club: a bowman who jumps away or hides in the keep mid-swing dodges it.
         enemy.playAttackAnimation(() => {
           const stillInReach = Math.abs(enemy.x - bowman.x) <= MELEE_REACH && Math.abs(enemy.y - bowman.y) <= 45;
