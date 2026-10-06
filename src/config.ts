@@ -129,7 +129,7 @@ export const MUSIC_FADE_S = 1.2;
 /** Each play is pitched randomly by ±this fraction so repeats don't sound identical. */
 export const SOUND_PITCH_VARIATION = 0.07;
 /** At most this many copies of one sound play at once (piercing hits, volleys). */
-export const SOUND_MAX_VOICES = 4;
+export const SOUND_MAX_VOICES = 6;
 /** Sounds at the screen edge pan this far; off-screen ones fade to SOUND_MIN_GAIN over one screen width. */
 export const SOUND_MAX_PAN = 0.6;
 export const SOUND_MIN_GAIN = 0.2;

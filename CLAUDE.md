@@ -185,7 +185,8 @@ src/
 - **Sound**: `ctx.sound` (`audio/SoundManager.ts`) plays the effects in `assets/sounds/` (the user's own
   recordings from `human/`, trimmed and normalized with ffmpeg). `CombatSystem` emits `sound(id, at)` events
   and `GameScene` plays them through `spatialMix` (pan by screen position, quieter off screen). Enemies
-  groan when hit by an arrow (8 random variants); falls are silent. New sounds: add the mp3, its id in
+  groan on every arrow hit, kills and headshots included (8 random variants), except an explosive arrow that
+  kills (just the blast); falls are silent. New sounds: add the mp3, its id in
   `SOURCES` (an array of variants), its volume in `config.ts` (`SOUND_VOLUMES`) and its description in
   `audio/soundCatalog.ts` (shown in the sound test panel, `scenes/SoundLabScene.ts` + `ui/SoundLabPanel.ts`). When trimming, don't
   denoise quiet takes or fade out trailing fricatives, or they get eaten. The enabled/volume

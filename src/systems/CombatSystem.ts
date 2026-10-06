@@ -417,8 +417,8 @@ export class CombatSystem {
     enemy.applyHitReaction(fromLeft ? 6 : -4);
     const cause = arrow.type === 'explosive' ? 'blast' : headshot ? 'headshot' : 'arrow';
     enemy.takeDamage(damage, { cause, fromX: fromLeft ? enemy.x - 1 : enemy.x + 1, point: impactPoint });
-    // Arrow hits make the enemy cry out, unless a headshot or a blast killed it outright.
-    if (enemy.isAlive() || cause === 'arrow') {
+    // Every arrow hit makes the enemy cry out (kills and headshots too); an explosive kill is just the blast.
+    if (arrow.type !== 'explosive' || enemy.isAlive()) {
       this.events.sound('groan', impactPoint);
     }
     hitEnemies.add(enemy);
