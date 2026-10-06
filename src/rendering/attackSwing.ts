@@ -16,8 +16,13 @@ export type AttackStyle = 'overhead' | 'twoHanded' | 'uppercut';
 export interface AttackPose {
   /** Front (club) upper arm angle. */
   armAngle: number;
-  /** Forearm bend added to the upper arm (the club follows the forearm). */
+  /** Elbow flexion added to the upper arm (≥ 0: the elbow never bends the wrong way). */
   forearmBend: number;
+  /**
+   * Wrist: rotates the club from sticking out across the fist (0) towards lying in line with the
+   * forearm (≈ π/2). The strike snaps it so the club lands forward and down.
+   */
+  clubTilt: number;
   /** Rear (free) upper arm angle; ignored when the style holds the club with both hands. */
   rearArmAngle: number;
   torsoLean: number;
@@ -45,31 +50,31 @@ export const CLUBS: Readonly<Record<AttackStyle, ClubShape>> = {
 type Key = AttackPose & { t: number };
 
 /** Standing pose: matches drawStickman's idle arms (0.1) and forearm bend for an armed hand. */
-export const ATTACK_REST: AttackPose = { armAngle: 0.1, forearmBend: 0.48, rearArmAngle: 0.1, torsoLean: 0, dip: 0, step: 0 };
+export const ATTACK_REST: AttackPose = { armAngle: 0.1, forearmBend: 0.48, clubTilt: 0, rearArmAngle: 0.1, torsoLean: 0, dip: 0, step: 0 };
 
 const STYLE_KEYS: Readonly<Record<AttackStyle, readonly Key[]>> = {
   overhead: [
     { t: 0, ...ATTACK_REST },
-    { t: 0.34, armAngle: Math.PI + 0.55, forearmBend: 1.25, rearArmAngle: 0.6, torsoLean: -0.2, dip: -1.5, step: -2 },
-    // The wrist snaps through the strike so the club lands forward and down.
-    { t: 0.5, armAngle: 1.05, forearmBend: -0.75, rearArmAngle: -0.65, torsoLean: 0.3, dip: 3.5, step: 9 },
-    { t: 0.6, armAngle: 0.82, forearmBend: -0.85, rearArmAngle: -0.5, torsoLean: 0.26, dip: 3, step: 9 },
+    { t: 0.34, armAngle: Math.PI + 0.55, forearmBend: 1.25, clubTilt: 0, rearArmAngle: 0.6, torsoLean: -0.2, dip: -1.5, step: -2 },
+    // The wrist snaps through the strike (the elbow stays slightly bent) so the club lands forward and down.
+    { t: 0.5, armAngle: 1.05, forearmBend: 0.1, clubTilt: 1.5, rearArmAngle: -0.65, torsoLean: 0.3, dip: 3.5, step: 9 },
+    { t: 0.6, armAngle: 0.82, forearmBend: 0.15, clubTilt: 1.55, rearArmAngle: -0.5, torsoLean: 0.26, dip: 3, step: 9 },
     { t: 1, ...ATTACK_REST },
   ],
   twoHanded: [
     { t: 0, ...ATTACK_REST },
-    { t: 0.38, armAngle: Math.PI + 0.75, forearmBend: 1.05, rearArmAngle: 0, torsoLean: -0.28, dip: -2, step: -3 },
-    { t: 0.55, armAngle: 1.15, forearmBend: -0.9, rearArmAngle: 0, torsoLean: 0.4, dip: 5, step: 11 },
-    { t: 0.66, armAngle: 0.9, forearmBend: -1.05, rearArmAngle: 0, torsoLean: 0.35, dip: 4.5, step: 11 },
+    { t: 0.38, armAngle: Math.PI + 0.75, forearmBend: 1.05, clubTilt: 0, rearArmAngle: 0, torsoLean: -0.28, dip: -2, step: -3 },
+    { t: 0.55, armAngle: 1.15, forearmBend: 0.1, clubTilt: 1.5, rearArmAngle: 0, torsoLean: 0.4, dip: 5, step: 11 },
+    { t: 0.66, armAngle: 0.9, forearmBend: 0.12, clubTilt: 1.6, rearArmAngle: 0, torsoLean: 0.35, dip: 4.5, step: 11 },
     { t: 1, ...ATTACK_REST },
   ],
   uppercut: [
     { t: 0, ...ATTACK_REST },
     // Crouched wind-up: club low behind the hip.
-    { t: 0.3, armAngle: -1.1, forearmBend: -0.25, rearArmAngle: 0.85, torsoLean: 0.2, dip: 4, step: 0 },
-    // Swing up and forward, rising and leaning back.
-    { t: 0.48, armAngle: 1.95, forearmBend: -0.85, rearArmAngle: -0.7, torsoLean: -0.18, dip: -2, step: 7 },
-    { t: 0.58, armAngle: 2.1, forearmBend: -0.75, rearArmAngle: -0.55, torsoLean: -0.12, dip: -1, step: 7 },
+    { t: 0.3, armAngle: -1.1, forearmBend: 0.2, clubTilt: 0.9, rearArmAngle: 0.85, torsoLean: 0.2, dip: 4, step: 0 },
+    // Swing up and forward, rising and leaning back; the club ends pointing up and forward.
+    { t: 0.48, armAngle: 1.95, forearmBend: 0.1, clubTilt: 1.05, rearArmAngle: -0.7, torsoLean: -0.18, dip: -2, step: 7 },
+    { t: 0.58, armAngle: 2.1, forearmBend: 0.1, clubTilt: 0.95, rearArmAngle: -0.55, torsoLean: -0.12, dip: -1, step: 7 },
     { t: 1, ...ATTACK_REST },
   ],
 };
@@ -91,6 +96,7 @@ export const getAttackPose = (progress: number, style: AttackStyle = 'overhead')
   return {
     armAngle: mix('armAngle'),
     forearmBend: mix('forearmBend'),
+    clubTilt: mix('clubTilt'),
     rearArmAngle: mix('rearArmAngle'),
     torsoLean: mix('torsoLean'),
     dip: mix('dip'),

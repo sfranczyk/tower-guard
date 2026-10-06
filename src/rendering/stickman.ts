@@ -45,15 +45,19 @@ export interface StickmanPose {
 /** Two-handed grip: the rear hand holds the shaft this far behind the front fist. */
 const TWO_HAND_GRIP = 9;
 
-/** Elbow and hand of a 21+21 arm reaching from the shoulder towards `target`, elbow hanging down. */
+/**
+ * Elbow and hand of a 21+21 arm reaching from the shoulder towards `target`. Of the two IK solutions it
+ * takes the one where the forearm turns the same way as a natural elbow flexion (the arm angle
+ * increasing from upper arm to forearm), so the elbow never bends backwards.
+ */
 const reachArm = (shoulder: Point, target: Point): { elbow: Point; hand: Point } => {
   const length = 21;
   const distance = Math.max(1, Math.min(length * 2 - 0.01, Math.hypot(target.x - shoulder.x, target.y - shoulder.y)));
   const base = Math.atan2(target.x - shoulder.x, target.y - shoulder.y);
   const bend = Math.acos(distance / (length * 2));
-  const elbowAt = (angle: number): Point => ({ x: shoulder.x + Math.sin(angle) * length, y: shoulder.y + Math.cos(angle) * length });
-  const [a, b] = [elbowAt(base + bend), elbowAt(base - bend)];
-  const elbow = a.y >= b.y ? a : b;
+  // Upper arm turned back by `bend` lets the forearm turn forward by 2·bend: a natural flexion.
+  const upper = base - bend;
+  const elbow = { x: shoulder.x + Math.sin(upper) * length, y: shoulder.y + Math.cos(upper) * length };
   const toTarget = Math.atan2(target.x - elbow.x, target.y - elbow.y);
   return { elbow, hand: { x: elbow.x + Math.sin(toTarget) * length, y: elbow.y + Math.cos(toTarget) * length } };
 };
@@ -120,6 +124,9 @@ export const drawStickman: StickmanRenderer = (sprite, phase, pose = {}) => {
   const runArm = runArmSwing(runProgress) * 0.9;
   const armSwingAngle = walkArmSwing + (runArm - walkArmSwing) * motionBlend;
   const attackForearmBend = attack?.forearmBend ?? ATTACK_REST.forearmBend;
+  const clubTilt = attack?.clubTilt ?? 0;
+  /** Direction of the club out of the fist for a forearm angle: across the fist, tilted by the wrist. */
+  const clubDirection = (forearmAngle: number): Point => ({ x: Math.cos(clubTilt - forearmAngle), y: Math.sin(clubTilt - forearmAngle) });
 
   const frontColor = armored ? ARMOR_COLORS.limb : skeleton;
   const rearColor = armored ? ARMOR_COLORS.limbRear : rear;
@@ -267,8 +274,8 @@ export const drawStickman: StickmanRenderer = (sprite, phase, pose = {}) => {
     if (armed && club.twoHanded) {
       // Both hands on the club: the rear hand reaches the shaft just behind the front fist.
       const front = armPoints(frontArmAngle, true);
-      const forearm = frontArmAngle + attackForearmBend;
-      const grip = { x: front.hand.x - Math.cos(forearm) * TWO_HAND_GRIP, y: front.hand.y + Math.sin(forearm) * TWO_HAND_GRIP };
+      const shaft = clubDirection(frontArmAngle + attackForearmBend);
+      const grip = { x: front.hand.x - shaft.x * TWO_HAND_GRIP, y: front.hand.y - shaft.y * TWO_HAND_GRIP };
       const rearArm = reachArm(shoulder, grip);
       drawArcherArm(rearArm.elbow, rearArm.hand, true);
     } else {
@@ -299,8 +306,7 @@ export const drawStickman: StickmanRenderer = (sprite, phase, pose = {}) => {
     ? { x: 0, y: 0 }
     : drawArm(frontArmAngle, false, armed);
   if (armed) {
-    const forearmAngle = frontArmAngle + attackForearmBend;
-    const weaponDirection = { x: Math.cos(forearmAngle), y: -Math.sin(forearmAngle) };
+    const weaponDirection = clubDirection(frontArmAngle + attackForearmBend);
     const butt = { x: weaponHand.x - weaponDirection.x * club.butt, y: weaponHand.y - weaponDirection.y * club.butt };
     const tip = { x: weaponHand.x + weaponDirection.x * club.reach, y: weaponHand.y + weaponDirection.y * club.reach };
     sprite.moveTo(butt.x, butt.y).lineTo(tip.x, tip.y).stroke({ width: club.width, color: 0x30243a, cap: 'round' });

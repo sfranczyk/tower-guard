@@ -86,7 +86,7 @@ src/
 - **Club attacks** (`rendering/attackSwing.ts`, pure keyframes by progress, `pose.attackStyle`): `overhead`
   (one-handed, enemies in the game), `twoHanded` (longer club in both hands; the rear hand reaches the shaft
   by IK) and `uppercut` (short club from below); `CLUBS` sets each club's length. Wind-up, a fast strike
-  with a wrist snap, a lunge and dip, then recovery. Progress 0 and 1 equal the standing pose, so a swing
+  with a wrist snap (`clubTilt`; `forearmBend` stays ≥ 0 so elbows never bend backwards, tested), a lunge and dip, then recovery. Progress 0 and 1 equal the standing pose, so a swing
   never jumps; drawStickman tilts the torso about the hip so the feet stay put.
 - **Joint poses** (`rendering/stickmanPose.ts`): `JointPose` + `drawJointPose` draw a stickman from explicit
   joint positions (skeleton look, optional club). Falls and cheers produce JointPoses.

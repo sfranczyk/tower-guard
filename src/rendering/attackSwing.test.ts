@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { ATTACK_REST, getAttackPose, type AttackPose, type AttackStyle } from './attackSwing';
 
-const KEYS: (keyof AttackPose)[] = ['armAngle', 'forearmBend', 'rearArmAngle', 'torsoLean', 'dip', 'step'];
+const KEYS: (keyof AttackPose)[] = ['armAngle', 'forearmBend', 'clubTilt', 'rearArmAngle', 'torsoLean', 'dip', 'step'];
 
 describe('getAttackPose', () => {
   it('starts and ends exactly at the standing pose (no jump into or out of the swing)', () => {
@@ -54,6 +54,17 @@ describe('attack styles', () => {
         const b = getAttackPose(index / 600, style);
         expect(Math.abs(b.armAngle - a.armAngle)).toBeLessThan(0.15);
         expect(Math.abs(b.step - a.step)).toBeLessThan(0.7);
+      }
+    });
+  });
+
+  it('never bends the elbow the wrong way, and keeps the wrist in a natural range', () => {
+    styles.forEach((style) => {
+      for (let p = 0; p < 1; p += 0.005) {
+        const pose = getAttackPose(p, style);
+        expect(pose.forearmBend).toBeGreaterThanOrEqual(0);
+        expect(pose.clubTilt).toBeGreaterThanOrEqual(0);
+        expect(pose.clubTilt).toBeLessThanOrEqual(Math.PI / 2 + 0.1);
       }
     });
   });
