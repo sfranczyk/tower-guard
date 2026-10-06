@@ -10,6 +10,8 @@ import {
   type SandboxSettings,
   type WaveEnemyCounts,
 } from '../data/sandbox';
+import { ICON_BOWMAN, ICON_ENEMIES, ICON_KEEP, ICON_WAVE } from './icons';
+import { mapThumbnail } from './mapThumbnail';
 
 export interface SandboxFormCallbacks {
   change(settings: SandboxSettings): void;
@@ -26,7 +28,11 @@ export class SandboxForm {
     root.addEventListener('change', () => this.emitChange());
     root.addEventListener('click', (event) => {
       const target = event.target as HTMLElement;
-      if (target.closest('[data-sandbox-start]')) {
+      const mapOption = target.closest<HTMLButtonElement>('[data-map]');
+      if (mapOption) {
+        mapOption.parentElement?.querySelectorAll('[data-map]').forEach((option) => option.classList.toggle('active', option === mapOption));
+        this.emitChange();
+      } else if (target.closest('[data-sandbox-start]')) {
         this.callbacks.start();
       } else if (target.closest('[data-sandbox-back]')) {
         this.callbacks.back();
@@ -50,22 +56,22 @@ export class SandboxForm {
         <td class="wave-number">${index + 1}</td>
         ${ENEMY_TYPES.map((type) => `<td>${numberInput(`data-wave="${index}" data-enemy="${type}"`, wave.enemies[type], 0, MAX_ENEMIES_PER_TYPE)}</td>`).join('')}
         <td class="wave-total" data-wave-total="${index}">${waveEnemyTotal(wave.enemies)}</td>
-        <td><select data-wave="${index}" data-battleground>
-          ${BATTLEGROUND_IDS.map((id) => option(id, BATTLEGROUNDS[id].name, id === wave.battleground)).join('')}
-        </select></td>
+        <td><div class="map-picker" data-wave="${index}" data-battleground>
+          ${BATTLEGROUND_IDS.map((id) => `<button type="button" class="map-option${id === wave.battleground ? ' active' : ''}" data-map="${id}" title="${BATTLEGROUNDS[id].name}" aria-label="${BATTLEGROUNDS[id].name}">${mapThumbnail(BATTLEGROUNDS[id])}</button>`).join('')}
+        </div></td>
       </tr>`).join('');
 
     this.root.innerHTML = `
       <div class="eyebrow">Sandbox</div>
       <h2>Battle setup</h2>
       <div class="sandbox-fields">
-        <label class="field"><span class="hud-label">Waves</span><select data-wave-count>${waveOptions}</select></label>
-        <label class="field"><span class="hud-label">Bowman health</span>${numberInput('data-bowman-health', settings.bowmanHealth, HEALTH_LIMITS.bowman.min, HEALTH_LIMITS.bowman.max, HEALTH_LIMITS.bowman.step)}</label>
-        <label class="field"><span class="hud-label">Keep health</span>${numberInput('data-keep-health', settings.keepHealth, HEALTH_LIMITS.keep.min, HEALTH_LIMITS.keep.max, HEALTH_LIMITS.keep.step)}</label>
+        <label class="field"><span class="hud-label field-icon">${ICON_WAVE}Waves</span><select data-wave-count>${waveOptions}</select></label>
+        <label class="field"><span class="hud-label field-icon">${ICON_BOWMAN}Bowman health</span>${numberInput('data-bowman-health', settings.bowmanHealth, HEALTH_LIMITS.bowman.min, HEALTH_LIMITS.bowman.max, HEALTH_LIMITS.bowman.step)}</label>
+        <label class="field"><span class="hud-label field-icon">${ICON_KEEP}Keep health</span>${numberInput('data-keep-health', settings.keepHealth, HEALTH_LIMITS.keep.min, HEALTH_LIMITS.keep.max, HEALTH_LIMITS.keep.step)}</label>
       </div>
       <table class="wave-table">
         <thead><tr>
-          <th>Wave</th>${ENEMY_TYPES.map((type) => `<th>${ENEMY_TYPE_LABELS[type]}</th>`).join('')}<th>Total</th><th>Battleground</th>
+          <th>Wave</th>${ENEMY_TYPES.map((type) => `<th class="enemy-col" title="${ENEMY_TYPE_LABELS[type]}">${ICON_ENEMIES[type]}<span>${ENEMY_TYPE_LABELS[type]}</span></th>`).join('')}<th>Total</th><th>Battleground</th>
         </tr></thead>
         <tbody>${rows}</tbody>
       </table>
@@ -94,8 +100,8 @@ export class SandboxForm {
           type,
           value(`[data-wave="${index}"][data-enemy="${type}"]`, wave.enemies[type]),
         ])) as WaveEnemyCounts;
-        const select = this.root.querySelector<HTMLSelectElement>(`select[data-wave="${index}"][data-battleground]`);
-        return { enemies, battleground: (select?.value as BattlegroundId | undefined) ?? wave.battleground };
+        const picked = this.root.querySelector<HTMLButtonElement>(`[data-wave="${index}"][data-battleground] .map-option.active`);
+        return { enemies, battleground: (picked?.dataset.map as BattlegroundId | undefined) ?? wave.battleground };
       }),
     };
   }

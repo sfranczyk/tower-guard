@@ -121,6 +121,17 @@
         .wave-table input[type="number"] { width: 60px; }
         .wave-number, .wave-total { font-family: var(--display); font-weight: 600; color: var(--ink-soft); }
         .sandbox-actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 18px; }
+        .field-icon { display: flex; align-items: center; gap: 6px; }
+        .field-icon .icon { width: 20px; height: 20px; }
+        .wave-table th.enemy-col { text-align: center; }
+        .enemy-col .icon { display: block; width: 30px; height: 30px; margin: 0 auto 1px; }
+        .enemy-col span { display: block; font-size: 10px; }
+        .wave-table td:has(input[data-enemy]) { text-align: center; }
+        .map-picker { display: flex; gap: 6px; }
+        .map-option { padding: 0; border-radius: 9px; background: none; line-height: 0; box-shadow: 0 3px 0 var(--panel-edge); outline: 3px solid transparent; outline-offset: 1px; transition: transform .08s ease, outline-color .15s ease; pointer-events: auto; }
+        .map-option .map-thumb { width: 44px; height: 33px; border-radius: 8px; }
+        .map-option:hover { transform: translateY(-1px); }
+        .map-option.active { outline-color: var(--gold); box-shadow: 0 3px 0 var(--gold-edge); }
         .sound-lab-card { width: min(820px, calc(100% - 28px)); }
         .sound-volumes { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 6px; }
         .sound-volumes .field { margin: 0; }

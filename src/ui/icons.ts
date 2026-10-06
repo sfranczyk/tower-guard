@@ -37,3 +37,18 @@ export const ICON_WEAPONS = {
   explosive: weapon('<circle cx="32" cy="20" r="5" fill="#d8614f"/><circle cx="30.5" cy="18.5" r="1.6" fill="#f6c27a"/>', BURST),
   piercing: weapon('<path d="M28 17.5l11 2.5-11 2.5z" fill="#6c7a88"/>', PIERCE, '#7a5a38'),
 } as const;
+
+/** Enemy type icons (sandbox columns): flat stick figures in the HUD ink colour, each with its tell. */
+const figure = (body: string): string => `<svg class="icon" viewBox="0 0 28 28" aria-hidden="true"
+  fill="none" stroke="#2c3a38" stroke-linecap="round" stroke-linejoin="round">${body}</svg>`;
+
+export const ICON_ENEMIES = {
+  basic: figure(`<circle cx="12" cy="6" r="3" stroke-width="2"/><path d="M12 9v9M12 18l-4 7M12 18l4 7M12 12l-4 4M12 12l5 2" stroke-width="2"/>
+    <path d="M17 14l5-7" stroke="#c4932f" stroke-width="3"/>`),
+  fast: figure(`<circle cx="15" cy="6" r="3" stroke-width="2"/><path d="M14 9l-3 8M11 17l-5 4M11 17l5 3 1 5M13 12l-5 1M13 12l5 3" stroke-width="2"/>
+    <path d="M2 10h4M1 14h4M3 18h3" stroke="#66756f" stroke-width="1.6"/>`),
+  tank: figure(`<circle cx="12" cy="6" r="3.6" stroke-width="2.6"/><path d="M12 10v8M12 18l-5 7M12 18l5 7M12 12l-5 4M12 12l6 2" stroke-width="3.4"/>
+    <path d="M18 15l6-9" stroke="#c4932f" stroke-width="4.2"/>`),
+  archer: figure(`<circle cx="11" cy="6" r="3" stroke-width="2"/><path d="M11 9v9M11 18l-4 7M11 18l4 7M11 12l6 1M11 13l6 0" stroke-width="2"/>
+    <path d="M18 5c4 5 4 11 0 16" stroke="#8a6238" stroke-width="2"/><path d="M18 5v16" stroke="#9aa4ae" stroke-width="1"/>`),
+} as const;
