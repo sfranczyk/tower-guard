@@ -8,10 +8,12 @@ const TRAJECTORY_DOT_EVERY = 3;
 /** Fraction of the drag distance used for the drawn aim radius. */
 export const AIM_VISUAL_RADIUS_FACTOR = 0.55;
 
-/** Draws the drag-to-aim circles and a ghost of the previous shot. */
+/** Draws the drag-to-aim circles and a ghost of the previous shot (left where that shot was loosed). */
 export class AimOverlay extends Graphics {
   private lastReleaseRadius = 0;
   private lastReleaseDirection: Vec2 = { x: 1, y: 0 };
+  /** World point the previous shot left the bow; its ghost stays there when the bowman moves on. */
+  private lastReleaseOrigin: Vec2 = { x: 0, y: 0 };
   private colors: AimColors = DEFAULT_AIM_COLORS;
 
   public constructor() {
@@ -24,14 +26,15 @@ export class AimOverlay extends Graphics {
     this.colors = colors;
   }
 
-  public recordRelease(aim: AimInput): void {
+  public recordRelease(aim: AimInput, origin: Vec2): void {
     this.lastReleaseRadius = aim.strength.distance * AIM_VISUAL_RADIUS_FACTOR;
     this.lastReleaseDirection = { ...aim.direction };
+    this.lastReleaseOrigin = { ...origin };
   }
 
   public draw(origin: Vec2, aim: AimInput | undefined, trajectory: readonly Vec2[] = []): void {
     this.clear();
-    this.drawPreviousRelease(origin);
+    this.drawPreviousRelease();
     this.drawTrajectory(trajectory);
     if (!aim || aim.power <= 0) {
       return;
@@ -66,10 +69,11 @@ export class AimOverlay extends Graphics {
     }
   }
 
-  private drawPreviousRelease(origin: Vec2): void {
+  private drawPreviousRelease(): void {
     if (this.lastReleaseRadius <= 0) {
       return;
     }
+    const origin = this.lastReleaseOrigin;
     const radius = this.lastReleaseRadius;
     const previousColor = this.colors.previousShot;
     this.circle(origin.x, origin.y, radius).fill({ color: previousColor, alpha: 0.12 });

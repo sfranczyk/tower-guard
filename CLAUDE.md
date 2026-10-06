@@ -70,6 +70,8 @@ src/
   `useTerrain`) and wind: each wave rolls one up to the map's `wind` (px/s²). Wind is part of `FlightParams`
   (scaled per projectile like drag), so arrows, the trajectory preview and enemy archer aim all use it;
   the status line shows its direction and strength.
+- **Aim overlay** (`rendering/AimOverlay.ts`): while aiming, circles at the drag start and at the bow; after a shot
+  a ghost of it (power circle and direction) stays where that shot was loosed, not following the bowman.
 - **Aim colours**: aim circles, the predicted path and the player's arrow trails use `aimColorsOf(battleground)`
   (`DEFAULT_AIM_COLORS`, overridden per map, e.g. deep violet on the desert where gold disappears; an
   optional `halo` adds a dark outline, used on Frostpeak Pass).

@@ -245,7 +245,7 @@ export class GameScene extends Scene {
     this.input.on(InputManager.Events.AIM_RELEASE, (aim: AimInput) => {
       this.bowman.setAim(aim.direction, aim.power);
       if (aim.power > MIN_SHOT_POWER) {
-        this.aimOverlay.recordRelease(aim);
+        this.aimOverlay.recordRelease(aim, this.bowman.getBowReleasePoint());
         this.fireArrow(aim, aim.power);
       }
       this.bowman.setAim(aim.direction, 0);
