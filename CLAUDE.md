@@ -28,7 +28,7 @@ src/
   audio/               SoundManager (effects), MusicPlayer (looping theme), audio settings, spatial mix
   core/                Scene base class, SceneManager, GameContext/GameSession, sandboxStorage
   scenes/              MenuScene, SandboxScene (battle setup), GameScene (one wave), AnimationLabScene
-  systems/             gameplay logic: CombatSystem, EffectsSystem, WaveSpawner, collision (pure)
+  systems/             gameplay logic: CombatSystem, EffectsSystem, waveDirector, collision (pure)
   rendering/           stickman renderer (pure drawing), Background, AimOverlay
   objects/             Pixi display objects with their own state: Bowman, Enemy, Arrow, Tower
   managers/            InputManager (keyboard + drag-to-aim)
@@ -47,6 +47,11 @@ src/
   offers "Next wave" (health carries over) until the last one, and then Victory. Defeat goes back to setup.
   The world keeps running after a wave ends (the end screen only overlays it): on defeat the enemies cheer,
   and a killed bowman topples over backwards (`Bowman.die()`).
+  Within a wave enemies arrive in groups (`systems/waveDirector.ts`, pure, tested; no visible "waves" in the
+  UI): `planWaveGroups` spreads each type through the wave (tougher types later, so the first group of
+  `FIRST_GROUP_SIZE` is light) in groups growing to `MAX_GROUP_SIZE`; `WaveDirector.update` (called every frame,
+  so it pauses with the game) releases the next group once at most `GROUP_RELEASE_ALIVE` enemies stand and
+  `GROUP_MIN_GAP_MS` passed, or after `GROUP_MAX_GAP_MS` regardless.
 - **Battlegrounds** (`data/battlegrounds.ts`): map themes (sky, sun, hills, tree style, ground colors)
   drawn by `rendering/Background.ts` (hills/dunes and trees/cacti in `rendering/landscape.ts`). Add a new
   map by adding an entry there. Each has a `weather`: `fair` (cumulus, stratus, cirrus), `clear` (no clouds,

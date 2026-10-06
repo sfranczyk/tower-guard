@@ -89,21 +89,3 @@ export const normalizeSandbox = (input: Partial<SandboxSettings> | undefined): S
 
 export const waveEnemyTotal = (enemies: WaveEnemyCounts): number =>
   ENEMY_TYPES.reduce((sum, type) => sum + enemies[type], 0);
-
-/**
- * Spawn order for a wave: types interleaved round-robin (fighters first, archers trailing) so a
- * wave arrives mixed rather than in blocks.
- */
-export const waveSpawnOrder = (enemies: WaveEnemyCounts): EnemyType[] => {
-  const remaining = { ...enemies };
-  const order: EnemyType[] = [];
-  while (ENEMY_TYPES.some((type) => remaining[type] > 0)) {
-    ENEMY_TYPES.forEach((type) => {
-      if (remaining[type] > 0) {
-        order.push(type);
-        remaining[type] -= 1;
-      }
-    });
-  }
-  return order;
-};

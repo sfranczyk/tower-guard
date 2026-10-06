@@ -12,9 +12,7 @@ import {
   TOWER_ENTRY_ZONE_HEIGHT,
   TOWER_ENTRY_ZONE_WIDTH,
   TOWER_EXIT_X_OFFSET,
-  WAVE_SPAWN_INTERVAL_MS,
   SNOW_WIND_DRIFT,
-  WAVE_START_DELAY_MS,
   WORLD_WIDTH,
 } from '../config';
 import type { SoundId } from '../audio/SoundManager';
@@ -24,7 +22,7 @@ import { centeredCameraX, viewWidth } from '../core/viewport';
 import { BATTLEGROUNDS, aimColorsOf, type Battleground } from '../data/battlegrounds';
 import { getEnemyStats } from '../data/enemies';
 import { launchSpeed, shrapnelBurst } from '../data/projectiles';
-import { waveEnemyTotal, waveSpawnOrder, type WaveSetup } from '../data/sandbox';
+import { waveEnemyTotal, type WaveSetup } from '../data/sandbox';
 import InputManager, { type AimInput } from '../managers/InputManager';
 import Arrow from '../objects/Arrow';
 import Bowman from '../objects/Bowman';
@@ -38,7 +36,7 @@ import { EffectsSystem } from '../systems/EffectsSystem';
 import { Snow } from '../rendering/Snow';
 import { WeatherSystem } from '../systems/WeatherSystem';
 import { groundAt } from '../systems/terrain';
-import { WaveSpawner } from '../systems/WaveSpawner';
+import { WaveDirector } from '../systems/waveDirector';
 import { simulateTrajectory } from '../systems/ballistics';
 import type { EnemyType, ProjectileType, Vec2 } from '../types';
 import { clamp } from '../utils/math';
@@ -88,7 +86,8 @@ export class GameScene extends Scene {
   private readonly arrows: Arrow[] = [];
   private readonly debugGraphics = new Graphics();
   private readonly aimOverlay = new AimOverlay();
-  private readonly spawner = new WaveSpawner((type) => this.spawnEnemy(type));
+  /** Releases the wave's enemies in groups (set up in enter). */
+  private director?: WaveDirector;
   private background!: Background;
   private effects!: EffectsSystem;
   private combat!: CombatSystem;
@@ -172,7 +171,7 @@ export class GameScene extends Scene {
     ui.setStatus(DEFAULT_STATUS);
     ui.setTheme(this.battleground.ui);
     this.bindInput();
-    this.spawner.schedule(waveSpawnOrder(this.wave.enemies), WAVE_SPAWN_INTERVAL_MS, WAVE_START_DELAY_MS);
+    this.director = new WaveDirector(this.wave.enemies);
     if (SHOW_HITBOX_DEBUG) {
       // Debug console hook (?debug): window.__towerGuard.scene gives access to the running wave.
       (window as unknown as { __towerGuard?: unknown }).__towerGuard = { scene: this };
@@ -180,7 +179,6 @@ export class GameScene extends Scene {
         delete (window as unknown as { __towerGuard?: unknown }).__towerGuard;
       });
     }
-    this.onExit(() => this.spawner.dispose());
     if (this.battleground.weather === 'storm') {
       this.weather = new WeatherSystem(this.world, this.ctx.root, this.background, {
         // After the wave is decided lightning still flashes but no longer hurts anyone.
@@ -200,6 +198,10 @@ export class GameScene extends Scene {
 
   /** The world keeps running after the wave ends; the end screen just overlays it. */
   public update(deltaMs: number): void {
+    if (!this.gameEnded && this.director) {
+      const alive = this.enemies.filter((enemy) => enemy.isAlive()).length;
+      this.director.update(deltaMs, alive).forEach((type) => this.spawnEnemy(type));
+    }
     this.background.update(deltaMs);
     this.weather?.update(deltaMs, this.cameraX);
     this.snow?.update(deltaMs, this.cameraX);
@@ -515,7 +517,7 @@ export class GameScene extends Scene {
   private endGame(won: boolean, waveCleared = false): void {
     this.gameEnded = true;
     this.destroyInput();
-    this.spawner.dispose();
+    this.director = undefined;
     if (!won) {
       this.enemies.forEach((enemy) => enemy.celebrate());
     }
