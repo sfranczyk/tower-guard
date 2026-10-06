@@ -49,8 +49,11 @@ export const launchSpeed = (type: ProjectileType, power: number): number => {
   return (bowSpeed(power) * speedMultiplier) / Math.sqrt(mass);
 };
 
-/** Flight parameters for a projectile under the given gravity. */
-export const flightParams = (type: ProjectileType, gravity: number): FlightParams => {
+/**
+ * Flight parameters for a projectile under the given gravity and wind (px/s² for a normal arrow).
+ * Wind pushes like drag does: more on light, draggy projectiles, less on heavy ones.
+ */
+export const flightParams = (type: ProjectileType, gravity: number, wind = 0): FlightParams => {
   const { mass, dragMultiplier } = PROJECTILE_PHYSICS[type];
-  return { gravity, drag: (ARROW_DRAG * dragMultiplier) / mass };
+  return { gravity, drag: (ARROW_DRAG * dragMultiplier) / mass, wind: (wind * dragMultiplier) / mass };
 };

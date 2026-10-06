@@ -68,3 +68,12 @@ describe('shrapnelBurst', () => {
     });
   });
 });
+
+describe('wind per projectile', () => {
+  it('pushes light, draggy projectiles more than heavy ones', () => {
+    const wind = (type: 'normal' | 'explosive' | 'fragment'): number => flightParams(type, 700, 100).wind ?? 0;
+    expect(wind('normal')).toBeCloseTo(100);
+    expect(wind('fragment')).toBeGreaterThan(wind('normal'));
+    expect(wind('explosive')).toBeLessThan(wind('normal'));
+  });
+});

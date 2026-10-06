@@ -117,6 +117,11 @@ export const RAIN_SPEED: readonly [number, number] = [620, 820];
 export const RAIN_SLANT = 0.22;
 export const RAIN_ALPHA = 0.28;
 
+/** Snowfall: number of flakes, fall speed range (px/s), and how much of the wind (px/s²) becomes drift (px/s). */
+export const SNOW_FLAKES = 110;
+export const SNOW_SPEED: readonly [number, number] = [40, 85];
+export const SNOW_WIND_DRIFT = 0.35;
+
 // Enable with ?debug in the URL.
 export const SHOW_HITBOX_DEBUG = typeof window !== 'undefined'
   && new URLSearchParams(window.location.search).has('debug');

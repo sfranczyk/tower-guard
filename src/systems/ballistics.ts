@@ -15,15 +15,17 @@ export interface FlightParams {
   gravity: number;
   /** Quadratic drag coefficient k in a = −k·|v|·v (1/px). Terminal fall speed is √(gravity / k). */
   drag: number;
+  /** Sideways wind acceleration, px/s² (+ = towards the right). */
+  wind?: number;
 }
 
 /**
  * Advances a projectile by `dt` seconds with semi-implicit Euler: velocity first (gravity plus
  * quadratic air drag opposing the velocity), then position. Mutates and returns `state`.
  */
-export const stepProjectile = (state: ProjectileState, dt: number, { gravity, drag }: FlightParams): ProjectileState => {
+export const stepProjectile = (state: ProjectileState, dt: number, { gravity, drag, wind = 0 }: FlightParams): ProjectileState => {
   const speed = Math.hypot(state.vx, state.vy);
-  state.vx -= drag * speed * state.vx * dt;
+  state.vx += (wind - drag * speed * state.vx) * dt;
   state.vy += (gravity - drag * speed * state.vy) * dt;
   state.x += state.vx * dt;
   state.y += state.vy * dt;

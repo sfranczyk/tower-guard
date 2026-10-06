@@ -14,6 +14,7 @@ import {
   TOWER_ENTRY_ZONE_WIDTH,
   TOWER_EXIT_X_OFFSET,
   WAVE_SPAWN_INTERVAL_MS,
+  SNOW_WIND_DRIFT,
   WAVE_START_DELAY_MS,
   WORLD_WIDTH,
 } from '../config';
@@ -33,6 +34,7 @@ import { AimOverlay } from '../rendering/AimOverlay';
 import { Background } from '../rendering/Background';
 import { CombatSystem } from '../systems/CombatSystem';
 import { EffectsSystem } from '../systems/EffectsSystem';
+import { Snow } from '../rendering/Snow';
 import { WeatherSystem } from '../systems/WeatherSystem';
 import { groundAt } from '../systems/terrain';
 import { WaveSpawner } from '../systems/WaveSpawner';
@@ -62,6 +64,13 @@ const PROJECTILE_KEYS: Record<string, ProjectileType> = {
   Digit4: 'shrapnel',
 };
 
+/** Status text for the wind: arrows for its direction, one to three by strength. */
+const windLabel = (wind: number, strongest: number): string => {
+  const strength = Math.max(1, Math.min(3, Math.ceil((Math.abs(wind) / Math.max(1, strongest)) * 3)));
+  const arrows = (wind < 0 ? '←' : '→').repeat(strength);
+  return `wind ${arrows} ${['light', 'moderate', 'strong'][strength - 1]}`;
+};
+
 /** Fragments from a shrapnel burst are drawn at this scale (normal arrows: 0.5). */
 const FRAGMENT_SCALE = 0.32;
 
@@ -84,6 +93,9 @@ export class GameScene extends Scene {
   private combat!: CombatSystem;
   /** Storm battlegrounds only: lightning. */
   private weather?: WeatherSystem;
+  private snow?: Snow;
+  /** This wave's wind (px/s² on a normal arrow), rolled from the battleground's strongest wind. */
+  private readonly wind: number;
   private playerTower!: Tower;
   private enemyTower!: Tower;
   private bowman!: Bowman;
@@ -105,6 +117,9 @@ export class GameScene extends Scene {
     const { sandbox, run } = ctx.session;
     this.wave = sandbox.waves[run.waveIndex];
     this.battleground = BATTLEGROUNDS[this.wave.battleground];
+    // Windy maps roll a fresh wind for every wave (direction and strength).
+    const strongest = this.battleground.wind ?? 0;
+    this.wind = Math.round((Math.random() * 2 - 1) * strongest);
     this.totalEnemies = waveEnemyTotal(this.wave.enemies);
     this.bowmanHealth = run.bowmanHealth;
   }
@@ -137,6 +152,7 @@ export class GameScene extends Scene {
         arrows: this.arrows,
         effects: this.effects,
         debug: this.debugGraphics,
+        wind: this.wind,
       },
       {
         bowmanDamaged: (amount) => {
@@ -170,7 +186,10 @@ export class GameScene extends Scene {
         },
       });
     }
-    const hint = this.battleground.weather === 'storm' ? 'beware of lightning' : 'defend your keep';
+    if (this.battleground.weather === 'snow') {
+      this.snow = new Snow(this.ctx.root, this.wind * SNOW_WIND_DRIFT);
+    }
+    const hint = this.battleground.weather === 'storm' ? 'beware of lightning' : this.wind !== 0 ? windLabel(this.wind, this.battleground.wind ?? 0) : 'defend your keep';
     ui.setStatus(`Wave ${run.waveIndex + 1} of ${sandbox.waveCount} · ${this.battleground.name} · ${hint}`);
   }
 
@@ -178,6 +197,7 @@ export class GameScene extends Scene {
   public update(deltaMs: number): void {
     this.background.update(deltaMs);
     this.weather?.update(deltaMs, this.cameraX);
+    this.snow?.update(deltaMs, this.cameraX);
     this.updateBowman(deltaMs);
     this.playerTower.update(deltaMs);
     this.enemyTower.update(deltaMs);
@@ -349,6 +369,7 @@ export class GameScene extends Scene {
     if (type === 'fragment') {
       arrow.scale.set(FRAGMENT_SCALE);
     }
+    arrow.wind = this.wind;
     arrow.fire(angle, speed, type);
     this.arrows.push(arrow);
     this.world.addChild(arrow);
@@ -378,6 +399,7 @@ export class GameScene extends Scene {
     this.world.addChild(trail);
     const arrow = new Arrow(from.x, from.y, this.ctx.textures.arrows.normal, trail);
     arrow.tint = ENEMY_ARROW_TINT;
+    arrow.wind = this.wind;
     arrow.fire(angle, speed, 'normal', true);
     this.arrows.push(arrow);
     this.world.addChild(arrow);
@@ -425,7 +447,7 @@ export class GameScene extends Scene {
     }
     const speed = launchSpeed(this.selectedProjectile, power);
     const velocity = { x: aim.direction.x * speed, y: aim.direction.y * speed };
-    return simulateTrajectory(releasePoint, velocity, Arrow.getFlightParams(this.selectedProjectile), {
+    return simulateTrajectory(releasePoint, velocity, Arrow.getFlightParams(this.selectedProjectile, this.wind), {
       // Same surface (and offset) at which flying arrows stick into the ground.
       groundY: (x) => groundAt(x) - 3,
       minX: 0,

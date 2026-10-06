@@ -50,6 +50,8 @@ export interface CombatWorld {
   readonly arrows: readonly Arrow[];
   readonly effects: EffectsSystem;
   readonly debug: Graphics;
+  /** The wave's wind (px/s² on a normal arrow); enemy archers aim with it. */
+  readonly wind: number;
 }
 
 export interface CombatEvents {
@@ -194,7 +196,7 @@ export class CombatSystem {
       const cached = this.archerAim.get(enemy);
       let angle = cached?.angle;
       if (!cached || cached.ageMs >= ARCHER_AIM_REFRESH_MS) {
-        angle = solveLaunchAngle(enemy.getBowReleasePoint(), aimPoint, speed, Arrow.getFlightParams('normal'), GROUND_Y);
+        angle = solveLaunchAngle(enemy.getBowReleasePoint(), aimPoint, speed, Arrow.getFlightParams('normal', this.world.wind), GROUND_Y);
         this.archerAim.set(enemy, { angle, ageMs: 0 });
       } else {
         cached.ageMs += deltaMs;

@@ -3,10 +3,10 @@
  * weather. Pure data; rendering/Background.ts draws them and systems/WeatherSystem.ts adds lightning.
  */
 
-export type BattlegroundId = 'greenMeadow' | 'crimsonPass' | 'sunscorchDunes' | 'thunderRidge';
+export type BattlegroundId = 'greenMeadow' | 'crimsonPass' | 'sunscorchDunes' | 'thunderRidge' | 'frostpeakPass';
 
-/** fair: drifting clouds; clear: cloudless sky; storm: dark storm clouds with lightning. */
-export type Weather = 'fair' | 'clear' | 'storm';
+/** fair: drifting clouds; clear: cloudless sky; storm: dark clouds, rain, lightning; snow: grey sky, snowfall. */
+export type Weather = 'fair' | 'clear' | 'storm' | 'snow';
 
 /** Colours of the aim circles, the predicted path and the player's arrow trails. */
 export interface AimColors {
@@ -38,8 +38,13 @@ export interface Battleground {
   cloudAlpha: number;
   /** Far and near hill colours; dunes are lower and smoother than hills. */
   hills: readonly [number, number];
-  hillShape: 'hills' | 'dunes';
-  trees: { style: 'round' | 'pine' | 'cactus'; colors: readonly [number, number, number]; trunk: number };
+  /** dunes are lower and smoother than hills; mountains are snow-capped peaks with rocky slopes in front. */
+  hillShape: 'hills' | 'dunes' | 'mountains';
+  trees: { style: 'round' | 'pine' | 'cactus' | 'snowPine'; colors: readonly [number, number, number]; trunk: number };
+  /** Height of the ground waves (default TERRAIN_AMPLITUDE). */
+  terrainAmplitude?: number;
+  /** Strongest wind of this map (px/s² on a normal arrow); each wave rolls one between −wind and +wind. */
+  wind?: number;
   ground: { fill: number; edge: number; tufts: number };
   /** Overrides DEFAULT_AIM_COLORS where the default gold and light blue don't stand out. */
   aimColors?: AimColors;
@@ -114,6 +119,31 @@ export const BATTLEGROUNDS: Readonly<Record<BattlegroundId, Battleground>> = {
     trees: { style: 'pine', colors: [0x1a2928, 0x213130, 0x152221], trunk: 0x2a2420 },
     ground: { fill: 0x4d5e45, edge: 0x6d7f5e, tufts: 0x3c4b36 },
     ui: { accent: '#5d7189', backdrop: '#161c25' },
+  },
+  frostpeakPass: {
+    id: 'frostpeakPass',
+    name: 'Frostpeak Pass',
+    // Cold, bright winter sky over snow-capped peaks; it snows and the wind pushes arrows aside.
+    sky: [0x8fa9c4, 0xa9bfd4, 0xc4d4e2, 0xdde6ee],
+    sun: { x: 860, y: 110, radius: 46, color: 0xf4f1e6 },
+    weather: 'snow',
+    cloudColor: 0xe9eef3,
+    cloudAlpha: 0.85,
+    hills: [0x6b7a90, 0x55627a],
+    hillShape: 'mountains',
+    trees: { style: 'snowPine', colors: [0x2f4a44, 0x3a5a52, 0x263d38], trunk: 0x4a3b30 },
+    ground: { fill: 0x8b9479, edge: 0xeef3f5, tufts: 0xdfe7ea },
+    terrainAmplitude: 16,
+    wind: 150,
+    // Gold vanishes against snow and the pale sky: deep red, with dark blue for the previous shot.
+    aimColors: {
+      aim: 0xc0182e,
+      previousShot: 0x1d3f7a,
+      trajectory: 0xb0122a,
+      trailGlow: 0xff5a6e,
+      trailCore: 0x9a0f24,
+    },
+    ui: { accent: '#5b6f8c', backdrop: '#1c2533' },
   },
 };
 

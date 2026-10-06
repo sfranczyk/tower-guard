@@ -115,3 +115,14 @@ describe('solveLaunchAngle', () => {
     expect(-angle).toBeLessThan(Math.PI / 4);
   });
 });
+
+describe('wind', () => {
+  it('pushes a projectile sideways and the preview the same way', () => {
+    const calm = simulateTrajectory({ x: 0, y: 300 }, { x: 400, y: -300 }, { gravity: 700, drag: 0.0005 }, WORLD);
+    const tailwind = simulateTrajectory({ x: 0, y: 300 }, { x: 400, y: -300 }, { gravity: 700, drag: 0.0005, wind: 150 }, WORLD);
+    const headwind = simulateTrajectory({ x: 0, y: 300 }, { x: 400, y: -300 }, { gravity: 700, drag: 0.0005, wind: -150 }, WORLD);
+    const range = (points: { x: number }[]): number => points[points.length - 1].x;
+    expect(range(tailwind)).toBeGreaterThan(range(calm) + 20);
+    expect(range(headwind)).toBeLessThan(range(calm) - 20);
+  });
+});

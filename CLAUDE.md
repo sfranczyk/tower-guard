@@ -59,6 +59,11 @@ src/
   `LIGHTNING_DAMAGE` within `LIGHTNING_RADIUS` (enemies: cause `'lightning'`, stiff death or knockdown; the
   bowman is safe inside the keep). Thunder is the explosion recording slowed down (`SOUND_RATES`).
   Storms also have light rain (`rendering/Rain.ts`, screen space, shifts with the camera; `RAIN_*`).
+- **Frostpeak Pass** (weather `snow`): snow-capped mountains with mist (`hillShape: 'mountains'`), snowy pines,
+  snowfall (`rendering/Snow.ts`, `SNOW_*`), bigger ground waves (`terrainAmplitude`; `Background` calls
+  `useTerrain`) and wind: each wave rolls one up to the map's `wind` (px/s²). Wind is part of `FlightParams`
+  (scaled per projectile like drag), so arrows, the trajectory preview and enemy archer aim all use it;
+  the status line shows its direction and strength.
 - **Aim colours**: aim circles, the predicted path and the player's arrow trails use `aimColorsOf(battleground)`
   (`DEFAULT_AIM_COLORS`, overridden per map, e.g. deep violet on the desert where gold disappears).
 - **UI** is HTML (`ui/template.ts`, styles in `index.html`) in the landscape style: flat shapes, cream panels,

@@ -2,7 +2,8 @@ import { ENEMY_TOWER_X, GROUND_Y, PLAYER_TOWER_X, TERRAIN_AMPLITUDE } from '../c
 
 /**
  * The ground's surface: gentle waves around GROUND_Y, flattened at both keeps so they stand level.
- * Pure; the ground is drawn along it and everyone walks, lands and gets hit on it.
+ * Pure apart from the current wave height (`useTerrain`); the ground is drawn along it and everyone
+ * walks, lands and gets hit on it.
  */
 
 /** Keeps sit on flat ground out to FLAT_RADIUS, blending into the waves by BLEND_RADIUS. */
@@ -24,5 +25,13 @@ const flatness = (x: number): number => {
   return smoothstep((nearestKeep - FLAT_RADIUS) / (BLEND_RADIUS - FLAT_RADIUS));
 };
 
+/** Wave height of the current battleground (set when its Background is built). */
+let amplitude = TERRAIN_AMPLITUDE;
+
+/** Selects the current battleground's wave height (Background calls this; scenes share one terrain). */
+export const useTerrain = (waveHeight: number = TERRAIN_AMPLITUDE): void => {
+  amplitude = waveHeight;
+};
+
 /** Ground surface height (y) at world x. */
-export const groundAt = (x: number): number => GROUND_Y + TERRAIN_AMPLITUDE * wave(x) * flatness(x);
+export const groundAt = (x: number): number => GROUND_Y + amplitude * wave(x) * flatness(x);

@@ -3,7 +3,7 @@ import { GAME_HEIGHT, GROUND_Y, WORLD_WIDTH } from '../config';
 import type { Battleground } from '../data/battlegrounds';
 import { layoutClouds, mixColor, type CloudLayer, type CloudShape } from './clouds';
 import { drawHills, drawVegetation } from './landscape';
-import { groundAt } from '../systems/terrain';
+import { groundAt, useTerrain } from '../systems/terrain';
 
 type Cloud = {
   sprite: Graphics;
@@ -30,6 +30,8 @@ export class Background {
   private readonly clouds: Cloud[];
 
   public constructor(container: Container, battleground: Battleground) {
+    // Everything that touches the ground (drawing, walking, arrows) uses this map's wave height.
+    useTerrain(battleground.terrainAmplitude);
     container.addChild(new Graphics().rect(0, 0, WORLD_WIDTH, GAME_HEIGHT).fill({ color: 0x10233a }));
     container.addChild(Background.createSky(battleground));
 

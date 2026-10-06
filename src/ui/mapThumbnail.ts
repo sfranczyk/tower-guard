@@ -17,12 +17,19 @@ export const mapThumbnail = (battleground: Battleground): string => {
   if (weather === 'fair') {
     parts.push(`<g fill="${hex(cloudColor)}" opacity=".9"><circle cx="22" cy="9" r="3.2"/><circle cx="26" cy="8" r="4"/><circle cx="30" cy="9.5" r="3"/><rect x="19" y="9" width="14" height="3.4" rx="1.7"/></g>`);
   }
+  if (weather === 'snow') {
+    parts.push(`<g fill="${hex(cloudColor)}" opacity=".9"><rect x="4" y="4" width="22" height="3.4" rx="1.7"/><rect x="24" y="8" width="18" height="3" rx="1.5"/></g>`);
+  }
   if (weather === 'storm') {
     parts.push(`<path d="M0 0h48v8c-6 3-10 0-15 2s-9-1-14 1-10-1-19 1z" fill="${hex(cloudColor)}"/>`);
     parts.push('<path d="M27 9l-4 7h3l-3 7 7-9h-3l3-5z" fill="#e8f0ff"/>');
   }
   const [far, near] = hills.map(hex);
-  if (hillShape === 'dunes') {
+  if (hillShape === 'mountains') {
+    parts.push(`<path d="M0 22l8-9 6 5 9-12 8 9 6-5 11 10v16H0z" fill="${far}"/>`);
+    parts.push('<path d="M14 18l9-12 3.5 4-2 1.5-2-1-2 2zM2 20l6-7 2.5 3-2 .5-1.5-1z" fill="#f2f5f8"/>');
+    parts.push(`<path d="M0 27c8-4 15-2 22-3s13-3 26 0v12H0z" fill="${near}"/>`);
+  } else if (hillShape === 'dunes') {
     parts.push(`<path d="M0 22c8-3 14-2 20 0s14-3 28-1v15H0z" fill="${far}"/><path d="M0 26c9-2 16-1 22 1s14-2 26-1v10H0z" fill="${near}"/>`);
   } else {
     parts.push(`<path d="M0 22c7-8 13-3 19-6s12-6 29-2v22H0z" fill="${far}"/><path d="M0 26c8-6 15-1 22-4s13-4 26 0v14H0z" fill="${near}"/>`);
@@ -30,11 +37,16 @@ export const mapThumbnail = (battleground: Battleground): string => {
   const [main, light] = trees.colors.map(hex);
   if (trees.style === 'cactus') {
     parts.push(`<g fill="${main}"><rect x="36" y="20" width="3" height="9" rx="1.5"/><rect x="33" y="22" width="2" height="4" rx="1"/><rect x="40" y="21" width="2" height="4" rx="1"/></g>`);
+  } else if (trees.style === 'snowPine') {
+    parts.push(`<path d="M8 28l4-9 4 9z" fill="${main}"/><path d="M36 28l3.5-8 3.5 8z" fill="${light}"/><path d="M10.5 22l1.5-3 1.5 3zM38 23l1.5-3 1.5 3z" fill="#f2f5f8"/>`);
   } else if (trees.style === 'pine') {
     parts.push(`<path d="M8 28l4-9 4 9z" fill="${main}"/><path d="M36 28l3.5-8 3.5 8z" fill="${light}"/>`);
   } else {
     parts.push(`<rect x="11.2" y="23" width="1.6" height="5" fill="${hex(trees.trunk)}"/><circle cx="12" cy="22" r="3.4" fill="${main}"/>`);
     parts.push(`<rect x="38.2" y="23" width="1.6" height="5" fill="${hex(trees.trunk)}"/><circle cx="39" cy="22" r="3" fill="${light}"/>`);
+  }
+  if (weather === 'snow') {
+    parts.push('<g fill="#fff"><circle cx="6" cy="14" r=".8"/><circle cx="18" cy="20" r=".7"/><circle cx="30" cy="15" r=".8"/><circle cx="42" cy="19" r=".7"/></g>');
   }
   parts.push(`<rect x="0" y="28" width="48" height="8" fill="${hex(ground.fill)}"/><rect x="0" y="27.4" width="48" height="1.6" fill="${hex(ground.edge)}"/>`);
   return `<svg class="map-thumb" viewBox="0 0 48 36" aria-hidden="true">${parts.join('')}</svg>`;

@@ -28,6 +28,8 @@ export default class Arrow extends Sprite {
   private hitCount = 0;
   /** Shot by an enemy archer: hurts the bowman/keep, ignores enemies. */
   private hostileShot = false;
+  /** The battleground's wind (px/s² for a normal arrow), set before firing. */
+  public wind = 0;
 
   public constructor(
     x: number,
@@ -86,7 +88,7 @@ export default class Arrow extends Sprite {
 
     this.segmentStart = { x: this.x, y: this.y };
     const state = { x: this.x, y: this.y, vx: this.velocity.x, vy: this.velocity.y };
-    advanceProjectile(state, deltaMs / 1000, Arrow.getFlightParams(this.projectileType));
+    advanceProjectile(state, deltaMs / 1000, Arrow.getFlightParams(this.projectileType, this.wind));
     this.position.set(state.x, state.y);
     this.velocity.x = state.vx;
     this.velocity.y = state.vy;
@@ -143,9 +145,9 @@ export default class Arrow extends Sprite {
     return this.stuck;
   }
 
-  /** Gravity and per-type air drag shared by arrows, the trajectory preview and enemy aim. */
-  public static getFlightParams(type: ProjectileType): FlightParams {
-    return flightParams(type, ARROW_GRAVITY);
+  /** Gravity, per-type air drag and wind shared by arrows, the trajectory preview and enemy aim. */
+  public static getFlightParams(type: ProjectileType, wind = 0): FlightParams {
+    return flightParams(type, ARROW_GRAVITY, wind);
   }
 
   public getTravelSegment(): { start: Vec2; end: Vec2 } {
