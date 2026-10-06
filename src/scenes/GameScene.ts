@@ -380,6 +380,9 @@ export class GameScene extends Scene {
     }
     arrow.wind = this.wind;
     arrow.fire(angle, speed, type);
+    if (this.ctx.session.arrowTrails === 0) {
+      arrow.hideTrail();
+    }
     this.arrows.push(arrow);
     this.world.addChild(arrow);
     return arrow;

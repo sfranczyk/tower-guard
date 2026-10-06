@@ -26,7 +26,7 @@ export interface GameSession {
   run: RunState;
   /** Draw the predicted arrow path while aiming (settings drawer, off by default). */
   showTrajectory: boolean;
-  /** How many of the latest shots keep their trail (settings drawer, 1..MAX_ARROW_TRAILS). */
+  /** How many of the latest shots keep their trail (settings drawer, 0 = none, up to MAX_ARROW_TRAILS). */
   arrowTrails: number;
 }
 

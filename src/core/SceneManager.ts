@@ -46,7 +46,7 @@ export class SceneManager {
       this.ctx.session.showTrajectory = enabled;
     };
     ui.handlers.arrowTrailsChange = (count) => {
-      this.ctx.session.arrowTrails = Math.max(1, Math.min(MAX_ARROW_TRAILS, Math.round(count)));
+      this.ctx.session.arrowTrails = Math.max(0, Math.min(MAX_ARROW_TRAILS, Math.round(count)));
       ui.setArrowTrailsOption(this.ctx.session.arrowTrails);
     };
     ui.handlers.audioChange = (changes) => sound.updateSettings(changes);

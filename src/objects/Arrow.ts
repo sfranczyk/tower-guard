@@ -158,6 +158,13 @@ export default class Arrow extends Sprite {
     };
   }
 
+  /** No trail for this shot (arrow trails set to 0). */
+  public hideTrail(): void {
+    this.trail.clear();
+    this.trail.visible = false;
+    this.trailVisible = false;
+  }
+
   /** Called when a new shot is fired: the trail fades and is gone once `keep` newer shots have been fired. */
   public ageTrail(keep: number): void {
     if (!this.trailVisible) {

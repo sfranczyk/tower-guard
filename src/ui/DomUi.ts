@@ -52,7 +52,7 @@ export interface UiHandlers {
   sandboxStart?: () => void;
   sandboxBack?: () => void;
   trajectoryChange?: (enabled: boolean) => void;
-  /** Number of shots that keep their trail (1..3) picked in the settings drawer. */
+  /** Number of shots that keep their trail (0..3) picked in the settings drawer. */
   arrowTrailsChange?: (count: number) => void;
   /** A music or effects toggle/volume (0..1) changed in the settings drawer. */
   audioChange?: (changes: Partial<AudioSettings>) => void;
