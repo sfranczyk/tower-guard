@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Vec2 } from '../types';
-import { DRAGON_ARCHER_SHOT_MS, DRAGON_FLAP_MS, getDragonPose } from './dragon';
+import { DRAGON_ARCHER_SHOT_MS, DRAGON_FLAP_MS, dragonHitZones, getDragonPose, type DragonHitZone } from './dragon';
 
 const distance = (a: Vec2, b: Vec2): number => Math.hypot(a.x - b.x, a.y - b.y);
 
@@ -62,5 +62,43 @@ describe('archer rider', () => {
     const drawn = samples.find((bow) => bow.tension > 0.9)!;
     expect(drawn.arrow!.tip.x).toBeGreaterThan(drawn.arrow!.nock.x);
     expect(drawn.arrow!.tip.y).toBeGreaterThan(drawn.arrow!.nock.y);
+  });
+});
+
+describe('dragonHitZones', () => {
+  const box = (zone: DragonHitZone) => ({
+    left: Math.min(...zone.points.map((p) => p.x)) - zone.padding,
+    right: Math.max(...zone.points.map((p) => p.x)) + zone.padding,
+    top: Math.min(...zone.points.map((p) => p.y)) - zone.padding,
+    bottom: Math.max(...zone.points.map((p) => p.y)) + zone.padding,
+  });
+  const overlaps = (a: DragonHitZone, b: DragonHitZone): boolean => {
+    const [p, q] = [box(a), box(b)];
+    return p.left <= q.right && q.left <= p.right && p.top <= q.bottom && q.top <= p.bottom;
+  };
+
+  it('chains tail → body → neck → head with no gap, at every point of the wing beat', () => {
+    for (let time = 0; time < DRAGON_FLAP_MS; time += 50) {
+      const zones = dragonHitZones(getDragonPose(time, 'archer'));
+      const body = zones.find((zone) => zone.part === 'body')!;
+      const head = zones.find((zone) => zone.part === 'head')!;
+      const neck = zones.filter((zone) => zone.part === 'neck');
+      const tail = zones.filter((zone) => zone.part === 'tail');
+      expect(neck.length).toBeGreaterThan(2);
+      expect(overlaps(body, neck[0])).toBe(true);
+      for (let index = 1; index < neck.length; index += 1) {
+        expect(overlaps(neck[index - 1], neck[index])).toBe(true);
+      }
+      expect(overlaps(neck[neck.length - 1], head)).toBe(true);
+      expect(overlaps(tail[tail.length - 1], body)).toBe(true);
+      for (let index = 1; index < tail.length; index += 1) {
+        expect(overlaps(tail[index - 1], tail[index])).toBe(true);
+      }
+    }
+  });
+
+  it('makes the rider and the dragon head headshots, the rest normal hits', () => {
+    const zones = dragonHitZones(getDragonPose(0, 'archer'));
+    zones.forEach((zone) => expect(zone.headshot).toBe(zone.part === 'rider' || zone.part === 'head'));
   });
 });

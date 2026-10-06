@@ -219,6 +219,62 @@ export const getDragonPose = (timeMs: number, riderKind: DragonRider = 'spear', 
   };
 };
 
+/** One hit zone in the dragon's sprite space: the box around `points`, padded by `padding`. */
+export interface DragonHitZone {
+  points: Vec2[];
+  padding: number;
+  headshot: boolean;
+  part: 'rider' | 'head' | 'neck' | 'body' | 'tail';
+}
+
+/** Body box up to the back ridge (the rider above it is a zone of his own). */
+const BODY_BOX = { left: -66, right: 66, top: -28, bottom: 28 };
+/** Head zone: from the skull centre to this far along the snout, padded. */
+const HEAD_ZONE = { snout: 26, radius: 11 };
+/** Neck and tail thickness (as drawn), for padding their zones. */
+const NECK_WIDTH = { base: 26, head: 13 };
+const TAIL_WIDTH = { tip: 4, base: 22 };
+/** Tail zones cover this many spine points each. */
+const TAIL_STEP = 2;
+
+/**
+ * Every hit zone of a pose, in sprite space: the rider and the dragon's head are headshots; the body, the
+ * neck (one zone per segment, from the chest to the head) and the curved tail are normal hits. Neighbouring
+ * zones overlap, so there's no gap an arrow can slip through.
+ */
+export const dragonHitZones = (pose: DragonPose): DragonHitZone[] => {
+  const { bob, head, headTilt, neck, tail, rider } = pose;
+  const zones: DragonHitZone[] = [
+    { part: 'rider', points: [rider.head, rider.shoulder], padding: STICKMAN_HEAD.radius, headshot: true },
+    {
+      part: 'head',
+      points: [head, { x: head.x + Math.cos(headTilt) * HEAD_ZONE.snout, y: head.y + Math.sin(headTilt) * HEAD_ZONE.snout }],
+      padding: HEAD_ZONE.radius,
+      headshot: true,
+    },
+    {
+      part: 'body',
+      points: [
+        { x: BODY_BOX.left, y: BODY_BOX.top + bob }, { x: BODY_BOX.right, y: BODY_BOX.top + bob },
+        { x: BODY_BOX.left, y: BODY_BOX.bottom + bob }, { x: BODY_BOX.right, y: BODY_BOX.bottom + bob },
+      ],
+      padding: 0,
+      headshot: false,
+    },
+  ];
+  // The neck as drawn: from the chest (inside the body box) through every neck point to the head.
+  const neckSpine = [{ x: 30, y: -2 + bob }, ...neck];
+  for (let index = 1; index < neckSpine.length; index += 1) {
+    const width = NECK_WIDTH.base + (NECK_WIDTH.head - NECK_WIDTH.base) * (index / (neckSpine.length - 1));
+    zones.push({ part: 'neck', points: [neckSpine[index - 1], neckSpine[index]], padding: width / 2, headshot: false });
+  }
+  for (let index = 0; index + TAIL_STEP < tail.length; index += TAIL_STEP) {
+    const width = TAIL_WIDTH.tip + (TAIL_WIDTH.base - TAIL_WIDTH.tip) * ((index + TAIL_STEP) / (tail.length - 1));
+    zones.push({ part: 'tail', points: [tail[index], tail[index + TAIL_STEP]], padding: width / 2, headshot: false });
+  }
+  return zones;
+};
+
 const drawWing = (g: Graphics, wingPose: WingPose, membrane: number): void => {
   const { shoulder, wrist, tip, trail } = wingPose;
   g.poly([shoulder, wrist, tip, ...trail].flatMap((point) => [point.x, point.y])).fill({ color: membrane });

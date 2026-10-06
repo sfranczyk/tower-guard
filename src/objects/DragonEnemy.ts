@@ -1,7 +1,6 @@
 import { Container, Graphics } from 'pixi.js';
 import { DRAGON_DRAW_MS, DRAGON_SCALE, DRAGON_SHOT_INTERVAL_MS } from '../config';
-import { STICKMAN_HEAD } from '../rendering/stickman';
-import { drawDragonRider, type DragonPose } from '../rendering/dragon';
+import { dragonHitZones, drawDragonRider, type DragonHitZone, type DragonPose } from '../rendering/dragon';
 import type { BodyAnchor } from '../systems/bodyAnchor';
 import { cruiseAltitude, fallStep, flyTowards, hoverX, type FallState } from '../systems/dragonFlight';
 import { groundAt } from '../systems/terrain';
@@ -18,12 +17,6 @@ const RELAX_MS = 400;
 const HIT_FLASH_MS = 120;
 /** Health bar above the dragon, in local (unscaled) units. */
 const HEALTH_BAR = { width: 70, height: 8, y: -112 };
-/** Body box of the dragon in local space: the body up to its back ridge (the rider above is the "head"). */
-const BODY_BOX = { left: -66, right: 66, top: -28, bottom: 28 };
-/** Dragon head hit zone (local units): from the skull centre to this far along the snout, padded. */
-const DRAGON_HEAD = { snout: 26, radius: 11 };
-/** Tail hit boxes cover this many spine points each. */
-const TAIL_STEP = 2;
 
 /** One hit zone of the dragon (world space). */
 export interface HitBox {
@@ -179,45 +172,27 @@ export default class DragonEnemy extends Container {
     this.art.tint = this.flashMs > 0 ? 0xffb0a8 : 0xffffff;
   }
 
+  /** The dragon's body (used for splash distance and the like; arrows test every zone). */
   public getPhysicsBounds(): Bounds {
-    const bob = this.pose.bob;
-    return DragonEnemy.boundsAround([
-      { x: BODY_BOX.left, y: BODY_BOX.top + bob }, { x: BODY_BOX.right, y: BODY_BOX.top + bob },
-      { x: BODY_BOX.left, y: BODY_BOX.bottom + bob }, { x: BODY_BOX.right, y: BODY_BOX.bottom + bob },
-    ].map((point) => this.toWorld(point)), 0);
+    return this.zoneBounds('body');
   }
 
-  /** The rider (head and shoulders above the dragon's back): hitting him counts as a headshot. */
+  /** The rider (head and shoulders above the dragon's back). */
   public getHeadBounds(): Bounds {
-    const { head, shoulder } = this.pose.rider;
-    const radius = STICKMAN_HEAD.radius * DRAGON_SCALE;
-    return DragonEnemy.boundsAround([this.toWorld(head), this.toWorld(shoulder)], radius);
+    return this.zoneBounds('rider');
   }
 
-  /**
-   * Every hit zone, in world space: the rider and the dragon's head are headshots; the body and the curved
-   * tail (a few boxes along it) are normal hits.
-   */
+  private zoneBounds(part: DragonHitZone['part']): Bounds {
+    const zone = dragonHitZones(this.pose).find((candidate) => candidate.part === part)!;
+    return DragonEnemy.boundsAround(zone.points.map((point) => this.toWorld(point)), zone.padding * DRAGON_SCALE);
+  }
+
+  /** Every hit zone in world space (see dragonHitZones): rider and dragon head are headshots. */
   public getHitBoxes(): HitBox[] {
-    const { head, headTilt, tail } = this.pose;
-    const nose = { x: Math.cos(headTilt), y: Math.sin(headTilt) };
-    const snout = { x: head.x + nose.x * DRAGON_HEAD.snout, y: head.y + nose.y * DRAGON_HEAD.snout };
-    const dragonHead = DragonEnemy.boundsAround([this.toWorld(head), this.toWorld(snout)], DRAGON_HEAD.radius * DRAGON_SCALE);
-    const tailBoxes: HitBox[] = [];
-    // Pairs of spine points from the tip towards the body, padded by the tail's thickness there.
-    for (let index = 0; index + TAIL_STEP < tail.length; index += TAIL_STEP) {
-      const thickness = 4 + (18 * (index + TAIL_STEP)) / (tail.length - 1);
-      tailBoxes.push({
-        bounds: DragonEnemy.boundsAround([this.toWorld(tail[index]), this.toWorld(tail[index + TAIL_STEP])], (thickness / 2) * DRAGON_SCALE),
-        headshot: false,
-      });
-    }
-    return [
-      { bounds: this.getHeadBounds(), headshot: true },
-      { bounds: dragonHead, headshot: true },
-      { bounds: this.getPhysicsBounds(), headshot: false },
-      ...tailBoxes,
-    ];
+    return dragonHitZones(this.pose).map(({ points, padding, headshot }) => ({
+      bounds: DragonEnemy.boundsAround(points.map((point) => this.toWorld(point)), padding * DRAGON_SCALE),
+      headshot,
+    }));
   }
 
   /** Arrows stick at a local point (stored in BodyAnchor's along/side) and follow the dragon. */

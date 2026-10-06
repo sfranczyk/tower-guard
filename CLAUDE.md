@@ -109,8 +109,10 @@ src/
 - **Dragon archer enemy** (`EnemyType 'dragon'`, `objects/DragonEnemy.ts`): flies at `DRAGON_ALTITUDE`, hovers
   `DRAGON_HOVER_OFFSET` in front of the bowman (`systems/dragonFlight.ts`, pure), and `CombatSystem.updateDragon`
   aims the rider's bow like an enemy archer (same ballistics and wind) and fires hostile arrows. Hit zones
-  (`getHitBoxes`): the rider and the dragon's head are headshots (the rider needs a lobbed arrow, the body
-  shields him from below); the body and a few boxes along the curved tail are normal hits. CombatSystem's
+  (`dragonHitZones` in `rendering/dragon.ts`, pure; `getHitBoxes` maps them to world space): the rider and the
+  dragon's head are headshots (the rider needs a lobbed arrow, the body shields him from below); the body,
+  one zone per neck segment and boxes along the curved tail are normal hits. A test checks the zones chain
+  tail → body → neck → head with no gap through the whole wing beat. CombatSystem's
   hit test takes the earliest zone hit (headshot wins ties); `?debug` draws them yellow/red. Arrows stick into it. Killed, it falls out of the sky and lies on the
   ground; ground lightning skips it (`isFlying`). Combat code takes `Foe = Enemy | DragonEnemy`.
 - **Dragon rider** (`rendering/dragon.ts`, also used by the lab): `getDragonPose` is pure (tested: loop, rider in the
