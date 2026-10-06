@@ -33,7 +33,7 @@ src/
   objects/             Pixi display objects with their own state: Bowman, Enemy, Arrow, Tower
   managers/            InputManager (keyboard + drag-to-aim)
   data/                game data: enemy stats, projectiles, sandbox settings, battlegrounds (map themes)
-  ui/                  DomUi (HTML overlay: menus, HUD, settings, end screen), SandboxForm, template.ts
+  ui/                  DomUi (HTML overlay), Hud, SandboxForm, SoundLabPanel, icons.ts, template.ts
 ```
 
 - **Scenes**: extend `Scene` from `core/Scene.ts`. Register window listeners with `listenWindow()`
@@ -61,7 +61,12 @@ src/
   Storms also have light rain (`rendering/Rain.ts`, screen space, shifts with the camera; `RAIN_*`).
 - **Aim colours**: aim circles, the predicted path and the player's arrow trails use `aimColorsOf(battleground)`
   (`DEFAULT_AIM_COLORS`, overridden per map, e.g. deep violet on the desert where gold disappears).
-- **UI** is HTML (`ui/template.ts`, styles in `index.html`). The in-game HUD sits *outside* the canvas
+- **UI** is HTML (`ui/template.ts`, styles in `index.html`) in the landscape style: flat shapes, cream panels,
+  chunky gold/cream buttons (`primary-button`, `secondary-button`), the Fredoka display font, flat SVG icons
+  (`ui/icons.ts`) and health bars in the HUD (`ui/Hud.ts`). The page backdrop and accent follow the map:
+  each battleground has `ui: { accent, backdrop }` and scenes call `DomUi.setTheme`. The menu is drawn over
+  a live battlefield (`MenuScene`), with the labs under "Dev tools"; the settings drawer works in the menu
+  and in game (its handlers live in `SceneManager`). The in-game HUD sits *outside* the canvas
   (bar above, status line below) and `DomUi.fitCanvas()` scales the canvas into the remaining space.
   Never place HUD elements over the play field. Only menus, the settings drawer and the end screen
   overlay the canvas. Scenes never touch the DOM directly. They call `DomUi` methods and assign
@@ -120,6 +125,11 @@ src/
   `MUSIC_LOOP_START_S..MUSIC_LOOP_END_S`; the last 6 s before the loop end are crossfaded (in the file) into
   the audio leading up to the loop start, so the seam is sample-continuous. If you re-cut the file, keep
   the loop points in `config.ts` in sync. Music and effects have separate toggles and volumes.
+- **Keeps** are drawn in code (`rendering/keep.ts`, flat version of the old pixel-art tower, same 200×406
+  silhouette at half size; `TOWER_HEIGHT`). The stone is tinted towards the map's far hills
+  (`keepTones`), and `keepDamageStage` (pure, tested) picks the look from health: cracks (≤60%), broken
+  merlons, torn banners and rubble (≤30%), fire and smoke (≤10%). `Tower` redraws only when the stage changes
+  and animates the torch, fire and smoke in `update(deltaMs)`.
 - **Coordinates**: the screen is 1024×540 and the world is wider (`WORLD_WIDTH`). `GameScene` scrolls the
   `world` container by `cameraX`.
 - **Terrain**: the ground surface is `groundAt(x)` (`systems/terrain.ts`, pure): gentle waves of

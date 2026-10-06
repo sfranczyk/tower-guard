@@ -114,10 +114,10 @@ export class GameScene extends Scene {
     this.effects = new EffectsSystem(this.world);
     this.aimOverlay.setColors(aimColorsOf(this.battleground));
 
-    const { textures } = this.ctx;
     const { sandbox, run } = this.ctx.session;
-    this.playerTower = new Tower(PLAYER_TOWER_X, GROUND_Y, textures.tower, sandbox.keepHealth, run.keepHealth);
-    this.enemyTower = new Tower(ENEMY_TOWER_X, GROUND_Y, textures.towerEnemy, ENEMY_KEEP_HEALTH, run.enemyKeepHealth);
+    const hillColor = this.battleground.hills[0];
+    this.playerTower = new Tower(PLAYER_TOWER_X, GROUND_Y, { hillColor, enemy: false }, sandbox.keepHealth, run.keepHealth);
+    this.enemyTower = new Tower(ENEMY_TOWER_X, GROUND_Y, { hillColor, enemy: true }, ENEMY_KEEP_HEALTH, run.enemyKeepHealth);
     this.bowman = new Bowman(BOWMAN_START_X, BOWMAN_Y, { x: 50, y: 0, width: WORLD_WIDTH - 100, height: GAME_HEIGHT });
     this.debugGraphics.zIndex = 4;
     this.world.addChild(this.playerTower, this.enemyTower, this.bowman, this.aimOverlay, this.debugGraphics);
@@ -143,7 +143,7 @@ export class GameScene extends Scene {
     );
 
     ui.setStatus(DEFAULT_STATUS);
-    this.syncOptions();
+    ui.setTheme(this.battleground.ui);
     this.bindInput();
     this.spawner.schedule(waveSpawnOrder(this.wave.enemies), WAVE_SPAWN_INTERVAL_MS, WAVE_START_DELAY_MS);
     if (SHOW_HITBOX_DEBUG) {
@@ -173,8 +173,8 @@ export class GameScene extends Scene {
     this.background.update(deltaMs);
     this.weather?.update(deltaMs, this.cameraX);
     this.updateBowman(deltaMs);
-    this.playerTower.update();
-    this.enemyTower.update();
+    this.playerTower.update(deltaMs);
+    this.enemyTower.update(deltaMs);
 
     this.debugGraphics.clear();
     this.effects.update(deltaMs);
@@ -197,7 +197,7 @@ export class GameScene extends Scene {
   }
 
   private bindInput(): void {
-    const { ui, session } = this.ctx;
+    const { ui } = this.ctx;
     this.input = new InputManager({
       eventTarget: this.ctx.app.canvas,
       worldPointFromScreen: (point) => ({ x: point.x + this.cameraX, y: point.y }),
@@ -220,15 +220,9 @@ export class GameScene extends Scene {
 
     ui.handlers.toggleOptions = () => this.toggleOptions();
     ui.handlers.selectProjectile = (type) => this.selectProjectile(type);
-    ui.handlers.trajectoryChange = (enabled) => {
-      session.showTrajectory = enabled;
-    };
-    ui.handlers.audioChange = (changes) => this.ctx.sound.updateSettings(changes);
     this.onExit(() => {
       ui.handlers.toggleOptions = undefined;
       ui.handlers.selectProjectile = undefined;
-      ui.handlers.trajectoryChange = undefined;
-      ui.handlers.audioChange = undefined;
     });
 
     this.listenWindow('keydown', (event) => {
@@ -373,11 +367,6 @@ export class GameScene extends Scene {
     this.input?.cancelAim();
   }
 
-  private syncOptions(): void {
-    this.ctx.ui.setTrajectoryOption(this.ctx.session.showTrajectory);
-    this.ctx.ui.setAudioOptions(this.ctx.sound.settings);
-  }
-
   private toggleEnemiesVisible(): void {
     this.enemiesVisible = !this.enemiesVisible;
     this.enemies.forEach((enemy) => {
@@ -413,12 +402,13 @@ export class GameScene extends Scene {
   private updateHud(): void {
     this.ctx.ui.updateHud({
       towerHealth: this.playerTower.getHealth(),
+      towerMaxHealth: this.playerTower.maxHealth,
       bowmanHealth: this.bowmanHealth,
+      bowmanMaxHealth: this.ctx.session.sandbox.bowmanHealth,
       defeatedEnemies: this.defeatedEnemies(),
       totalEnemies: this.totalEnemies,
       wave: this.ctx.session.run.waveIndex + 1,
       waveCount: this.ctx.session.sandbox.waveCount,
-      battlegroundName: this.battleground.name,
     });
   }
 
@@ -467,10 +457,16 @@ export class GameScene extends Scene {
     const { session, ui } = this.ctx;
     const { run, sandbox } = session;
     const hasNextWave = won && waveCleared && run.waveIndex + 1 < sandbox.waveCount;
+    const stats = [
+      { label: 'enemies defeated', value: `${this.defeatedEnemies()} / ${this.totalEnemies}` },
+      { label: 'keep', value: `${Math.ceil(this.playerTower.getHealth())} / ${this.playerTower.maxHealth}` },
+      { label: 'bowman', value: `${Math.ceil(this.bowmanHealth)} / ${sandbox.bowmanHealth}` },
+    ];
     if (hasNextWave) {
       ui.showEndScreen({
         title: `Wave ${run.waveIndex + 1} cleared!`,
-        titleColor: '#82d99a',
+        outcome: 'win',
+        stats,
         copy: `Next: wave ${run.waveIndex + 2} of ${sandbox.waveCount} at ${BATTLEGROUNDS[sandbox.waves[run.waveIndex + 1].battleground].name}.`,
         buttonLabel: 'Next wave',
         onButton: this.endAction = () => {
@@ -487,9 +483,10 @@ export class GameScene extends Scene {
     }
     ui.showEndScreen({
       title: won ? 'Victory!' : 'Defeat',
-      titleColor: won ? '#82d99a' : '#e66b6b',
+      outcome: won ? 'win' : 'loss',
+      stats,
       copy: won
-        ? (this.enemyTower.isDestroyed() ? 'The enemy keep has fallen.' : `All ${sandbox.waveCount} waves held off.`)
+        ? (this.enemyTower.isDestroyed() ? 'The enemy keep has fallen.' : sandbox.waveCount === 1 ? 'The wave is held off.' : `All ${sandbox.waveCount} waves held off.`)
         : `${this.playerTower.isDestroyed() ? 'The keep has fallen' : 'The bowman has fallen'}. Adjust the sandbox and try again.`,
       buttonLabel: 'Back to sandbox setup',
       onButton: this.endAction = () => this.ctx.goTo('sandbox'),

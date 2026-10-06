@@ -2,8 +2,6 @@ import { Application, Assets, type Texture } from 'pixi.js';
 import arrowAsset from './assets/arrow.svg';
 import arrowExplosiveAsset from './assets/arrow-explosive.svg';
 import arrowPiercingAsset from './assets/arrow-piercing.svg';
-import towerAsset from './assets/tower.svg';
-import towerEnemyAsset from './assets/tower-enemy.svg';
 import { SoundManager } from './audio/SoundManager';
 import { GAME_HEIGHT, GAME_WIDTH } from './config';
 import type { GameTextures } from './core/Scene';
@@ -11,14 +9,12 @@ import { SceneManager } from './core/SceneManager';
 import { DomUi } from './ui/DomUi';
 
 const loadTextures = async (): Promise<GameTextures> => {
-  const [tower, towerEnemy, normal, piercing, explosive] = await Promise.all([
-    Assets.load<Texture>(towerAsset),
-    Assets.load<Texture>(towerEnemyAsset),
+  const [normal, piercing, explosive] = await Promise.all([
     Assets.load<Texture>(arrowAsset),
     Assets.load<Texture>(arrowPiercingAsset),
     Assets.load<Texture>(arrowExplosiveAsset),
   ]);
-  return { tower, towerEnemy, arrows: { normal, piercing, explosive } };
+  return { arrows: { normal, piercing, explosive } };
 };
 
 const bootstrap = async (): Promise<void> => {

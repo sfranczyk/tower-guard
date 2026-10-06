@@ -40,6 +40,13 @@ export class SceneManager {
     ui.handlers.openGame = () => this.goTo('sandbox');
     ui.handlers.openAnimationLab = () => this.goTo('animationLab');
     ui.handlers.openSoundLab = () => this.goTo('soundLab');
+    // The settings drawer works wherever it's opened (menu or game).
+    ui.handlers.trajectoryChange = (enabled) => {
+      this.ctx.session.showTrajectory = enabled;
+    };
+    ui.handlers.audioChange = (changes) => sound.updateSettings(changes);
+    ui.setTrajectoryOption(this.ctx.session.showTrajectory);
+    ui.setAudioOptions(sound.settings);
 
     app.ticker.add((ticker) => this.current?.update(ticker.deltaMS));
   }

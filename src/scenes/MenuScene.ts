@@ -1,13 +1,68 @@
+import { Container } from 'pixi.js';
+import { GAME_HEIGHT, WORLD_WIDTH } from '../config';
 import { Scene } from '../core/Scene';
+import { BATTLEGROUNDS } from '../data/battlegrounds';
+import Bowman from '../objects/Bowman';
+import Tower from '../objects/Tower';
+import { Background } from '../rendering/Background';
+import { groundAt } from '../systems/terrain';
 
+/** The menu shows the middle of the battlefield, with both keeps pulled into view. */
+const MENU_CAMERA_X = 88;
+const MENU_KEEPS = { player: 190, enemy: 1010 } as const;
+const MENU_BOWMAN_X = 285;
+
+/** Main menu over a live battlefield (drifting clouds, flickering torches, the bowman at ease). */
 export class MenuScene extends Scene {
+  private background?: Background;
+  private keeps: Tower[] = [];
+  private bowman?: Bowman;
+  private optionsVisible = false;
+
   public enter(): void {
-    this.ctx.ui.showScreen('menu');
+    const { ui } = this.ctx;
+    const battleground = BATTLEGROUNDS.greenMeadow;
+    ui.showScreen('menu');
+    ui.setTheme(battleground.ui);
+    this.createScenery(battleground);
+
+    ui.handlers.toggleOptions = () => this.setOptionsVisible(!this.optionsVisible);
+    this.onExit(() => {
+      ui.handlers.toggleOptions = undefined;
+    });
 
     this.listenWindow('keydown', (event) => {
-      if (event.code === 'Digit1' || event.code === 'Space') {
+      if (event.code === 'Escape' && this.optionsVisible) {
+        this.setOptionsVisible(false);
+      } else if (!this.optionsVisible && (event.code === 'Digit1' || event.code === 'Space')) {
         this.ctx.goTo('sandbox');
       }
     });
+  }
+
+  public update(deltaMs: number): void {
+    this.background?.update(deltaMs);
+    this.keeps.forEach((keep) => keep.update(deltaMs));
+    this.bowman?.updateAnimation(deltaMs, false);
+  }
+
+  private createScenery(battleground: (typeof BATTLEGROUNDS)[keyof typeof BATTLEGROUNDS]): void {
+    const world = new Container();
+    world.sortableChildren = true;
+    world.x = -MENU_CAMERA_X;
+    this.ctx.root.addChild(world);
+    this.background = new Background(world, battleground);
+    const hillColor = battleground.hills[0];
+    this.keeps = [
+      new Tower(MENU_KEEPS.player, groundAt(MENU_KEEPS.player), { hillColor, enemy: false }),
+      new Tower(MENU_KEEPS.enemy, groundAt(MENU_KEEPS.enemy), { hillColor, enemy: true }),
+    ];
+    this.bowman = new Bowman(MENU_BOWMAN_X, groundAt(MENU_BOWMAN_X), { x: 0, y: 0, width: WORLD_WIDTH, height: GAME_HEIGHT });
+    world.addChild(...this.keeps, this.bowman);
+  }
+
+  private setOptionsVisible(visible: boolean): void {
+    this.optionsVisible = visible;
+    this.ctx.ui.setOptionsVisible(visible);
   }
 }

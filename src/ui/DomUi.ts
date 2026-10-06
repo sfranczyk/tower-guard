@@ -3,6 +3,7 @@ import type { ProjectileType } from '../types';
 import type { AudioSettings } from '../audio/audioSettings';
 import type { SoundId } from '../audio/SoundManager';
 import type { SandboxSettings } from '../data/sandbox';
+import { Hud, type HudValues } from './Hud';
 import { SandboxForm } from './SandboxForm';
 import { SoundLabPanel, type SoundLabMusic, type SoundLabMusicState, type SoundLabRow } from './SoundLabPanel';
 import { HUD_BOTTOM_TEMPLATE, HUD_TOP_TEMPLATE, OVERLAY_TEMPLATE } from './template';
@@ -12,22 +13,23 @@ const PAGE_MARGIN = 16;
 
 export type UiScreen = 'menu' | 'sandbox' | 'animationLab' | 'soundLab' | 'game';
 
-export interface HudValues {
-  towerHealth: number;
-  bowmanHealth: number;
-  defeatedEnemies: number;
-  totalEnemies: number;
-  wave: number;
-  waveCount: number;
-  battlegroundName: string;
-}
+export type { HudValues } from './Hud';
 
 export interface EndScreenOptions {
   title: string;
-  titleColor: string;
+  /** Colours the title: green for a win, red for a loss. */
+  outcome: 'win' | 'loss';
   copy: string;
+  /** Small figures shown in a row under the copy (e.g. enemies defeated, keep health). */
+  stats?: ReadonlyArray<{ label: string; value: string }>;
   buttonLabel: string;
   onButton: () => void;
+}
+
+/** Page colours behind the game, taken from the current battleground. */
+export interface UiTheme {
+  accent: string;
+  backdrop: string;
 }
 
 /** Callbacks wired to DOM controls. Scenes assign the ones they care about. */
@@ -73,11 +75,9 @@ export class DomUi {
   private readonly endButton: HTMLButtonElement;
   private readonly labBackButton: HTMLButtonElement;
   private readonly statusElement: HTMLElement;
-  private readonly towerHealthElement: HTMLElement;
-  private readonly bowmanHealthElement: HTMLElement;
-  private readonly enemyCountElement: HTMLElement;
-  private readonly waveElement: HTMLElement;
-  private readonly battlegroundElement: HTMLElement;
+  private readonly hud: Hud;
+  private readonly endStats: HTMLElement;
+  private readonly devTools: HTMLElement;
   private readonly sandboxScreen: HTMLElement;
   private readonly sandboxForm: SandboxForm;
   private readonly soundLabScreen: HTMLElement;
@@ -110,11 +110,9 @@ export class DomUi {
     this.endButton = this.query<HTMLButtonElement>('[data-end-button]');
     this.labBackButton = this.query<HTMLButtonElement>('[data-lab-back]');
     this.statusElement = this.query('[data-status]');
-    this.towerHealthElement = this.query('[data-tower-health]');
-    this.bowmanHealthElement = this.query('[data-bowman-health]');
-    this.enemyCountElement = this.query('[data-enemy-count]');
-    this.waveElement = this.query('[data-wave]');
-    this.battlegroundElement = this.query('[data-battleground]');
+    this.hud = new Hud(this.hudTop);
+    this.endStats = this.query('[data-end-stats]');
+    this.devTools = this.query('[data-dev-tools]');
     this.sandboxScreen = this.query('[data-sandbox]');
     this.sandboxForm = new SandboxForm(this.query('[data-sandbox-form]'), {
       change: (settings) => this.handlers.sandboxChange?.(settings),
@@ -137,6 +135,8 @@ export class DomUi {
     this.musicVolumeInput = this.query<HTMLInputElement>('[data-music-volume]');
 
     this.onClick('[data-start]', () => this.handlers.start?.());
+    this.onClick('[data-menu-settings]', () => this.handlers.toggleOptions?.());
+    this.onClick('[data-dev-toggle]', () => this.toggleDevTools());
     this.onClick('[data-open-test]', () => this.handlers.openAnimationLab?.());
     this.onClick('[data-open-sound-lab]', () => this.handlers.openSoundLab?.());
     this.onClick('[data-open-game]', () => this.handlers.openGame?.());
@@ -182,11 +182,14 @@ export class DomUi {
   }
 
   public updateHud(values: HudValues): void {
-    this.towerHealthElement.textContent = `${values.towerHealth} HP`;
-    this.bowmanHealthElement.textContent = `${values.bowmanHealth} HP`;
-    this.enemyCountElement.textContent = `${values.defeatedEnemies} / ${values.totalEnemies}`;
-    this.waveElement.textContent = `${values.wave} / ${values.waveCount}`;
-    this.battlegroundElement.textContent = values.battlegroundName;
+    this.hud.update(values);
+  }
+
+  /** Tints the page behind the game and the UI accent with the battleground's colours. */
+  public setTheme(theme: UiTheme): void {
+    const root = document.documentElement.style;
+    root.setProperty('--accent', theme.accent);
+    root.setProperty('--backdrop', theme.backdrop);
   }
 
   public setActiveProjectile(type: ProjectileType): void {
@@ -225,11 +228,19 @@ export class DomUi {
 
   public showEndScreen(options: EndScreenOptions): void {
     this.endTitle.textContent = options.title;
-    this.endTitle.style.color = options.titleColor;
+    this.endTitle.dataset.outcome = options.outcome;
     this.endCopy.textContent = options.copy;
+    this.endStats.innerHTML = (options.stats ?? [])
+      .map(({ label, value }) => `<div><strong>${value}</strong><span>${label}</span></div>`).join('');
+    this.endStats.hidden = !options.stats?.length;
     this.endButton.textContent = options.buttonLabel;
     this.onEndButton = options.onButton;
     this.endScreen.hidden = false;
+  }
+
+  private toggleDevTools(): void {
+    this.devTools.hidden = !this.devTools.hidden;
+    this.query('[data-dev-toggle]').setAttribute('aria-expanded', String(!this.devTools.hidden));
   }
 
   /** Largest canvas size with the game's aspect ratio that fits next to the visible HUD bars. */

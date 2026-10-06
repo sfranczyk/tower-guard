@@ -54,6 +54,7 @@ export class SandboxScene extends Scene {
     if (id === this.previewId) {
       return;
     }
+    this.ctx.ui.setTheme(BATTLEGROUNDS[id].ui);
     this.preview?.destroy({ children: true });
     this.preview = new Container();
     this.preview.sortableChildren = true;

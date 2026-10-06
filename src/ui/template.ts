@@ -1,59 +1,71 @@
+import { ICON_ARROWS, ICON_BOWMAN, ICON_GEAR, ICON_KEEP, ICON_WAVE } from './icons';
+
 /**
  * Static DOM markup. Elements are looked up by their data-* attributes in DomUi.
  * The HUD bars sit above and below the canvas so they never cover the play field;
  * the overlay (menus, settings drawer, end screen) is drawn on top of the canvas.
  */
 export const OVERLAY_TEMPLATE = `
-      <section class="screen" data-menu>
-        <div class="menu-card">
-          <div class="eyebrow">Medieval defense / sandbox</div>
-          <h1>Tower Guard</h1>
-          <p>Protect the keep, control your position and fire with precision.</p>
-          <button class="primary-button" data-start>Start game <span>Space</span></button>
-          <button class="secondary-button" data-open-test>Open animation test panel</button>
-          <button class="secondary-button" data-open-sound-lab>Open sound test panel</button>
+      <section class="screen menu-screen" data-menu>
+        <div class="menu-stack">
+          <h1 class="logo">Tower Guard</h1>
+          <p class="tagline">Hold the keep. Read the wind. Loose the arrow.</p>
+          <div class="menu-card">
+            <button class="primary-button" data-start>Start game <span class="key-hint">Space</span></button>
+            <button class="secondary-button" data-menu-settings>Settings</button>
+            <button class="dev-toggle" data-dev-toggle aria-expanded="false">Dev tools ▾</button>
+            <div class="dev-tools" data-dev-tools hidden>
+              <button class="secondary-button small-button" data-open-test>Animation lab</button>
+              <button class="secondary-button small-button" data-open-sound-lab>Sound lab</button>
+            </div>
+          </div>
         </div>
       </section>
       <section class="test-screen" data-test>
-        <button class="secondary-button" data-lab-back hidden>← All animations</button>
-        <button class="secondary-button" data-open-game>Battle setup</button>
+        <button class="secondary-button small-button" data-lab-back hidden>← All animations</button>
+        <button class="secondary-button small-button" data-open-game>Battle setup</button>
       </section>
       <div class="drawer" data-drawer hidden>
-        <div class="drawer-header"><h2>Game settings</h2><button class="icon-button" data-close-options aria-label="Close settings">×</button></div>
-        <label class="field toggle-field"><span class="hud-label">Trajectory preview</span><input data-trajectory type="checkbox" checked></label>
-        <label class="field toggle-field"><span class="hud-label">Music</span><input data-music type="checkbox" checked></label>
-        <label class="field"><span class="hud-label">Music volume</span><input data-music-volume type="range" min="0" max="100" step="5" value="35"></label>
-        <label class="field toggle-field"><span class="hud-label">Sound effects</span><input data-sound type="checkbox" checked></label>
-        <label class="field"><span class="hud-label">Effects volume</span><input data-volume type="range" min="0" max="100" step="5" value="70"></label>
+        <div class="drawer-header"><h2>Settings</h2><button class="round-button" data-close-options aria-label="Close settings">×</button></div>
+        <label class="field toggle-field"><span>Trajectory preview</span><input data-trajectory type="checkbox" checked></label>
+        <label class="field toggle-field"><span>Music</span><input data-music type="checkbox" checked></label>
+        <label class="field"><span>Music volume</span><input data-music-volume type="range" min="0" max="100" step="5" value="35"></label>
+        <label class="field toggle-field"><span>Sound effects</span><input data-sound type="checkbox" checked></label>
+        <label class="field"><span>Effects volume</span><input data-volume type="range" min="0" max="100" step="5" value="70"></label>
       </div>
-      <section class="screen sandbox-screen" data-sound-lab hidden>
-        <div class="sandbox-card sound-lab-card" data-sound-lab-panel></div>
+      <section class="screen panel-screen" data-sound-lab hidden>
+        <div class="panel-card sound-lab-card" data-sound-lab-panel></div>
       </section>
-      <section class="screen sandbox-screen" data-sandbox hidden>
-        <div class="sandbox-card" data-sandbox-form></div>
+      <section class="screen panel-screen" data-sandbox hidden>
+        <div class="panel-card" data-sandbox-form></div>
       </section>
-      <section class="screen" data-end hidden>
-        <div class="end-card"><h2 data-end-title>Victory</h2><p data-end-copy>Press Space to return to the main menu.</p><button class="primary-button" data-end-button>Return to menu</button></div>
+      <section class="screen end-screen" data-end hidden>
+        <div class="end-card">
+          <h2 data-end-title>Victory</h2>
+          <p data-end-copy>Press Space to return to the main menu.</p>
+          <div class="end-stats" data-end-stats></div>
+          <button class="primary-button" data-end-button>Return to menu</button>
+        </div>
       </section>
 `;
 
+const ammoCard = (type: keyof typeof ICON_ARROWS, key: number, label: string, active = false): string =>
+  `<button class="ammo-card${active ? ' active' : ''}" data-projectile="${type}"><span class="ammo-key">${key}</span>${ICON_ARROWS[type]}${label}</button>`;
+
 export const HUD_TOP_TEMPLATE = `
-  <div class="hud-stats">
-    <div class="hud-stat"><span class="hud-label">Keep</span><strong data-tower-health>570 HP</strong></div>
-    <div class="hud-stat"><span class="hud-label">Bowman</span><strong data-bowman-health>100 HP</strong></div>
-    <div class="hud-stat"><span class="hud-label">Enemies</span><strong data-enemy-count>0 / 10</strong></div>
-    <div class="hud-stat"><span class="hud-label">Wave <span data-wave>1 / 1</span></span><strong data-battleground>Green Meadow</strong></div>
+  <div class="hud-chip">${ICON_KEEP}<div><div class="chip-label">Keep</div><div class="meter"><i data-tower-bar></i></div><div class="chip-value" data-tower-health>600 / 600</div></div></div>
+  <div class="hud-chip">${ICON_BOWMAN}<div><div class="chip-label">Bowman</div><div class="meter"><i data-bowman-bar></i></div><div class="chip-value" data-bowman-health>100 / 100</div></div></div>
+  <div class="hud-chip">${ICON_WAVE}<div><div class="chip-label">Wave <span data-wave>1 / 1</span></div><div class="pips" data-enemy-pips></div><div class="meter" hidden><i data-wave-bar></i></div><div class="chip-value" data-enemy-count>0 of 0 defeated</div></div></div>
+  <div class="hud-spacer"></div>
+  <div class="ammo-cards" data-projectiles>
+    ${ammoCard('normal', 1, 'Normal', true)}
+    ${ammoCard('explosive', 2, 'Explosive')}
+    ${ammoCard('piercing', 3, 'Piercing')}
   </div>
-  <div class="projectile-bar" data-projectiles>
-    <button class="projectile-button active" data-projectile="normal"><b>1</b> Normal</button>
-    <button class="projectile-button" data-projectile="explosive"><b>2</b> Explosive</button>
-    <button class="projectile-button" data-projectile="piercing"><b>3</b> Piercing</button>
-  </div>
-  <div class="hud-actions">
-    <button class="icon-button" data-options aria-label="Open settings">⚙</button>
-  </div>
+  <div class="hud-spacer"></div>
+  <button class="round-button" data-options aria-label="Open settings">${ICON_GEAR}</button>
 `;
 
 export const HUD_BOTTOM_TEMPLATE = `
-  <div class="status-line" data-status>Drag from the bowman and release to fire</div>
+  <div class="status-banner" data-status>Drag from the bowman and release to fire</div>
 `;

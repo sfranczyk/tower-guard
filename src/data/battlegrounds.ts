@@ -43,6 +43,8 @@ export interface Battleground {
   ground: { fill: number; edge: number; tufts: number };
   /** Overrides DEFAULT_AIM_COLORS where the default gold and light blue don't stand out. */
   aimColors?: AimColors;
+  /** Page backdrop behind the game and the UI accent (bars, highlights) for this map (CSS colours). */
+  ui: { accent: string; backdrop: string };
 }
 
 export const BATTLEGROUNDS: Readonly<Record<BattlegroundId, Battleground>> = {
@@ -58,6 +60,7 @@ export const BATTLEGROUNDS: Readonly<Record<BattlegroundId, Battleground>> = {
     hillShape: 'hills',
     trees: { style: 'round', colors: [0x2d594f, 0x35695a, 0x264e4b], trunk: 0x584d42 },
     ground: { fill: 0x79a866, edge: 0xc7e094, tufts: 0x679452 },
+    ui: { accent: '#3f6965', backdrop: '#20363b' },
   },
   crimsonPass: {
     id: 'crimsonPass',
@@ -72,6 +75,7 @@ export const BATTLEGROUNDS: Readonly<Record<BattlegroundId, Battleground>> = {
     hillShape: 'hills',
     trees: { style: 'pine', colors: [0x26182a, 0x2e1d31, 0x1e1322], trunk: 0x2a1a1f },
     ground: { fill: 0x9a6a43, edge: 0xc99a5b, tufts: 0x7c5233 },
+    ui: { accent: '#8e4152', backdrop: '#2e1f33' },
   },
   sunscorchDunes: {
     id: 'sunscorchDunes',
@@ -95,6 +99,7 @@ export const BATTLEGROUNDS: Readonly<Record<BattlegroundId, Battleground>> = {
       trailGlow: 0xb54dff,
       trailCore: 0x5a0aa8,
     },
+    ui: { accent: '#b0753a', backdrop: '#3a2f22' },
   },
   thunderRidge: {
     id: 'thunderRidge',
@@ -108,6 +113,7 @@ export const BATTLEGROUNDS: Readonly<Record<BattlegroundId, Battleground>> = {
     hillShape: 'hills',
     trees: { style: 'pine', colors: [0x1a2928, 0x213130, 0x152221], trunk: 0x2a2420 },
     ground: { fill: 0x4d5e45, edge: 0x6d7f5e, tufts: 0x3c4b36 },
+    ui: { accent: '#5d7189', backdrop: '#161c25' },
   },
 };
 

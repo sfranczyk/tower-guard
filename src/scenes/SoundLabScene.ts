@@ -17,6 +17,7 @@ export class SoundLabScene extends Scene {
   public enter(): void {
     const { ui, sound } = this.ctx;
     ui.showScreen('soundLab');
+    ui.setTheme(BATTLEGROUNDS.greenMeadow.ui);
     const background = new Container();
     background.sortableChildren = true;
     new Background(background, BATTLEGROUNDS.greenMeadow);

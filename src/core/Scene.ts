@@ -7,8 +7,6 @@ import type { DomUi } from '../ui/DomUi';
 export type SceneName = 'menu' | 'sandbox' | 'animationLab' | 'soundLab' | 'game';
 
 export interface GameTextures {
-  tower: Texture;
-  towerEnemy: Texture;
   /** One texture per projectile type. */
   arrows: Record<ProjectileType, Texture>;
 }
