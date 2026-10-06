@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { ENEMY_HEALTH, ENEMY_SPEED } from '../config';
-import { ENEMY_LOOKS, blowsApart, getEnemyStats, splashGibChance } from './enemies';
+import { ENEMY_SPEED, HEADSHOT_DAMAGE_MULTIPLIER, PROJECTILE_DAMAGE } from '../config';
+import { ENEMY_DAMAGE, ENEMY_LOOKS, blowsApart, getEnemyStats, rollDamage, splashGibChance } from './enemies';
 
 describe('getEnemyStats', () => {
   it('returns base stats at difficulty 1', () => {
-    expect(getEnemyStats('basic', 1)).toEqual({ health: ENEMY_HEALTH, speed: ENEMY_SPEED });
+    expect(getEnemyStats('basic', 1)).toEqual({ health: 35, speed: ENEMY_SPEED });
   });
 
   it('makes fast enemies quicker and frailer, tanks slower and tougher', () => {
@@ -19,8 +19,39 @@ describe('getEnemyStats', () => {
 
   it('scales with difficulty and rounds health', () => {
     const stats = getEnemyStats('basic', 1.35);
-    expect(stats.health).toBe(Math.round(ENEMY_HEALTH * 1.35));
+    expect(stats.health).toBe(Math.round(35 * 1.35));
     expect(stats.speed).toBeCloseTo(ENEMY_SPEED * 1.35);
+  });
+});
+
+describe('enemy toughness and damage', () => {
+  const arrowsToKill = (type: Parameters<typeof getEnemyStats>[0], damage: number): number =>
+    Math.ceil(getEnemyStats(type, 1).health / damage);
+  const headshot = PROJECTILE_DAMAGE * HEADSHOT_DAMAGE_MULTIPLIER;
+
+  it('takes a sensible number of arrows per type', () => {
+    expect(arrowsToKill('basic', PROJECTILE_DAMAGE)).toBe(2);
+    expect(arrowsToKill('fast', headshot)).toBe(1);
+    expect(arrowsToKill('archer', headshot)).toBe(1);
+    expect(arrowsToKill('fast', PROJECTILE_DAMAGE)).toBe(2);
+    expect(arrowsToKill('tank', PROJECTILE_DAMAGE)).toBeGreaterThanOrEqual(5);
+    expect(arrowsToKill('dragon', PROJECTILE_DAMAGE)).toBeGreaterThan(arrowsToKill('tank', PROJECTILE_DAMAGE));
+  });
+
+  it('hits differently per type: runners least, brutes most, keeps harder than the bowman', () => {
+    const average = ([min, max]: readonly [number, number]): number => (min + max) / 2;
+    const melee = (type: 'basic' | 'fast' | 'tank') => average(ENEMY_DAMAGE[type].melee.bowman);
+    expect(melee('fast')).toBeLessThan(melee('basic'));
+    expect(melee('basic')).toBeLessThan(melee('tank'));
+    (['basic', 'fast', 'tank', 'archer'] as const).forEach((type) =>
+      expect(average(ENEMY_DAMAGE[type].melee.keep)).toBeGreaterThan(average(ENEMY_DAMAGE[type].melee.bowman)));
+    expect(average(ENEMY_DAMAGE.dragon.arrow!.bowman)).toBeGreaterThan(average(ENEMY_DAMAGE.archer.arrow!.bowman));
+  });
+
+  it('rolls damage within the range', () => {
+    expect(rollDamage([6, 10], 0)).toBe(6);
+    expect(rollDamage([6, 10], 1)).toBe(10);
+    expect(rollDamage([6, 10], 0.5)).toBe(8);
   });
 });
 

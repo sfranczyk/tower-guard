@@ -163,7 +163,7 @@ export class GameScene extends Scene {
           this.bowmanHealth = Math.max(0, this.bowmanHealth - amount);
         },
         headshot: () => this.ctx.ui.setStatus(`Headshot! ×${HEADSHOT_DAMAGE_MULTIPLIER} damage`),
-        enemyShot: (from, angle, speed) => this.fireEnemyArrow(from, angle, speed),
+        enemyShot: (from, angle, speed, shooter) => this.fireEnemyArrow(from, angle, speed, shooter),
         sound: (id, at) => this.playSound(id, at),
       },
     );
@@ -405,7 +405,7 @@ export class GameScene extends Scene {
   }
 
   /** An enemy archer's arrow: reddish, hurts the bowman (or the keep while he hides). */
-  private fireEnemyArrow(from: Vec2, angle: number, speed: number): void {
+  private fireEnemyArrow(from: Vec2, angle: number, speed: number, shooter: EnemyType): void {
     const trail = new Graphics();
     trail.zIndex = 1;
     this.world.addChild(trail);
@@ -413,6 +413,7 @@ export class GameScene extends Scene {
     arrow.tint = ENEMY_ARROW_TINT;
     arrow.wind = this.wind;
     arrow.fire(angle, speed, 'normal', true);
+    arrow.shooter = shooter;
     this.arrows.push(arrow);
     this.world.addChild(arrow);
     this.playSound('bowShot', from);

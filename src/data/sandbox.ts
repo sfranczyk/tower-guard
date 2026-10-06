@@ -20,7 +20,7 @@ export const MAX_WAVES = 5;
 export const MAX_ENEMIES_PER_TYPE = 20;
 export const HEALTH_LIMITS = {
   bowman: { min: 20, max: 500, step: 10 },
-  keep: { min: 100, max: 2000, step: 50 },
+  keep: { min: 100, max: 5000, step: 100 },
 } as const;
 
 export type WaveEnemyCounts = Record<EnemyType, number>;
@@ -54,7 +54,7 @@ export const createDefaultSandbox = (): SandboxSettings => ({
     battleground: BATTLEGROUND_IDS[index % BATTLEGROUND_IDS.length],
   })),
   bowmanHealth: 100,
-  keepHealth: 600,
+  keepHealth: 2000,
 });
 
 const clampInt = (value: unknown, min: number, max: number, fallback: number): number => {

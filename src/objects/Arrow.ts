@@ -4,7 +4,7 @@ import { DEFAULT_AIM_COLORS } from '../data/battlegrounds';
 import { flightParams } from '../data/projectiles';
 import { advanceProjectile, type FlightParams } from '../systems/ballistics';
 import type { BodyAnchor } from '../systems/bodyAnchor';
-import type { ProjectileType, Vec2 } from '../types';
+import type { EnemyType, ProjectileType, Vec2 } from '../types';
 
 /** Something an arrow can be pinned to that moves and changes pose (an enemy). */
 export interface AnchorTarget {
@@ -28,6 +28,8 @@ export default class Arrow extends Sprite {
   private hitCount = 0;
   /** Shot by an enemy archer: hurts the bowman/keep, ignores enemies. */
   private hostileShot = false;
+  /** Who loosed a hostile arrow (its damage depends on it, see ENEMY_DAMAGE). */
+  public shooter?: EnemyType;
   /** The battleground's wind (px/s² for a normal arrow), set before firing. */
   public wind = 0;
 

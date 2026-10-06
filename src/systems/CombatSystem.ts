@@ -4,7 +4,6 @@ import {
   DRAGON_RANGE,
   ENEMY_ARCHER_RANGE,
   ENEMY_ARCHER_SPREAD,
-  ENEMY_ARROW_DAMAGE,
   ENEMY_ARROW_POWER,
   ENEMY_TOWER_DAMAGE,
   EXPLOSION_DAMAGE,
@@ -20,13 +19,14 @@ import {
 } from '../config';
 import type { SoundId } from '../audio/SoundManager';
 import Arrow from '../objects/Arrow';
+import { ENEMY_DAMAGE, rollDamage, type EnemyDamage } from '../data/enemies';
 import { bowSpeed } from '../data/projectiles';
 import type Bowman from '../objects/Bowman';
 import DragonEnemy, { type HitBox } from '../objects/DragonEnemy';
 import type Enemy from '../objects/Enemy';
 import { TOWER_HEIGHT } from '../objects/Tower';
 import type Tower from '../objects/Tower';
-import type { Vec2 } from '../types';
+import type { EnemyType, Vec2 } from '../types';
 import { solveLaunchAngle } from './ballistics';
 import { segmentHitTime } from './collision';
 import { struckBy } from './lightning';
@@ -62,7 +62,8 @@ export interface CombatEvents {
   /** A sound-worthy impact at a world position (the scene plays it). */
   sound(id: SoundId, at: Vec2): void;
   /** An enemy archer looses an arrow. */
-  enemyShot(from: Vec2, angle: number, speed: number): void;
+  /** A hostile arrow loosed by `shooter` (its damage depends on who shot it). */
+  enemyShot(from: Vec2, angle: number, speed: number, shooter: EnemyType): void;
 }
 
 interface EnemyHit {
@@ -71,7 +72,10 @@ interface EnemyHit {
   headshot: boolean;
 }
 
-const randomEnemyDamage = (): number => Math.floor(Math.random() * 6) + 2;
+
+/** Damage of a hostile arrow by who shot it (archer arrows if unknown). */
+const arrowDamage = (shooter: EnemyType | undefined): NonNullable<EnemyDamage['arrow']> =>
+  ENEMY_DAMAGE[shooter ?? 'archer'].arrow ?? ENEMY_DAMAGE.archer.arrow!;
 
 const pointAlong = (start: Vec2, travel: Vec2, time: number): Vec2 => ({
   x: start.x + travel.x * time,
@@ -154,7 +158,7 @@ export class CombatSystem {
       if (enemy.x <= playerTower.x + TOWER_ATTACK_REACH && enemy.canAttack()) {
         // The keep takes the hit when the club lands, with a chip of stone flying off the wall.
         enemy.playAttackAnimation(() => {
-          playerTower.takeDamage(randomEnemyDamage());
+          playerTower.takeDamage(rollDamage(ENEMY_DAMAGE[enemy.kind].melee.keep));
           this.world.effects.impact({ x: playerTower.x + TOWER_HALF_WIDTH - 4, y: enemy.y - 30 * enemy.scale.y });
         });
       }
@@ -171,7 +175,7 @@ export class CombatSystem {
         enemy.playAttackAnimation(() => {
           const stillInReach = Math.abs(enemy.x - bowman.x) <= enemy.strikeReach && Math.abs(enemy.y - bowman.y) <= 45 * enemy.size;
           if (stillInReach && !bowman.isInTower && !bowman.isDead) {
-            this.events.bowmanDamaged(randomEnemyDamage());
+            this.events.bowmanDamaged(rollDamage(ENEMY_DAMAGE[enemy.kind].melee.bowman));
             this.world.effects.bloodBurst({ x: bowman.x, y: bowman.y - 20 });
           }
         });
@@ -219,7 +223,7 @@ export class CombatSystem {
       }
       if (enemy.aimBow(angle ?? Math.PI, deltaMs)) {
         const spread = (Math.random() * 2 - 1) * ENEMY_ARCHER_SPREAD;
-        this.events.enemyShot(enemy.getBowReleasePoint(), (angle ?? Math.PI) + spread, speed * (0.97 + Math.random() * 0.06));
+        this.events.enemyShot(enemy.getBowReleasePoint(), (angle ?? Math.PI) + spread, speed * (0.97 + Math.random() * 0.06), enemy.kind);
       }
     }
     enemy.updateAnimation(deltaMs, enemy.isMoving());
@@ -252,7 +256,7 @@ export class CombatSystem {
       }
       if (dragon.aim(angle ?? Math.PI, deltaMs)) {
         const spread = (Math.random() * 2 - 1) * ENEMY_ARCHER_SPREAD;
-        this.events.enemyShot(dragon.getBowReleasePoint(), (angle ?? Math.PI) + spread, speed * (0.97 + Math.random() * 0.06));
+        this.events.enemyShot(dragon.getBowReleasePoint(), (angle ?? Math.PI) + spread, speed * (0.97 + Math.random() * 0.06), 'dragon');
       }
     }
     dragon.updateAnimation(deltaMs);
@@ -287,7 +291,7 @@ export class CombatSystem {
         bottom: GROUND_Y,
       });
       if (towerHit !== undefined) {
-        playerTower.takeDamage(ENEMY_ARROW_DAMAGE);
+        playerTower.takeDamage(rollDamage(arrowDamage(arrow.shooter).keep));
         effects.impact(pointAlong(start, travel, towerHit));
         arrow.deactivate();
       }
@@ -304,7 +308,7 @@ export class CombatSystem {
       bottom: bowman.y,
     });
     if (bowmanHit !== undefined) {
-      this.events.bowmanDamaged(ENEMY_ARROW_DAMAGE);
+      this.events.bowmanDamaged(rollDamage(arrowDamage(arrow.shooter).bowman));
       effects.bloodBurst(pointAlong(start, travel, bowmanHit));
       arrow.deactivate();
     }

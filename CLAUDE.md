@@ -112,6 +112,11 @@ src/
   the reaction: a headshot gives `deathStiff`, an explosion gives `knockback` (survivors get up and fight
   on), and other kills pick `death` or `deathCrumple` at random. `getFallPose()` is
   pure; feet and hands are kept on the ground by `groundedAngle`, and tests check every frame.
+- **Enemy toughness and damage** (`data/enemies.ts`, tested): health per type against a 20-damage arrow
+  (headshot ×`HEADSHOT_DAMAGE_MULTIPLIER` = 1.25): fighter 35, runner 22, archer 24 (one headshot), brute 110,
+  dragon 170. `ENEMY_DAMAGE` gives each type a random range (`rollDamage`) for club swings at the bowman and at
+  the keep (the keep takes more; it has 2000 by default), and for shooters their arrows (`Arrow.shooter` tells
+  CombatSystem whose arrow hit).
 - **Enemy looks** (`ENEMY_LOOKS` in `data/enemies.ts`): size, club swing and gait per type. Runners run (run
   cycle) and swing a short club from below; Brutes are 1.5× tall (container scale, so hitboxes and arrow
   anchors scale too; the health bar keeps its size) and chop two-handed with a long club.

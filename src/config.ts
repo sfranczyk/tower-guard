@@ -45,12 +45,10 @@ export const ARROW_GRAVITY = 700;
 export const ARROW_DRAG = 0.0005;
 
 export const ENEMY_SPEED = 40;
-export const ENEMY_HEALTH = 20;
 export const ENEMY_ATTACK_INTERVAL_MS = 2000;
-export const ENEMY_HIT_DAMAGE = 10;
 export const PROJECTILE_DAMAGE = 20;
 /** Damage multiplier when an arrow hits an enemy's head. */
-export const HEADSHOT_DAMAGE_MULTIPLIER = 2;
+export const HEADSHOT_DAMAGE_MULTIPLIER = 1.25;
 export const EXPLOSION_RADIUS = 72;
 export const EXPLOSION_DAMAGE = 14;
 /**
@@ -75,7 +73,7 @@ export const ENEMY_ARCHER_RANGE = 340;
 export const ENEMY_ARCHER_DRAW_MS = 900;
 export const ENEMY_ARCHER_COOLDOWN_MS = 1700;
 export const ENEMY_ARCHER_SPREAD = 0.07;
-/** Draw power (0..1) of enemy shots and the damage they deal to the bowman or the keep. */
+/** Draw power (0..1) of enemy shots (their damage per shooter is in data/enemies.ts, ENEMY_DAMAGE). */
 export const ENEMY_ARROW_POWER = 0.75;
 /**
  * Dragon archer: flies at DRAGON_ALTITUDE (y), hovers DRAGON_HOVER_OFFSET in front of the bowman, shoots
@@ -88,7 +86,6 @@ export const DRAGON_DRAW_MS = 900;
 export const DRAGON_SHOT_INTERVAL_MS = 2800;
 /** Dragon drawn at this scale (its art is ~300 px long with the tail). */
 export const DRAGON_SCALE = 0.42;
-export const ENEMY_ARROW_DAMAGE = 8;
 export const ENEMY_GROUND_Y = GROUND_Y;
 
 
