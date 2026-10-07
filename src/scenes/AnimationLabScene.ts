@@ -1,5 +1,5 @@
 import { Container, Graphics, Rectangle, Text } from 'pixi.js';
-import { BOWMAN_KNOCKBACK, GAME_HEIGHT, GAME_WIDTH, SHOW_HITBOX_DEBUG } from '../config';
+import { BACKDROP_WIDTH, BOWMAN_KNOCKBACK, GAME_HEIGHT, GAME_WIDTH, SHOW_HITBOX_DEBUG } from '../config';
 import { Scene } from '../core/Scene';
 import { centeredCameraX, viewWidth } from '../core/viewport';
 import { LAB_PARAM, getUrlParam, setUrlParam } from '../core/urlState';
@@ -455,7 +455,7 @@ export class AnimationLabScene extends Scene {
     const { root } = this.ctx;
     const meadow = new Container();
     meadow.sortableChildren = true;
-    new Background(meadow, BATTLEGROUNDS.greenMeadow);
+    new Background(meadow, BATTLEGROUNDS.greenMeadow, BACKDROP_WIDTH);
     root.addChild(meadow, this.content);
     this.meadow = meadow;
     this.content.addChild(new Graphics()

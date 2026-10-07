@@ -100,6 +100,13 @@ src/
   the status line shows its direction and strength.
 - **Aim overlay** (`rendering/AimOverlay.ts`): while aiming, circles at the drag start and at the bow; after a shot
   a ghost of it (power circle and direction) stays where that shot was loosed, not following the bowman.
+- **Aim camera** (`core/camera.ts`, pure, tested): while the local player draws, the view slides towards where the
+  shot would land (`GameScene.updateAim` simulates it every frame, same ballistics as the preview, whether the
+  preview is on or not): `aimLookAhead` does nothing for a shot landing within `LOOK_DEAD_ZONE` of the view,
+  then slides smoothly up to the bowman `LOOK_EDGE_MARGIN` from the edge; eased in (`LOOK_AIM_MS`). It only slides
+  further out: a shorter shot doesn't bring it back in, unless he aims the other way (`nextLookShift`). After the
+  shot it stays while he stands and eases back to him once he moves (`LOOK_RETURN_MS`). The drag is measured on screen (InputManager), so
+  the sliding view doesn't change the aim, and `getAim()` gives its points in the world as the camera is now.
 - **Aim colours**: aim circles, the predicted path and the player's arrow trails use `aimColorsOf(battleground)`
   (`DEFAULT_AIM_COLORS`, overridden per map, e.g. deep violet on the desert where gold disappears; an
   optional `halo` adds a dark outline, used on Frostpeak Pass).
@@ -120,9 +127,11 @@ src/
   least `GAME_WIDTH` (1134, 2.1:1) wide. A window wider than 2.1:1, or one big enough to pass `MAX_VIEW_SCALE`
   (1.4 CSS px per game px), widens the view (up to `MAX_VIEW_WIDTH`) instead of scaling everything up. Read the
   current width with `viewWidth()` every frame, never `GAME_WIDTH`, for anything that spans the screen. The
-  battlefield stays `WORLD_WIDTH` (1200); `GameScene` follows the bowman while the view is narrower and centres
-  the world once it fits (`centeredCameraX`); menus and labs centre their backdrop and content. The landscape
-  (sky, hills mirrored past both ends, trees, ground, clouds) extends `SCENERY_MARGIN` beyond the world, and
+  battlefield is `WORLD_WIDTH` (3600, three screens or so); `GameScene` follows the bowman across it (and would
+  centre it, `centeredCameraX(width, WORLD_WIDTH)`, in a view wider than it). Menus, labs and the lobby show a
+  `BACKDROP_WIDTH` (1200) landscape, centred (`centeredCameraX()`; `new Background(..., BACKDROP_WIDTH)`). The hills
+  drawing is one `BACKDROP_WIDTH` stretch that `Background` repeats, every other copy mirrored; the landscape (sky,
+  hills, trees, ground, clouds) extends `SCENERY_MARGIN` beyond either end, and
   rain and snow cover `MAX_VIEW_WIDTH`.
   Overlays on the canvas (menu, sandbox/sound panels, end screen, drawer) are laid out for a canvas at
   scale 1 and zoom with it (`--ui-scale`, set in `fitCanvas`, `UI_SCALE` limits); the sandbox's buttons stay
@@ -144,7 +153,7 @@ src/
   (headshot ×`HEADSHOT_DAMAGE_MULTIPLIER` = 1.25): fighter 35, runner 22, archer 24 (one headshot), brute 110,
   dragon 170. `ENEMY_DAMAGE` gives each type a random range (`rollDamage`) for club swings and, for shooters,
   their arrows (`Arrow.shooter` tells CombatSystem whose arrow hit). The keep (2000 by default) takes the same
-  × `KEEP_DAMAGE_MULTIPLIER` per attack (1, except archer arrows 0.5, brute 2, kamikaze 4); read ranges with `enemyDamage(type, attack, target)`.
+  × `KEEP_DAMAGE_MULTIPLIER` per attack (1, except archer arrows 0.5, brute 2, kamikaze 8); read ranges with `enemyDamage(type, attack, target)`.
 - **Kamikaze** (`EnemyType 'kamikaze'`): runs in unarmed with a bomb on its chest (`pose.bomb`, sparking fuse) and
   dies to one arrow. On reaching the bowman (jumping doesn't save him) or the keep, `CombatSystem.detonate` blows
   it apart (cause `'blast'`), runs the same `explode` as an explosive arrow (splash and knockback on nearby

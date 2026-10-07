@@ -20,7 +20,7 @@ import {
 } from '../config';
 import type { SoundId } from '../audio/SoundManager';
 import Arrow from '../objects/Arrow';
-import { enemyDamage, explosionDamage, rollDamage, type DamageTarget } from '../data/enemies';
+import { enemyDamage, explosionDamage, pinDurationMs, rollDamage, type DamageTarget } from '../data/enemies';
 import { burnDamage, flamesTouch } from './burning';
 import { bowSpeed } from '../data/projectiles';
 import type Bowman from '../objects/Bowman';
@@ -40,6 +40,8 @@ const MELEE_REACH = 25;
 const TOWER_ATTACK_REACH = 40;
 const TOWER_HALF_WIDTH = 48;
 const PIERCING_MAX_IMPACTS = 5;
+/** A pinning arrow's centre sits this far back from where its tip goes into the ground (the sprite is ~36 px long). */
+const PIN_SINK = 13;
 /** Bowman hit box (feet at bowman.y) and where enemy archers aim on him. */
 const BOWMAN_HALF_WIDTH = 7;
 const BOWMAN_HEIGHT = 40;
@@ -530,6 +532,14 @@ export class CombatSystem {
       if (arrow.impacts >= PIERCING_MAX_IMPACTS) {
         arrow.deactivate();
       }
+    } else if (arrow.type === 'pinning' && enemy.isAlive() && !(enemy instanceof DragonEnemy) && pinDurationMs(enemy.kind) > 0) {
+      // Through the foot into the ground: the enemy is held there for a while.
+      enemy.pin(pinDurationMs(enemy.kind));
+      const heading = Math.atan2(arrow.velocityVector.y, arrow.velocityVector.x);
+      const ground = groundAt(enemy.x);
+      arrow.position.set(enemy.x - Math.cos(heading) * PIN_SINK, ground - Math.sin(heading) * PIN_SINK);
+      arrow.stickToGround(arrow.y);
+      effects.impact({ x: enemy.x, y: ground - 2 });
     } else {
       // Pinned to the body: it rides along with walking, falls and the corpse.
       arrow.stickToEnemy(enemy, impactPoint);

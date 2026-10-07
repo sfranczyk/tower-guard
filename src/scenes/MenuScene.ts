@@ -1,5 +1,5 @@
 import { Container } from 'pixi.js';
-import { GAME_HEIGHT, WORLD_WIDTH } from '../config';
+import { BACKDROP_WIDTH, GAME_HEIGHT } from '../config';
 import { Scene } from '../core/Scene';
 import { centeredCameraX } from '../core/viewport';
 import { BATTLEGROUNDS } from '../data/battlegrounds';
@@ -58,13 +58,13 @@ export class MenuScene extends Scene {
     world.sortableChildren = true;
     this.world = world;
     this.ctx.root.addChild(world);
-    this.background = new Background(world, battleground);
+    this.background = new Background(world, battleground, BACKDROP_WIDTH);
     const hillColor = battleground.hills[0];
     this.keeps = [
       new Tower(MENU_KEEPS.player, groundAt(MENU_KEEPS.player), { hillColor, enemy: false }),
       new Tower(MENU_KEEPS.enemy, groundAt(MENU_KEEPS.enemy), { hillColor, enemy: true }),
     ];
-    this.bowman = new Bowman(MENU_BOWMAN_X, groundAt(MENU_BOWMAN_X), { x: 0, y: 0, width: WORLD_WIDTH, height: GAME_HEIGHT }, {
+    this.bowman = new Bowman(MENU_BOWMAN_X, groundAt(MENU_BOWMAN_X), { x: 0, y: 0, width: BACKDROP_WIDTH, height: GAME_HEIGHT }, {
       armorColors: battleground.player,
     });
     world.addChild(...this.keeps, this.bowman);

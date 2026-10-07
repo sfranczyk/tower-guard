@@ -1,4 +1,5 @@
 import { Container } from 'pixi.js';
+import { BACKDROP_WIDTH } from '../config';
 import { Scene } from '../core/Scene';
 import { centeredCameraX } from '../core/viewport';
 import { BATTLEGROUNDS } from '../data/battlegrounds';
@@ -23,7 +24,7 @@ export class CoopScene extends Scene {
     ui.showScreen('coop');
     ui.setTheme(BATTLEGROUNDS.greenMeadow.ui);
     this.backdrop.sortableChildren = true;
-    new Background(this.backdrop, BATTLEGROUNDS.greenMeadow);
+    new Background(this.backdrop, BATTLEGROUNDS.greenMeadow, BACKDROP_WIDTH);
     this.ctx.root.addChild(this.backdrop);
 
     ui.handlers.coopHost = () => void this.host();

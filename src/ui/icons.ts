@@ -32,6 +32,11 @@ const BURST = `<g transform="translate(29 29)"><path d="M0-9l2.6 5.2L8.4-6 5.6-.
 const PIERCE = `<g transform="translate(29 29)"><circle r="8" fill="#3f6965"/>
   <path d="M-4.5-4 0 0l-4.5 4M0.5-4 5 0 0.5 4" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></g>`;
 
+/** Pinning badge: a spike driven into the ground. */
+const PIN = `<g transform="translate(29 29)"><circle r="8" fill="#8f3b2e"/>
+  <path d="M0-5.5v8" stroke="#fff" stroke-width="2" stroke-linecap="round"/><path d="M-2.4 0.5 0 4l2.4-3.5z" fill="#fff"/>
+  <path d="M-5 4.6h10" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/></g>`;
+
 /** Shrapnel badge: three small arrows fanning out. */
 const SPLIT = `<g transform="translate(29 29)"><circle r="8" fill="#5f8f8b"/>
   <g stroke="#fff" stroke-width="1.6" stroke-linecap="round"><path d="M-4 3 4-5M-4 3 5-1M-4 3 1 5.5"/></g></g>`;
@@ -41,6 +46,7 @@ export const ICON_WEAPONS = {
   explosive: weapon('<circle cx="32" cy="20" r="5" fill="#d8614f"/><circle cx="30.5" cy="18.5" r="1.6" fill="#f6c27a"/>', BURST),
   piercing: weapon('<path d="M28 17.5l11 2.5-11 2.5z" fill="#6c7a88"/>', PIERCE, '#7a5a38'),
   shrapnel: weapon('<path d="M27 16.5h6l5 3.5-5 3.5h-6z" fill="#5f8f8b"/><path d="M30 16.8v6.4" stroke="#24333a" stroke-width="1"/>', SPLIT, '#6b7b80'),
+  pinning: weapon('<path d="M27 17h5l7 3-7 3h-5z" fill="#5d6670"/><path d="M31 17l-2.5-2M31 23l-2.5 2" stroke="#23282e" stroke-width="1.4" stroke-linecap="round"/><path d="M24 17.5v5M26 17.5v5" stroke="#c9a46a" stroke-width="1.2"/>', PIN),
 } as const;
 
 /** Enemy type icons (sandbox columns): flat stick figures in the HUD ink colour, each with its tell. */

@@ -78,6 +78,9 @@ const TORSO_TO_SHOULDER = 35;
 
 /** Container scale of a normal-sized enemy (bigger types multiply it by their size). */
 const ENEMY_SCALE = 2 / 3;
+/** A pinned enemy tugs back and forth: lean (radians) and pace (ms per radian of the sway). */
+const PIN_TUG_LEAN = 0.09;
+const PIN_TUG_MS = 70;
 const RUN_LEAN = 0.14;
 
 export default class Enemy extends Container {
@@ -93,6 +96,8 @@ export default class Enemy extends Container {
   /** Walk/run cycle phase: advances with the distance covered, so the feet stay planted at any speed. */
   private stridePhase = 0;
   private attackTimerMs = 0;
+  /** Pinned to the ground by a pinning arrow: can't walk until this runs out (it can still swing or shoot). */
+  private pinnedMs = 0;
   private velocity = { x: 0, y: 0 };
   private alive = true;
   private fall?: FallState;
@@ -325,23 +330,36 @@ export default class Enemy extends Container {
     this.netHooks?.attacked();
   }
 
-  /** Co-op: what the guest needs besides the position (walking speed; an archer's bow). */
-  public getNetState(): { vx: number; aim?: number; tension?: number; ready?: number } {
+  /** Pins the enemy to the ground for `durationMs` (a fresh pin restarts the time). */
+  public pin(durationMs: number): void {
+    if (this.isAlive()) {
+      this.pinnedMs = Math.max(this.pinnedMs, durationMs);
+    }
+  }
+
+  public get isPinned(): boolean {
+    return this.isAlive() && this.pinnedMs > 0;
+  }
+
+  /** Co-op: what the guest needs besides the position (walking speed; an archer's bow; time left pinned). */
+  public getNetState(): { vx: number; aim?: number; tension?: number; ready?: number; pinned?: number } {
+    const pinned = this.pinnedMs > 0 ? this.pinnedMs : undefined;
     return this.isArcher
-      ? { vx: this.velocity.x, aim: this.aimAngle, tension: this.bowTension, ready: this.bowReady }
-      : { vx: this.velocity.x };
+      ? { vx: this.velocity.x, aim: this.aimAngle, tension: this.bowTension, ready: this.bowReady, pinned }
+      : { vx: this.velocity.x, pinned };
   }
 
   /**
    * Co-op guest: puts the enemy where the host has it (no AI runs on the guest); walking speed drives the
    * stride and facing, an archer's bow follows the host's aim and draw.
    */
-  public applyNetState(state: { x: number; y: number; vx: number; aim?: number; tension?: number; ready?: number }): void {
+  public applyNetState(state: { x: number; y: number; vx: number; aim?: number; tension?: number; ready?: number; pinned?: number }): void {
     if (!this.isAlive()) {
       return;
     }
     this.position.set(state.x, state.y);
     this.velocity = { x: state.vx, y: 0 };
+    this.pinnedMs = state.pinned ?? 0;
     if (this.isArcher && state.aim !== undefined) {
       this.aimAngle = state.aim;
       this.bowTension = state.tension ?? 0;
@@ -397,6 +415,11 @@ export default class Enemy extends Container {
       this.body.rotation = 0;
       this.body.y = -29;
       drawStickman(this.body, this.walkPhase, this.pose({ idleBlend: 1 }));
+      if (this.pinnedMs > 0) {
+        // Pinned: tugs back and forth, trying to pull free.
+        this.body.rotation = Math.sin(this.animationTime / PIN_TUG_MS) * PIN_TUG_LEAN;
+        this.animationTime += deltaMs;
+      }
       return;
     }
 
@@ -469,7 +492,15 @@ export default class Enemy extends Container {
   public update(deltaMs: number, target?: Vec2, stopDistance = 0): void {
     // The pause between swings runs down all the time, also while the bowman is out of reach.
     this.attackCooldown = Math.max(0, this.attackCooldown - deltaMs);
+    this.pinnedMs = Math.max(0, this.pinnedMs - deltaMs);
     if (!this.isAlive() || this.fall) {
+      return;
+    }
+    // Pinned: struggles on the spot.
+    if (this.pinnedMs > 0) {
+      this.velocity.x = 0;
+      this.velocity.y = 0;
+      this.y = groundAt(this.x);
       return;
     }
     // Planted while swinging (the club is moving, the feet aren't).

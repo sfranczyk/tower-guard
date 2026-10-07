@@ -1,5 +1,5 @@
 import { Container } from 'pixi.js';
-import { ENEMY_KEEP_HEALTH } from '../config';
+import { BACKDROP_WIDTH, ENEMY_KEEP_HEALTH } from '../config';
 import { Scene, newRun } from '../core/Scene';
 import { centeredCameraX } from '../core/viewport';
 import { saveSandbox } from '../core/sandboxStorage';
@@ -66,7 +66,7 @@ export class SandboxScene extends Scene {
     this.preview?.destroy({ children: true });
     this.preview = new Container();
     this.preview.sortableChildren = true;
-    new Background(this.preview, BATTLEGROUNDS[id]);
+    new Background(this.preview, BATTLEGROUNDS[id], BACKDROP_WIDTH);
     this.ctx.root.addChild(this.preview);
     this.previewId = id;
   }

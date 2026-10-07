@@ -1,5 +1,5 @@
 import { Container } from 'pixi.js';
-import { MUSIC_LOOP_END_S } from '../config';
+import { BACKDROP_WIDTH, MUSIC_LOOP_END_S } from '../config';
 import { MUSIC_INFO, SOUND_INFO } from '../audio/soundCatalog';
 import type { SoundId } from '../audio/SoundManager';
 import { Scene } from '../core/Scene';
@@ -23,7 +23,7 @@ export class SoundLabScene extends Scene {
     ui.setTheme(BATTLEGROUNDS.greenMeadow.ui);
     const background = new Container();
     background.sortableChildren = true;
-    new Background(background, BATTLEGROUNDS.greenMeadow);
+    new Background(background, BATTLEGROUNDS.greenMeadow, BACKDROP_WIDTH);
     this.ctx.root.addChild(background);
     this.background = background;
 

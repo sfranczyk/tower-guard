@@ -53,6 +53,9 @@ export class InputManager extends EventEmitter {
   private readonly screenSize: () => Vec2;
   private readonly keyState = new Set<string>();
   private dragStart: Vec2 | undefined;
+  /** Where the drag started on screen: the pull is measured on screen, so a moving camera doesn't change the aim. */
+  private dragStartScreen: Vec2 | undefined;
+  private lastScreenPoint: Vec2 | undefined;
   private lastAim: AimInput | undefined;
   private jumpConsumed = false;
 
@@ -74,6 +77,7 @@ export class InputManager extends EventEmitter {
       return;
     }
     this.dragStart = this.worldPointFromScreen(point);
+    this.dragStartScreen = point;
     this.handlePointerMove(event);
   };
 
@@ -95,6 +99,7 @@ export class InputManager extends EventEmitter {
       this.emit(InputManager.Events.AIM_RELEASE, this.cloneAim(this.lastAim));
     }
     this.dragStart = undefined;
+    this.dragStartScreen = undefined;
     this.lastAim = undefined;
   };
 
@@ -147,12 +152,25 @@ export class InputManager extends EventEmitter {
     return this.isDown(this.sprintKey) || this.isDown('ShiftRight');
   }
 
+  /**
+   * The bow being drawn. Its drag points are given in the world as the camera is now, so the aim circles stay
+   * under the pointer while the view slides; direction and power come from the drag on screen.
+   */
   public getAim(): AimInput | undefined {
-    return this.lastAim ? this.cloneAim(this.lastAim) : undefined;
+    if (!this.lastAim) {
+      return undefined;
+    }
+    const aim = this.cloneAim(this.lastAim);
+    if (this.dragStartScreen && this.lastScreenPoint) {
+      aim.start = this.worldPointFromScreen(this.dragStartScreen);
+      aim.current = this.worldPointFromScreen(this.lastScreenPoint);
+    }
+    return aim;
   }
 
   public cancelAim(): void {
     this.dragStart = undefined;
+    this.dragStartScreen = undefined;
     this.lastAim = undefined;
   }
 
@@ -180,15 +198,17 @@ export class InputManager extends EventEmitter {
 
   private handlePointerMove(event: PointerEvent): void {
     const screenPoint = this.toScreenPoint(event);
-    if (this.isPointerBlocked?.(screenPoint) || !this.dragStart) {
+    if (this.isPointerBlocked?.(screenPoint) || !this.dragStart || !this.dragStartScreen) {
       return;
     }
 
-    const current = this.worldPointFromScreen(screenPoint);
+    // Measured on screen (the camera may slide while aiming); `current` is the matching world point for the overlay.
     const pull = {
-      x: this.dragStart.x - current.x,
-      y: this.dragStart.y - current.y,
+      x: this.dragStartScreen.x - screenPoint.x,
+      y: this.dragStartScreen.y - screenPoint.y,
     };
+    const current = { x: this.dragStart.x - pull.x, y: this.dragStart.y - pull.y };
+    this.lastScreenPoint = screenPoint;
     const distance = Math.hypot(pull.x, pull.y);
     const direction = normalize(pull);
     const power = clamp(distance / this.maxDragDistance, 0, 1);

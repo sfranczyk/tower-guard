@@ -1,4 +1,4 @@
-import { ENEMY_SPEED, EXPLOSION_DAMAGE, KNOCKBACK_PUSH_MAX, SPLASH_GIB_CHANCE } from '../config';
+import { ENEMY_SPEED, EXPLOSION_DAMAGE, KNOCKBACK_PUSH_MAX, PIN_DURATION_MS, PIN_DURATION_ZOMBIE_MS, SPLASH_GIB_CHANCE } from '../config';
 import type { AttackStyle } from '../rendering/attackSwing';
 import type { EnemyType } from '../types';
 
@@ -59,7 +59,7 @@ export const ENEMY_DAMAGE: Readonly<Record<EnemyType, EnemyDamage>> = {
 export const KEEP_DAMAGE_MULTIPLIER: Readonly<Partial<Record<EnemyType, Partial<Record<keyof EnemyDamage, number>>>>> = {
   archer: { arrow: 0.5 },
   tank: { melee: 2 },
-  kamikaze: { melee: 4 },
+  kamikaze: { melee: 8 },
 };
 
 export type DamageTarget = 'bowman' | 'keep';
@@ -69,6 +69,14 @@ export const enemyDamage = (type: EnemyType, attack: keyof EnemyDamage, target: 
   const range = attack === 'arrow' ? ENEMY_DAMAGE[type].arrow ?? ENEMY_DAMAGE.archer.arrow! : ENEMY_DAMAGE[type].melee;
   const factor = target === 'keep' ? KEEP_DAMAGE_MULTIPLIER[type]?.[attack] ?? 1 : 1;
   return [range[0] * factor, range[1] * factor];
+};
+
+/** How long a pinning arrow holds this type in place (ms); 0 = it can't be pinned (brutes, dragons). */
+export const pinDurationMs = (type: EnemyType): number => {
+  if (type === 'tank' || type === 'dragon' || type === 'fireDragon') {
+    return 0;
+  }
+  return type === 'zombie' ? PIN_DURATION_ZOMBIE_MS : PIN_DURATION_MS;
 };
 
 /** A random hit within `range` (`roll` 0..1, passed in so tests can pin it). */

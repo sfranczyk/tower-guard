@@ -11,10 +11,15 @@ export const MAX_VIEW_SCALE = 1.4;
 /** Upper limit of the renderer resolution (backing pixels per game px) for big windows and browser zoom. */
 export const MAX_RENDER_RESOLUTION = 4;
 export const RENDER_SCALE = 1;
-/** The battlefield, keep to keep (independent of the view width). */
-export const WORLD_WIDTH = 1200;
-/** Landscape (sky, hills, trees, ground) is drawn this far beyond both ends of the world for wide views. */
-export const SCENERY_MARGIN = Math.ceil((MAX_VIEW_WIDTH - WORLD_WIDTH) / 2) + 40;
+/** The battlefield, keep to keep (independent of the view width); the camera follows the bowman across it. */
+export const WORLD_WIDTH = 3600;
+/**
+ * Width of the backdrop behind menus, labs and the lobby (centred in the view), and of one stretch of the hills
+ * drawing, which repeats (mirrored every other time) across the battlefield.
+ */
+export const BACKDROP_WIDTH = 1200;
+/** Landscape (sky, hills, trees, ground) is drawn this far beyond both ends, for views wider than the backdrop. */
+export const SCENERY_MARGIN = Math.max(0, Math.ceil((MAX_VIEW_WIDTH - BACKDROP_WIDTH) / 2)) + 40;
 export const CAMERA_ZOOM = 1;
 
 export const GROUND_Y = 490;
@@ -72,6 +77,9 @@ export const SHRAPNEL_FRAGMENT_DAMAGE = 0.55;
 export const SPLASH_GIB_CHANCE = { near: 0.3, far: 0.7, max: 0.95, min: 0.05 } as const;
 export const KNOCKBACK_PUSH_MAX = 110;
 export const PIERCING_DAMAGE_MULTIPLIER = 0.62;
+/** Pinning arrow: an enemy it hits stays put this long (zombies longer; brutes and dragons can't be pinned). */
+export const PIN_DURATION_MS = 7000;
+export const PIN_DURATION_ZOMBIE_MS = 10000;
 export const ENEMY_TOWER_DAMAGE = 16;
 /** Enemy archers: stop and shoot from this distance, draw time, pause between shots, aim error. */
 export const ENEMY_ARCHER_RANGE = 340;

@@ -74,6 +74,8 @@ export interface EnemySnap {
   aim?: number;
   tension?: number;
   ready?: number;
+  /** Time left pinned to the ground (ms). */
+  pinned?: number;
 }
 
 /** A dragon: position, the archer rider's bow, and the fire dragon's breath (ms into it) and aim. */

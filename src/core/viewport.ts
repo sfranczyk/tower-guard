@@ -1,4 +1,4 @@
-import { GAME_HEIGHT, GAME_WIDTH, MAX_VIEW_SCALE, MAX_VIEW_WIDTH, WORLD_WIDTH } from '../config';
+import { BACKDROP_WIDTH, GAME_HEIGHT, GAME_WIDTH, MAX_VIEW_SCALE, MAX_VIEW_WIDTH } from '../config';
 
 /**
  * The view's width in game px. Its height is always GAME_HEIGHT; the width grows from GAME_WIDTH when the
@@ -30,5 +30,8 @@ export const setViewWidth = (width: number): void => {
   currentWidth = width;
 };
 
-/** Camera x that centres the world in the view (negative once the view is wider than the world). */
-export const centeredCameraX = (width = currentWidth): number => (WORLD_WIDTH - width) / 2;
+/**
+ * Camera x that centres a stretch `span` wide (by default the BACKDROP_WIDTH behind menus and labs) in the view
+ * (negative once the view is wider than it).
+ */
+export const centeredCameraX = (width = currentWidth, span = BACKDROP_WIDTH): number => (span - width) / 2;

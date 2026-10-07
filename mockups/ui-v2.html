@@ -1,0 +1,450 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tower Guard · makiety UI v2</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --page: #18292e;
+    --page-text: #e9efe9;
+    --page-muted: #a7b8b4;
+    --display: 'Fredoka', ui-rounded, system-ui, sans-serif;
+    --body: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+    /* Landscape-style UI tokens (Green Meadow theme). */
+    --panel: #f6f1e4;
+    --panel-edge: #ded3ba;
+    --ink: #2c3a38;
+    --ink-soft: #66756f;
+    --accent: #3f6965;
+    --gold: #f1c45a;
+    --gold-edge: #c4932f;
+    --good: #5aa36f;
+    --warn: #e3a447;
+    --bad: #d8614f;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--page); color: var(--page-text); font-family: var(--body); line-height: 1.5; }
+  main { max-width: 1120px; margin: 0 auto; padding: 32px 16px 80px; }
+  h1 { font-family: var(--display); font-weight: 600; font-size: 34px; margin: 0 0 6px; }
+  h2 { font-family: var(--display); font-weight: 600; font-size: 24px; margin: 56px 0 6px; }
+  p.lead, p.note { color: var(--page-muted); max-width: 760px; margin: 0 0 18px; }
+  .frame { position: relative; width: 100%; aspect-ratio: 1024 / 540; border-radius: 14px; overflow: hidden; box-shadow: 0 18px 50px rgba(0,0,0,.35); }
+  .frame > svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+
+  /* ---------- Tower sheet ---------- */
+  .tower-compare { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+  .tower-card { background: #223a40; border-radius: 14px; padding: 14px; }
+  .tower-card h3, .states h3 { font-family: var(--display); font-weight: 600; font-size: 16px; margin: 0 0 8px; color: var(--page-text); }
+  .tower-stage { display: flex; justify-content: center; align-items: flex-end; height: 330px; border-radius: 10px; background: linear-gradient(#80b8d1 0 78%, #79a866 78%); }
+  .tower-stage img, .tower-stage svg { height: 300px; width: auto; image-rendering: pixelated; }
+  .states { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-top: 16px; }
+  .state { border-radius: 12px; overflow: hidden; background: #223a40; }
+  .state svg { display: block; width: 100%; height: auto; }
+  .state span { display: block; padding: 8px 10px; font-size: 13px; color: var(--page-muted); }
+  .state strong { color: var(--page-text); font-family: var(--display); font-weight: 600; }
+  .maps { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-top: 16px; }
+
+  /* ---------- Shared UI kit ---------- */
+  .btn { font-family: var(--display); font-weight: 600; border: 0; border-radius: 14px; cursor: pointer; }
+  .btn-primary { background: var(--gold); color: #4a3510; box-shadow: 0 5px 0 var(--gold-edge), 0 10px 18px rgba(0,0,0,.18); }
+  .btn-secondary { background: var(--panel); color: var(--ink); box-shadow: 0 4px 0 var(--panel-edge), 0 8px 14px rgba(0,0,0,.14); }
+  .btn:active { transform: translateY(3px); }
+
+  /* ---------- Menu ---------- */
+  .menu-overlay { position: absolute; inset: 0; display: grid; place-items: center; }
+  .menu-stack { text-align: center; transform: translateY(-4%); }
+  .logo { font-family: var(--display); font-weight: 700; font-size: clamp(34px, 7vw, 76px); line-height: 1; color: #fffdf6; letter-spacing: .01em; text-shadow: 0 5px 0 #2f5a55, 0 12px 24px rgba(20, 40, 40, .35); }
+  .tagline { font-family: var(--display); font-weight: 500; font-size: clamp(12px, 1.6vw, 17px); color: #f7f3e6; margin: 10px 0 22px; text-shadow: 0 2px 0 rgba(47, 90, 85, .6); }
+  .menu-card { display: inline-flex; flex-direction: column; gap: 14px; padding: 18px; border-radius: 22px; background: rgba(246, 241, 228, .9); box-shadow: 0 16px 40px rgba(30, 60, 60, .25); width: min(300px, 70vw); }
+  .menu-card .btn { font-size: clamp(14px, 1.8vw, 20px); padding: 12px 18px; }
+  .menu-card .key { font-size: 12px; opacity: .65; margin-left: 6px; }
+  .dev { font-family: var(--display); font-size: 13px; color: var(--ink-soft); background: none; border: 0; cursor: pointer; }
+
+  /* ---------- HUD ---------- */
+  .game-shell { background: linear-gradient(#20363b, #16262a); border-radius: 18px; padding: 12px; box-shadow: 0 18px 50px rgba(0,0,0,.35); }
+  .hud { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+  .chip { display: flex; align-items: center; gap: 8px; background: var(--panel); color: var(--ink); border-radius: 14px; padding: 7px 10px; box-shadow: 0 4px 0 var(--panel-edge); min-width: 0; }
+  .chip svg.icon { width: 28px; height: 28px; flex-shrink: 0; }
+  .chip .label { font-family: var(--display); font-weight: 600; font-size: 13px; line-height: 1.1; }
+  .chip .value { font-size: 11px; color: var(--ink-soft); }
+  .bar { width: 84px; height: 10px; border-radius: 6px; background: #e3dac6; overflow: hidden; margin-top: 4px; }
+  .bar i { display: block; height: 100%; border-radius: 6px; }
+  .pips { display: flex; gap: 3px; margin-top: 4px; }
+  .pips svg { width: 14px; height: 14px; }
+  .spacer { flex: 1; }
+  .ammo { display: flex; gap: 8px; }
+  .ammo .card { position: relative; display: flex; flex-direction: column; align-items: center; gap: 2px; width: 74px; padding: 6px 6px 7px; border-radius: 12px; background: var(--panel); color: var(--ink); box-shadow: 0 4px 0 var(--panel-edge); font-family: var(--display); font-weight: 600; font-size: 12px; }
+  .ammo .card.active { background: var(--gold); color: #4a3510; box-shadow: 0 4px 0 var(--gold-edge); transform: translateY(-3px); }
+  .ammo .card svg { width: 64px; height: 16px; }
+  .ammo .key { position: absolute; top: -7px; left: -5px; width: 20px; height: 20px; border-radius: 10px; background: var(--accent); color: #fff; font-size: 11px; display: grid; place-items: center; }
+  .gear { flex-shrink: 0; width: 44px; height: 44px; border-radius: 14px; display: grid; place-items: center; }
+  .status { margin: 10px auto 0; width: fit-content; max-width: 100%; padding: 6px 22px; border-radius: 999px; background: var(--panel); color: var(--ink); font-family: var(--display); font-weight: 500; font-size: 14px; box-shadow: 0 3px 0 var(--panel-edge); }
+  .status b { color: var(--accent); font-weight: 600; }
+  .themes { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-top: 18px; }
+  .theme { border-radius: 14px; padding: 12px; }
+  .theme .chip { box-shadow: 0 3px 0 rgba(0,0,0,.12); }
+  .theme small { display: block; margin-top: 8px; font-family: var(--display); font-weight: 500; }
+
+  @media (max-width: 760px) {
+    .tower-compare, .states, .maps, .themes { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .ammo .card { width: 66px; }
+    .bar { width: 70px; }
+  }
+  @keyframes rise { from { transform: translateY(0); opacity: .55; } to { transform: translateY(-26px); opacity: 0; } }
+  .smoke circle { animation: rise 2.4s linear infinite; transform-box: fill-box; }
+  .smoke circle:nth-child(2) { animation-delay: .8s; }
+  .smoke circle:nth-child(3) { animation-delay: 1.6s; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Tower Guard · makiety UI v2</h1>
+  <p class="lead">Kierunek „jak krajobraz”: płaskie kształty bez konturów, trzy tony na płaszczyznę, miękkie zaokrąglenia,
+  ciepłe kremowe panele i akcenty z palety mapy. Wieża zachowuje sylwetkę i proporcje — zmienia się tylko sposób rysowania.</p>
+
+  <!-- ================= 1. TOWER ================= -->
+  <h2>1 · Wieża</h2>
+  <p class="note">Ta sama geometria co obecny SVG (te same blanki, gzyms, mury boczne, brama, sztandary, skrzynie, pochodnia).
+  Bez czarnych obrysów i wzoru cegieł: kamień ma ton bazowy, jasną krawędź z lewej i cień z prawej, a kilka subtelnych bloków zamiast pełnej faktury.</p>
+  <div class="tower-compare">
+    <div class="tower-card"><h3>Teraz (pixel-art)</h3><div class="tower-stage"><svg style="height:300px;width:auto" xmlns="http://www.w3.org/2000/svg" width="200" height="406" viewBox="0 0 200 406" shape-rendering="crispEdges">
+  <defs>
+    <pattern id="bricks" width="16" height="12" patternUnits="userSpaceOnUse">
+      <rect width="16" height="12" fill="#8e877c"/>
+      <rect x="2" y="2" width="6" height="4" fill="#a7a094" opacity=".35"/>
+      <rect x="10" y="8" width="4" height="4" fill="#6f685f" opacity=".35"/>
+      <rect y="0" width="16" height="2" fill="#6a645b"/>
+      <rect y="6" width="16" height="2" fill="#6a645b"/>
+      <rect x="8" y="0" width="2" height="6" fill="#6a645b"/>
+      <rect x="0" y="6" width="2" height="6" fill="#6a645b"/>
+    </pattern>
+  </defs>
+  <rect x="64" y="4" width="2" height="22" fill="#34333a"/>
+  <path d="M66 6h14l-4 4 6 4H66z" fill="#7a2234" stroke="#34333a" stroke-width="1"/>
+  <rect x="66" y="7" width="8" height="2" fill="#a33a50"/>
+  <rect x="136" y="4" width="2" height="22" fill="#34333a"/>
+  <path d="M138 6h14l-4 4 6 4H138z" fill="#7a2234" stroke="#34333a" stroke-width="1"/>
+  <rect x="138" y="7" width="8" height="2" fill="#a33a50"/>
+  <rect x="12" y="290" width="8" height="10" fill="#a7a094" stroke="#34333a" stroke-width="2"/>
+  <rect x="25" y="290" width="8" height="10" fill="#a7a094" stroke="#34333a" stroke-width="2"/>
+  <rect x="38" y="290" width="8" height="10" fill="#a7a094" stroke="#34333a" stroke-width="2"/>
+  <rect x="50" y="290" width="8" height="10" fill="#a7a094" stroke="#34333a" stroke-width="2"/>
+  <rect x="12" y="300" width="46" height="72" fill="url(#bricks)" stroke="#34333a" stroke-width="2"/>
+  <rect x="44" y="300" width="14" height="72" fill="#000" opacity="0.12"/>
+  <rect x="12" y="300" width="46" height="6" fill="#a7a094" stroke="#34333a" stroke-width="2"/>
+  <rect x="142" y="290" width="8" height="10" fill="#a7a094" stroke="#34333a" stroke-width="2"/>
+  <rect x="155" y="290" width="8" height="10" fill="#a7a094" stroke="#34333a" stroke-width="2"/>
+  <rect x="168" y="290" width="8" height="10" fill="#a7a094" stroke="#34333a" stroke-width="2"/>
+  <rect x="180" y="290" width="8" height="10" fill="#a7a094" stroke="#34333a" stroke-width="2"/>
+  <rect x="142" y="300" width="46" height="72" fill="url(#bricks)" stroke="#34333a" stroke-width="2"/>
+  <rect x="174" y="300" width="14" height="72" fill="#000" opacity="0.12"/>
+  <rect x="142" y="300" width="46" height="6" fill="#a7a094" stroke="#34333a" stroke-width="2"/>
+  <rect x="62" y="70" width="76" height="208" fill="url(#bricks)" stroke="#34333a" stroke-width="2"/>
+  <rect x="64" y="72" width="6" height="204" fill="#fff" opacity="0.14"/>
+  <rect x="112" y="72" width="24" height="204" fill="#000" opacity="0.14"/>
+  <rect x="56" y="56" width="88" height="14" fill="#8e877c" stroke="#34333a" stroke-width="2"/>
+  <rect x="60" y="62" width="4" height="6" fill="#34333a" opacity=".7"/>
+  <rect x="70" y="62" width="4" height="6" fill="#34333a" opacity=".7"/>
+  <rect x="80" y="62" width="4" height="6" fill="#34333a" opacity=".7"/>
+  <rect x="90" y="62" width="4" height="6" fill="#34333a" opacity=".7"/>
+  <rect x="100" y="62" width="4" height="6" fill="#34333a" opacity=".7"/>
+  <rect x="110" y="62" width="4" height="6" fill="#34333a" opacity=".7"/>
+  <rect x="120" y="62" width="4" height="6" fill="#34333a" opacity=".7"/>
+  <rect x="130" y="62" width="4" height="6" fill="#34333a" opacity=".7"/>
+  <rect x="52" y="36" width="96" height="20" fill="url(#bricks)" stroke="#34333a" stroke-width="2"/>
+  <rect x="54" y="38" width="92" height="3" fill="#fff" opacity="0.2"/>
+  <rect x="118" y="38" width="28" height="16" fill="#000" opacity="0.12"/>
+  <rect x="52" y="24" width="10" height="12" fill="#a7a094" stroke="#34333a" stroke-width="2"/>
+  <rect x="68" y="24" width="10" height="12" fill="#a7a094" stroke="#34333a" stroke-width="2"/>
+  <rect x="84" y="24" width="10" height="12" fill="#a7a094" stroke="#34333a" stroke-width="2"/>
+  <rect x="100" y="24" width="10" height="12" fill="#a7a094" stroke="#34333a" stroke-width="2"/>
+  <rect x="116" y="24" width="10" height="12" fill="#a7a094" stroke="#34333a" stroke-width="2"/>
+  <rect x="132" y="24" width="10" height="12" fill="#a7a094" stroke="#34333a" stroke-width="2"/>
+  <rect x="56" y="276" width="10" height="10" fill="#a7a094" stroke="#34333a" stroke-width="2"/>
+  <rect x="72" y="276" width="10" height="10" fill="#a7a094" stroke="#34333a" stroke-width="2"/>
+  <rect x="88" y="276" width="10" height="10" fill="#a7a094" stroke="#34333a" stroke-width="2"/>
+  <rect x="104" y="276" width="10" height="10" fill="#a7a094" stroke="#34333a" stroke-width="2"/>
+  <rect x="120" y="276" width="10" height="10" fill="#a7a094" stroke="#34333a" stroke-width="2"/>
+  <rect x="134" y="276" width="10" height="10" fill="#a7a094" stroke="#34333a" stroke-width="2"/>
+  <rect x="56" y="286" width="88" height="12" fill="#a7a094" stroke="#34333a" stroke-width="2"/>
+  <rect x="118" y="288" width="24" height="8" fill="#000" opacity="0.1"/>
+  <rect x="58" y="298" width="84" height="74" fill="url(#bricks)" stroke="#34333a" stroke-width="2"/>
+  <rect x="116" y="300" width="24" height="70" fill="#000" opacity="0.12"/>
+  <rect x="27" y="312" width="24" height="3" fill="#34333a"/>
+  <path d="M30 315H48V352L39 360L30 352Z" fill="#2d3f99" stroke="#c9a23b" stroke-width="2"/>
+  <rect x="32" y="317" width="4" height="34" fill="#1f2c6e" opacity=".6"/>
+  <path d="M37 325h4v2h2v4h-2v2h3v6h-2v-2h-2v4h-2v-3h-2v3h-2v-4h1v-6h1v-4z" fill="#d9b44a"/>
+  <rect x="149" y="312" width="24" height="3" fill="#34333a"/>
+  <path d="M152 315H170V352L161 360L152 352Z" fill="#2d3f99" stroke="#c9a23b" stroke-width="2"/>
+  <rect x="154" y="317" width="4" height="34" fill="#1f2c6e" opacity=".6"/>
+  <path d="M159 325h4v2h2v4h-2v2h3v6h-2v-2h-2v4h-2v-3h-2v3h-2v-4h1v-6h1v-4z" fill="#d9b44a"/>
+  <path d="M80 372V332a20 20 0 0 1 40 0V372" fill="none" stroke="#a7a094" stroke-width="4"/>
+  <path d="M82 372V332a18 18 0 0 1 36 0V372Z" fill="#6b4a2e" stroke="#34333a" stroke-width="2"/>
+  <rect x="91" y="318" width="2" height="54" fill="#4a321f"/>
+  <rect x="100" y="318" width="2" height="54" fill="#4a321f"/>
+  <rect x="109" y="318" width="2" height="54" fill="#4a321f"/>
+  <rect x="83" y="340" width="34" height="3" fill="#4c4c55"/>
+  <rect x="83" y="360" width="34" height="3" fill="#4c4c55"/>
+  <rect x="95" y="324" width="10" height="9" fill="#1f1d24" stroke="#34333a" stroke-width="1"/>
+  <path d="M98 324v9M102 324v9M95 328h10" stroke="#6d6d78" stroke-width="1"/>
+  <rect x="112" y="350" width="3" height="3" fill="#c0c0c8"/>
+  <rect x="129" y="334" width="3" height="10" fill="#4a321f"/>
+  <rect x="127" y="331" width="7" height="4" fill="#34333a"/>
+  <rect x="128" y="325" width="5" height="6" fill="#ff9a2e"/>
+  <rect x="129" y="323" width="3" height="4" fill="#ffe27a"/>
+  <rect x="62" y="358" width="14" height="14" fill="#8a6238" stroke="#34333a" stroke-width="2"/>
+  <path d="M62 358l14 14M76 358l-14 14" stroke="#5e4022" stroke-width="2"/>
+  <rect x="66" y="346" width="12" height="12" fill="#8a6238" stroke="#34333a" stroke-width="2"/>
+  <path d="M66 346l12 12M78 346l-12 12" stroke="#5e4022" stroke-width="2"/>
+  <rect x="124" y="362" width="16" height="10" fill="#7a5530" stroke="#34333a" stroke-width="2"/>
+  <rect x="124" y="365" width="16" height="2" fill="#4c4c55"/>
+  <rect x="4" y="372" width="192" height="32" fill="#8e877c" stroke="#34333a" stroke-width="2"/>
+  <rect x="6" y="374" width="188" height="3" fill="#fff" opacity="0.2"/>
+  <rect x="100" y="377" width="94" height="25" fill="#000" opacity="0.14"/>
+  <path d="M52 374v28M148 374v28" stroke="#6a645b" stroke-width="2"/>
+</svg></div></div>
+    <div class="tower-card"><h3>Propozycja (flat)</h3><div class="tower-stage" id="tower-flat"></div></div>
+  </div>
+
+  <div class="states" id="damage-states"></div>
+  <p class="note" style="margin-top:12px">Stany uszkodzeń według HP zamku: pęknięcia → wyszczerbione i brakujące blanki, rozdarty sztandar, gruz → dym i ogień.
+  Wieża wroga dostaje to samo (czerwone sztandary).</p>
+
+  <div class="maps" id="map-variants"></div>
+  <p class="note" style="margin-top:12px">Kamień jest lekko mieszany z barwami mapy (jak cienie chmur), więc wieża „siedzi” w jej świetle zamiast wyglądać na wklejoną.</p>
+
+  <!-- ================= 2. MENU ================= -->
+  <h2>2 · Menu główne</h2>
+  <p class="note">Zamiast ciemnej karty na gradiencie — żywa scena pola bitwy (w grze z płynącymi chmurami i łucznikiem w spoczynku),
+  logo w zaokrąglonym foncie i grube przyciski. Laby chowają się w małym „Dev tools”.</p>
+  <div class="frame" id="menu-frame">
+    <div class="menu-overlay">
+      <div class="menu-stack">
+        <div class="logo">Tower Guard</div>
+        <div class="tagline">Hold the keep. Read the wind. Loose the arrow.</div>
+        <div class="menu-card">
+          <button class="btn btn-primary">Start game <span class="key">Space</span></button>
+          <button class="btn btn-secondary">Settings</button>
+          <button class="dev">Dev tools ▾</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= 3. HUD ================= -->
+  <h2>3 · HUD w grze</h2>
+  <p class="note">HUD nadal poza polem gry (nad i pod canvasem). Zamiast tekstu „600 HP” — paski zdrowia jak nad wrogami,
+  postęp fali jako „pipsy” wrogów, wybór pocisku jako karty z prawdziwą grafiką strzały i klawiszem.</p>
+  <div class="game-shell">
+    <div class="hud" id="hud"></div>
+    <div class="frame" id="hud-frame" style="box-shadow:none;border-radius:12px"></div>
+    <div class="status">Wave 2 of 3 · <b>Green Meadow</b> · defend your keep</div>
+  </div>
+  <div class="themes" id="themes"></div>
+  <p class="note" style="margin-top:12px">Akcent HUD bierze kolory z mapy bieżącej fali (DomUi.setTheme): panele zostają kremowe, zmienia się tło i kolor akcentu.</p>
+</main>
+
+<script>
+// ---------------------------------------------------------------- helpers
+const hex = (n) => '#' + n.toString(16).padStart(6, '0');
+const mix = (a, b, t) => {
+  const c = (s) => Math.round(((a >> s) & 255) + (((b >> s) & 255) - ((a >> s) & 255)) * t) << s;
+  return c(16) | c(8) | c(0);
+};
+
+// ---------------------------------------------------------------- terrain (same as systems/terrain.ts)
+const GROUND_Y = 490, WORLD = 1200;
+const wave = (x) => Math.sin(x / 150 + 0.8) * 0.6 + Math.sin(x / 63 + 2.1) * 0.28 + Math.sin(x / 37 + 0.4) * 0.12;
+const smooth = (t) => { const c = Math.max(0, Math.min(1, t)); return c * c * (3 - 2 * c); };
+const groundAt = (x) => GROUND_Y + 7 * wave(x) * smooth((Math.min(Math.abs(x - 70), Math.abs(x - 1130)) - 110) / 120);
+
+// ---------------------------------------------------------------- maps (same palettes as data/battlegrounds.ts)
+const MAPS = {
+  meadow: { name: 'Green Meadow', sky: [0x80b8d1], sun: [790, 105, 68, 0xf8dc9b], hills: [0x587d85, 0x3f6965], ground: [0x79a866, 0xc7e094], clouds: 0xf7fbf5 },
+  crimson: { name: 'Crimson Pass', sky: [0x3b2a52, 0x5e3456, 0x8e4152, 0xc65c45, 0xe8894a], sun: [620, 300, 58, 0xffb35c], hills: [0x6e2f3a, 0x4a2230], ground: [0x9a6a43, 0xc99a5b], clouds: 0xf3a27a },
+  desert: { name: 'Sunscorch Dunes', sky: [0x7fb6d4, 0x9cc6d6, 0xbdd3cc, 0xdcd8b4, 0xeed9a2], sun: [300, 92, 60, 0xfff3c4], hills: [0xd8b479, 0xc89c5c], ground: [0xe2c286, 0xf2dba3], clouds: null },
+  storm: { name: 'Thunder Ridge', sky: [0x1b222d, 0x232c39, 0x2c3645, 0x364252], sun: null, hills: [0x2e3a44, 0x232e38], ground: [0x4d5e45, 0x6d7f5e], clouds: 0x4b5464 },
+};
+
+// ---------------------------------------------------------------- flat keep (geometry of src/assets/tower.svg, 200×406)
+const STONE = 0xa79f92;
+/** Stone tones for a map: base mixed 14% towards the far hills, plus light edge, shadow and deep slots. */
+const stoneTones = (map) => {
+  const base = mix(STONE, map ? map.hills[0] : STONE, 0.14);
+  return { base: hex(base), light: hex(mix(base, 0xffffff, 0.28)), shade: hex(mix(base, 0x1d2228, 0.22)), deep: hex(mix(base, 0x1d2228, 0.6)), cap: hex(mix(base, 0xffffff, 0.12)) };
+};
+
+function keepSvg({ map = MAPS.meadow, damage = 0, enemy = false, width = '' } = {}) {
+  const s = stoneTones(map);
+  const pennant = ['#8a2a3c', '#b04a5e'];
+  const flag = enemy ? ['#9a2c37', '#6e1f28', '#e2b44c'] : ['#34489f', '#24357a', '#e2b44c'];
+  const wood = ['#8a6238', '#6b4a2e', '#5a3c23'];
+  const r = (x, y, w, h, fill, rx = 2, extra = '') => `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${rx}" fill="${fill}" ${extra}/>`;
+  // Missing / chipped merlons by damage level.
+  const topMerlons = [52, 68, 84, 100, 116, 132].filter((x, i) => !(damage >= 2 && (i === 1 || i === 4)) && !(damage >= 3 && i === 5));
+  const sideMerlonsL = [12, 25, 38, 50].filter((x, i) => !(damage >= 2 && i === 2));
+  const sideMerlonsR = [142, 155, 168, 180].filter((x, i) => !(damage >= 3 && (i === 0 || i === 3)));
+  let out = '';
+  // Flags (the right one burns away at the last stage)
+  const flagAt = (px) => `${r(px, 4, 3, 24, s.deep, 1.5)}<path d="M${px + 3} 6h15l-5 5 6 5h-16z" fill="${pennant[0]}"/>${r(px + 3, 7, 9, 3, pennant[1], 1)}`;
+  out += flagAt(63);
+  if (damage < 3) out += flagAt(135);
+  // Side walls
+  const sideWall = (x, merlons) => merlons.map((mx) => r(mx, 290, 9, 11, s.cap, 2)).join('')
+    + r(x, 300, 46, 72, s.base, 3) + r(x + 32, 300, 14, 72, s.shade, 3) + r(x, 300, 46, 7, s.cap, 2) + r(x + 2, 307, 4, 63, s.light, 2);
+  out += sideWall(12, sideMerlonsL) + sideWall(142, sideMerlonsR);
+  // Main tower body
+  out += r(62, 70, 76, 208, s.base, 3) + r(64, 72, 7, 204, s.light, 3) + r(112, 72, 24, 204, s.shade, 3);
+  // A few soft stone blocks instead of a brick pattern
+  [[78, 96, 16], [96, 130, 12], [74, 168, 14], [92, 204, 18], [80, 240, 12], [100, 252, 10]].forEach(([x, y, w]) => { out += r(x, y, w, 7, s.light, 2, 'opacity=".45"'); });
+  [[118, 110, 10], [120, 190, 12]].forEach(([x, y, w]) => { out += r(x, y, w, 7, s.deep, 2, 'opacity=".25"'); });
+  // Arrow slits
+  out += r(94, 120, 8, 22, s.deep, 4) + r(94, 196, 8, 22, s.deep, 4);
+  // Cornice with slots, top block, merlons
+  out += r(56, 56, 88, 14, s.cap, 3);
+  for (let x = 60; x <= 130; x += 10) out += r(x, 62, 4, 6, s.deep, 1.5, 'opacity=".75"');
+  out += r(52, 36, 96, 20, s.base, 3) + r(54, 38, 92, 4, s.light, 2) + r(118, 38, 28, 16, s.shade, 2);
+  out += topMerlons.map((x, i) => r(x, damage >= 1 && i === 0 ? 29 : 24, 10, damage >= 1 && i === 0 ? 7 : 12, s.cap, 2)).join('');
+  // Lower ring of merlons and band
+  out += [56, 72, 88, 104, 120, 134].filter((x, i) => !(damage >= 3 && i === 2)).map((x) => r(x, 276, 10, 10, s.cap, 2)).join('');
+  out += r(56, 286, 88, 12, s.cap, 3) + r(118, 288, 24, 8, s.shade, 2);
+  // Gatehouse
+  out += r(58, 298, 84, 74, s.base, 3) + r(116, 300, 24, 70, s.shade, 3) + r(60, 302, 4, 68, s.light, 2);
+  out += `<path d="M80 372V332a20 20 0 0 1 40 0V372z" fill="${s.light}"/><path d="M83 372V333a17 17 0 0 1 34 0V372z" fill="${wood[1]}"/>`;
+  out += r(91, 320, 2.5, 52, wood[2], 1) + r(100, 318, 2.5, 54, wood[2], 1) + r(109, 320, 2.5, 52, wood[2], 1);
+  out += r(84, 341, 32, 3, '#4c4c55', 1.5) + r(84, 359, 32, 3, '#4c4c55', 1.5);
+  // Banners on the side walls (torn later)
+  const banner = (x) => damage >= 2
+    ? `${r(x - 3, 312, 24, 3, s.deep, 1.5)}<path d="M${x} 315h18v24l-4 5-3-4-3 6-3-5-5 4z" fill="${flag[0]}"/>`
+    : `${r(x - 3, 312, 24, 3, s.deep, 1.5)}<path d="M${x} 315h18v37l-9 8-9-8z" fill="${flag[0]}"/>${r(x + 2, 317, 4, 34, flag[1], 1.5, 'opacity=".55"')}<circle cx="${x + 9}" cy="331" r="4" fill="${flag[2]}"/>`;
+  out += banner(30) + banner(152);
+  // Torch, crates, barrel
+  out += r(129, 333, 3, 11, wood[2], 1) + r(127, 330, 7, 4, s.deep, 1.5) + `<ellipse cx="130.5" cy="326" rx="3.5" ry="5" fill="#ff9a2e"/><ellipse cx="130.5" cy="325" rx="1.8" ry="3" fill="#ffe27a"/>`;
+  out += r(62, 358, 14, 14, wood[0], 2) + r(66, 346, 12, 12, wood[0], 2) + `<path d="M64 360l10 10M74 360l-10 10M68 348l8 8M76 348l-8 8" stroke="${wood[2]}" stroke-width="2" stroke-linecap="round"/>`;
+  out += r(124, 362, 16, 10, wood[0], 3) + r(124, 365.5, 16, 2, '#4c4c55', 1);
+  // Plinth
+  out += r(4, 372, 192, 32, s.cap, 4) + r(6, 374, 188, 4, s.light, 2) + r(100, 378, 94, 24, s.shade, 3, 'opacity=".55"');
+  // ---------- damage overlays
+  const crack = (d) => `<path d="${d}" fill="none" stroke="${s.deep}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>`;
+  if (damage >= 1) out += crack('M88 70l4 14-5 10 6 12') + crack('M126 300l-5 12 4 9');
+  if (damage >= 2) {
+    out += crack('M70 150l8 10-3 12 9 14-4 10') + crack('M118 228l-6 10 5 8-7 12') + crack('M24 300l5 14-4 12');
+    // Chunk knocked out of the top block corner
+    out += `<path d="M138 36h10v12l-6 3-4-7z" fill="${map.sky[0] !== undefined ? hex(map.sky[Math.min(1, map.sky.length - 1)]) : '#80b8d1'}"/>`;
+    // Rubble at the foot
+    [[44, 398, 7], [54, 401, 5], [152, 399, 6], [162, 402, 4], [36, 402, 4]].forEach(([x, y, w]) => { out += r(x, y - w, w, w, s.cap, 1.5); });
+  }
+  if (damage >= 3) {
+    out += crack('M100 300l-3 14 6 10-4 16') + crack('M60 90l10 18-2 16 8 12');
+    out += `<path d="M52 36h12l2 10-8 4-6-2z" fill="${hex(map.sky[0])}"/>`;
+    // Fire in a slit and smoke above the keep
+    out += `<ellipse cx="98" cy="126" rx="5" ry="8" fill="#ff8a2a"/><ellipse cx="98" cy="128" rx="2.6" ry="4.5" fill="#ffe27a"/>`;
+    out += `<g class="smoke" fill="#5f6470"><circle cx="86" cy="14" r="9" opacity=".5"/><circle cx="104" cy="8" r="12" opacity=".45"/><circle cx="120" cy="16" r="8" opacity=".5"/></g>`;
+  }
+  return `<svg viewBox="-10 -20 220 430" ${width ? `width="${width}"` : ''} xmlns="http://www.w3.org/2000/svg">${out}</svg>`;
+}
+
+// ---------------------------------------------------------------- landscape scene (Background + landscape.ts look)
+function cloud(x, y, w, color) {
+  const h = w * 0.34, out = [];
+  const shadow = hex(mix(color, 0x587d85, 0.35)), light = hex(mix(color, 0xffffff, 0.3));
+  out.push(`<ellipse cx="${x}" cy="${y}" rx="${w * 0.47}" ry="${h * 0.2}" fill="${shadow}"/>`);
+  for (let i = 0; i < 7; i++) { const t = i / 6; const rr = h * (0.32 + 0.38 * Math.sin(Math.PI * t)); out.push(`<circle cx="${x + (t - 0.5) * w * 0.72}" cy="${y - rr * 0.62}" r="${rr}" fill="${hex(color)}"/>`); }
+  out.push(`<ellipse cx="${x}" cy="${y - h * 0.08}" rx="${w * 0.48}" ry="${h * 0.2}" fill="${hex(color)}"/>`);
+  out.push(`<ellipse cx="${x - w * 0.08}" cy="${y - h * 0.62}" rx="${w * 0.24}" ry="${h * 0.3}" fill="${light}"/>`);
+  return `<g opacity=".9">${out.join('')}</g>`;
+}
+
+function stickman(x, color, scale = 0.5, armored = false) {
+  const y = groundAt(x);
+  const w = armored ? 5 : 2.2;
+  return `<g transform="translate(${x} ${y}) scale(${scale})" stroke="${color}" stroke-width="${w}" stroke-linecap="round" fill="none">
+    <path d="M0 -58 L0 -23 M0 -23 L-12 0 M0 -23 L12 0 M0 -50 L-14 -34 M0 -50 L16 -40"/>
+    <circle cx="0" cy="-70" r="10" ${armored ? `fill="${color}"` : ''}/></g>`;
+}
+
+function scene(map, { towers = 'both', actors = false, view = [0, 0, 1024, 540], keepXs = [70, 1130], clouds = [[180, 205, 250], [560, 190, 220], [940, 215, 280]] } = {}) {
+  const parts = [];
+  const band = GROUND_Y / map.sky.length;
+  map.sky.forEach((c, i) => parts.push(`<rect x="0" y="${i * band}" width="${WORLD}" height="${band + 1}" fill="${hex(c)}"/>`));
+  if (map.sun) { const [x, y, rr, c] = map.sun; parts.push(`<circle cx="${x}" cy="${y}" r="${rr * 1.3}" fill="${hex(c)}" opacity=".14"/><circle cx="${x}" cy="${y}" r="${rr}" fill="${hex(c)}" opacity=".9"/>`); }
+  if (map.clouds) clouds.forEach(([x, y, w]) => parts.push(cloud(x, y, w, map.clouds)));
+  const [far, near] = map.hills.map(hex);
+  parts.push(`<path d="M0 360C180 250 310 340 480 275S820 330 ${WORLD} 245V540H0Z" fill="${far}"/>`);
+  parts.push(`<path d="M0 412C190 320 390 390 570 330S900 390 ${WORLD} 312V540H0Z" fill="${near}"/>`);
+  for (let x = 20; x < WORLD; x += 92) {
+    const h = 38 + ((x / 92) % 3) * 14;
+    parts.push(`<rect x="${x - 3}" y="${GROUND_Y - h + 16}" width="6" height="${h}" fill="#584d42"/><circle cx="${x}" cy="${GROUND_Y - h}" r="18" fill="#2d594f"/><circle cx="${x - 14}" cy="${GROUND_Y - h + 12}" r="15" fill="#35695a"/><circle cx="${x + 15}" cy="${GROUND_Y - h + 12}" r="15" fill="#264e4b"/>`);
+  }
+  let surface = '';
+  for (let x = 0; x <= WORLD + 8; x += 8) surface += `${x},${groundAt(x).toFixed(1)} `;
+  parts.push(`<polygon points="${surface} ${WORLD + 8},540 0,540" fill="${hex(map.ground[0])}"/><polyline points="${surface}" fill="none" stroke="${hex(map.ground[1])}" stroke-width="8" stroke-linejoin="round"/>`);
+  for (let x = 25; x < WORLD; x += 70) parts.push(`<ellipse cx="${x}" cy="${groundAt(x) + 32 + (x % 3) * 8}" rx="22" ry="6" fill="#679452" opacity=".35"/>`);
+  const keepAt = (x, enemy, damage = 0) => `<g transform="translate(${x - 37} ${groundAt(x) - 150}) scale(0.37)">${keepSvg({ map, enemy, damage }).replace(/<svg[^>]*>|<\/svg>/g, '')}</g>`;
+  if (towers === 'both' || towers === 'player') parts.push(keepAt(keepXs[0], false, actors ? 1 : 0));
+  if (towers === 'both') parts.push(keepAt(keepXs[1], true));
+  if (actors) {
+    // Arrow trail, the bowman and a few enemies on the wavy ground
+    parts.push(`<path d="M172 ${groundAt(165) - 24} Q 430 250 690 ${groundAt(690) - 22}" fill="none" stroke="#f3c969" stroke-width="2.5" opacity=".25"/><path d="M172 ${groundAt(165) - 24} Q 430 250 690 ${groundAt(690) - 22}" fill="none" stroke="#ffe7a4" stroke-width="1" opacity=".8"/>`);
+    parts.push(stickman(165, '#2b3038', 0.5, true));
+    [700, 760, 815, 880].forEach((x) => parts.push(stickman(x, '#f4f7fb', 0.5)));
+    [700, 760, 815, 880].forEach((x, i) => parts.push(`<rect x="${x - 12}" y="${groundAt(x) - 50}" width="24" height="4" rx="2" fill="#1d2a2a" opacity=".5"/><rect x="${x - 12}" y="${groundAt(x) - 50}" width="${[24, 16, 24, 9][i]}" height="4" rx="2" fill="#7ad08a"/>`));
+  }
+  return `<svg viewBox="${view.join(' ')}" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">${parts.join('')}</svg>`;
+}
+
+// ---------------------------------------------------------------- 1. tower sheet
+document.getElementById('tower-flat').innerHTML = keepSvg({ width: '' });
+const STATES = [[0, '100–61%', 'cała'], [1, '60–31%', 'pęknięcia, wyszczerbiona blanka'], [2, '30–11%', 'brakujące blanki, rozdarte sztandary, gruz'], [3, '10–0%', 'dym, ogień, spalona flaga']];
+document.getElementById('damage-states').innerHTML = STATES.map(([d, hp, label]) =>
+  `<div class="state" style="background:linear-gradient(#80b8d1 0 80%, #79a866 80%)">${keepSvg({ damage: d })}<span style="background:#223a40"><strong>HP ${hp}</strong> · ${label}</span></div>`).join('');
+document.getElementById('map-variants').innerHTML = Object.values(MAPS).map((map) => {
+  const sky = map.sky.map((c, i, a) => `${hex(c)} ${(i / a.length) * 80}%`).join(', ');
+  return `<div class="state" style="background:linear-gradient(${sky}, ${hex(map.ground[0])} 80%)">${keepSvg({ map, enemy: map === MAPS.crimson })}<span style="background:#223a40"><strong>${map.name}</strong>${map === MAPS.crimson ? ' · wieża wroga' : ''}</span></div>`;
+}).join('');
+
+// ---------------------------------------------------------------- 2. menu
+document.getElementById('menu-frame').insertAdjacentHTML('afterbegin', scene(MAPS.meadow, { towers: 'both', view: [88, 0, 1024, 540], keepXs: [190, 1010], clouds: [[230, 150, 230], [960, 125, 260]] }));
+
+// ---------------------------------------------------------------- 3. HUD
+const ICONS = {
+  keep: `<svg class="icon" viewBox="0 0 28 28"><rect x="7" y="9" width="14" height="16" rx="2" fill="#a79f92"/><rect x="16" y="9" width="5" height="16" rx="2" fill="#8c8478"/><rect x="5" y="5" width="4" height="5" rx="1" fill="#bdb6aa"/><rect x="12" y="5" width="4" height="5" rx="1" fill="#bdb6aa"/><rect x="19" y="5" width="4" height="5" rx="1" fill="#bdb6aa"/><path d="M11 25v-6a3 3 0 0 1 6 0v6z" fill="#6b4a2e"/></svg>`,
+  bowman: `<svg class="icon" viewBox="0 0 28 28"><path d="M6 25c0-6 3-10 8-10s8 4 8 10z" fill="#3a4250"/><circle cx="14" cy="10" r="6" fill="#2b3038"/><path d="M8.5 10a5.5 5.5 0 0 1 11 0z" fill="#4a5568"/><path d="M21 4c4 5 4 13 0 18" fill="none" stroke="#8a6238" stroke-width="2" stroke-linecap="round"/></svg>`,
+  wave: `<svg class="icon" viewBox="0 0 28 28"><rect x="7" y="4" width="2.5" height="21" rx="1.2" fill="#5a3c23"/><path d="M9.5 5h12l-3 4 3 4h-12z" fill="#d8614f"/></svg>`,
+  gear: `<svg viewBox="0 0 24 24" width="24" height="24"><path fill="#2c3a38" d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Zm8.4 4.6.1-1.1-.1-1.1 2-1.6-2-3.4-2.4 1a8 8 0 0 0-1.9-1.1L15.7 3h-4l-.4 2.7a8 8 0 0 0-1.9 1.1l-2.4-1-2 3.4 2 1.6L7 12l.1 1.1-2 1.6 2 3.4 2.4-1c.6.5 1.2.8 1.9 1.1l.4 2.8h4l.4-2.8c.7-.3 1.3-.6 1.9-1.1l2.4 1 2-3.4z"/></svg>`,
+};
+const skull = (alive) => `<svg viewBox="0 0 14 14"><circle cx="7" cy="6" r="5" fill="${alive ? '#2c3a38' : '#cfc6b2'}"/><circle cx="5" cy="6" r="1.2" fill="${alive ? '#f6f1e4' : '#f6f1e4'}"/><circle cx="9" cy="6" r="1.2" fill="#f6f1e4"/><rect x="5" y="10" width="4" height="3" rx="1" fill="${alive ? '#2c3a38' : '#cfc6b2'}"/></svg>`;
+const arrowIcon = (head, color = '#5a3c23') => `<svg viewBox="0 0 64 16"><rect x="6" y="7" width="44" height="2.4" rx="1.2" fill="${color}"/><path d="M2 3l8 5-8 5 3-5z" fill="#c9d3dc"/>${head}</svg>`;
+const ARROWS = [
+  ['Normal', arrowIcon('<path d="M50 3l12 5-12 5z" fill="#8c96a0"/>'), true],
+  ['Explosive', arrowIcon('<circle cx="55" cy="8" r="6" fill="#d8614f"/><circle cx="53" cy="6" r="2" fill="#f6c27a"/>'), false],
+  ['Piercing', arrowIcon('<path d="M48 5.5l15 2.5-15 2.5z" fill="#6c7a88"/>', '#7a5a38'), false],
+];
+document.getElementById('hud').innerHTML = `
+  <div class="chip">${ICONS.keep}<div><div class="label">Keep</div><div class="bar"><i style="width:100%;background:var(--good)"></i></div><div class="value">600 / 600</div></div></div>
+  <div class="chip">${ICONS.bowman}<div><div class="label">Bowman</div><div class="bar"><i style="width:70%;background:var(--warn)"></i></div><div class="value">70 / 100</div></div></div>
+  <div class="chip">${ICONS.wave}<div><div class="label">Wave 2 / 3</div><div class="pips">${[0, 0, 1, 1, 1, 1, 1].map((a) => skull(a)).join('')}</div><div class="value">2 of 7 defeated</div></div></div>
+  <div class="spacer"></div>
+  <div class="ammo">${ARROWS.map(([name, icon, active], i) => `<div class="card ${active ? 'active' : ''}"><span class="key">${i + 1}</span>${icon}${name}</div>`).join('')}</div>
+  <div class="spacer"></div>
+  <button class="btn btn-secondary gear" aria-label="Settings">${ICONS.gear}</button>`;
+document.getElementById('hud-frame').innerHTML = scene(MAPS.meadow, { towers: 'player', actors: true, view: [0, 0, 1024, 540] });
+
+// Per-map HUD theme samples
+const THEMES = [
+  [MAPS.meadow, '#20363b', '#3f6965'],
+  [MAPS.crimson, '#2e1f33', '#8e4152'],
+  [MAPS.desert, '#3a2f22', '#b0753a'],
+  [MAPS.storm, '#161c25', '#5d7189'],
+];
+document.getElementById('themes').innerHTML = THEMES.map(([map, bg, accent]) => `
+  <div class="theme" style="background:${bg}; --accent:${accent}">
+    <div class="chip">${ICONS.wave}<div><div class="label">Wave 1 / 3</div><div class="bar"><i style="width:60%;background:${accent}"></i></div></div></div>
+    <small style="color:#e9efe9">${map.name}</small>
+  </div>`).join('');
+</script>
+</body>
+</html>

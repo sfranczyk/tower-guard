@@ -55,7 +55,9 @@ export class LocalInput implements PlayerInput {
   }
 
   public getAim(): AimInput | undefined {
-    return this.aim && this.aim.power > 0 ? this.aim : undefined;
+    // Fresh from the manager each frame (its drag points follow the camera); undefined once released.
+    const aim = this.aim ? this.manager.getAim() : undefined;
+    return aim && aim.power > 0 ? aim : undefined;
   }
 
   public takeShots(): AimInput[] {

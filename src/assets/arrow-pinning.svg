@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="72" height="12" viewBox="0 0 72 12">
+  <path d="M5 6h47" stroke="#27354e" stroke-width="3.8" stroke-linecap="round"/>
+  <path d="M5 6h47" stroke="#7a5a38" stroke-width="1.8" stroke-linecap="round"/>
+  <!-- Rope binding behind the head -->
+  <path d="M42 3.5v5M45 3.5v5M48 3.5v5" stroke="#c9a46a" stroke-width="1.6" stroke-linecap="round"/>
+  <!-- Heavy iron spike with backward barbs that hold fast -->
+  <path d="M51 3.2h8l10 2.8-10 2.8h-8z" fill="#5d6670" stroke="#23282e" stroke-width="1.2" stroke-linejoin="round"/>
+  <path d="M59 3.2l-4-2.7M59 8.8l-4 2.7" stroke="#23282e" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M61 4.6l6 1.4-6 1.4" fill="#aab4be"/>
+  <path d="M4 2c5 1 10 1 16 2L16 6l4 2c-6 1-11 1-16 2l4-4z" fill="#8f3b2e" stroke="#2c1b18" stroke-width="1.2" stroke-linejoin="round"/>
+  <path d="M8 3.5L11 6 8 8.5M13 4L16 6 13 8" fill="none" stroke="#d8735f" stroke-width="1" stroke-linecap="round"/>
+</svg>

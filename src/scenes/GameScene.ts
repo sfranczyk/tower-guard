@@ -14,6 +14,7 @@ import {
 import type { SoundId } from '../audio/SoundManager';
 import { spatialMix } from '../audio/spatial';
 import { Scene, type GameContext } from '../core/Scene';
+import { LOOK_AIM_MS, LOOK_RETURN_MS, aimLookAhead, easeTowards, nextLookShift } from '../core/camera';
 import { centeredCameraX, viewWidth } from '../core/viewport';
 import { BATTLEGROUNDS, aimColorsOf, type Battleground } from '../data/battlegrounds';
 import { getEnemyStats } from '../data/enemies';
@@ -46,7 +47,8 @@ import type { EnemyType, ProjectileType, Vec2 } from '../types';
 import { clamp } from '../utils/math';
 
 const MIN_SHOT_POWER = 0.05;
-const CAMERA_SMOOTHING = 0.1;
+/** The camera eases after its target with this time constant (ms). */
+const CAMERA_FOLLOW_MS = 160;
 const DEFAULT_STATUS = 'Drag from the bowman and release to fire';
 const ENEMY_ARROW_TINT = 0xff8f80;
 /** Enemies walk in from just in front of the enemy keep. */
@@ -57,6 +59,7 @@ const PROJECTILE_LABELS: Record<ProjectileType, string> = {
   explosive: 'Explosive bolt · heavy, short high arc, area damage on impact',
   piercing: 'Piercing arrow · light and fast, flat and long, passes through enemies',
   shrapnel: 'Shrapnel arrow · press Space in flight to burst it into three small arrows',
+  pinning: 'Pinning arrow · pins an enemy to the ground for a while (not brutes or dragons)',
   fragment: 'Shrapnel fragment',
 };
 
@@ -65,6 +68,7 @@ const PROJECTILE_KEYS: Record<string, ProjectileType> = {
   Digit2: 'explosive',
   Digit3: 'piercing',
   Digit4: 'shrapnel',
+  Digit5: 'pinning',
 };
 
 /** Status text for the wind: arrows for its direction, one to three by strength. */
@@ -115,6 +119,12 @@ export class GameScene extends Scene {
   private cameraX = 0;
   /** The camera starts on its target, then follows it smoothly. */
   private cameraPlaced = false;
+  /** How far (px) the view is slid towards where the local player is aiming (eased towards `lookGoal`). */
+  private lookShift = 0;
+  /** Where aiming has slid the view to: only further out, unless he aims the other way; 0 again once he moves. */
+  private lookGoal = 0;
+  /** Where the local player's drawn shot would land (x), while aiming. */
+  private aimLandingX?: number;
   private spawnedEnemies = 0;
   private optionsVisible = false;
   /** Debug toggle (O key): hides and freezes all enemies. */
@@ -253,7 +263,7 @@ export class GameScene extends Scene {
 
     this.updateAim();
     this.updateHud();
-    this.updateCamera();
+    this.updateCamera(deltaMs);
     if (!this.gameEnded && this.role !== 'guest') {
       this.checkEndConditions();
     }
@@ -567,21 +577,23 @@ export class GameScene extends Scene {
     this.debugGraphics.clear();
   }
 
-  /** The local player's aim circles and predicted path. */
+  /**
+   * The local player's aim circles and predicted path (when the preview is on), and where the drawn shot would
+   * land (the camera slides towards it).
+   */
   private updateAim(): void {
     const { bowman, input, projectile } = this.localPlayer;
     const aim = input.getAim();
     const hasAim = aim !== undefined && !bowman.isStunned && !bowman.isDead;
     const releasePoint = bowman.getBowReleasePoint();
-    this.aimOverlay.draw(releasePoint, hasAim ? aim : undefined, hasAim ? this.predictTrajectory(aim, releasePoint, projectile) : []);
+    const path = hasAim && aim.power > MIN_SHOT_POWER ? this.simulateShot(aim, releasePoint, projectile) : [];
+    this.aimLandingX = path.length > 0 ? path[path.length - 1].x : undefined;
+    this.aimOverlay.draw(releasePoint, hasAim ? aim : undefined, this.ctx.session.showTrajectory ? path : []);
   }
 
   /** Path the arrow would take if released now (same integrator, gravity and drag as real arrows). */
-  private predictTrajectory(aim: AimInput, releasePoint: Vec2, projectile: ProjectileType): Vec2[] {
+  private simulateShot(aim: AimInput, releasePoint: Vec2, projectile: ProjectileType): Vec2[] {
     const power = aim.power;
-    if (!this.ctx.session.showTrajectory || power <= MIN_SHOT_POWER) {
-      return [];
-    }
     const speed = launchSpeed(projectile, power);
     const velocity = { x: aim.direction.x * speed, y: aim.direction.y * speed };
     return simulateTrajectory(releasePoint, velocity, Arrow.getFlightParams(projectile, this.wind), {
@@ -607,11 +619,30 @@ export class GameScene extends Scene {
     });
   }
 
-  private updateCamera(): void {
-    // Follows the local bowman; a view wider than the world shows all of it, centred, with landscape either side.
+  /**
+   * Keeps the local bowman in the middle, but while he aims slides the view towards where the shot would land:
+   * not for a short shot, up to the bowman near the edge for a long one (core/camera.ts). A shorter shot doesn't
+   * bring it back in (aiming the other way does). After the shot the view stays put while he stands and shoots,
+   * and drifts back to him once he moves.
+   * A view wider than the world shows all of it, centred.
+   */
+  private updateCamera(deltaMs: number): void {
     const width = viewWidth();
-    const target = width >= WORLD_WIDTH ? centeredCameraX(width) : clamp(this.localPlayer.bowman.x - width / 2, 0, WORLD_WIDTH - width);
-    this.cameraX = this.cameraPlaced ? this.cameraX + (target - this.cameraX) * CAMERA_SMOOTHING : target;
+    const { bowman, input } = this.localPlayer;
+    const moving = input.getMovementDirection() !== 0 || Math.abs(bowman.velocityX) > 1;
+    const aim = input.getAim();
+    if (this.aimLandingX !== undefined && aim) {
+      // Out for a longer shot, but not back in for a shorter one (unless he turns the other way).
+      this.lookGoal = nextLookShift(this.lookGoal, aimLookAhead(this.aimLandingX - bowman.x, width), aim.direction.x);
+      this.lookShift = easeTowards(this.lookShift, this.lookGoal, deltaMs, LOOK_AIM_MS);
+    } else if (moving) {
+      this.lookGoal = 0;
+      this.lookShift = easeTowards(this.lookShift, 0, deltaMs, LOOK_RETURN_MS);
+    }
+    const target = width >= WORLD_WIDTH
+      ? centeredCameraX(width, WORLD_WIDTH)
+      : clamp(bowman.x + this.lookShift - width / 2, 0, WORLD_WIDTH - width);
+    this.cameraX = this.cameraPlaced ? easeTowards(this.cameraX, target, deltaMs, CAMERA_FOLLOW_MS) : target;
     this.cameraPlaced = true;
     const shake = this.effects.cameraShake;
     this.world.position.set(-this.cameraX + shake.x, shake.y);

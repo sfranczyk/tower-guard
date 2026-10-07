@@ -23,6 +23,8 @@ export const PROJECTILE_PHYSICS: Readonly<Record<ProjectileType, ProjectilePhysi
   explosive: { mass: 1.8, dragMultiplier: 1.6, speedMultiplier: 1 },
   // A canister of small heads: a bit heavier than a normal arrow until it bursts.
   shrapnel: { mass: 1.15, dragMultiplier: 1.1, speedMultiplier: 1.1 },
+  // Heavy barbed iron spike that pins an enemy to the ground: shorter, lower flight than a normal arrow.
+  pinning: { mass: 1.35, dragMultiplier: 1.15, speedMultiplier: 1.1 },
   // The small arrows a shrapnel burst releases (never launched from the bow).
   fragment: { mass: 0.45, dragMultiplier: 0.8, speedMultiplier: 1 },
 };

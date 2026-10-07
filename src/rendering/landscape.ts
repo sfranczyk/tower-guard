@@ -1,28 +1,28 @@
 import { Graphics } from 'pixi.js';
-import { GAME_HEIGHT, GROUND_Y, WORLD_WIDTH } from '../config';
+import { BACKDROP_WIDTH, GAME_HEIGHT, GROUND_Y, WORLD_WIDTH } from '../config';
 import type { Battleground } from '../data/battlegrounds';
 
-/** Far and near hills (or lower, smoother dunes) between the sky and the ground. */
+/** Far and near hills (or lower, smoother dunes) between the sky and the ground, one BACKDROP_WIDTH stretch (Background repeats it). */
 export const drawHills = ({ hills: [far, near], hillShape }: Battleground): Graphics => {
   const hills = new Graphics();
   if (hillShape === 'dunes') {
     hills.moveTo(0, 405).bezierCurveTo(160, 360, 300, 372, 430, 392)
       .bezierCurveTo(600, 418, 760, 340, 940, 362)
-      .bezierCurveTo(1060, 376, 1130, 388, WORLD_WIDTH, 380)
-      .lineTo(WORLD_WIDTH, GAME_HEIGHT).lineTo(0, GAME_HEIGHT).closePath().fill({ color: far });
+      .bezierCurveTo(1060, 376, 1130, 388, BACKDROP_WIDTH, 380)
+      .lineTo(BACKDROP_WIDTH, GAME_HEIGHT).lineTo(0, GAME_HEIGHT).closePath().fill({ color: far });
     hills.moveTo(0, 448).bezierCurveTo(140, 418, 290, 422, 420, 440)
       .bezierCurveTo(560, 460, 700, 408, 860, 424)
-      .bezierCurveTo(1000, 438, 1110, 452, WORLD_WIDTH, 436)
-      .lineTo(WORLD_WIDTH, GAME_HEIGHT).lineTo(0, GAME_HEIGHT).closePath().fill({ color: near });
+      .bezierCurveTo(1000, 438, 1110, 452, BACKDROP_WIDTH, 436)
+      .lineTo(BACKDROP_WIDTH, GAME_HEIGHT).lineTo(0, GAME_HEIGHT).closePath().fill({ color: near });
   } else if (hillShape === 'mountains') {
     drawMountains(hills, far, near);
   } else {
     hills.moveTo(0, 360).bezierCurveTo(180, 250, 310, 340, 480, 275)
-      .bezierCurveTo(650, 215, 820, 330, WORLD_WIDTH, 245)
-      .lineTo(WORLD_WIDTH, GAME_HEIGHT).lineTo(0, GAME_HEIGHT).closePath().fill({ color: far });
+      .bezierCurveTo(650, 215, 820, 330, BACKDROP_WIDTH, 245)
+      .lineTo(BACKDROP_WIDTH, GAME_HEIGHT).lineTo(0, GAME_HEIGHT).closePath().fill({ color: far });
     hills.moveTo(0, 412).bezierCurveTo(190, 320, 390, 390, 570, 330)
-      .bezierCurveTo(760, 270, 900, 390, WORLD_WIDTH, 312)
-      .lineTo(WORLD_WIDTH, GAME_HEIGHT).lineTo(0, GAME_HEIGHT).closePath().fill({ color: near });
+      .bezierCurveTo(760, 270, 900, 390, BACKDROP_WIDTH, 312)
+      .lineTo(BACKDROP_WIDTH, GAME_HEIGHT).lineTo(0, GAME_HEIGHT).closePath().fill({ color: near });
   }
   hills.zIndex = 0;
   return hills;
@@ -39,7 +39,7 @@ const drawMist = (g: Graphics, top: number, height: number, alpha: number): void
   const strips = 8;
   for (let index = 0; index < strips; index += 1) {
     const t = (index + 0.5) / strips;
-    g.rect(0, top + (index * height) / strips, WORLD_WIDTH, height / strips + 0.5).fill({ color: MIST, alpha: alpha * Math.sin(Math.PI * t) });
+    g.rect(0, top + (index * height) / strips, BACKDROP_WIDTH, height / strips + 0.5).fill({ color: MIST, alpha: alpha * Math.sin(Math.PI * t) });
   }
 };
 
@@ -53,7 +53,7 @@ const drawMountains = (g: Graphics, far: number, near: number): void => {
       range.push((x + next[0]) / 2, VALLEY_Y - 20 + (index % 2) * 25);
     }
   });
-  range.push(WORLD_WIDTH, PEAKS[PEAKS.length - 1][1] + 30, WORLD_WIDTH, GAME_HEIGHT, 0, GAME_HEIGHT);
+  range.push(BACKDROP_WIDTH, PEAKS[PEAKS.length - 1][1] + 30, BACKDROP_WIDTH, GAME_HEIGHT, 0, GAME_HEIGHT);
   g.poly(range).fill({ color: far });
   // Snow caps: the top third of each peak, with a ragged lower edge.
   PEAKS.forEach(([x, top]) => {
@@ -65,8 +65,8 @@ const drawMountains = (g: Graphics, far: number, near: number): void => {
   drawMist(g, 280, 44, 0.22);
   g.moveTo(0, 392).bezierCurveTo(150, 350, 280, 372, 420, 356)
     .bezierCurveTo(600, 334, 720, 384, 880, 362)
-    .bezierCurveTo(1010, 346, 1120, 370, WORLD_WIDTH, 358)
-    .lineTo(WORLD_WIDTH, GAME_HEIGHT).lineTo(0, GAME_HEIGHT).closePath().fill({ color: near });
+    .bezierCurveTo(1010, 346, 1120, 370, BACKDROP_WIDTH, 358)
+    .lineTo(BACKDROP_WIDTH, GAME_HEIGHT).lineTo(0, GAME_HEIGHT).closePath().fill({ color: near });
   drawMist(g, 404, 50, 0.16);
 };
 
