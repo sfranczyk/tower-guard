@@ -93,6 +93,16 @@ export default class Tower extends Container {
     return { x: this.x, y: this.groundY - TOWER_HEIGHT + HIDE_BELOW_TOP };
   }
 
+  /** Co-op guest: the health the host's keep has (damage stage follows). */
+  public setHealth(health: number): void {
+    const next = Math.max(0, Math.min(this.maxHealth, health));
+    if (next < this.health) {
+      this.damageFlashMs = 140;
+    }
+    this.health = next;
+    this.redraw();
+  }
+
   public getHealth(): number {
     return this.health;
   }

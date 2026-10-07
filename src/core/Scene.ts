@@ -3,8 +3,18 @@ import type { SandboxSettings } from '../data/sandbox';
 import type { ProjectileType } from '../types';
 import type { SoundManager } from '../audio/SoundManager';
 import type { DomUi } from '../ui/DomUi';
+import type { Transport } from '../net/Transport';
 
-export type SceneName = 'menu' | 'sandbox' | 'animationLab' | 'soundLab' | 'game';
+export type SceneName = 'menu' | 'coop' | 'sandbox' | 'animationLab' | 'soundLab' | 'game';
+
+/** Co-op online: this browser's role, the room and the link to the other browser. */
+export interface NetLink {
+  role: 'host' | 'guest';
+  code: string;
+  transport: Transport;
+  /** Guest: the wind of the wave the host started (the host rolls it). */
+  wind: number;
+}
 
 export interface GameTextures {
   /** One texture per projectile type. */
@@ -33,8 +43,12 @@ export interface GameSession {
   /** Setup from the sandbox screen (remembered in localStorage). */
   sandbox: SandboxSettings;
   run: RunState;
-  /** Bowmen in the battle: 1, or 2 in co-op (for now `?coop` in the URL; the online lobby comes later). */
+  /** Bowmen in the battle: 1, or 2 in co-op (online, or `?coop` for a local test with player 2 driven from the console). */
   playerCount: number;
+  /** Set while playing co-op online. */
+  net?: NetLink;
+  /** Shown once in the co-op lobby (e.g. "The host left"). */
+  coopNotice?: string;
   /** Draw the predicted arrow path while aiming (settings drawer, off by default). */
   showTrajectory: boolean;
   /** How many of the latest shots keep their trail (settings drawer, 0 = none, up to MAX_ARROW_TRAILS). */

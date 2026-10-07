@@ -12,6 +12,7 @@ export const OVERLAY_TEMPLATE = `
           <p class="tagline">Hold the keep. Read the wind. Loose the arrow.</p>
           <div class="menu-card">
             <button class="primary-button" data-start>Start game <span class="key-hint">Space</span></button>
+            <button class="secondary-button" data-open-coop>Co-op online</button>
             <button class="secondary-button" data-menu-settings>Settings</button>
             <button class="dev-toggle" data-dev-toggle aria-expanded="false">Dev tools ▾</button>
             <div class="dev-tools" data-dev-tools hidden>
@@ -38,6 +39,9 @@ export const OVERLAY_TEMPLATE = `
       </div>
       <section class="screen panel-screen" data-sound-lab hidden>
         <div class="panel-card sound-lab-card" data-sound-lab-panel></div>
+      </section>
+      <section class="screen panel-screen" data-coop hidden>
+        <div class="panel-card coop-card" data-coop-panel></div>
       </section>
       <section class="screen panel-screen" data-sandbox hidden>
         <div class="panel-card" data-sandbox-form></div>

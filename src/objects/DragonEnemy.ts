@@ -77,6 +77,8 @@ interface DragonDeath {
  */
 export default class DragonEnemy extends Container {
   public readonly kind: DragonKind;
+  /** Co-op host: hears about every hit, to replay it on the guest's screen. */
+  public netHooks?: { damaged(amount: number, hit?: HitInfo): void };
   public readonly isArcher = false;
   public readonly isFlying = true;
   public readonly isDown = false;
@@ -151,6 +153,7 @@ export default class DragonEnemy extends Container {
     if (!this.isAlive()) {
       return this.health;
     }
+    this.netHooks?.damaged(amount, hit);
     this.health = Math.max(0, this.health - Math.max(0, amount));
     this.drawHealthBar();
     if (this.health === 0) {
@@ -191,6 +194,24 @@ export default class DragonEnemy extends Container {
       this.x = flyTowards(this.x, hoverX(targetX, this.look.hoverOffset), this.speed, deltaMs);
     }
     this.y = flyTowards(this.y, cruiseAltitude(this.timeMs, this.look.altitude), 40, deltaMs);
+  }
+
+  /** Co-op: the rider's bow and the fire dragon's breath, for the guest. */
+  public getNetState(): { aim: number; tension: number; breathMs?: number; fireAim: number } {
+    return { aim: this.aimAngle, tension: this.tension, breathMs: this.breathMs, fireAim: this.fireAim };
+  }
+
+  /** Co-op guest: flies where the host has it, with the host's bow and breath (no AI runs on the guest). */
+  public applyNetState(state: { x: number; y: number; aim: number; tension: number; breathMs?: number; fireAim: number }): void {
+    if (!this.isAlive()) {
+      return;
+    }
+    this.position.set(state.x, state.y);
+    this.aimAngle = state.aim;
+    this.tension = state.tension;
+    this.breathMs = state.breathMs;
+    this.fireAim = state.fireAim;
+    this.fireTarget = state.fireAim;
   }
 
   /** Fire dragon: whether it is pouring out fire right now (for damage once burning is added). */

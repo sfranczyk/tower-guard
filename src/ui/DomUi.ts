@@ -5,6 +5,7 @@ import type { AudioSettings } from '../audio/audioSettings';
 import type { SoundId } from '../audio/SoundManager';
 import type { SandboxSettings } from '../data/sandbox';
 import { Hud, type HudValues } from './Hud';
+import { CoopPanel, type CoopView } from './CoopPanel';
 import { SandboxForm } from './SandboxForm';
 import { SoundLabPanel, type SoundLabMusic, type SoundLabMusicState, type SoundLabRow } from './SoundLabPanel';
 import { HUD_BOTTOM_TEMPLATE, HUD_TOP_TEMPLATE, OVERLAY_TEMPLATE } from './template';
@@ -17,7 +18,9 @@ const PAGE_MARGIN = 16;
  */
 const UI_SCALE = { min: 0.6, max: 1.15, boost: 1.12 };
 
-export type UiScreen = 'menu' | 'sandbox' | 'animationLab' | 'soundLab' | 'game';
+export type UiScreen = 'menu' | 'coop' | 'sandbox' | 'animationLab' | 'soundLab' | 'game';
+
+export type { CoopView } from './CoopPanel';
 
 export type { HudValues } from './Hud';
 
@@ -51,6 +54,11 @@ export interface UiHandlers {
   sandboxChange?: (settings: SandboxSettings) => void;
   sandboxStart?: () => void;
   sandboxBack?: () => void;
+  openCoop?: () => void;
+  coopHost?: () => void;
+  coopJoin?: (code: string) => void;
+  coopSetup?: () => void;
+  coopLeave?: () => void;
   trajectoryChange?: (enabled: boolean) => void;
   /** Number of shots that keep their trail (0..3) picked in the settings drawer. */
   arrowTrailsChange?: (count: number) => void;
@@ -88,6 +96,8 @@ export class DomUi {
   private readonly devTools: HTMLElement;
   private readonly sandboxScreen: HTMLElement;
   private readonly sandboxForm: SandboxForm;
+  private readonly coopScreen: HTMLElement;
+  private readonly coopPanel: CoopPanel;
   private readonly soundLabScreen: HTMLElement;
   private readonly soundLabPanel: SoundLabPanel;
   private readonly projectileButtons: HTMLButtonElement[];
@@ -128,6 +138,13 @@ export class DomUi {
       start: () => this.handlers.sandboxStart?.(),
       back: () => this.handlers.sandboxBack?.(),
     });
+    this.coopScreen = this.query('[data-coop]');
+    this.coopPanel = new CoopPanel(this.query('[data-coop-panel]'), {
+      host: () => this.handlers.coopHost?.(),
+      join: (code) => this.handlers.coopJoin?.(code),
+      setup: () => this.handlers.coopSetup?.(),
+      leave: () => this.handlers.coopLeave?.(),
+    });
     this.soundLabScreen = this.query('[data-sound-lab]');
     this.soundLabPanel = new SoundLabPanel(this.query('[data-sound-lab-panel]'), {
       play: (id, variant) => this.handlers.soundLabPlay?.(id, variant),
@@ -145,6 +162,7 @@ export class DomUi {
     this.musicVolumeInput = this.query<HTMLInputElement>('[data-music-volume]');
 
     this.onClick('[data-start]', () => this.handlers.start?.());
+    this.onClick('[data-open-coop]', () => this.handlers.openCoop?.());
     this.onClick('[data-menu-settings]', () => this.handlers.toggleOptions?.());
     this.onClick('[data-dev-toggle]', () => this.toggleDevTools());
     this.onClick('[data-open-test]', () => this.handlers.openAnimationLab?.());
@@ -182,6 +200,7 @@ export class DomUi {
   public showScreen(screen: UiScreen): void {
     this.menuScreen.hidden = screen !== 'menu';
     this.sandboxScreen.hidden = screen !== 'sandbox';
+    this.coopScreen.hidden = screen !== 'coop';
     this.soundLabScreen.hidden = screen !== 'soundLab';
     this.labScreen.hidden = screen !== 'animationLab';
     this.hudTop.hidden = screen !== 'game';
@@ -223,6 +242,10 @@ export class DomUi {
   }
 
   /** Rebuilds the sandbox setup form (e.g. after the wave count changes). */
+  public renderCoop(view: CoopView): void {
+    this.coopPanel.render(view);
+  }
+
   public renderSandbox(settings: SandboxSettings): void {
     this.sandboxForm.render(settings);
   }

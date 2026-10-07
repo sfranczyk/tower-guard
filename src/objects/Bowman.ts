@@ -83,6 +83,8 @@ export class Bowman extends Container {
   private horizontalSpeed = 0;
   private jumpBuffer = 0;
   private knockdown?: Knockdown;
+  /** Co-op host: told when he's knocked down or catches fire, to replay it on the guest's screen. */
+  public netHooks?: { knockedBack(fromX: number, strength: number): void; ignited(): void };
   private animationTime = 0;
   private animationIdleBlend = 1;
   private animationRunningBlend = 0;
@@ -151,9 +153,39 @@ export class Bowman extends Container {
 
   /** Touched by fire: catches (or keeps) burning for the full BURN_DURATION_MS. Returns true if he just caught fire. */
   public ignite(): boolean {
+    this.netHooks?.ignited();
     const caught = this.burnMs <= 0;
     this.burnMs = relight();
     return caught;
+  }
+
+  /** Horizontal speed (px/s, signed), for co-op snapshots. */
+  public get velocityX(): number {
+    return this.horizontalSpeed;
+  }
+
+  /**
+   * Co-op guest: the other player's bowman, placed as the host has him (his controls run on the host):
+   * position, walking speed (for the animation), the keep, and the bow.
+   */
+  public applyRemote(state: { x: number; y: number; vx: number; inTower: boolean; ax: number; ay: number; power: number }): void {
+    if (state.inTower !== this.inTower) {
+      if (state.inTower) {
+        this.enterTower();
+      } else {
+        this.exitTower();
+      }
+    }
+    this.position.set(state.x, state.y);
+    this.horizontalSpeed = this.knockdown ? 0 : state.vx;
+    this.verticalVelocity = 0;
+    this.setAim({ x: state.ax, y: state.ay }, state.power);
+  }
+
+  /** Co-op guest: the host has this player somewhere else; put him there (prediction went wrong). */
+  public correctTo(x: number, y: number): void {
+    this.position.set(x, y);
+    this.verticalVelocity = 0;
   }
 
   /** Knocked down (falling, lying or getting up): can't move, jump, aim or enter the keep. */
@@ -169,6 +201,7 @@ export class Bowman extends Container {
     if (this.inTower || this.knockdown) {
       return;
     }
+    this.netHooks?.knockedBack(fromX, strength);
     this.facingDirection = fromX >= this.x ? 1 : -1;
     this.aim = { ...this.aim, direction: { x: this.facingDirection, y: 0 }, power: 0 };
     this.bowReady = 0;

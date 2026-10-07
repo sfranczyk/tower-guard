@@ -20,7 +20,11 @@ import { getEnemyStats } from '../data/enemies';
 import { launchSpeed, shrapnelBurst } from '../data/projectiles';
 import { waveEnemyTotal, type WaveSetup } from '../data/sandbox';
 import InputManager, { type AimInput } from '../managers/InputManager';
-import { LocalInput, ManualInput } from '../input/PlayerInput';
+import { LocalInput, ManualInput, RecordingInput, type PlayerInput } from '../input/PlayerInput';
+import { leaveCoop } from '../net/coopLink';
+import { GuestSync } from '../net/GuestSync';
+import { HostSync, type ArrowLaunch } from '../net/HostSync';
+import type { EndInfo, NetMessage } from '../net/protocol';
 import Arrow from '../objects/Arrow';
 import Bowman from '../objects/Bowman';
 import DragonEnemy from '../objects/DragonEnemy';
@@ -98,10 +102,15 @@ export class GameScene extends Scene {
   private readonly wind: number;
   private playerTower!: Tower;
   private enemyTower!: Tower;
-  /** One per player (co-op: two); players[0] is this browser's. */
+  /** One per player (co-op: two; the host is player 1, the guest player 2). */
   private players: Player[] = [];
   private control!: PlayerControl;
   private localInput?: LocalInput;
+  /** Co-op online: this browser's role, and the sync with the other browser. */
+  private readonly role: 'solo' | 'host' | 'guest';
+  private readonly localIndex: number;
+  private hostSync?: HostSync;
+  private guestSync?: GuestSync;
 
   private cameraX = 0;
   /** The camera starts on its target, then follows it smoothly. */
@@ -119,15 +128,17 @@ export class GameScene extends Scene {
     const { sandbox, run } = ctx.session;
     this.wave = sandbox.waves[run.waveIndex];
     this.battleground = BATTLEGROUNDS[this.wave.battleground];
-    // Windy maps roll a fresh wind for every wave (direction and strength).
+    this.role = ctx.session.net?.role ?? 'solo';
+    this.localIndex = this.role === 'guest' ? 1 : 0;
+    // Windy maps roll a fresh wind for every wave (direction and strength); a co-op guest takes the host's.
     const strongest = this.battleground.wind ?? 0;
-    this.wind = Math.round((Math.random() * 2 - 1) * strongest);
+    this.wind = this.role === 'guest' ? ctx.session.net!.wind : Math.round((Math.random() * 2 - 1) * strongest);
     this.totalEnemies = waveEnemyTotal(this.wave.enemies);
   }
 
   /** This browser's player. */
   private get localPlayer(): Player {
-    return this.players[0];
+    return this.players[this.localIndex];
   }
 
   private get coop(): boolean {
@@ -185,7 +196,11 @@ export class GameScene extends Scene {
     ui.setStatus(DEFAULT_STATUS);
     ui.setTheme(this.battleground.ui);
     this.bindInput();
-    this.director = new WaveDirector(this.wave.enemies);
+    // A co-op guest runs no wave of its own: the host's enemies arrive as events.
+    if (this.role !== 'guest') {
+      this.director = new WaveDirector(this.wave.enemies);
+    }
+    this.startSync();
     if (SHOW_HITBOX_DEBUG) {
       // Debug console hook (?debug): window.__towerGuard.scene gives access to the running wave.
       (window as unknown as { __towerGuard?: unknown }).__towerGuard = { scene: this };
@@ -196,7 +211,8 @@ export class GameScene extends Scene {
     if (this.battleground.weather === 'storm') {
       this.weather = new WeatherSystem(this.world, this.ctx.root, this.background, {
         // After the wave is decided lightning still flashes but no longer hurts anyone.
-        groundStrike: (point) => (this.gameEnded ? this.effects.lightningStrike(point) : this.combat.lightningStrike(point)),
+        // A co-op guest's own bolts are only for show (the host's strikes arrive as effects).
+        groundStrike: (point) => (this.gameEnded || this.role === 'guest' ? this.effects.lightningStrike(point) : this.combat.lightningStrike(point)),
         thunder: (at, close) => {
           const mix = spatialMix(at.x, this.cameraX, viewWidth());
           this.ctx.sound.play('thunder', { ...mix, gain: mix.gain * (close ? 1 : 0.45) });
@@ -219,7 +235,8 @@ export class GameScene extends Scene {
     this.background.update(deltaMs);
     this.weather?.update(deltaMs, this.cameraX);
     this.snow?.update(deltaMs, this.cameraX);
-    this.players.forEach((player) => this.updatePlayer(player, deltaMs));
+    // A co-op guest moves only its own bowman; the host's comes from the host.
+    this.players.filter((player) => this.role !== 'guest' || player.local).forEach((player) => this.updatePlayer(player, deltaMs));
     this.playerTower.update(deltaMs);
     this.enemyTower.update(deltaMs);
 
@@ -228,14 +245,92 @@ export class GameScene extends Scene {
     this.enemies.forEach((enemy) => {
       enemy.visible = this.enemiesVisible;
     });
-    this.combat.update(deltaMs, this.enemiesVisible);
+    if (this.guestSync) {
+      this.guestSync.update(deltaMs);
+    } else {
+      this.combat.update(deltaMs, this.enemiesVisible);
+    }
 
     this.updateAim();
     this.updateHud();
     this.updateCamera();
-    if (!this.gameEnded) {
+    if (!this.gameEnded && this.role !== 'guest') {
       this.checkEndConditions();
     }
+    this.hostSync?.update(deltaMs);
+    // The guest left mid-wave: player 2 stands still from now on.
+    if (this.hostSync && !this.ctx.session.net) {
+      this.hostSync = undefined;
+      (this.players[1]?.input as ManualInput | undefined)?.set({ direction: 0, sprint: false, aim: undefined });
+    }
+  }
+
+  /**
+   * Co-op online. The host tells the guest the wave's setup and then streams it (HostSync), with the guest's
+   * controls driving player 2. The guest builds the same battlefield and replays the host's (GuestSync).
+   */
+  private startSync(): void {
+    const net = this.ctx.session.net;
+    if (!net || this.role === 'solo') {
+      return;
+    }
+    if (this.role === 'host') {
+      this.hostSync = new HostSync(net.transport, {
+        players: this.players,
+        enemies: this.enemies,
+        playerTower: this.playerTower,
+        enemyTower: this.enemyTower,
+      }, this.players[1].input as ManualInput);
+      this.hostSync.watch(this.effects);
+      const { sandbox, run } = this.ctx.session;
+      net.transport.send({ t: 'start', sandbox, run, wind: this.wind });
+      return;
+    }
+    this.guestSync = new GuestSync(net.transport, {
+      players: this.players,
+      localIndex: this.localIndex,
+      enemies: this.enemies,
+      arrows: this.arrows,
+      effects: this.effects,
+      playerTower: this.playerTower,
+      enemyTower: this.enemyTower,
+      spawnEnemy: (type) => this.spawnEnemy(type),
+      launchArrow: (launch) => this.launchReplicaArrow(launch),
+      playSound: (id, at) => this.playSound(id, at),
+      setStatus: (text) => this.ctx.ui.setStatus(text),
+      showEnd: (info) => this.showGuestEnd(info),
+      restart: (message) => this.restartAsGuest(message),
+      backToLobby: () => this.ctx.goTo('coop'),
+    }, this.localPlayer.input as RecordingInput);
+  }
+
+  /** Guest: an arrow the host launched (its sound comes as its own event). */
+  private launchReplicaArrow(launch: ArrowLaunch): Arrow {
+    if (launch.hostile) {
+      return this.fireEnemyArrow(launch.from, launch.angle, launch.speed, launch.shooter ?? 'archer', true);
+    }
+    if (launch.type !== 'fragment') {
+      this.arrows.filter((arrow) => arrow.owner === launch.owner).forEach((arrow) => arrow.ageTrail(this.ctx.session.arrowTrails));
+    }
+    return this.launchPlayerArrow(launch.owner, launch.type, launch.from, launch.angle, launch.speed);
+  }
+
+  /** Guest: the host decides what comes after the wave. */
+  private showGuestEnd(info: EndInfo): void {
+    this.gameEnded = true;
+    this.destroyInput();
+    this.ctx.ui.showEndScreen({ ...info, buttonLabel: 'Waiting for the host…', onButton: () => {} });
+  }
+
+  /** Guest: the host started the next wave (or a new battle). */
+  private restartAsGuest(message: Extract<NetMessage, { t: 'start' }>): void {
+    const { session } = this.ctx;
+    session.sandbox = message.sandbox;
+    session.run = message.run;
+    if (session.net) {
+      session.net.wind = message.wind;
+    }
+    this.ctx.goTo('game');
   }
 
   public exit(): void {
@@ -260,7 +355,7 @@ export class GameScene extends Scene {
         bowman.die(true);
       }
       this.world.addChild(bowman);
-      return { index, bowman, input: new ManualInput(), local: index === 0, health, projectile: 'normal' as ProjectileType };
+      return { index, bowman, input: new ManualInput() as PlayerInput, local: index === this.localIndex, health, projectile: 'normal' as ProjectileType };
     });
   }
 
@@ -268,10 +363,12 @@ export class GameScene extends Scene {
     return this.players.find((player) => player.bowman === bowman) ?? this.localPlayer;
   }
 
-  /** Status line message, only for this browser's player. */
+  /** Status line message for one player: shown here if they're this browser's, else sent to the guest. */
   private localStatus(player: Player, message: string): void {
     if (player.local) {
       this.ctx.ui.setStatus(message);
+    } else {
+      this.hostSync?.push({ e: 'status', player: player.index, text: message });
     }
   }
 
@@ -283,7 +380,9 @@ export class GameScene extends Scene {
       maxDragDistance: 200,
       screenSize: () => ({ x: viewWidth(), y: GAME_HEIGHT }),
     }));
-    this.players[0] = { ...this.localPlayer, input: this.localInput };
+    // A co-op guest also sends its presses to the host.
+    const input = this.role === 'guest' ? new RecordingInput(this.localInput) : this.localInput;
+    this.players[this.localIndex] = { ...this.localPlayer, input };
 
     ui.handlers.toggleOptions = () => this.toggleOptions();
     ui.handlers.selectProjectile = (type) => this.localInput?.queueProjectile(type);
@@ -294,6 +393,8 @@ export class GameScene extends Scene {
 
     this.listenWindow('keydown', (event) => {
       if (event.code === 'Escape') {
+        // Leaving a co-op battle leaves the room (the partner is told).
+        leaveCoop(this.ctx);
         this.ctx.goTo('menu');
         return;
       }
@@ -323,7 +424,7 @@ export class GameScene extends Scene {
     this.localInput?.destroy();
     this.localInput = undefined;
     if (this.players.length > 0) {
-      this.players[0] = { ...this.localPlayer, input: new ManualInput() };
+      this.players[this.localIndex] = { ...this.localPlayer, input: new ManualInput() };
     }
   }
 
@@ -338,6 +439,9 @@ export class GameScene extends Scene {
         this.ctx.ui.setStatus(PROJECTILE_LABELS[projectile]);
       }
     }
+    if (projectile && this.guestSync) {
+      this.guestSync.queueProjectile(projectile);
+    }
     input.takeShots().forEach((aim) => {
       bowman.setAim(aim.direction, aim.power);
       // Knocked down by a blast (or fallen): the draw is lost.
@@ -345,20 +449,26 @@ export class GameScene extends Scene {
         if (player.local) {
           this.aimOverlay.recordRelease(aim, bowman.getBowReleasePoint());
         }
-        this.fireArrow(player, aim, aim.power);
+        // A co-op guest's shots are loosed by the host (the arrow comes back as an event).
+        if (this.guestSync) {
+          this.guestSync.queueShot(aim);
+        } else {
+          this.fireArrow(player, aim, aim.power);
+        }
       }
       bowman.setAim(aim.direction, 0);
     });
     if (input.takeBurst()) {
-      this.burstShrapnel(player);
+      if (this.guestSync) {
+        this.guestSync.queueBurst();
+      } else {
+        this.burstShrapnel(player);
+      }
     }
     this.control.update(player, deltaMs);
   }
 
-  private spawnEnemy(type: EnemyType): void {
-    if (this.gameEnded) {
-      return;
-    }
+  private spawnEnemy(type: EnemyType): Foe {
     const stats = getEnemyStats(type, 1);
     const enemy = type === 'dragon' || type === 'fireDragon'
       ? new DragonEnemy(ENEMY_SPAWN_X, stats.health, stats.speed, type)
@@ -367,6 +477,8 @@ export class GameScene extends Scene {
     this.enemies.push(enemy);
     this.spawnedEnemies += 1;
     this.world.addChild(enemy);
+    this.hostSync?.trackEnemy(enemy, type);
+    return enemy;
   }
 
   private fireArrow(player: Player, aim: AimInput, power: number): void {
@@ -395,6 +507,7 @@ export class GameScene extends Scene {
     }
     this.arrows.push(arrow);
     this.world.addChild(arrow);
+    this.hostSync?.trackArrow(arrow, { owner, type, from, angle, speed, hostile: false });
     return arrow;
   }
 
@@ -414,8 +527,8 @@ export class GameScene extends Scene {
       });
   }
 
-  /** An enemy archer's arrow: reddish, hurts the bowman (or the keep while he hides). */
-  private fireEnemyArrow(from: Vec2, angle: number, speed: number, shooter: EnemyType): void {
+  /** An enemy archer's arrow: reddish, hurts the bowman (or the keep while he hides); `silent` for a co-op guest's copy. */
+  private fireEnemyArrow(from: Vec2, angle: number, speed: number, shooter: EnemyType, silent = false): Arrow {
     const trail = new Graphics();
     trail.zIndex = 1;
     this.world.addChild(trail);
@@ -426,12 +539,17 @@ export class GameScene extends Scene {
     arrow.shooter = shooter;
     this.arrows.push(arrow);
     this.world.addChild(arrow);
-    this.playSound('bowShot', from);
+    this.hostSync?.trackArrow(arrow, { owner: -1, type: 'normal', from, angle, speed, hostile: true, shooter });
+    if (!silent) {
+      this.playSound('bowShot', from);
+    }
+    return arrow;
   }
 
-  /** Panned and faded by where it happens relative to the camera. */
+  /** Panned and faded by where it happens relative to the camera (co-op host: the guest hears it too). */
   private playSound(id: SoundId, at: Vec2): void {
     this.ctx.sound.play(id, spatialMix(at.x, this.cameraX, viewWidth()));
+    this.hostSync?.sound(id, at);
   }
 
   private toggleOptions(): void {
@@ -478,7 +596,8 @@ export class GameScene extends Scene {
     this.ctx.ui.updateHud({
       towerHealth: this.playerTower.getHealth(),
       towerMaxHealth: this.playerTower.maxHealth,
-      bowmanHealth: this.localPlayer.health,
+      // Player 1's bar first, then player 2's, the same on both screens.
+      bowmanHealth: this.players[0].health,
       bowmanMaxHealth: this.ctx.session.sandbox.bowmanHealth,
       partnerHealth: this.coop ? this.players[1].health : undefined,
       defeatedEnemies: this.defeatedEnemies(),
@@ -500,10 +619,11 @@ export class GameScene extends Scene {
 
   private checkEndConditions(): void {
     // A bowman at 0 falls (for the rest of the run); the wave is lost once all of them have, or the keep.
-    this.players.filter((player) => player.health <= 0 && !player.bowman.isDead).forEach((player) => {
-      player.bowman.die();
+    this.players.filter((player) => player.health <= 0 && !player.bowman.isDead).forEach((fallen) => {
+      fallen.bowman.die();
+      this.hostSync?.push({ e: 'die', player: fallen.index });
       if (this.coop) {
-        this.ctx.ui.setStatus(player.local ? 'You have fallen · your partner fights on' : 'Your partner has fallen · hold on alone');
+        this.players.forEach((player) => this.localStatus(player, player === fallen ? 'You have fallen · your partner fights on' : 'Your partner has fallen · hold on alone'));
       }
     });
     const bowmen = this.players.map((player) => player.bowman);
@@ -536,6 +656,7 @@ export class GameScene extends Scene {
     this.director = undefined;
     if (!won) {
       this.enemies.forEach((enemy) => enemy.celebrate());
+      this.hostSync?.push({ e: 'cheer' });
     }
 
     const { session, ui } = this.ctx;
@@ -550,11 +671,15 @@ export class GameScene extends Scene {
       })),
     ];
     if (hasNextWave) {
-      ui.showEndScreen({
+      const info: EndInfo = {
         title: `Wave ${run.waveIndex + 1} cleared!`,
         outcome: 'win',
         stats,
         copy: `Next: wave ${run.waveIndex + 2} of ${sandbox.waveCount} at ${BATTLEGROUNDS[sandbox.waves[run.waveIndex + 1].battleground].name}.`,
+      };
+      this.hostSync?.sendEnd(info);
+      ui.showEndScreen({
+        ...info,
         buttonLabel: 'Next wave',
         onButton: this.endAction = () => {
           session.run = {
@@ -568,15 +693,23 @@ export class GameScene extends Scene {
       });
       return;
     }
-    ui.showEndScreen({
+    const info: EndInfo = {
       title: won ? 'Victory!' : 'Defeat',
       outcome: won ? 'win' : 'loss',
       stats,
       copy: won
         ? (this.enemyTower.isDestroyed() ? 'The enemy keep has fallen.' : sandbox.waveCount === 1 ? 'The wave is held off.' : `All ${sandbox.waveCount} waves held off.`)
         : `${this.playerTower.isDestroyed() ? 'The keep has fallen' : this.coop ? 'Both bowmen have fallen' : 'The bowman has fallen'}. Adjust the sandbox and try again.`,
+    };
+    this.hostSync?.sendEnd(info);
+    ui.showEndScreen({
+      ...info,
       buttonLabel: 'Back to sandbox setup',
-      onButton: this.endAction = () => this.ctx.goTo('sandbox'),
+      onButton: this.endAction = () => {
+        // Co-op: the guest goes back to the lobby and waits for the next battle.
+        this.ctx.session.net?.transport.send({ t: 'lobby' });
+        this.ctx.goTo('sandbox');
+      },
     });
   }
 }

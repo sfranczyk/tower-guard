@@ -108,6 +108,8 @@ export default class Enemy extends Container {
   private aimAngle = Math.PI;
   private bowCooldownMs = 0;
   public target: EnemyTarget;
+  /** Co-op host: hears about every hit and swing, to replay them on the guest's screen. */
+  public netHooks?: { damaged(amount: number, hit: HitInfo): void; attacked(): void };
 
   public constructor(
     x: number,
@@ -247,6 +249,7 @@ export default class Enemy extends Container {
     if (!this.isAlive()) {
       return this.health;
     }
+    this.netHooks?.damaged(amount, hit);
 
     this.health = Math.max(0, this.health - Math.max(0, amount));
     this.drawHealthBar();
@@ -319,6 +322,34 @@ export default class Enemy extends Container {
   public playAttackAnimation(onImpact?: () => void): void {
     this.attackTimerMs = ATTACK_ANIMATION_DURATION_MS;
     this.pendingImpact = onImpact;
+    this.netHooks?.attacked();
+  }
+
+  /** Co-op: what the guest needs besides the position (walking speed; an archer's bow). */
+  public getNetState(): { vx: number; aim?: number; tension?: number; ready?: number } {
+    return this.isArcher
+      ? { vx: this.velocity.x, aim: this.aimAngle, tension: this.bowTension, ready: this.bowReady }
+      : { vx: this.velocity.x };
+  }
+
+  /**
+   * Co-op guest: puts the enemy where the host has it (no AI runs on the guest); walking speed drives the
+   * stride and facing, an archer's bow follows the host's aim and draw.
+   */
+  public applyNetState(state: { x: number; y: number; vx: number; aim?: number; tension?: number; ready?: number }): void {
+    if (!this.isAlive()) {
+      return;
+    }
+    this.position.set(state.x, state.y);
+    this.velocity = { x: state.vx, y: 0 };
+    if (this.isArcher && state.aim !== undefined) {
+      this.aimAngle = state.aim;
+      this.bowTension = state.tension ?? 0;
+      this.bowReady = state.ready ?? 0;
+      if (this.bowReady > 0 && Math.abs(state.vx) <= 1) {
+        this.body.scale.x = Math.cos(state.aim) < 0 ? -BODY_SCALE.x : BODY_SCALE.x;
+      }
+    }
   }
 
   public updateAnimation(deltaMs: number, moving: boolean): void {

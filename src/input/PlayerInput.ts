@@ -175,3 +175,58 @@ export class ManualInput implements PlayerInput {
 
   public destroy(): void {}
 }
+
+/**
+ * Co-op guest: passes the local controls through (the guest's own bowman moves at once, before the host
+ * confirms) and remembers the one-off presses so they can be sent to the host too.
+ */
+export class RecordingInput implements PlayerInput {
+  private jumped = false;
+
+  public constructor(private readonly inner: PlayerInput) {}
+
+  public getMovementDirection(): number {
+    return this.inner.getMovementDirection();
+  }
+
+  public isSprintDown(): boolean {
+    return this.inner.isSprintDown();
+  }
+
+  public isJumpPressed(): boolean {
+    const pressed = this.inner.isJumpPressed();
+    this.jumped ||= pressed;
+    return pressed;
+  }
+
+  /** Whether jump was pressed since the last call. */
+  public takeJump(): boolean {
+    const jumped = this.jumped;
+    this.jumped = false;
+    return jumped;
+  }
+
+  public getAim(): AimInput | undefined {
+    return this.inner.getAim();
+  }
+
+  public takeShots(): AimInput[] {
+    return this.inner.takeShots();
+  }
+
+  public takeBurst(): boolean {
+    return this.inner.takeBurst();
+  }
+
+  public takeProjectile(): ProjectileType | undefined {
+    return this.inner.takeProjectile();
+  }
+
+  public cancelAim(): void {
+    this.inner.cancelAim();
+  }
+
+  public destroy(): void {
+    this.inner.destroy();
+  }
+}

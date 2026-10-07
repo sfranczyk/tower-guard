@@ -29,7 +29,8 @@ export class SandboxScene extends Scene {
 
     ui.handlers.sandboxChange = (settings) => this.applySettings(settings);
     ui.handlers.sandboxStart = () => this.startRun();
-    ui.handlers.sandboxBack = () => this.ctx.goTo('menu');
+    // Co-op host: back to the lobby (the partner stays connected).
+    ui.handlers.sandboxBack = () => this.ctx.goTo(this.ctx.session.net ? 'coop' : 'menu');
     this.onExit(() => {
       ui.handlers.sandboxChange = undefined;
       ui.handlers.sandboxStart = undefined;

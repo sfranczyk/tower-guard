@@ -153,6 +153,14 @@
 
         /* ---------- End screen (the battle keeps going behind it) ---------- */
         .end-screen { background: rgba(20, 30, 32, .18); }
+        .coop-card { width: min(380px, calc(100% - 28px)); text-align: center; }
+        .coop-body { display: flex; flex-direction: column; align-items: stretch; gap: 12px; }
+        .coop-copy, .coop-status { margin: 0; font-size: 15px; line-height: 1.4; }
+        .coop-status { font-family: var(--display); font-weight: 500; }
+        .coop-error { margin: 0; color: var(--bad); font-size: 14px; }
+        .coop-join { display: flex; gap: 8px; }
+        .coop-join input { flex: 1; min-width: 0; padding: 9px 12px; border: 0; border-radius: 12px; background: var(--panel-sunk); color: var(--ink); font-family: var(--display); font-weight: 600; font-size: 18px; letter-spacing: .12em; text-transform: uppercase; box-shadow: inset 0 2px 0 rgba(0, 0, 0, .06); }
+        .coop-code { padding: 10px; border-radius: 14px; background: var(--panel-sunk); font-family: var(--display); font-weight: 700; font-size: 34px; letter-spacing: .2em; }
         .end-card { display: flex; flex-direction: column; align-items: center; width: min(380px, calc(100% - 36px)); padding: 24px 26px 26px; border-radius: 22px; background: rgba(246, 241, 228, .95); color: var(--ink); text-align: center; box-shadow: 0 6px 0 var(--panel-edge), 0 24px 60px rgba(0, 0, 0, .3); pointer-events: auto; }
         .end-card h2 { font-family: var(--display); font-weight: 700; font-size: 36px; line-height: 1.1; }
         .end-card h2[data-outcome="win"] { color: var(--good); }

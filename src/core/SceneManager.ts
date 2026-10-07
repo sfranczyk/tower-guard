@@ -2,6 +2,7 @@ import { Container, type Application } from 'pixi.js';
 import type { SoundManager } from '../audio/SoundManager';
 import type { DomUi } from '../ui/DomUi';
 import { AnimationLabScene } from '../scenes/AnimationLabScene';
+import { CoopScene } from '../scenes/CoopScene';
 import { GameScene } from '../scenes/GameScene';
 import { MenuScene } from '../scenes/MenuScene';
 import { SandboxScene } from '../scenes/SandboxScene';
@@ -42,6 +43,7 @@ export class SceneManager {
 
     ui.handlers.start = () => this.goTo('sandbox');
     ui.handlers.openGame = () => this.goTo('sandbox');
+    ui.handlers.openCoop = () => this.goTo('coop');
     ui.handlers.openAnimationLab = () => this.goTo('animationLab');
     ui.handlers.openSoundLab = () => this.goTo('soundLab');
     // The settings drawer works wherever it's opened (menu or game).
@@ -86,6 +88,8 @@ export class SceneManager {
     switch (name) {
       case 'menu':
         return new MenuScene(this.ctx);
+      case 'coop':
+        return new CoopScene(this.ctx);
       case 'sandbox':
         return new SandboxScene(this.ctx);
       case 'animationLab':

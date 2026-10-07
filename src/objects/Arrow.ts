@@ -32,6 +32,8 @@ export default class Arrow extends Sprite {
   public shooter?: EnemyType;
   /** Which player loosed a player arrow (co-op: their trails and shrapnel bursts are their own). */
   public owner = 0;
+  /** Co-op host: told when the arrow sticks (into a target or the ground) or is gone, for the guest. */
+  public netHooks?: { stuck(target: AnchorTarget | undefined, point: Vec2): void; gone(): void };
   /** The battleground's wind (px/s² for a normal arrow), set before firing. */
   public wind = 0;
 
@@ -121,6 +123,7 @@ export default class Arrow extends Sprite {
   }
 
   public stickToGround(y: number): this {
+    this.netHooks?.stuck(undefined, { x: this.x, y });
     this.stuck = true;
     this.stuckTarget = undefined;
     this.stuckAnchor = undefined;
@@ -132,6 +135,7 @@ export default class Arrow extends Sprite {
 
   /** Pins the arrow where it hit; it then follows the target's body, including death falls. */
   public stickToEnemy(target: AnchorTarget, impactPoint = { x: this.x, y: this.y }): this {
+    this.netHooks?.stuck(target, impactPoint);
     this.stuck = true;
     this.stuckTarget = target;
     this.velocity.x = 0;
@@ -187,6 +191,9 @@ export default class Arrow extends Sprite {
   }
 
   public deactivate(): this {
+    if (this.activeProjectile) {
+      this.netHooks?.gone();
+    }
     this.stuck = false;
     this.stuckTarget = undefined;
     this.stuckAnchor = undefined;

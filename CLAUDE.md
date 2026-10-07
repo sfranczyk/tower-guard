@@ -52,17 +52,34 @@ src/
   `FIRST_GROUP_SIZE` is light) in groups growing to `MAX_GROUP_SIZE`; `WaveDirector.update` (called every frame,
   so it pauses with the game) releases the next group once at most `GROUP_RELEASE_ALIVE` enemies stand and
   `GROUP_MIN_GAP_MS` passed, or after `GROUP_MAX_GAP_MS` regardless.
-- **Co-op** (branch `coop`, in progress; plan: host-authoritative online play for two over PeerJS): `ctx.session.playerCount`
-  (2 with `?coop` for now). `GameScene.players` holds one `Player` per bowman (`scenes/PlayerControl.ts`: bowman,
-  `PlayerInput`, health, weapon; players[0] is this browser's: camera, aim overlay, status messages). Controls go
-  through `input/PlayerInput.ts`: `LocalInput` (keyboard and mouse via InputManager) or `ManualInput` (set from
-  outside; drive player 2 from the console with `scene.players[1].input.set({ direction: 1 })`, `.shoot(aim)`,
-  `.pressJump()`). `PlayerControl` moves a bowman and handles the keep; the scene shoots (`Arrow.owner`: trails
-  and shrapnel bursts per player). Enemies go for the nearest bowman out in the open, else the keep
-  (`systems/targeting.ts`, pure); `CombatWorld.bowmen`, and damage events name the bowman. Health is per player
-  (`RunState.bowmanHealths`), a fallen bowman stays down for the run (`Bowman.die(true)` in later waves), and the
-  wave is lost when all have fallen or the keep falls. Player 2 wears `secondPlayerArmor` (bronze, silver trim)
-  and hides in the keep's second, lower tower; the HUD shows a second bar.
+- **Co-op online** (branch `coop`): two bowmen, host-authoritative over PeerJS (`peerjs`, its free public broker
+  only to find each other; `?net=local` links two tabs with a BroadcastChannel instead). Menu → "Co-op online" →
+  `CoopScene` (lobby, `ui/CoopPanel.ts`): host a room (5-character code, `net/roomCode.ts`) or join one. The host
+  sets up the battle (SandboxScene, back = lobby) and starts it; the guest waits in the lobby. `ctx.session.net`
+  (`NetLink`: role, code, `Transport`, the wave's wind) and `playerCount` 2; `net/coopLink.ts` links up and handles
+  a dropped link (guest back to the lobby with a notice; host plays on, player 2 stands still); Esc in a co-op
+  battle leaves the room.
+  - Players: `GameScene.players`, one `Player` per bowman (`scenes/PlayerControl.ts`: bowman, `PlayerInput`,
+    health, weapon). The host is player 1, the guest player 2 (`localIndex`; camera, aim overlay, status line
+    follow the local one; the HUD shows player 1 then player 2 on both screens). Controls through
+    `input/PlayerInput.ts`: `LocalInput` (keyboard and mouse), `ManualInput` (set from outside: the guest's
+    controls on the host; `?coop` alone gives a local 2-bowman test with player 2 driven from the console,
+    `scene.players[1].input.set({ direction: 1 })`), `RecordingInput` (guest: passes through and records presses).
+  - Host (`net/HostSync.ts`): ids for enemies and arrows, `netHooks` on Enemy/DragonEnemy (hits, swings), Arrow
+    (stuck, gone), Bowman (knockdown, fire) and `EffectsSystem.onEffect`; sounds, deaths, cheers and per-player
+    status lines as events; a `frame` (snapshot + events, `net/protocol.ts`) every 50 ms; `start` / `end` /
+    `lobby` messages around waves. The guest's `input` drives player 2.
+  - Guest (`net/GuestSync.ts`): no wave, AI or CombatSystem; applies events in order with the same objects (same
+    takeDamage, so the same reactions), shows snapshots 100 ms in the past, interpolated (`applyNetState`,
+    `applyRemote`), flies arrows locally (same ballistics, sticks into the ground itself), predicts its own bowman
+    and corrects him when the host disagrees, and sends its controls every 33 ms (shots are loosed by the host).
+  - Gameplay: enemies go for the nearest bowman out in the open, else the keep (`systems/targeting.ts`, pure);
+    `CombatWorld.bowmen`, damage events name the bowman. Health is per player (`RunState.bowmanHealths`), a
+    fallen bowman stays down for the run (`Bowman.die(true)`), the wave is lost when all have fallen or the keep
+    falls. Player 2 wears `secondPlayerArmor` (bronze, silver trim) and hides in the keep's lower second tower.
+  - Not yet: a local preview of the guest's own arrows (they appear after a round trip), the guest's lightning
+    bolts are its own (only the host's strikes hurt; their sparks arrive as effects), no reconnecting, and a
+    hidden browser tab stops its game loop (keep the host's tab visible).
 - **Battlegrounds** (`data/battlegrounds.ts`): map themes (sky, sun, hills, tree style, ground colors)
   drawn by `rendering/Background.ts` (hills/dunes and trees/cacti in `rendering/landscape.ts`). Add a new
   map by adding an entry there. Each has a `weather`: `fair` (cumulus, stratus, cirrus), `clear` (no clouds,

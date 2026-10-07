@@ -51,6 +51,9 @@ export class EffectsSystem {
   private shakeMs = 0;
   private shake: Vec2 = { x: 0, y: 0 };
 
+  /** Co-op host: told about every effect, to replay it on the guest's screen. */
+  public onEffect?: (kind: 'blood' | 'greenBlood' | 'impact' | 'explosion' | 'lightning', point: Vec2) => void;
+
   public constructor(private readonly container: Container) {}
 
   /** Current camera shake offset; add it to the world container's position. */
@@ -60,6 +63,7 @@ export class EffectsSystem {
 
   /** Spray of blood (red for humans, green for zombies) and a stain on the ground. */
   public bloodBurst(point: Vec2, colors: BodyColors = HUMAN_BODY): void {
+    this.onEffect?.(colors === HUMAN_BODY ? 'blood' : 'greenBlood', point);
     for (let index = 0; index < 8; index += 1) {
       const particle = new Graphics()
         .circle(0, 0, 1.5 + Math.random() * 2)
@@ -82,6 +86,7 @@ export class EffectsSystem {
   }
 
   public impact(point: Vec2): void {
+    this.onEffect?.('impact', point);
     const sprite = new Graphics().circle(0, 0, 8).fill({ color: 0xf4e7b1, alpha: 0.8 });
     this.spawn(sprite, point, 5, { velocity: { x: 0, y: 0 }, lifeMs: 220, gravity: 0, drag: 0, grow: 0.55 });
   }
@@ -91,6 +96,7 @@ export class EffectsSystem {
    * happens at ground level. Also shakes the camera.
    */
   public explosion(point: Vec2): void {
+    this.onEffect?.('explosion', point);
     const radius = EXPLOSION_RADIUS;
     const onGround = point.y >= groundAt(point.x) - 12;
     // On the ground everything is thrown upwards; in the air it bursts in all directions.
@@ -144,6 +150,7 @@ export class EffectsSystem {
 
   /** Ground lightning strike: a white flash, blue-white sparks thrown up, smoke, a scorch mark, a shake. */
   public lightningStrike(point: Vec2): void {
+    this.onEffect?.('lightning', point);
     const still = { x: 0, y: 0 };
     const flash = new Graphics().circle(0, 0, LIGHTNING_RADIUS * 0.8).fill({ color: 0xe8f1ff });
     this.spawn(flash, point, 6, { velocity: still, lifeMs: 180, gravity: 0, drag: 0, grow: 0.8, startAlpha: 0.85 });
