@@ -17,6 +17,8 @@ export const KEEP_BASE = { x: 100, y: 404 } as const;
 export const KEEP_FIRE_SPOT = { x: 98, y: 127 } as const;
 /** Above the top merlons, where smoke rises from. */
 export const KEEP_SMOKE_SPOT = { x: 102, y: 18 } as const;
+/** Co-op keep: the lower second tower in place of the right wall: its sides, shaft top and cornice top (drawing space). */
+export const KEEP_TURRET = { left: 146, right: 194, top: 196, cornice: 184 } as const;
 
 const PENNANT = [0x8a2a3c, 0xb04a5e] as const;
 const PLAYER_BANNER = [0x34489f, 0x24357a] as const;
@@ -29,9 +31,11 @@ export interface KeepLook {
   tones: KeepTones;
   enemy: boolean;
   damage: KeepDamage;
+  /** Co-op: a second, lower tower rises where the right wall is (one for each bowman to hide in). */
+  twin?: boolean;
 }
 
-export const drawKeep = (g: Graphics, { tones: t, enemy, damage }: KeepLook): void => {
+export const drawKeep = (g: Graphics, { tones: t, enemy, damage, twin = false }: KeepLook): void => {
   g.clear();
   const rect = (x: number, y: number, w: number, h: number, color: number, radius = 2, alpha = 1): void => {
     g.roundRect(x, y, w, h, radius).fill({ color, alpha });
@@ -58,7 +62,31 @@ export const drawKeep = (g: Graphics, { tones: t, enemy, damage }: KeepLook): vo
     rect(x + 2, 307, 4, 63, t.light);
   };
   sideWall(12, [12, 25, 38, 50].filter((_, index) => !(damage >= 2 && index === 2)));
-  sideWall(142, [142, 155, 168, 180].filter((_, index) => !(damage >= 3 && (index === 0 || index === 3))));
+  if (twin) {
+    // Second, lower tower: shaft, a slit, a cornice and merlons (two knocked off as damage grows).
+    const { left, right, top } = KEEP_TURRET;
+    const width = right - left;
+    [left - 3, left + 10, left + 23, left + 36].forEach((x, index) => {
+      if (!((damage >= 2 && index === 1) || (damage >= 3 && index === 3))) {
+        rect(x, top - 24, 10, 12, t.cap);
+      }
+    });
+    rect(left - 4, KEEP_TURRET.cornice, width + 8, top - KEEP_TURRET.cornice, t.cap, 3);
+    for (let x = left; x <= right - 6; x += 10) {
+      rect(x, top - 7, 4, 5, t.deep, 1.5, 0.75);
+    }
+    rect(left, top, width, 372 - top, t.base, 3);
+    rect(left + 2, top + 2, 5, 372 - top - 4, t.light, 3);
+    rect(right - 16, top + 2, 14, 372 - top - 4, t.shade, 3);
+    [[left + 10, top + 30, 14], [left + 18, top + 74, 10]].forEach(([x, y, w]) => rect(x, y, w, 6, t.light, 2, 0.45));
+    rect(left + 20, top + 42, 7, 18, t.deep, 3.5);
+    if (damage >= 2) {
+      g.poly([right - 10, top + 12, right - 16, top + 24, right - 11, top + 34, right - 17, top + 46], false)
+        .stroke({ width: 2.4, color: t.deep, cap: 'round', join: 'round' });
+    }
+  } else {
+    sideWall(142, [142, 155, 168, 180].filter((_, index) => !(damage >= 3 && (index === 0 || index === 3))));
+  }
 
   // Tower shaft with soft blocks instead of bricks, and arrow slits.
   rect(62, 70, 76, 208, t.base, 3);
@@ -124,7 +152,7 @@ export const drawKeep = (g: Graphics, { tones: t, enemy, damage }: KeepLook): vo
     g.circle(x + 9, 331, 4).fill({ color: BANNER_EMBLEM });
   };
   drawBanner(30);
-  drawBanner(152);
+  drawBanner(twin ? 161 : 152);
 
   // Torch (its flame is animated by Tower), crates and a barrel.
   rect(129, 333, 3, 11, WOOD[2], 1);

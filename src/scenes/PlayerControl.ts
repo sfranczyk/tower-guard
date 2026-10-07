@@ -1,7 +1,6 @@
-import { BOWMAN_START_X, BOWMAN_Y, GROUND_Y, PLAYER_TOWER_X, TOWER_ENTRY_ZONE_HEIGHT, TOWER_ENTRY_ZONE_WIDTH, TOWER_EXIT_X_OFFSET } from '../config';
+import { BOWMAN_START_X, BOWMAN_Y, TOWER_ENTRY_ZONE_HEIGHT, TOWER_ENTRY_ZONE_WIDTH, TOWER_EXIT_X_OFFSET } from '../config';
 import type { PlayerInput } from '../input/PlayerInput';
 import type Bowman from '../objects/Bowman';
-import { TOWER_HEIGHT } from '../objects/Tower';
 import type Tower from '../objects/Tower';
 import { groundAt } from '../systems/terrain';
 import type { ProjectileType } from '../types';
@@ -17,9 +16,8 @@ export interface Player {
   projectile: ProjectileType;
 }
 
-/** Co-op: where each player's bowman starts, and how far apart they hide in the keep. */
+/** Co-op: how far apart the bowmen start. */
 const START_SPACING = 45;
-const TOWER_SPOT_SPACING = 16;
 
 export const playerStartX = (index: number): number => BOWMAN_START_X + index * START_SPACING;
 
@@ -92,8 +90,9 @@ export class PlayerControl {
 
   private enterTower(player: Player): void {
     player.bowman.enterTower();
-    // Feet hidden behind the parapet, head and shoulders above the merlons (co-op: side by side).
-    player.bowman.setTowerPosition(PLAYER_TOWER_X + player.index * TOWER_SPOT_SPACING, GROUND_Y - TOWER_HEIGHT + 40);
+    // Feet hidden behind the parapet, head and shoulders above the merlons (co-op: the second bowman in the lower tower).
+    const spot = this.tower.hideSpot(player.index);
+    player.bowman.setTowerPosition(spot.x, spot.y);
     this.events.enteredTower(player);
   }
 

@@ -61,8 +61,8 @@ src/
   and shrapnel bursts per player). Enemies go for the nearest bowman out in the open, else the keep
   (`systems/targeting.ts`, pure); `CombatWorld.bowmen`, and damage events name the bowman. Health is per player
   (`RunState.bowmanHealths`), a fallen bowman stays down for the run (`Bowman.die(true)` in later waves), and the
-  wave is lost when all have fallen or the keep falls. Player 2 wears `secondPlayerArmor` (bronze, silver trim);
-  the HUD shows a second bar.
+  wave is lost when all have fallen or the keep falls. Player 2 wears `secondPlayerArmor` (bronze, silver trim)
+  and hides in the keep's second, lower tower; the HUD shows a second bar.
 - **Battlegrounds** (`data/battlegrounds.ts`): map themes (sky, sun, hills, tree style, ground colors)
   drawn by `rendering/Background.ts` (hills/dunes and trees/cacti in `rendering/landscape.ts`). Add a new
   map by adding an entry there. Each has a `weather`: `fair` (cumulus, stratus, cirrus), `clear` (no clouds,
@@ -254,6 +254,9 @@ src/
   (`keepTones`), and `keepDamageStage` (pure, tested) picks the look from health: cracks (≤60%), broken
   merlons, torn banners and rubble (≤30%), fire and smoke (≤10%). `Tower` redraws only when the stage changes
   and animates the torch, fire and smoke in `update(deltaMs)`.
+  The co-op keep (`KeepOptions.twin`, `KeepLook.twin`) has a second, lower tower in place of the right wall
+  (`KEEP_TURRET`, same footprint and hit box); `Tower.hideSpot(index)` is where each bowman stands when hiding
+  (player 1 in the main tower, player 2 in the lower one).
 - **Coordinates**: the view is `viewWidth()`×540 (see View size) and the battlefield `WORLD_WIDTH`. `GameScene`
   scrolls the `world` container by `cameraX` (negative when the view is wider than the world).
 - **Terrain**: the ground surface is `groundAt(x)` (`systems/terrain.ts`, pure): gentle waves of

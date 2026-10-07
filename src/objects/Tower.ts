@@ -1,5 +1,6 @@
 import { Container, Graphics } from 'pixi.js';
-import { KEEP_BASE, KEEP_FIRE_SPOT, KEEP_SMOKE_SPOT, drawKeep } from '../rendering/keep';
+import { KEEP_BASE, KEEP_FIRE_SPOT, KEEP_SMOKE_SPOT, KEEP_TURRET, drawKeep } from '../rendering/keep';
+import type { Vec2 } from '../types';
 import { keepDamageStage, keepTones, type KeepDamage } from '../rendering/keepStyle';
 
 /** The keep is drawn at half size: 200×406 drawing space → ~100×203 in the world. */
@@ -16,7 +17,14 @@ export interface KeepOptions {
   hillColor: number;
   /** Enemy keep: red banners. */
   enemy: boolean;
+  /** Co-op: a second, lower tower for the second bowman to hide in. */
+  twin?: boolean;
 }
+
+/** A hidden bowman's feet in the main tower: this far below the top of the drawing, behind the parapet. */
+const HIDE_BELOW_TOP = 40;
+/** In the lower tower: this far below the top of its cornice (as deep as in the main tower). */
+const HIDE_BELOW_CORNICE = 11;
 
 /**
  * A keep with health. The flat-style drawing (rendering/keep.ts) is redrawn only when the damage stage
@@ -71,6 +79,20 @@ export default class Tower extends Container {
     return this.health;
   }
 
+  /**
+   * Where a bowman hiding in the keep stands (world, feet): the main tower for the first, the lower second
+   * tower (co-op keep) for the second.
+   */
+  public hideSpot(index: number): Vec2 {
+    if (index > 0 && this.options.twin) {
+      return {
+        x: this.x + ((KEEP_TURRET.left + KEEP_TURRET.right) / 2 - KEEP_BASE.x) * KEEP_SCALE,
+        y: this.groundY - (KEEP_BASE.y - KEEP_TURRET.cornice) * KEEP_SCALE + HIDE_BELOW_CORNICE,
+      };
+    }
+    return { x: this.x, y: this.groundY - TOWER_HEIGHT + HIDE_BELOW_TOP };
+  }
+
   public getHealth(): number {
     return this.health;
   }
@@ -90,7 +112,7 @@ export default class Tower extends Container {
     }
     this.drawn = true;
     this.damage = damage;
-    drawKeep(this.body, { tones: keepTones(this.options.hillColor), enemy: this.options.enemy, damage });
+    drawKeep(this.body, { tones: keepTones(this.options.hillColor), enemy: this.options.enemy, damage, twin: this.options.twin });
   }
 
   /** Flickering torch; at the last stage fire in the arrow slit and smoke rising from the top. */

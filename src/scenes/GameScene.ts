@@ -147,7 +147,9 @@ export class GameScene extends Scene {
 
     const { sandbox, run } = this.ctx.session;
     const hillColor = this.battleground.hills[0];
-    this.playerTower = new Tower(PLAYER_TOWER_X, GROUND_Y, { hillColor, enemy: false }, sandbox.keepHealth, run.keepHealth);
+    // Co-op: the keep gets a second, lower tower for the second bowman.
+    const twin = this.ctx.session.playerCount > 1;
+    this.playerTower = new Tower(PLAYER_TOWER_X, GROUND_Y, { hillColor, enemy: false, twin }, sandbox.keepHealth, run.keepHealth);
     this.enemyTower = new Tower(ENEMY_TOWER_X, GROUND_Y, { hillColor, enemy: true }, ENEMY_KEEP_HEALTH, run.enemyKeepHealth);
     this.debugGraphics.zIndex = 4;
     this.world.addChild(this.playerTower, this.enemyTower, this.aimOverlay, this.debugGraphics);
