@@ -44,13 +44,17 @@ export const ARROW_GRAVITY = 700;
  */
 export const ARROW_DRAG = 0.0005;
 
-export const ENEMY_SPEED = 40;
+export const ENEMY_SPEED = 30;
 export const ENEMY_ATTACK_INTERVAL_MS = 2000;
 export const PROJECTILE_DAMAGE = 20;
 /** Damage multiplier when an arrow hits an enemy's head. */
 export const HEADSHOT_DAMAGE_MULTIPLIER = 1.25;
 export const EXPLOSION_RADIUS = 72;
-export const EXPLOSION_DAMAGE = 14;
+/**
+ * Explosion damage by distance from the blast: `centre` at the middle (and for the enemy an explosive arrow hits
+ * directly), falling off linearly to `edge` at EXPLOSION_RADIUS. The arrow itself does no damage.
+ */
+export const EXPLOSION_DAMAGE = { centre: 35, edge: 10 } as const;
 /**
  * Shrapnel arrow: Space in flight bursts it into SHRAPNEL_FRAGMENTS small arrows fanned SHRAPNEL_SPREAD
  * radians apart around its heading, each dealing SHRAPNEL_FRAGMENT_DAMAGE × PROJECTILE_DAMAGE.
@@ -85,6 +89,21 @@ export const DRAGON_HOVER_OFFSET = 260;
 export const DRAGON_RANGE = 520;
 export const DRAGON_DRAW_MS = 900;
 export const DRAGON_SHOT_INTERVAL_MS = 2800;
+/**
+ * Fire dragon: flies lower (FIRE_DRAGON_ALTITUDE) and hovers closer (FIRE_DRAGON_HOVER_OFFSET) so its fire
+ * (rendering/dragonFire.ts, ~290 px long at DRAGON_SCALE) reaches the bowman; it breathes when he's within
+ * FIRE_DRAGON_RANGE of its mouth, at most once every FIRE_DRAGON_BREATH_INTERVAL_MS (start to start).
+ */
+export const FIRE_DRAGON_ALTITUDE = 290;
+export const FIRE_DRAGON_HOVER_OFFSET = 200;
+export const FIRE_DRAGON_RANGE = 300;
+export const FIRE_DRAGON_BREATH_INTERVAL_MS = 6500;
+/**
+ * Burning (the fire dragon's flames set the bowman alight, systems/burning.ts): BURN_DAMAGE_PER_S of steady
+ * damage for BURN_DURATION_MS after the flames last touched him; staying in the fire keeps relighting it.
+ */
+export const BURN_DURATION_MS = 4000;
+export const BURN_DAMAGE_PER_S = 6;
 /** Dragon drawn at this scale (its art is ~300 px long with the tail). */
 export const DRAGON_SCALE = 0.42;
 export const ENEMY_GROUND_Y = GROUND_Y;
@@ -99,6 +118,12 @@ export const SPRINT_MAX_MULTIPLIER = 2.25;
 export const JUMP_SPEED = 420;
 /** Bowman gravity: with JUMP_SPEED this gives a ~40 px jump lasting ~0.38 s. */
 export const GRAVITY = 2200;
+/**
+ * A kamikaze blast knocks the bowman down (stickmanFall's knockback, then getUp): the fall throws him back
+ * ~22 px by itself, plus a slide of up to `pushMax` px (scaled by closeness, from `minStrength` at the edge).
+ * He lies `lieMs` before getting up, and the animations play `animationSpeed`× faster than the enemies'.
+ */
+export const BOWMAN_KNOCKBACK = { pushMax: 40, minStrength: 0.35, lieMs: 250, animationSpeed: 1.3 } as const;
 export const JUMP_BUFFER_MS = 110;
 
 /** The enemy keep's health in every sandbox run (destroying it wins immediately). */

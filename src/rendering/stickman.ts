@@ -90,6 +90,11 @@ const IDLE_KNEE_BEND = -0.35;
 /** Head circle in stickman sprite space (shared with hitboxes). */
 export const STICKMAN_HEAD = { x: 0, y: -52, radius: 10 } as const;
 
+/** Walking feet swing between ±WALK_HALF_STRIDE; each step (π of phase) the planted foot moves a full stride back. */
+const WALK_HALF_STRIDE = 22;
+/** How far the body moves (sprite units) per radian of walk phase with the planted foot not sliding. */
+export const WALK_STRIDE_PER_RADIAN = (WALK_HALF_STRIDE * 2) / Math.PI;
+
 export type StickmanRenderer = (sprite: Graphics, phase: number, pose?: StickmanPose) => void;
 
 /** Redraws a stickman into `sprite` for the given animation phase (radians) and pose. */
@@ -246,11 +251,11 @@ export const drawStickman: StickmanRenderer = (sprite, phase, pose = {}) => {
   };
 
   const walkSwingFoot = {
-    x: -22 + easedProgress * 22 * 2,
+    x: -WALK_HALF_STRIDE + easedProgress * WALK_HALF_STRIDE * 2,
     y: 55 - Math.sin(progress * Math.PI) * footLift,
   };
   const walkStanceFoot = {
-    x: 22 - easedProgress * 22 * 2,
+    x: WALK_HALF_STRIDE - easedProgress * WALK_HALF_STRIDE * 2,
     y: 55,
   };
   const runnerFootAt = (progressOfLeg: number): Point => {

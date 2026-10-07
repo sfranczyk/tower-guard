@@ -1,6 +1,6 @@
 import type { Vec2 } from '../types';
 import { createRandom } from '../utils/math';
-import { DRAGON_COLORS, type DragonPose, type WingPose } from './dragon';
+import { DRAGON_PALETTES, type DragonPalette, type DragonPose, type WingPose } from './dragon';
 import { DEATH_GRAVITY } from './dragonRiderFall';
 import { GIB_GROUND_Y } from './stickmanGibs';
 
@@ -65,7 +65,7 @@ const wingChunks = (wing: WingPose): Vec2[][] => {
 };
 
 /** Six wedges of the body: the top ones in the body colour, the bottom ones in the belly colour. */
-const bodyChunks = (pose: DragonPose): Array<{ outline: Vec2[]; color: number }> => {
+const bodyChunks = (pose: DragonPose, palette: DragonPalette): Array<{ outline: Vec2[]; color: number }> => {
   const center = bodyCenter(pose);
   return Array.from({ length: 6 }, (_, wedge) => {
     const from = -Math.PI / 2 + (wedge * Math.PI) / 3;
@@ -74,7 +74,7 @@ const bodyChunks = (pose: DragonPose): Array<{ outline: Vec2[]; color: number }>
       return { x: center.x + Math.cos(angle) * 66, y: center.y + Math.sin(angle) * 24 };
     });
     const middle = from + Math.PI / 6;
-    return { outline: [center, ...arc], color: Math.sin(middle) > 0.1 ? DRAGON_COLORS.belly : DRAGON_COLORS.body };
+    return { outline: [center, ...arc], color: Math.sin(middle) > 0.1 ? palette.belly : palette.body };
   });
 };
 
@@ -104,18 +104,18 @@ export class DragonGibSimulation {
   public readonly pieces: DragonPiece[];
   public timeMs = 0;
 
-  /** `pose` is the dragon at the blast, drawn with its origin at `offsetY`. */
-  public constructor(pose: DragonPose, offsetY: number, seed = 3, force = 1) {
+  /** `pose` is the dragon at the blast, drawn with its origin at `offsetY`, in `palette`'s colours. */
+  public constructor(pose: DragonPose, offsetY: number, seed = 3, force = 1, palette: DragonPalette = DRAGON_PALETTES.red) {
     const random = createRandom(seed);
     const neckChunks = ribbonChunks([{ x: 30, y: -2 + pose.bob }, ...pose.neck], 26, 13, 2);
     const tailChunks = ribbonChunks(pose.tail, 4, 22, 2);
     const shapes: Array<{ outline: Vec2[]; color: number }> = [
-      ...wingChunks(pose.farWing).map((outline) => ({ outline, color: DRAGON_COLORS.wingFar })),
-      ...tailChunks.map((outline, index) => ({ outline, color: index % 2 ? DRAGON_COLORS.body : DRAGON_COLORS.bodyDark })),
-      ...bodyChunks(pose),
-      ...neckChunks.map((outline, index) => ({ outline, color: index % 2 ? DRAGON_COLORS.bodyDark : DRAGON_COLORS.body })),
-      { outline: headChunk(pose), color: DRAGON_COLORS.body },
-      ...wingChunks(pose.nearWing).map((outline) => ({ outline, color: DRAGON_COLORS.wingNear })),
+      ...wingChunks(pose.farWing).map((outline) => ({ outline, color: palette.wingFar })),
+      ...tailChunks.map((outline, index) => ({ outline, color: index % 2 ? palette.body : palette.bodyDark })),
+      ...bodyChunks(pose, palette),
+      ...neckChunks.map((outline, index) => ({ outline, color: index % 2 ? palette.bodyDark : palette.body })),
+      { outline: headChunk(pose), color: palette.body },
+      ...wingChunks(pose.nearWing).map((outline) => ({ outline, color: palette.wingNear })),
     ];
     const center = bodyCenter(pose);
     const blast = { x: center.x, y: center.y + offsetY };

@@ -1,4 +1,4 @@
-import { ENEMY_SPEED, KNOCKBACK_PUSH_MAX, SPLASH_GIB_CHANCE } from '../config';
+import { ENEMY_SPEED, EXPLOSION_DAMAGE, KNOCKBACK_PUSH_MAX, SPLASH_GIB_CHANCE } from '../config';
 import type { AttackStyle } from '../rendering/attackSwing';
 import type { EnemyType } from '../types';
 
@@ -8,20 +8,22 @@ export interface EnemyStats {
 }
 
 /**
- * Health per type, against a normal arrow's 20 (headshot ×1.25 = 25, explosive direct hit 34): fighters take
+ * Health per type, against a normal arrow's 20 (headshot ×1.25 = 25, explosive arrow only its blast, 35 at the centre down to 10 at the edge): fighters take
  * two arrows, runners and archers drop to one headshot (two body hits), brutes about six, dragons about nine.
- * Kamikazes die to any arrow (they must be stopped before they reach you); zombies shamble but take three.
+ * Kamikazes die to any normal arrow (they must be stopped before they reach you); zombies shamble but take three.
  */
 const BASE_STATS: Readonly<Record<EnemyType, EnemyStats>> = {
   basic: { health: 35, speed: ENEMY_SPEED },
-  fast: { health: 22, speed: ENEMY_SPEED * 1.65 },
-  tank: { health: 110, speed: ENEMY_SPEED * 0.62 },
+  fast: { health: 22, speed: ENEMY_SPEED * 2.1 },
+  tank: { health: 110, speed: ENEMY_SPEED * 0.6 },
   // Fragile, keeps its distance and shoots.
   archer: { health: 24, speed: ENEMY_SPEED * 0.9 },
   // Flying archer mount: tough, flies in steadily (speed is its horizontal flight speed).
   dragon: { health: 170, speed: ENEMY_SPEED * 1.2 },
+  // Flies in lower and closer to breathe fire.
+  fireDragon: { health: 170, speed: ENEMY_SPEED * 1.2 },
   // Sprints at the bowman with a bomb and blows up on contact.
-  kamikaze: { health: 18, speed: ENEMY_SPEED * 1.5 },
+  kamikaze: { health: 18, speed: ENEMY_SPEED * 2 },
   // Slow, arms out, hard to put down.
   zombie: { health: 60, speed: ENEMY_SPEED * 0.45 },
 };
@@ -29,26 +31,44 @@ const BASE_STATS: Readonly<Record<EnemyType, EnemyStats>> = {
 /** Inclusive min..max of a random hit. */
 export type DamageRange = readonly [number, number];
 
-/** What one hit of this type deals to the bowman and to the keep (club swings, or arrows for shooters). */
+/** What one hit of this type deals to the bowman (the keep takes it × KEEP_DAMAGE_MULTIPLIER). */
 export interface EnemyDamage {
   /** Club swing (archers too, when caught up close; the zombie's grab; the kamikaze's own explosion). */
-  melee: { bowman: DamageRange; keep: DamageRange };
+  melee: DamageRange;
   /** Arrows of shooting types (archer on foot, dragon rider). */
-  arrow?: { bowman: DamageRange; keep: DamageRange };
+  arrow?: DamageRange;
 }
 
-/**
- * Damage per type: runners nick, fighters hit, brutes smash; the keep (2000 by default) takes more per swing
- * than the bowman (100). The dragon rider's arrows hit hardest.
- */
+/** Damage per type: runners nick, fighters hit, brutes smash. The dragon rider's arrows hit hardest. */
 export const ENEMY_DAMAGE: Readonly<Record<EnemyType, EnemyDamage>> = {
-  basic: { melee: { bowman: [6, 10], keep: [18, 26] } },
-  fast: { melee: { bowman: [3, 6], keep: [10, 16] } },
-  tank: { melee: { bowman: [14, 22], keep: [40, 60] } },
-  archer: { melee: { bowman: [3, 5], keep: [8, 12] }, arrow: { bowman: [7, 10], keep: [10, 14] } },
-  dragon: { melee: { bowman: [0, 0], keep: [0, 0] }, arrow: { bowman: [12, 16], keep: [16, 22] } },
-  kamikaze: { melee: { bowman: [24, 32], keep: [120, 160] } },
-  zombie: { melee: { bowman: [8, 12], keep: [22, 32] } },
+  basic: { melee: [6, 10] },
+  fast: { melee: [3, 6] },
+  tank: { melee: [14, 22] },
+  archer: { melee: [3, 5], arrow: [7, 10] },
+  dragon: { melee: [0, 0], arrow: [12, 16] },
+  // No hits of its own: its fire sets the bowman alight (BURN_* in config.ts, systems/burning.ts).
+  fireDragon: { melee: [0, 0] },
+  kamikaze: { melee: [24, 32] },
+  zombie: { melee: [8, 12] },
+};
+
+/**
+ * How much harder an attack hits the keep than the bowman (1 unless listed): archers' arrows barely scratch
+ * the stone (their club hits both alike), brutes smash it and a kamikaze's bomb is made for walls.
+ */
+export const KEEP_DAMAGE_MULTIPLIER: Readonly<Partial<Record<EnemyType, Partial<Record<keyof EnemyDamage, number>>>>> = {
+  archer: { arrow: 0.5 },
+  tank: { melee: 2 },
+  kamikaze: { melee: 4 },
+};
+
+export type DamageTarget = 'bowman' | 'keep';
+
+/** Damage range of one `attack` by `type` against `target` (a type without arrows uses the archer's). */
+export const enemyDamage = (type: EnemyType, attack: keyof EnemyDamage, target: DamageTarget): DamageRange => {
+  const range = attack === 'arrow' ? ENEMY_DAMAGE[type].arrow ?? ENEMY_DAMAGE.archer.arrow! : ENEMY_DAMAGE[type].melee;
+  const factor = target === 'keep' ? KEEP_DAMAGE_MULTIPLIER[type]?.[attack] ?? 1 : 1;
+  return [range[0] * factor, range[1] * factor];
 };
 
 /** A random hit within `range` (`roll` 0..1, passed in so tests can pin it). */
@@ -85,6 +105,12 @@ export const splashGibChance = (distance: number): number => {
 export const blowsApart = (cause: string, distance = 1, roll = Math.random()): boolean =>
   cause === 'blast' || (cause === 'explosion' && roll < splashGibChance(distance));
 
+/** Explosion damage `distance` (fraction of EXPLOSION_RADIUS, 0 = centre or a direct hit) from the blast. */
+export const explosionDamage = (distance: number): number => {
+  const t = Math.max(0, Math.min(1, distance));
+  return Math.round(EXPLOSION_DAMAGE.centre + (EXPLOSION_DAMAGE.edge - EXPLOSION_DAMAGE.centre) * t);
+};
+
 /** Extra push (px) on top of the knockback fall for an enemy `distance` (fraction of the radius) from a blast. */
 export const knockbackPush = (distance: number): number => KNOCKBACK_PUSH_MAX * Math.max(0, 1 - distance) ** 1.5;
 
@@ -98,7 +124,8 @@ export interface EnemyLook {
    * has to get this far away during the swing (jumping on the spot doesn't help).
    */
   strikeReach: number;
-  /** Walk cycle speed (ms per phase radian, default 150): zombies shuffle slower. */
+  /** Sway speed of standing poses (ms per phase radian, default 150): zombies sway slower. Walking and
+   * running follow the actual speed (Enemy.stridePhase), so the feet never slide. */
   stepMs?: number;
 }
 
@@ -111,6 +138,7 @@ export const ENEMY_LOOKS: Readonly<Record<EnemyType, EnemyLook>> = {
   archer: { size: 1, attackStyle: 'overhead', runs: false, strikeReach: 55 },
   // Never melees (it shoots from the air); see DragonEnemy.
   dragon: { size: 1, attackStyle: 'overhead', runs: false, strikeReach: 0 },
+  fireDragon: { size: 1, attackStyle: 'overhead', runs: false, strikeReach: 0 },
   // Runs in unarmed with a bomb on its chest and detonates on contact (CombatSystem.detonate).
   kamikaze: { size: 1, attackStyle: 'overhead', runs: true, strikeReach: 0 },
   // Shuffles with its arms out; grabs and yanks its hands back (hits within arm's reach).

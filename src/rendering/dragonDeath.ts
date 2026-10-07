@@ -1,7 +1,8 @@
 import type { Graphics } from 'pixi.js';
 import type { Vec2 } from '../types';
 import { drawBow } from './archer';
-import { DRAGON_COLORS, drawDragon, getDragonPose, type DragonPose, type WingPose } from './dragon';
+import { DRAGON_PALETTES, getDragonPose, type DragonPalette, type DragonPose, type WingPose } from './dragon';
+import { drawDragon } from './dragonArt';
 import { DragonGibSimulation } from './dragonGibs';
 import { DEATH_GRAVITY, landingTime, thrownBow, thrownRider } from './dragonRiderFall';
 import { GIB_GROUND_Y, GibSimulation, drawStickmanGibs } from './stickmanGibs';
@@ -159,26 +160,26 @@ export const drawThrownRider = (g: Graphics, pose: DragonPose, sinceMs: number, 
   drawJointPose(g, thrownRider(seatedRider(pose, startY), sinceMs).pose, 0, { append: true });
 };
 
-/** Draws a dragon death at `timeMs` (0 = still flying, the hit comes at DRAGON_HIT_MS). */
-export const drawDragonDeath = (g: Graphics, timeMs: number, kind: DragonDeathKind): void => {
+/** Draws a dragon death at `timeMs` (0 = still flying, the hit comes at DRAGON_HIT_MS); the dragon archer by default. */
+export const drawDragonDeath = (g: Graphics, timeMs: number, kind: DragonDeathKind, palette: DragonPalette = DRAGON_PALETTES.dark): void => {
   g.clear();
   const time = Math.max(0, Math.min(DRAGON_DEATH_MS, timeMs));
   const hitPose = getDragonPose(DRAGON_HIT_MS, 'archer');
   if (time < DRAGON_HIT_MS) {
     place(g, 0, 0, FLY_Y);
-    drawDragon(g, getDragonPose(time, 'archer'), true);
+    drawDragon(g, getDragonPose(time, 'archer'), true, palette);
     g.resetTransform();
     return;
   }
   const since = time - DRAGON_HIT_MS;
 
   if (kind === 'explode') {
-    const simulation = new DragonGibSimulation(hitPose, FLY_Y);
+    const simulation = new DragonGibSimulation(hitPose, FLY_Y, undefined, undefined, palette);
     simulation.step(since);
     simulation.pieces.forEach((piece) => {
       g.poly(DragonGibSimulation.outlineOf(piece).flatMap((point) => [point.x, point.y]))
         .fill({ color: piece.color })
-        .stroke({ width: 1.5, color: DRAGON_COLORS.bone, join: 'round' });
+        .stroke({ width: 1.5, color: palette.bone, join: 'round' });
     });
     drawRiderGibs(g, hitPose, since);
     drawFlash(g, { x: 0, y: FLY_Y }, since, 70);
@@ -188,7 +189,7 @@ export const drawDragonDeath = (g: Graphics, timeMs: number, kind: DragonDeathKi
   // The dragon falls and settles flat (wings frozen from the moment it was hit).
   const fall = dragonFallState(time);
   place(g, fall.rotation, 0, fall.y);
-  drawDragon(g, lyingDragonPose(hitPose, fall.lying), false);
+  drawDragon(g, lyingDragonPose(hitPose, fall.lying), false, palette);
   g.resetTransform();
 
   if (kind === 'fall') {

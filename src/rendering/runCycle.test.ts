@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { RUN_GROUND_Y, STANCE_END, runBounce, runFoot } from './runCycle';
+import { RUN_GROUND_Y, RUN_STRIDE_PER_RADIAN, STANCE_END, runBounce, runFoot } from './runCycle';
 
 const LEG_LENGTH = 60;
 const samples = Array.from({ length: 200 }, (_, index) => index / 200);
@@ -46,6 +46,13 @@ describe('runFoot', () => {
   it('has a flight phase with both feet off the ground', () => {
     const flight = samples.filter((p) => runFoot(p).lift > 0 && runFoot(p + 0.5).lift > 0);
     expect(flight.length).toBeGreaterThan(0);
+  });
+});
+
+describe('RUN_STRIDE_PER_RADIAN', () => {
+  it('matches how fast the planted foot slides back, so advancing the phase by distance keeps it still', () => {
+    const radians = STANCE_END * 0.5 * 2 * Math.PI;
+    expect(runFoot(0).x - runFoot(STANCE_END * 0.5).x).toBeCloseTo(RUN_STRIDE_PER_RADIAN * radians);
   });
 });
 

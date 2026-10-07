@@ -6,13 +6,14 @@ import type { EnemyType } from '../types';
  * fought, and the starting health of the bowman and the keep. Pure data + validation.
  */
 
-export const ENEMY_TYPES: readonly EnemyType[] = ['basic', 'fast', 'tank', 'archer', 'dragon', 'kamikaze', 'zombie'];
+export const ENEMY_TYPES: readonly EnemyType[] = ['basic', 'fast', 'tank', 'archer', 'dragon', 'fireDragon', 'kamikaze', 'zombie'];
 export const ENEMY_TYPE_LABELS: Readonly<Record<EnemyType, string>> = {
   basic: 'Fighter',
   fast: 'Runner',
   tank: 'Brute',
   archer: 'Archer',
-  dragon: 'Dragon',
+  dragon: 'Dragon archer',
+  fireDragon: 'Fire dragon',
   kamikaze: 'Kamikaze',
   zombie: 'Zombie',
 };
@@ -42,11 +43,11 @@ export interface SandboxSettings {
 
 /** Default waves get a little harder each time and alternate battlegrounds. */
 const DEFAULT_WAVE_ENEMIES: readonly WaveEnemyCounts[] = [
-  { basic: 4, fast: 0, tank: 0, archer: 1, dragon: 0, kamikaze: 0, zombie: 0 },
-  { basic: 4, fast: 2, tank: 0, archer: 1, dragon: 0, kamikaze: 0, zombie: 1 },
-  { basic: 4, fast: 3, tank: 1, archer: 2, dragon: 0, kamikaze: 1, zombie: 2 },
-  { basic: 5, fast: 3, tank: 2, archer: 2, dragon: 1, kamikaze: 2, zombie: 2 },
-  { basic: 6, fast: 4, tank: 3, archer: 3, dragon: 1, kamikaze: 2, zombie: 3 },
+  { basic: 4, fast: 0, tank: 0, archer: 1, dragon: 0, fireDragon: 0, kamikaze: 0, zombie: 0 },
+  { basic: 4, fast: 2, tank: 0, archer: 1, dragon: 0, fireDragon: 0, kamikaze: 0, zombie: 1 },
+  { basic: 4, fast: 3, tank: 1, archer: 2, dragon: 0, fireDragon: 0, kamikaze: 1, zombie: 2 },
+  { basic: 5, fast: 3, tank: 2, archer: 2, dragon: 1, fireDragon: 0, kamikaze: 2, zombie: 2 },
+  { basic: 6, fast: 4, tank: 3, archer: 3, dragon: 1, fireDragon: 1, kamikaze: 2, zombie: 3 },
 ];
 
 export const createDefaultSandbox = (): SandboxSettings => ({

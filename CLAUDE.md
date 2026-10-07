@@ -114,19 +114,24 @@ src/
   pure; feet and hands are kept on the ground by `groundedAngle`, and tests check every frame.
 - **Enemy toughness and damage** (`data/enemies.ts`, tested): health per type against a 20-damage arrow
   (headshot ×`HEADSHOT_DAMAGE_MULTIPLIER` = 1.25): fighter 35, runner 22, archer 24 (one headshot), brute 110,
-  dragon 170. `ENEMY_DAMAGE` gives each type a random range (`rollDamage`) for club swings at the bowman and at
-  the keep (the keep takes more; it has 2000 by default), and for shooters their arrows (`Arrow.shooter` tells
-  CombatSystem whose arrow hit).
+  dragon 170. `ENEMY_DAMAGE` gives each type a random range (`rollDamage`) for club swings and, for shooters,
+  their arrows (`Arrow.shooter` tells CombatSystem whose arrow hit). The keep (2000 by default) takes the same
+  × `KEEP_DAMAGE_MULTIPLIER` per attack (1, except archer arrows 0.5, brute 2, kamikaze 4); read ranges with `enemyDamage(type, attack, target)`.
 - **Kamikaze** (`EnemyType 'kamikaze'`): runs in unarmed with a bomb on its chest (`pose.bomb`, sparking fuse) and
   dies to one arrow. On reaching the bowman (jumping doesn't save him) or the keep, `CombatSystem.detonate` blows
   it apart (cause `'blast'`), runs the same `explode` as an explosive arrow (splash and knockback on nearby
-  enemies) and hurts the bowman (unless he's in the keep) and the keep within `KAMIKAZE_REACH` × the radius.
-- **Zombie** (`EnemyType 'zombie'`): shuffles slowly (`stepMs`) with its arms held out (`pose.zombie`,
+  enemies) and hurts the bowman (unless he's in the keep) and the keep within `KAMIKAZE_REACH` × the radius. It also knocks
+  the bowman down (`Bowman.knockBack`, `BOWMAN_KNOCKBACK`): stickmanFall's `knockback` then `getUp`, drawn in his
+  armor by `drawArmoredJointPose` (`rendering/armoredPose.ts`), sliding further the closer he stood; meanwhile
+  (`isStunned`) he can't move, jump, aim or enter the keep. Killed by it, he stays lying on his back. Lab row: `archer-knockdown`.
+- **Zombie** (`EnemyType 'zombie'`): shuffles slowly with its arms held out (`pose.zombie`,
   `ZOMBIE_REST`), attacks with the `'grab'` style (lunge, then yank both hands back to the chest; the hit lands
   on the yank) and is pale green with green blood: `BodyColors` (`rendering/bodyColors.ts`, `HUMAN_BODY` /
   `ZOMBIE_BODY`) colour drawStickman, joint poses (falls, cheers), gibs and `EffectsSystem.bloodBurst`
   (`enemy.bodyColors`). Lab rows: `kamikaze-run`, `zombie-walk`, `zombie-attack`.
-- **Enemy looks** (`ENEMY_LOOKS` in `data/enemies.ts`): size, club swing and gait per type. Runners run (run
+- **Enemy looks** (`ENEMY_LOOKS` in `data/enemies.ts`): size, club swing and gait per type. The walk/run phase
+  advances with the distance covered (`Enemy.stridePhase`, `WALK_STRIDE_PER_RADIAN` / `RUN_STRIDE_PER_RADIAN` × body
+  scale), so feet stay planted at any speed and size; `stepMs` only sets the sway of standing poses. Runners run (run
   cycle) and swing a short club from below; Brutes are 1.5× tall (container scale, so hitboxes and arrow
   anchors scale too; the health bar keeps its size) and chop two-handed with a long club.
 - **Club attacks** (`rendering/attackSwing.ts`, pure keyframes by progress, `pose.attackStyle`): `overhead`
@@ -155,25 +160,42 @@ src/
   `groundAt(x)`): the dragon falls and lies flat (its `art` moves, and `toWorld` follows it so stuck arrows
   stay put) and the rider is thrown off in `riderArt`; a kill by a direct explosive hit (cause `'blast'`) blows
   the rider apart instead (`riderGibSimulation`, stepped per frame). The explosive dragon death isn't in the game yet; ground lightning skips it (`isFlying`). Combat code takes `Foe = Enemy | DragonEnemy`.
+- **Dragon kinds**: hides are `DRAGON_PALETTES` (`rendering/dragon.ts`; `drawDragon`, deaths and gibs take a palette).
+  The dragon archer is `dark` (dark brown, nearly black). The **fire dragon** (`EnemyType 'fireDragon'`, same
+  `DragonEnemy` with `kind`, see `DRAGON_KINDS`) is `red` with an `'unarmed'` rider (both hands on the reins); it
+  flies lower and closer (`FIRE_DRAGON_ALTITUDE`, `FIRE_DRAGON_HOVER_OFFSET`) and `CombatSystem.updateFireDragon`
+  calls `breathe` when the target is within `FIRE_DRAGON_RANGE` of its mouth (`FIRE_DRAGON_BREATH_INTERVAL_MS`
+  between breaths). The breath (`rendering/dragonFire.ts`, pure, tested): `breathControl` rears the head back,
+  then thrusts it forward with the jaw open (`pose.jaw`, `pose.mouth`) for `FIRE_BREATH.flameMs`; `firePuffs` is
+  the stream (puffs fly ~`FIRE_REACH` out, swell, cool to smoke and rise), drawn into `DragonEnemy.fireArt`.
+  The stream goes along the aim (the head tilts less by half the jaw opening); `getFlames` gives its hot puffs
+  in world space. Lab rows: `fire-dragon`, `fire-dragon-breath`.
+- **Burning**: the fire dragon's flames (`flamesTouch` in `systems/burning.ts`, pure, puff cores vs the bowman's box;
+  not in the keep) set the bowman alight (`Bowman.ignite`, status line message): `BURN_DAMAGE_PER_S` of steady
+  damage (applied in `CombatSystem.update`) for `BURN_DURATION_MS` after the last touch, so staying in the fire
+  keeps relighting it. Flames (`rendering/burning.ts`, pure `burnFlames` / `burnSmoke`): translucent tongues
+  from the feet, knees, hip, chest, shoulder and head of the current pose (standing, toppling or the knockdown's
+  fall pose) with smoke rising, drawn into `Bowman.flameArt` at `BURN_FLAME_SIZE`. Lab row: `archer-burning`.
 - **Dragon rider** (`rendering/dragon.ts`, also used by the lab): `getDragonPose` is pure (tested: loop, rider in the
   saddle, smooth wings); side-view wing beat with foreshortening, body bob, undulating neck and tail; the
   rider is a JointPose sitting astride: the far leg is drawn before the dragon's body (`drawRearLeg`) so it's
   hidden, the rest on top (`drawJointPose(..., { append: true, hideRearLeg: true })`). Riders: `'spear'` (reins
-  and a raised spear) or `'archer'` (the player's archer rig, rotated with the torso lean and moved to the
+  and a raised spear), `'unarmed'` (both hands on the reins) or `'archer'` (the player's archer rig, rotated with the torso lean and moved to the
   saddle, aiming down ahead, drawing and loosing every `DRAGON_ARCHER_SHOT_MS`).
 - **Dragon deaths** (`rendering/dragonDeath.ts`, pure functions of time, ground at `GIB_GROUND_Y`; `dragonFallState` takes the
   start height, so the game can drop it from its real altitude):
   `fall` (the dragon drops nose-down and lies flat: neck, head and tail on the ground, near wing draped over
   its side, far wing folded out of sight behind the body), `explode` and `riderExplode` (the rider through
-  `GibSimulation` with `lift`, the dragon falls as in `fall`). `drawDragon(g, pose, withRider)` and
-  `drawDragonRiderOnly` draw the parts separately. The thrown rider (`rendering/dragonRiderFall.ts`) blends
+  `GibSimulation` with `lift`, the dragon falls as in `fall`). `drawDragon(g, pose, withRider, palette)` and
+  `drawDragonRiderOnly` (`rendering/dragonArt.ts`, the drawing of dragon.ts's poses) draw the parts separately. The thrown rider (`rendering/dragonRiderFall.ts`) blends
   joint angles (limb lengths kept) from the saddle to limbs flung out, tumbles onto his back and settles
   flat, kept above the ground every frame; his bow lands flat beside him. The exploded dragon
   (`rendering/dragonGibs.ts`, seeded) is ~25 polygon chunks that bounce, tip over onto their broad side and stop.
 - **Explosive death** (`rendering/stickmanGibs.ts`): `GibSimulation` blows the standing stickman into
   10 pieces plus blood (seeded and deterministic, so it's testable), and `drawStickmanGibs` draws it.
   In the game an enemy is blown apart (random force 1–1.7×) when killed by a direct explosive hit (cause
-  `'blast'`: arrow plus `EXPLOSION_DAMAGE`), or by chance by a splash explosion, by distance from the blast
+  `'blast'`: only the blast, the arrow itself does no damage; `explosionDamage` falls off from
+  `EXPLOSION_DAMAGE.centre` (direct hit) to `.edge` at `EXPLOSION_RADIUS`), or by chance by a splash explosion, by distance from the blast
   (`HitInfo.blastDistance`, fraction of `EXPLOSION_RADIUS`): ~95% near the centre, 50% halfway, ~5% at the edge
   (`splashGibChance` / `blowsApart` in `data/enemies.ts`, `SPLASH_GIB_CHANCE`). Other kills by splash get
   `knockback`, and knocked-back enemies (dead or alive) slide up to `KNOCKBACK_PUSH_MAX` px further the closer

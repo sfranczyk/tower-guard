@@ -2,7 +2,8 @@ import { Container, Graphics } from 'pixi.js';
 import { ENEMY_ARCHER_COOLDOWN_MS, ENEMY_ARCHER_DRAW_MS, ENEMY_ATTACK_INTERVAL_MS, PLAYER_TOWER_X, WORLD_WIDTH } from '../config';
 import { getArcherRig, toArcherLocalAngle } from '../rendering/archer';
 import { attackImpactProgress } from '../rendering/attackSwing';
-import { STICKMAN_HEAD, drawStickman, type StickmanPose } from '../rendering/stickman';
+import { STICKMAN_HEAD, WALK_STRIDE_PER_RADIAN, drawStickman, type StickmanPose } from '../rendering/stickman';
+import { RUN_STRIDE_PER_RADIAN } from '../rendering/runCycle';
 import { FALL_DURATION_MS, drawStickmanFall, getFallPose, type FallKind, type FallPose } from '../rendering/stickmanFall';
 import { CHEER_KINDS, drawStickmanCheer, type CheerKind } from '../rendering/stickmanCheer';
 import { GibSimulation, drawStickmanGibs } from '../rendering/stickmanGibs';
@@ -77,8 +78,6 @@ const TORSO_TO_SHOULDER = 35;
 
 /** Container scale of a normal-sized enemy (bigger types multiply it by their size). */
 const ENEMY_SCALE = 2 / 3;
-/** Run cycle phase speed for running enemies (walking uses 150 ms per radian). */
-const RUN_PHASE_MS = 105;
 const RUN_LEAN = 0.14;
 
 export default class Enemy extends Container {
@@ -91,6 +90,8 @@ export default class Enemy extends Container {
   private attackCooldown = 0;
   private hitStaggerMs = 0;
   private animationTime = 0;
+  /** Walk/run cycle phase: advances with the distance covered, so the feet stay planted at any speed. */
+  private stridePhase = 0;
   private attackTimerMs = 0;
   private velocity = { x: 0, y: 0 };
   private alive = true;
@@ -371,7 +372,10 @@ export default class Enemy extends Container {
     this.animationTime += deltaMs;
     this.body.scale.x = this.velocity.x < 0 ? -BODY_SCALE.x : BODY_SCALE.x;
     const { runs } = this.look;
-    drawStickman(this.body, this.animationTime / (runs ? RUN_PHASE_MS : this.look.stepMs ?? 150), this.pose({ running: runs }));
+    // Stride in world px per radian of phase (bigger bodies take longer strides).
+    const stride = (runs ? RUN_STRIDE_PER_RADIAN : WALK_STRIDE_PER_RADIAN) * BODY_SCALE.x * this.scale.x;
+    this.stridePhase += (Math.hypot(this.velocity.x, this.velocity.y) * deltaMs) / 1000 / stride;
+    drawStickman(this.body, this.stridePhase, this.pose({ running: runs }));
     if (!this.isArcher) {
       // Archers keep drawStickman's own lean so the bow rig stays consistent.
       const lean = runs ? RUN_LEAN : 0.06;

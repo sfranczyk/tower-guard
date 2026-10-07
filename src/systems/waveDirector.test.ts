@@ -4,8 +4,8 @@ import { WaveDirector, planWaveGroups } from './waveDirector';
 
 const last = <T>(items: readonly T[]): T => items[items.length - 1];
 
-const wave = { basic: 6, fast: 4, tank: 3, archer: 3, dragon: 1, kamikaze: 2, zombie: 2 };
-const total = 21;
+const wave = { basic: 6, fast: 4, tank: 3, archer: 3, dragon: 1, fireDragon: 1, kamikaze: 2, zombie: 2 };
+const total = 22;
 
 describe('wave groups', () => {
   it('splits the wave into growing groups containing every enemy', () => {
@@ -13,20 +13,20 @@ describe('wave groups', () => {
     expect(groups.flat()).toHaveLength(total);
     expect(groups[0]).toHaveLength(FIRST_GROUP_SIZE);
     groups.forEach((group) => expect(group.length).toBeLessThanOrEqual(MAX_GROUP_SIZE + 1));
-    (['basic', 'fast', 'tank', 'archer', 'dragon', 'kamikaze', 'zombie'] as const).forEach((type) =>
+    (['basic', 'fast', 'tank', 'archer', 'dragon', 'fireDragon', 'kamikaze', 'zombie'] as const).forEach((type) =>
       expect(groups.flat().filter((t) => t === type)).toHaveLength(wave[type]));
   });
 
   it('opens light: no brutes or dragons in the first group, and they are spread out', () => {
     const groups = planWaveGroups(wave);
-    expect(groups[0].some((type) => type === 'tank' || type === 'dragon')).toBe(false);
+    expect(groups[0].some((type) => type === 'tank' || type === 'dragon' || type === 'fireDragon')).toBe(false);
     const tankGroups = new Set(groups.flatMap((group, index) => (group.includes('tank') ? [index] : [])));
     expect(tankGroups.size).toBeGreaterThan(1);
   });
 
   it('never leaves a lone enemy as the last group', () => {
-    expect(last(planWaveGroups({ basic: 6, fast: 0, tank: 0, archer: 0, dragon: 0, kamikaze: 0, zombie: 0 })).length).toBeGreaterThan(1);
-    expect(planWaveGroups({ basic: 1, fast: 0, tank: 0, archer: 0, dragon: 0, kamikaze: 0, zombie: 0 })).toEqual([['basic']]);
+    expect(last(planWaveGroups({ basic: 6, fast: 0, tank: 0, archer: 0, dragon: 0, fireDragon: 0, kamikaze: 0, zombie: 0 })).length).toBeGreaterThan(1);
+    expect(planWaveGroups({ basic: 1, fast: 0, tank: 0, archer: 0, dragon: 0, fireDragon: 0, kamikaze: 0, zombie: 0 })).toEqual([['basic']]);
   });
 });
 

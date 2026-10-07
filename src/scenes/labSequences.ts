@@ -1,6 +1,9 @@
 import type { Graphics } from 'pixi.js';
 import { drawStickman } from '../rendering/stickman';
 import { FALL_DURATION_MS, drawStickmanFall, type FallKind } from '../rendering/stickmanFall';
+
+/** Draws one frame of a fall (default: the skeleton look). */
+export type FallDrawer = (sprite: Graphics, kind: FallKind, progress: number) => void;
 import { GibSimulation, drawStickmanGibs } from '../rendering/stickmanGibs';
 
 /** Scripted animation sequences shown in the animation lab. Each has update(deltaMs) and render(sprite). */
@@ -232,15 +235,18 @@ export class FallClock {
     drawStickmanFall(sprite, kind, Math.min(1, (this.timeMs % (duration + FALL_HOLD_MS)) / duration));
   }
 
-  /** Knockback, a short pause on the ground, getting up, a moment standing, then replays. */
-  public renderKnockbackGetUp(sprite: Graphics): void {
-    const knockback = FALL_DURATION_MS.knockback;
-    const getUp = FALL_DURATION_MS.getUp;
-    const time = this.timeMs % (knockback + KNOCKDOWN_LIE_MS + getUp + STAND_HOLD_MS);
-    if (time < knockback + KNOCKDOWN_LIE_MS) {
-      drawStickmanFall(sprite, 'knockback', Math.min(1, time / knockback));
+  /**
+   * Knockback, a short pause on the ground (`lieMs`), getting up, a moment standing, then replays;
+   * `speed` plays the falls faster (the bowman's are quicker than the enemies').
+   */
+  public renderKnockbackGetUp(sprite: Graphics, draw: FallDrawer = drawStickmanFall, speed = 1, lieMs = KNOCKDOWN_LIE_MS): void {
+    const knockback = FALL_DURATION_MS.knockback / speed;
+    const getUp = FALL_DURATION_MS.getUp / speed;
+    const time = this.timeMs % (knockback + lieMs + getUp + STAND_HOLD_MS);
+    if (time < knockback + lieMs) {
+      draw(sprite, 'knockback', Math.min(1, time / knockback));
     } else {
-      drawStickmanFall(sprite, 'getUp', Math.min(1, (time - knockback - KNOCKDOWN_LIE_MS) / getUp));
+      draw(sprite, 'getUp', Math.min(1, (time - knockback - lieMs) / getUp));
     }
   }
 }

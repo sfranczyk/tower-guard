@@ -4,8 +4,13 @@ import { groundAt } from '../systems/terrain';
 import { approach, clamp } from '../utils/math';
 import { getArcherRig, toArcherLocalAngle } from '../rendering/archer';
 import type { ArmorPalette } from '../rendering/armor';
+import { armoredFallPose, drawArmoredJointPose } from '../rendering/armoredPose';
+import { STANDING_BURN_POINTS, burnPoints, drawBurning } from '../rendering/burning';
+import { relight } from '../systems/burning';
 import { drawStickman } from '../rendering/stickman';
+import { FALL_DURATION_MS, getFallPose } from '../rendering/stickmanFall';
 import {
+  BOWMAN_KNOCKBACK,
   GRAVITY,
   JUMP_BUFFER_MS,
   JUMP_SPEED,
@@ -30,6 +35,18 @@ const TOPPLE_MS = 650;
 const TOPPLE_ANGLE = Math.PI / 2 - 0.12;
 /** Hip to feet in body-sprite space (drawStickman's standing feet). */
 const HIP_TO_FEET = 55;
+/** A burn fades out over its last this many ms; flames are drawn this much bigger than in the lab, to read at game size. */
+const BURN_FADE_MS = 700;
+const BURN_FLAME_SIZE = 1.6;
+
+/** Knocked down by a blast: thrown onto his back (stickmanFall's knockback), lies a moment, gets up. */
+interface Knockdown {
+  kind: 'knockback' | 'getUp';
+  timeMs: number;
+  /** Extra slide away from the blast (px) over the fall, on top of the pose's own throw. */
+  push: number;
+  pushed: number;
+}
 
 export interface BowmanAim {
   direction: Vec2;
@@ -57,10 +74,15 @@ export class Bowman extends Container {
   private readonly boardBounds: Rect;
   private readonly bodyWidth: number;
   private readonly bodySprite: Graphics;
+  /** Flames while burning (container space, over the body). */
+  private readonly flameArt = new Graphics();
+  private burnMs = 0;
+  private burnClockMs = 0;
   private inTower = false;
   private verticalVelocity = 0;
   private horizontalSpeed = 0;
   private jumpBuffer = 0;
+  private knockdown?: Knockdown;
   private animationTime = 0;
   private animationIdleBlend = 1;
   private animationRunningBlend = 0;
@@ -91,7 +113,7 @@ export class Bowman extends Container {
     this.health = this.maxHealth;
 
     this.bodySprite = new Graphics();
-    this.addChild(this.bodySprite);
+    this.addChild(this.bodySprite, this.flameArt);
 
     this.scale.set(1 / 3);
     this.zIndex = 2;
@@ -118,7 +140,50 @@ export class Bowman extends Container {
     this.zIndex = 2;
   }
 
+  /** On fire: takes steady damage until the burn runs out (CombatSystem applies it). */
+  public get isBurning(): boolean {
+    return this.burnMs > 0;
+  }
+
+  public get burnRemainingMs(): number {
+    return this.burnMs;
+  }
+
+  /** Touched by fire: catches (or keeps) burning for the full BURN_DURATION_MS. Returns true if he just caught fire. */
+  public ignite(): boolean {
+    const caught = this.burnMs <= 0;
+    this.burnMs = relight();
+    return caught;
+  }
+
+  /** Knocked down (falling, lying or getting up): can't move, jump, aim or enter the keep. */
+  public get isStunned(): boolean {
+    return this.knockdown !== undefined;
+  }
+
+  /**
+   * Thrown onto his back away from a blast at `fromX` (he turns to face it), slides up to
+   * BOWMAN_KNOCKBACK.pushMax × `strength` (0..1) further, lies a moment and gets up. Ignored inside the keep.
+   */
+  public knockBack(fromX: number, strength: number): void {
+    if (this.inTower || this.knockdown) {
+      return;
+    }
+    this.facingDirection = fromX >= this.x ? 1 : -1;
+    this.aim = { ...this.aim, direction: { x: this.facingDirection, y: 0 }, power: 0 };
+    this.bowReady = 0;
+    this.horizontalSpeed = 0;
+    this.jumpBuffer = 0;
+    this.knockdown = { kind: 'knockback', timeMs: 0, push: BOWMAN_KNOCKBACK.pushMax * clamp(strength, 0, 1), pushed: 0 };
+    this.redraw();
+  }
+
   public moveHorizontal(direction: number, deltaSeconds = 0, sprinting = false): void {
+    if (this.knockdown) {
+      // Knocked down: no control (the slide is applied in updateKnockdown).
+      this.horizontalSpeed = 0;
+      return;
+    }
     const clampedDirection = clamp(direction, -1, 1);
     if (this.inTower && clampedDirection === 0) {
       this.horizontalSpeed = 0;
@@ -143,7 +208,7 @@ export class Bowman extends Container {
   }
 
   public jump(): void {
-    if (this.inTower) {
+    if (this.inTower || this.knockdown) {
       return;
     }
     this.jumpBuffer = JUMP_BUFFER_MS;
@@ -192,6 +257,9 @@ export class Bowman extends Container {
   }
 
   public setAim(direction: Vec2, power: number): void {
+    if (this.knockdown) {
+      return;
+    }
     const length = Math.hypot(direction.x, direction.y);
     if (length > Number.EPSILON) {
       this.aim.direction = {
@@ -224,6 +292,15 @@ export class Bowman extends Container {
   }
 
   public updateAnimation(deltaMs: number, moving: boolean, sprinting = false): void {
+    this.updateBody(deltaMs, moving, sprinting);
+    this.updateBurn(deltaMs);
+  }
+
+  private updateBody(deltaMs: number, moving: boolean, sprinting: boolean): void {
+    if (this.knockdown) {
+      this.updateKnockdown(deltaMs);
+      return;
+    }
     if (this.deathMs !== undefined) {
       this.deathMs += deltaMs;
       this.updateDeath(deltaMs);
@@ -280,6 +357,66 @@ export class Bowman extends Container {
     return Math.atan2(this.aim.direction.y, this.aim.direction.x);
   }
 
+  /** Counts the burn down and draws the flames on the body as it is now (standing, falling or lying). */
+  private updateBurn(deltaMs: number): void {
+    this.flameArt.clear();
+    if (this.burnMs <= 0) {
+      return;
+    }
+    this.burnMs = Math.max(0, this.burnMs - deltaMs);
+    this.burnClockMs += deltaMs;
+    drawBurning(this.flameArt, this.bodyBurnPoints(), this.burnClockMs, Math.min(1, this.burnMs / BURN_FADE_MS), BURN_FLAME_SIZE);
+  }
+
+  /** Where the fire burns from, in container space: the fall pose's joints, or the standing figure's (leaning, toppling). */
+  private bodyBurnPoints(): Vec2[] {
+    const body = this.bodySprite;
+    const points = this.knockdown
+      ? burnPoints(armoredFallPose(this.knockdown.kind, this.knockdownProgress))
+      : STANDING_BURN_POINTS;
+    const cos = Math.cos(body.rotation);
+    const sin = Math.sin(body.rotation);
+    return points.map(({ x, y }) => {
+      const scaledX = x * body.scale.x;
+      const scaledY = y * body.scale.y;
+      return { x: body.x + scaledX * cos - scaledY * sin, y: body.y + scaledX * sin + scaledY * cos };
+    });
+  }
+
+  private get knockdownProgress(): number {
+    const knockdown = this.knockdown;
+    return knockdown ? Math.min(1, (knockdown.timeMs * BOWMAN_KNOCKBACK.animationSpeed) / FALL_DURATION_MS[knockdown.kind]) : 0;
+  }
+
+  /**
+   * Plays the fall, slides away from the blast meanwhile, lies BOWMAN_KNOCKBACK.lieMs and gets up; then moves
+   * to where the get-up pose ends. Killed meanwhile, he stays lying on his back.
+   */
+  private updateKnockdown(deltaMs: number): void {
+    const knockdown = this.knockdown!;
+    knockdown.timeMs += deltaMs;
+    const progress = this.knockdownProgress;
+    if (knockdown.kind === 'knockback') {
+      // Away from the blast is −facing; most of the slide while flying, easing out on landing.
+      const target = knockdown.push * progress * progress * (3 - 2 * progress);
+      this.x -= this.facingDirection * (target - knockdown.pushed);
+      knockdown.pushed = target;
+      this.constrainToBoard();
+      const lyingMs = knockdown.timeMs - FALL_DURATION_MS.knockback / BOWMAN_KNOCKBACK.animationSpeed;
+      if (lyingMs >= BOWMAN_KNOCKBACK.lieMs && this.deathMs === undefined) {
+        this.knockdown = { ...knockdown, kind: 'getUp', timeMs: 0 };
+      }
+    } else if (progress >= 1) {
+      // The get-up ends standing behind where the fall started; move there for real.
+      this.x += getFallPose('getUp', 1).hip.x * this.facingDirection * this.scale.x;
+      this.constrainToBoard();
+      this.knockdown = undefined;
+      this.animationIdleBlend = 1;
+      this.animationRunningBlend = 0;
+    }
+    this.redraw();
+  }
+
   /** Standing pose with the bow lowered, rotated about the feet as the body tips over. */
   private updateDeath(deltaMs: number): void {
     this.animationIdleBlend = approach(this.animationIdleBlend, 1, deltaMs / 120);
@@ -296,6 +433,10 @@ export class Bowman extends Container {
 
   private redraw(): void {
     this.bodySprite.scale.x = this.facingDirection;
+    if (this.knockdown) {
+      drawArmoredJointPose(this.bodySprite, armoredFallPose(this.knockdown.kind, this.knockdownProgress), BODY_ORIGIN_Y, this.armorColors);
+      return;
+    }
     drawStickman(this.bodySprite, this.animationTime, {
       idleBlend: this.animationIdleBlend,
       runningBlend: this.animationRunningBlend,

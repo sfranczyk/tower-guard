@@ -56,11 +56,20 @@ export const ICON_ENEMIES = {
     <path d="M18 15l6-9" stroke="#c4932f" stroke-width="4.2"/>`),
   archer: figure(`<circle cx="11" cy="6" r="3" stroke-width="2"/><path d="M11 9v9M11 18l-4 7M11 18l4 7M11 12l6 1M11 13l6 0" stroke-width="2"/>
     <path d="M18 5c4 5 4 11 0 16" stroke="#8a6238" stroke-width="2"/><path d="M18 5v16" stroke="#9aa4ae" stroke-width="1"/>`),
+  // Dark dragon archer: the rider holds a bow.
   dragon: `<svg class="icon" viewBox="0 0 28 28" aria-hidden="true">
-    <path d="M12 13L5 3l2 9z" fill="#8e3a33"/><path d="M13 13l1-11 5 10z" fill="#9c3d35"/>
-    <ellipse cx="13" cy="17" rx="8" ry="4" fill="#b5473a"/><ellipse cx="14" cy="18.5" rx="6" ry="1.8" fill="#f0c38a"/>
-    <path d="M19 15l4-5 3 1-2 3z" fill="#b5473a"/><path d="M5 18l-4 3 5-1z" fill="#8e3a33"/>
-    <circle cx="12" cy="10" r="1.8" fill="none" stroke="#2c3a38" stroke-width="1.4"/><path d="M12 12v2" stroke="#2c3a38" stroke-width="1.4"/></svg>`,
+    <path d="M12 13L5 3l2 9z" fill="#261a15"/><path d="M13 13l1-11 5 10z" fill="#33241d"/>
+    <ellipse cx="13" cy="17" rx="8" ry="4" fill="#3b2a22"/><ellipse cx="14" cy="18.5" rx="6" ry="1.8" fill="#7a6250"/>
+    <path d="M19 15l4-5 3 1-2 3z" fill="#3b2a22"/><path d="M5 18l-4 3 5-1z" fill="#261a15"/>
+    <circle cx="12" cy="10" r="1.8" fill="none" stroke="#2c3a38" stroke-width="1.4"/><path d="M12 12v2" stroke="#2c3a38" stroke-width="1.4"/>
+    <path d="M15 6c2 2 2 5 0 7" fill="none" stroke="#8a6238" stroke-width="1.3"/></svg>`,
+  // Red fire dragon breathing a flame; its rider is unarmed.
+  fireDragon: `<svg class="icon" viewBox="0 0 28 28" aria-hidden="true">
+    <path d="M10 13L3 3l2 9z" fill="#8e3a33"/><path d="M11 13l1-11 5 10z" fill="#9c3d35"/>
+    <ellipse cx="11" cy="17" rx="8" ry="4" fill="#b5473a"/><ellipse cx="12" cy="18.5" rx="6" ry="1.8" fill="#f0c38a"/>
+    <path d="M17 15l4-5 3 1-2 3z" fill="#b5473a"/><path d="M3 18l-3 3 5-1z" fill="#8e3a33"/>
+    <path d="M23 12c3 1 5 4 5 8-2-1-3-2-4-4-1 2-1 3 0 5-2-2-3-5-1-9z" fill="#ff9a2e"/><path d="M23.5 13c1.5 1 2.5 3 2.5 5-1-1-2-2-2.5-5z" fill="#ffd35a"/>
+    <circle cx="10" cy="10" r="1.8" fill="none" stroke="#2c3a38" stroke-width="1.4"/><path d="M10 12v2" stroke="#2c3a38" stroke-width="1.4"/></svg>`,
   kamikaze: figure(`<circle cx="15" cy="5" r="3" stroke-width="2"/><path d="M14 8l-3 8M11 16l-5 4M11 16l5 3 1 5M13 11l-5 2M13 11l5 3" stroke-width="2"/>
     <circle cx="16" cy="14" r="4" fill="#2c2c34" stroke="none"/><path d="M17 10q1-3 3-4" stroke="#c9b48a" stroke-width="1.3"/>
     <circle cx="20.5" cy="5.5" r="2" fill="#ff8a33" stroke="none"/>`),

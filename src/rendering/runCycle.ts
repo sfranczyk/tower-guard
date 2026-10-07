@@ -19,6 +19,11 @@ export const RUN_GROUND_Y = 50;
 export const RUN_BOUNCE = 2.4;
 const CONTACT_X = 20;
 const TOE_OFF_X = -26;
+/**
+ * How far the body moves (sprite units) per radian of drawStickman phase while running with the stance
+ * foot planted (one cycle = 2π): advance the phase by distance / this and the feet don't slide.
+ */
+export const RUN_STRIDE_PER_RADIAN = (CONTACT_X - TOE_OFF_X) / (STANCE_END * 2 * Math.PI);
 
 interface RunKey {
   p: number;

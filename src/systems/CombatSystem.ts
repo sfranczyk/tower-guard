@@ -1,13 +1,14 @@
 import type { Graphics } from 'pixi.js';
 import {
+  BOWMAN_KNOCKBACK,
   BOWMAN_Y,
   DRAGON_RANGE,
   ENEMY_ARCHER_RANGE,
   ENEMY_ARCHER_SPREAD,
   ENEMY_ARROW_POWER,
   ENEMY_TOWER_DAMAGE,
-  EXPLOSION_DAMAGE,
   EXPLOSION_RADIUS,
+  FIRE_DRAGON_RANGE,
   GROUND_Y,
   HEADSHOT_DAMAGE_MULTIPLIER,
   LIGHTNING_DAMAGE,
@@ -19,7 +20,8 @@ import {
 } from '../config';
 import type { SoundId } from '../audio/SoundManager';
 import Arrow from '../objects/Arrow';
-import { ENEMY_DAMAGE, rollDamage, type EnemyDamage } from '../data/enemies';
+import { enemyDamage, explosionDamage, rollDamage, type DamageTarget } from '../data/enemies';
+import { burnDamage, flamesTouch } from './burning';
 import { bowSpeed } from '../data/projectiles';
 import type Bowman from '../objects/Bowman';
 import DragonEnemy, { type HitBox } from '../objects/DragonEnemy';
@@ -41,6 +43,8 @@ const PIERCING_MAX_IMPACTS = 5;
 const BOWMAN_HALF_WIDTH = 7;
 const BOWMAN_HEIGHT = 40;
 const BOWMAN_CHEST = 22;
+/** The fire dragon aims this far above the bowman's feet. */
+const FIRE_AIM_ABOVE_FEET = 10;
 /** Enemy archers re-solve their aim this often (the solver simulates many trajectories). */
 const ARCHER_AIM_REFRESH_MS = 250;
 /** A kamikaze's blast reaches the bowman and the keep within this many explosion radii. */
@@ -60,6 +64,8 @@ export interface CombatWorld {
 
 export interface CombatEvents {
   bowmanDamaged(amount: number): void;
+  /** The bowman just caught fire. */
+  bowmanIgnited(): void;
   headshot(): void;
   /** A sound-worthy impact at a world position (the scene plays it). */
   sound(id: SoundId, at: Vec2): void;
@@ -76,8 +82,7 @@ interface EnemyHit {
 
 
 /** Damage of a hostile arrow by who shot it (archer arrows if unknown). */
-const arrowDamage = (shooter: EnemyType | undefined): NonNullable<EnemyDamage['arrow']> =>
-  ENEMY_DAMAGE[shooter ?? 'archer'].arrow ?? ENEMY_DAMAGE.archer.arrow!;
+const arrowDamage = (shooter: EnemyType | undefined, target: DamageTarget) => enemyDamage(shooter ?? 'archer', 'arrow', target);
 
 const pointAlong = (start: Vec2, travel: Vec2, time: number): Vec2 => ({
   x: start.x + travel.x * time,
@@ -104,6 +109,11 @@ export class CombatSystem {
   public update(deltaMs: number, enemiesActive = true): void {
     const activeEnemies = enemiesActive ? this.world.enemies.filter((enemy) => enemy.isAlive()) : [];
     activeEnemies.forEach((enemy) => this.updateEnemy(enemy, deltaMs));
+    // Burning: steady damage until the burn runs out (the bowman counts it down in his animation).
+    const { bowman } = this.world;
+    if (bowman.isBurning && !bowman.isDead) {
+      this.events.bowmanDamaged(burnDamage(bowman.burnRemainingMs, deltaMs));
+    }
     // Dead enemies finish (then hold) their death animation.
     this.world.enemies.filter((enemy) => !enemy.isAlive()).forEach((enemy) => enemy.updateAnimation(deltaMs, false));
 
@@ -170,7 +180,7 @@ export class CombatSystem {
       if (enemy.x <= playerTower.x + TOWER_ATTACK_REACH && enemy.canAttack()) {
         // The keep takes the hit when the club lands, with a chip of stone flying off the wall.
         enemy.playAttackAnimation(() => {
-          playerTower.takeDamage(rollDamage(ENEMY_DAMAGE[enemy.kind].melee.keep));
+          playerTower.takeDamage(rollDamage(enemyDamage(enemy.kind, 'melee', 'keep')));
           this.world.effects.impact({ x: playerTower.x + TOWER_HALF_WIDTH - 4, y: enemy.y - 30 * enemy.scale.y });
         });
       }
@@ -187,7 +197,7 @@ export class CombatSystem {
         enemy.playAttackAnimation(() => {
           const stillInReach = Math.abs(enemy.x - bowman.x) <= enemy.strikeReach && Math.abs(enemy.y - bowman.y) <= 45 * enemy.size;
           if (stillInReach && !bowman.isInTower && !bowman.isDead) {
-            this.events.bowmanDamaged(rollDamage(ENEMY_DAMAGE[enemy.kind].melee.bowman));
+            this.events.bowmanDamaged(rollDamage(enemyDamage(enemy.kind, 'melee', 'bowman')));
             this.world.effects.bloodBurst({ x: bowman.x, y: bowman.y - 20 });
           }
         });
@@ -251,6 +261,10 @@ export class CombatSystem {
       ? { x: playerTower.x, y: GROUND_Y - TOWER_HEIGHT * 0.55 }
       : { x: bowman.x, y: bowman.y - BOWMAN_CHEST };
     dragon.update(deltaMs, aimPoint.x);
+    if (dragon.kind === 'fireDragon') {
+      this.updateFireDragon(dragon, aimPoint, deltaMs);
+      return;
+    }
     const release = dragon.getBowReleasePoint();
     const inRange = release.x > aimPoint.x && release.x - aimPoint.x <= DRAGON_RANGE;
     if (!inRange || bowman.isDead) {
@@ -272,6 +286,30 @@ export class CombatSystem {
       }
     }
     dragon.updateAnimation(deltaMs);
+  }
+
+  /**
+   * Fire dragon: hovers lower and closer (DragonEnemy) and breathes fire at the bowman (or the keep, if he's
+   * hiding) whenever the target is within FIRE_DRAGON_RANGE of its mouth, ahead of and below it. Its flames
+   * set the bowman alight (systems/burning.ts); the burn's damage is applied in update.
+   */
+  private updateFireDragon(dragon: DragonEnemy, aimPoint: Vec2, deltaMs: number): void {
+    const { bowman } = this.world;
+    // The hot gas rises towards the end of the stream: aim at his legs rather than his chest.
+    const target = bowman.isInTower ? aimPoint : { x: aimPoint.x, y: bowman.y - FIRE_AIM_ABOVE_FEET };
+    const mouth = dragon.getMouthPoint();
+    const dx = target.x - mouth.x;
+    const dy = target.y - mouth.y;
+    const inReach = dx < 0 && dy > 0 && Math.hypot(dx, dy) <= FIRE_DRAGON_RANGE;
+    if (inReach && !bowman.isDead) {
+      dragon.breathe(Math.atan2(dy, dx));
+    }
+    dragon.updateAnimation(deltaMs);
+    // The flames set the bowman alight (not inside the keep); staying in them keeps relighting the burn.
+    const body = { left: bowman.x - BOWMAN_HALF_WIDTH, right: bowman.x + BOWMAN_HALF_WIDTH, top: bowman.y - BOWMAN_HEIGHT, bottom: bowman.y };
+    if (!bowman.isInTower && !bowman.isDead && flamesTouch(dragon.getFlames(), body) && bowman.ignite()) {
+      this.events.bowmanIgnited();
+    }
   }
 
   /**
@@ -303,7 +341,7 @@ export class CombatSystem {
         bottom: GROUND_Y,
       });
       if (towerHit !== undefined) {
-        playerTower.takeDamage(rollDamage(arrowDamage(arrow.shooter).keep));
+        playerTower.takeDamage(rollDamage(arrowDamage(arrow.shooter, 'keep')));
         effects.impact(pointAlong(start, travel, towerHit));
         arrow.deactivate();
       }
@@ -320,7 +358,7 @@ export class CombatSystem {
       bottom: bowman.y,
     });
     if (bowmanHit !== undefined) {
-      this.events.bowmanDamaged(rollDamage(arrowDamage(arrow.shooter).bowman));
+      this.events.bowmanDamaged(rollDamage(arrowDamage(arrow.shooter, 'bowman')));
       effects.bloodBurst(pointAlong(start, travel, bowmanHit));
       arrow.deactivate();
     }
@@ -388,27 +426,31 @@ export class CombatSystem {
 
   /**
    * A kamikaze blows up: it bursts apart, the blast hurts the enemies around it like an explosive arrow,
-   * and the bowman (unless he's in the keep) and the keep take its damage if they're close.
+   * and the bowman (unless he's in the keep) and the keep take its damage if they're close; the bowman is thrown back.
    */
   private detonate(kamikaze: Enemy): void {
     const { bowman, playerTower, effects } = this.world;
     const body = kamikaze.getPhysicsBounds();
     const point = { x: body.x + body.width / 2, y: body.y + body.height / 2 };
-    const damage = ENEMY_DAMAGE.kamikaze.melee;
     kamikaze.takeDamage(Number.MAX_SAFE_INTEGER, { cause: 'blast', fromX: point.x, point });
     this.explode(point, this.world.enemies.filter((enemy) => enemy.isAlive()), kamikaze);
-    if (!bowman.isInTower && !bowman.isDead && Math.hypot(bowman.x - point.x, bowman.y - BOWMAN_CHEST - point.y) <= EXPLOSION_RADIUS * KAMIKAZE_REACH) {
-      this.events.bowmanDamaged(rollDamage(damage.bowman));
+    const reach = EXPLOSION_RADIUS * KAMIKAZE_REACH;
+    const bowmanDistance = Math.hypot(bowman.x - point.x, bowman.y - BOWMAN_CHEST - point.y);
+    if (!bowman.isInTower && !bowman.isDead && bowmanDistance <= reach) {
+      this.events.bowmanDamaged(rollDamage(enemyDamage('kamikaze', 'melee', 'bowman')));
       effects.bloodBurst({ x: bowman.x, y: bowman.y - BOWMAN_CHEST });
+      // Thrown away from the blast, harder the closer he stood.
+      const { minStrength } = BOWMAN_KNOCKBACK;
+      bowman.knockBack(point.x, minStrength + (1 - minStrength) * (1 - bowmanDistance / reach));
     }
-    if (point.x - (playerTower.x + TOWER_HALF_WIDTH) <= EXPLOSION_RADIUS * KAMIKAZE_REACH) {
-      playerTower.takeDamage(rollDamage(damage.keep));
+    if (point.x - (playerTower.x + TOWER_HALF_WIDTH) <= reach) {
+      playerTower.takeDamage(rollDamage(enemyDamage('kamikaze', 'melee', 'keep')));
     }
   }
 
   /**
    * Explosion visuals plus splash damage and knockback for every living enemy whose body centre is
-   * within EXPLOSION_RADIUS (except `directHit`, which already took the arrow's damage).
+   * within EXPLOSION_RADIUS (except `directHit`, which already took the blast at its centre); damage falls off with distance.
    */
   private explode(point: Vec2, activeEnemies: readonly Foe[], directHit?: Foe): void {
     this.world.effects.explosion(point);
@@ -423,7 +465,8 @@ export class CombatSystem {
           return;
         }
         // Survivors are knocked down away from the blast and get back up; the rest die thrown back.
-        candidate.takeDamage(EXPLOSION_DAMAGE, { cause: 'explosion', fromX: point.x, point, blastDistance: Math.hypot(dx, dy) / EXPLOSION_RADIUS });
+        const blastDistance = Math.hypot(dx, dy) / EXPLOSION_RADIUS;
+        candidate.takeDamage(explosionDamage(blastDistance), { cause: 'explosion', fromX: point.x, point, blastDistance });
       });
   }
 
@@ -440,27 +483,27 @@ export class CombatSystem {
       debug.circle(impactPoint.x, impactPoint.y, 3).fill({ color: 0x55ff88, alpha: 1 });
     }
 
+    // An explosive arrow deals only its blast (no impact damage, so no headshot either); a kill blows the body apart.
+    const explosive = arrow.type === 'explosive';
     const baseDamage = arrow.type === 'piercing'
       ? PROJECTILE_DAMAGE * Math.pow(PIERCING_DAMAGE_MULTIPLIER, arrow.impacts)
       : arrow.type === 'fragment' ? PROJECTILE_DAMAGE * SHRAPNEL_FRAGMENT_DAMAGE : PROJECTILE_DAMAGE;
-    const arrowDamage = headshot ? baseDamage * HEADSHOT_DAMAGE_MULTIPLIER : baseDamage;
-    // A direct explosive hit also takes the blast; a kill blows the body apart.
-    const damage = arrow.type === 'explosive' ? arrowDamage + EXPLOSION_DAMAGE : arrowDamage;
-    if (headshot) {
+    const damage = explosive ? explosionDamage(0) : headshot ? baseDamage * HEADSHOT_DAMAGE_MULTIPLIER : baseDamage;
+    if (headshot && !explosive) {
       this.events.headshot();
     }
     const fromLeft = arrow.x < enemy.x;
     enemy.applyHitReaction(fromLeft ? 6 : -4);
-    const cause = arrow.type === 'explosive' ? 'blast' : headshot ? 'headshot' : 'arrow';
+    const cause = explosive ? 'blast' : headshot ? 'headshot' : 'arrow';
     enemy.takeDamage(damage, { cause, fromX: fromLeft ? enemy.x - 1 : enemy.x + 1, point: impactPoint });
     // Every arrow hit makes the enemy cry out (kills and headshots too); an explosive kill is just the blast.
-    if (arrow.type !== 'explosive' || enemy.isAlive()) {
+    if (!explosive || enemy.isAlive()) {
       this.events.sound('groan', impactPoint);
     }
     hitEnemies.add(enemy);
     arrow.registerImpact();
 
-    if (arrow.type === 'explosive') {
+    if (explosive) {
       this.explode(impactPoint, activeEnemies, enemy);
       arrow.deactivate();
     } else if (arrow.type === 'piercing') {

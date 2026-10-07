@@ -163,6 +163,7 @@ export class GameScene extends Scene {
           this.bowmanHealth = Math.max(0, this.bowmanHealth - amount);
         },
         headshot: () => this.ctx.ui.setStatus(`Headshot! ×${HEADSHOT_DAMAGE_MULTIPLIER} damage`),
+        bowmanIgnited: () => this.ctx.ui.setStatus('You are on fire! Get out of the flames'),
         enemyShot: (from, angle, speed, shooter) => this.fireEnemyArrow(from, angle, speed, shooter),
         sound: (id, at) => this.playSound(id, at),
       },
@@ -244,7 +245,8 @@ export class GameScene extends Scene {
 
     this.input.on(InputManager.Events.AIM_RELEASE, (aim: AimInput) => {
       this.bowman.setAim(aim.direction, aim.power);
-      if (aim.power > MIN_SHOT_POWER) {
+      // Knocked down by a blast: the draw is lost.
+      if (aim.power > MIN_SHOT_POWER && !this.bowman.isStunned) {
         this.aimOverlay.recordRelease(aim, this.bowman.getBowReleasePoint());
         this.fireArrow(aim, aim.power);
       }
@@ -315,7 +317,7 @@ export class GameScene extends Scene {
     } else {
       this.bowman.moveHorizontal(direction, deltaSeconds, sprinting);
       this.bowman.updateVertical(deltaSeconds);
-      if (direction < 0 && this.canEnterTower()) {
+      if (direction < 0 && !this.bowman.isStunned && this.canEnterTower()) {
         this.enterTower();
       }
     }
@@ -351,8 +353,8 @@ export class GameScene extends Scene {
       return;
     }
     const stats = getEnemyStats(type, 1);
-    const enemy = type === 'dragon'
-      ? new DragonEnemy(ENEMY_SPAWN_X, stats.health, stats.speed)
+    const enemy = type === 'dragon' || type === 'fireDragon'
+      ? new DragonEnemy(ENEMY_SPAWN_X, stats.health, stats.speed, type)
       : new Enemy(ENEMY_SPAWN_X, stats.health, stats.speed, 'bowman', type);
     enemy.visible = this.enemiesVisible;
     this.enemies.push(enemy);
@@ -447,7 +449,7 @@ export class GameScene extends Scene {
 
   private updateAim(): void {
     const aim = this.input?.getAim();
-    const hasAim = aim !== undefined && aim.power > 0;
+    const hasAim = aim !== undefined && aim.power > 0 && !this.bowman.isStunned;
     const releasePoint = this.bowman.getBowReleasePoint();
     this.aimOverlay.draw(releasePoint, hasAim ? aim : undefined, hasAim ? this.predictTrajectory(aim, releasePoint) : []);
   }

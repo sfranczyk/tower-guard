@@ -40,10 +40,10 @@ export interface FreeArm {
  * Lowered bow ("low ready"): bow arm hanging forward with the bow pointing at the ground ahead.
  * Sprite space, facing +x.
  */
-const LOWERED_GRIP: Vec2 = { x: 24, y: -4 };
-const LOWERED_ELBOW: Vec2 = { x: 12, y: -21 };
+export const LOWERED_GRIP: Vec2 = { x: 24, y: -4 };
+export const LOWERED_ELBOW: Vec2 = { x: 12, y: -21 };
 /** Aim-direction angle of the lowered bow (radians, positive = pointing down). */
-const LOWERED_ANGLE = 0.5;
+export const LOWERED_ANGLE = 0.5;
 const DEFAULT_FREE_ARM: FreeArm = { elbow: { x: 2, y: -14 }, hand: { x: 8, y: 6 } };
 
 const lerp = (a: number, b: number, amount: number): number => a + (b - a) * amount;

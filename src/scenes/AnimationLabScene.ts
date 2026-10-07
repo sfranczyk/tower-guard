@@ -1,13 +1,17 @@
 import { Container, Graphics, Rectangle, Text } from 'pixi.js';
-import { GAME_HEIGHT, GAME_WIDTH, SHOW_HITBOX_DEBUG } from '../config';
+import { BOWMAN_KNOCKBACK, GAME_HEIGHT, GAME_WIDTH, SHOW_HITBOX_DEBUG } from '../config';
 import { Scene } from '../core/Scene';
 import { centeredCameraX, viewWidth } from '../core/viewport';
 import { LAB_PARAM, getUrlParam, setUrlParam } from '../core/urlState';
 import { BATTLEGROUNDS } from '../data/battlegrounds';
 import { Background } from '../rendering/Background';
+import { armoredFallPose, drawArmoredJointPose } from '../rendering/armoredPose';
+import { STANDING_BURN_POINTS, drawBurning } from '../rendering/burning';
 import { ZOMBIE_BODY } from '../rendering/bodyColors';
 import { drawStickman } from '../rendering/stickman';
-import { drawDragonRider } from '../rendering/dragon';
+import { DRAGON_PALETTES, type DragonPose } from '../rendering/dragon';
+import { drawDragonRider } from '../rendering/dragonArt';
+import { FIRE_BREATH_MS, breathControl, drawFireStream } from '../rendering/dragonFire';
 import { DRAGON_DEATH_MS, drawDragonDeath, type DragonDeathKind } from '../rendering/dragonDeath';
 import { drawStickmanCheer } from '../rendering/stickmanCheer';
 import { ArcherReadySequence, FallClock, GibReplay, PausingWalk, RUN_PHASE_MS, WALK_PHASE_MS, WalkRunSequence } from './labSequences';
@@ -54,6 +58,24 @@ type PreviewRow = {
 /** Preview tiles: dark slate so the white skeletons read; the armored archer gets the sky. */
 const DEFAULT_BACKDROP = 0x2c4448;
 const SKY_BACKDROP = 0x80b8d1;
+
+/** Burning row: catches fire, burns for a while, burns out, a pause, again. */
+const LAB_BURN = { catchMs: 250, burnMs: 3000, fadeMs: 700, pauseMs: 900 };
+const labBurnIntensity = (timeMs: number): number => {
+  const { catchMs, burnMs, fadeMs, pauseMs } = LAB_BURN;
+  const t = timeMs % (catchMs + burnMs + fadeMs + pauseMs);
+  if (t < catchMs) {
+    return t / catchMs;
+  }
+  if (t < catchMs + burnMs) {
+    return 1;
+  }
+  return Math.max(0, 1 - (t - catchMs - burnMs) / fadeMs);
+};
+
+/** Fire breath row: flight before each breath, and the aim (radians below level). */
+const FIRE_BREATH_LAB_PAUSE_MS = 1200;
+const FIRE_BREATH_LAB_AIM = 0.55;
 
 /**
  * Every stickman animation in its own row with a description. Clicking a row zooms into it; the
@@ -143,13 +165,35 @@ export class AnimationLabScene extends Scene {
     {
       id: 'dragon-archer',
       title: 'Dragon archer (flying)',
-      description: 'The same dragon with an archer astride (far leg hidden behind the dragon): bow aimed down ahead, drawing the string and loosing an arrow every 1.6 s.',
+      description: 'The dark brown, nearly black dragon with an archer astride (far leg hidden behind the dragon): bow aimed down ahead, drawing the string and loosing an arrow every 1.6 s.',
       backdrop: SKY_BACKDROP,
       flying: true,
       previewScale: 0.17,
       zoomScale: 1.15,
       offsetX: 25,
-      render: (sprite) => drawDragonRider(sprite, this.cheerTime, 'archer'),
+      render: (sprite) => drawDragonRider(sprite, this.cheerTime, 'archer', undefined, DRAGON_PALETTES.dark),
+    },
+    {
+      id: 'fire-dragon',
+      title: 'Fire dragon (flying)',
+      description: 'The red fire dragon in flight; its rider carries no weapon and holds the reins in both hands.',
+      backdrop: SKY_BACKDROP,
+      flying: true,
+      previewScale: 0.17,
+      zoomScale: 1.15,
+      offsetX: 25,
+      render: (sprite) => drawDragonRider(sprite, this.cheerTime, 'unarmed', undefined, DRAGON_PALETTES.red),
+    },
+    {
+      id: 'fire-dragon-breath',
+      title: 'Fire dragon · fire breath',
+      description: 'Rears its head back to draw breath, then thrusts it forward with the jaw wide open and pours a long stream of fire down ahead for 2.6 s; the flames swell, cool from white-hot to red and smoke, and the tail of the stream burns out after the mouth closes.',
+      backdrop: SKY_BACKDROP,
+      flying: true,
+      previewScale: 0.075,
+      zoomScale: 0.36,
+      offsetX: -380,
+      render: (sprite) => this.drawFireBreath(sprite),
     },
     {
       id: 'dragon-death',
@@ -282,6 +326,31 @@ export class AnimationLabScene extends Scene {
       description: 'Knockback, a moment on the ground, then sits up, pushes off and stands up again.',
       offsetX: 54,
       render: (sprite) => this.fallClock.renderKnockbackGetUp(sprite),
+    },
+    {
+      id: 'archer-burning',
+      backdrop: SKY_BACKDROP,
+      title: 'Archer · on fire',
+      description: 'Set alight by the fire dragon: flames lick up from his feet, knees, hips, chest and head, flickering, with smoke rising; it catches quickly and burns out over the last moment (game: steady damage while it lasts).',
+      render: (sprite) => {
+        drawStickman(sprite, 0, { idleBlend: 1, archerPose: true, skin: 'armored', originY: 0 });
+        drawBurning(sprite, STANDING_BURN_POINTS, this.cheerTime, labBurnIntensity(this.cheerTime));
+      },
+    },
+    {
+      id: 'archer-knockdown',
+      backdrop: SKY_BACKDROP,
+      title: 'Archer · knocked down (kamikaze)',
+      description: 'The player thrown onto his back by a kamikaze blast, in armor with the bow in hand, then getting up (game speed).',
+      // The bow reaches far on both sides: framed a bit smaller.
+      offsetX: 45,
+      zoomScale: 1.6,
+      render: (sprite) => this.fallClock.renderKnockbackGetUp(
+        sprite,
+        (target, kind, progress) => drawArmoredJointPose(target, armoredFallPose(kind, progress)),
+        BOWMAN_KNOCKBACK.animationSpeed,
+        BOWMAN_KNOCKBACK.lieMs,
+      ),
     },
     {
       id: 'cheer-jump',
@@ -538,6 +607,13 @@ export class AnimationLabScene extends Scene {
   }
 
   /** Dragon deaths loop with a pause on the final pose. */
+  /** Fire dragon: a moment of plain flight, then one fire breath aimed down ahead, on a loop. */
+  private drawFireBreath(sprite: Graphics): void {
+    const since = (this.cheerTime % (FIRE_BREATH_LAB_PAUSE_MS + FIRE_BREATH_MS)) - FIRE_BREATH_LAB_PAUSE_MS;
+    const pose: DragonPose = drawDragonRider(sprite, this.cheerTime, 'unarmed', undefined, DRAGON_PALETTES.red, breathControl(since, FIRE_BREATH_LAB_AIM));
+    drawFireStream(sprite, pose.mouth.point, pose.mouth.angle, since);
+  }
+
   private drawDragonDeath(sprite: Graphics, kind: DragonDeathKind): void {
     drawDragonDeath(sprite, this.cheerTime % (DRAGON_DEATH_MS + DRAGON_DEATH_PAUSE_MS), kind);
   }

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { ENEMY_SPEED, HEADSHOT_DAMAGE_MULTIPLIER, PROJECTILE_DAMAGE } from '../config';
-import { ENEMY_DAMAGE, ENEMY_LOOKS, blowsApart, getEnemyStats, knockbackPush, rollDamage, splashGibChance } from './enemies';
+import { ENEMY_SPEED, EXPLOSION_DAMAGE, HEADSHOT_DAMAGE_MULTIPLIER, PROJECTILE_DAMAGE } from '../config';
+import { ENEMY_DAMAGE, ENEMY_LOOKS, enemyDamage, blowsApart, explosionDamage, getEnemyStats, knockbackPush, rollDamage, splashGibChance } from './enemies';
 
 describe('getEnemyStats', () => {
   it('returns base stats at difficulty 1', () => {
@@ -38,14 +38,28 @@ describe('enemy toughness and damage', () => {
     expect(arrowsToKill('dragon', PROJECTILE_DAMAGE)).toBeGreaterThan(arrowsToKill('tank', PROJECTILE_DAMAGE));
   });
 
-  it('hits differently per type: runners least, brutes most, keeps harder than the bowman', () => {
+  it('hits differently per type: runners least, brutes most', () => {
     const average = ([min, max]: readonly [number, number]): number => (min + max) / 2;
-    const melee = (type: 'basic' | 'fast' | 'tank') => average(ENEMY_DAMAGE[type].melee.bowman);
+    const melee = (type: 'basic' | 'fast' | 'tank') => average(ENEMY_DAMAGE[type].melee);
     expect(melee('fast')).toBeLessThan(melee('basic'));
     expect(melee('basic')).toBeLessThan(melee('tank'));
-    (['basic', 'fast', 'tank', 'archer'] as const).forEach((type) =>
-      expect(average(ENEMY_DAMAGE[type].melee.keep)).toBeGreaterThan(average(ENEMY_DAMAGE[type].melee.bowman)));
-    expect(average(ENEMY_DAMAGE.dragon.arrow!.bowman)).toBeGreaterThan(average(ENEMY_DAMAGE.archer.arrow!.bowman));
+    expect(average(ENEMY_DAMAGE.dragon.arrow!)).toBeGreaterThan(average(ENEMY_DAMAGE.archer.arrow!));
+  });
+
+  it('hits the keep as hard as the bowman, except archer arrows (half), brutes (double) and kamikazes (×4)', () => {
+    const keepFactor = (type: Parameters<typeof enemyDamage>[0], attack: 'melee' | 'arrow' = 'melee') =>
+      enemyDamage(type, attack, 'keep')[1] / enemyDamage(type, attack, 'bowman')[1];
+    (['basic', 'fast', 'zombie'] as const).forEach((type) =>
+      expect(enemyDamage(type, 'melee', 'keep')).toEqual(enemyDamage(type, 'melee', 'bowman')));
+    expect(keepFactor('dragon', 'arrow')).toBe(1);
+    expect(keepFactor('archer', 'arrow')).toBe(0.5);
+    expect(keepFactor('archer')).toBe(1);
+    expect(keepFactor('tank')).toBe(2);
+    expect(keepFactor('kamikaze')).toBe(4);
+  });
+
+  it('gives non-shooters the archer arrow', () => {
+    expect(enemyDamage('basic', 'arrow', 'bowman')).toEqual(ENEMY_DAMAGE.archer.arrow);
   });
 
   it('rolls damage within the range', () => {
@@ -79,6 +93,27 @@ describe('blowsApart', () => {
     expect(blowsApart('arrow', 0, LUCKY)).toBe(false);
     expect(blowsApart('headshot', 0, LUCKY)).toBe(false);
     expect(blowsApart('lightning', 0, LUCKY)).toBe(false);
+  });
+});
+
+describe('explosionDamage', () => {
+  it('is full at the centre and smallest at the edge', () => {
+    expect(explosionDamage(0)).toBe(EXPLOSION_DAMAGE.centre);
+    expect(explosionDamage(1)).toBe(EXPLOSION_DAMAGE.edge);
+    expect(explosionDamage(0.5)).toBe(Math.round((EXPLOSION_DAMAGE.centre + EXPLOSION_DAMAGE.edge) / 2));
+  });
+
+  it('falls off steadily and stays within its range', () => {
+    for (let distance = 0.05; distance <= 1; distance += 0.05) {
+      expect(explosionDamage(distance)).toBeLessThanOrEqual(explosionDamage(distance - 0.05));
+    }
+    expect(explosionDamage(-1)).toBe(EXPLOSION_DAMAGE.centre);
+    expect(explosionDamage(2)).toBe(EXPLOSION_DAMAGE.edge);
+  });
+
+  it('kills light enemies with a direct hit, but not a brute', () => {
+    expect(explosionDamage(0)).toBeGreaterThanOrEqual(getEnemyStats('basic', 1).health);
+    expect(explosionDamage(0)).toBeLessThan(getEnemyStats('tank', 1).health);
   });
 });
 

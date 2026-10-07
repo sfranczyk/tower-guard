@@ -1,8 +1,7 @@
-import type { Graphics } from 'pixi.js';
 import type { Vec2 } from '../types';
 import { STICKMAN_HEAD } from './stickman';
-import { drawBow, getArcherRig, type ArcherRig } from './archer';
-import { drawJointPose, drawRearLeg, type JointPose } from './stickmanPose';
+import { getArcherRig, type ArcherRig } from './archer';
+import type { JointPose } from './stickmanPose';
 
 /**
  * A flying dragon with a stickman rider, in the flat landscape style. `getDragonPose` is pure (tested):
@@ -16,21 +15,51 @@ export const DRAGON_FLAP_MS = 900;
 /** Archer rider: one draw-and-release cycle. */
 export const DRAGON_ARCHER_SHOT_MS = 1600;
 
-/** What the rider holds: a raised spear, or a bow aimed down ahead of the dragon. */
-export type DragonRider = 'spear' | 'archer';
+/** What the rider holds: a raised spear, a bow aimed down ahead of the dragon, or just the reins (fire dragon). */
+export type DragonRider = 'spear' | 'archer' | 'unarmed';
 
-export const DRAGON_COLORS = {
-  body: 0xb5473a,
-  bodyDark: 0x8e3a33,
-  belly: 0xf0c38a,
-  wingNear: 0x9c3d35,
-  wingFar: 0x6e2a26,
-  bone: 0x5a221e,
-  horn: 0xeadfc6,
-  eye: 0xffd35a,
-  spear: 0x7a5a38,
-  spearTip: 0xd7dde3,
-} as const;
+/** A dragon's hide: body, belly, wing membranes, bones, horns and eye. */
+export interface DragonPalette {
+  body: number;
+  bodyDark: number;
+  belly: number;
+  wingNear: number;
+  wingFar: number;
+  bone: number;
+  horn: number;
+  eye: number;
+  /** Inside of the open mouth. */
+  mouth: number;
+}
+
+/** Red (the fire dragon) and dark brown, nearly black (the dragon archer). */
+export const DRAGON_PALETTES = {
+  red: {
+    body: 0xb5473a,
+    bodyDark: 0x8e3a33,
+    belly: 0xf0c38a,
+    wingNear: 0x9c3d35,
+    wingFar: 0x6e2a26,
+    bone: 0x5a221e,
+    horn: 0xeadfc6,
+    eye: 0xffd35a,
+    mouth: 0x3a1210,
+  },
+  dark: {
+    body: 0x3b2a22,
+    bodyDark: 0x261a15,
+    belly: 0x7a6250,
+    wingNear: 0x33241d,
+    wingFar: 0x1d1411,
+    bone: 0x120c0a,
+    horn: 0xd8ccb2,
+    eye: 0xff9a3c,
+    mouth: 0x5a1a12,
+  },
+} as const satisfies Record<string, DragonPalette>;
+
+/** The rider's gear (spear shaft and point, arrow), the same on every dragon. */
+export const DRAGON_GEAR = { spear: 0x7a5a38, spearTip: 0xd7dde3 } as const;
 
 export interface WingPose {
   shoulder: Vec2;
@@ -58,14 +87,34 @@ export interface DragonPose {
   spear?: { butt: Vec2; tip: Vec2 };
   /** Archer rider: the bow rig in sprite space, and the nocked arrow while the string is drawn. */
   bow?: { rig: ArcherRig; tension: number; arrow?: { nock: Vec2; tip: Vec2 } };
+  /** How far the jaw hangs open (0 = shut, 1 = wide open, breathing fire). */
+  jaw: number;
+  /** Where fire leaves the mouth and its direction (radians, + = down), in sprite space. */
+  mouth: { point: Vec2; angle: number };
 }
 
-const rotate = (point: Vec2, angle: number): Vec2 => ({
+/**
+ * Fire breath control (rendering/dragonFire.ts schedules it): `rear` pulls the head back and up to draw
+ * breath, `thrust` stretches the neck forward with the jaw wide open and the head turned to `aim`.
+ */
+export interface BreathControl {
+  rear: number;
+  thrust: number;
+  /** Direction of the fire (local radians, + = down). */
+  aim: number;
+}
+
+/** Jaw hinge and snout tip along the head (sprite units from the skull centre, and to the side). */
+export const JAW_HINGE = { along: 4, side: 4 };
+export const JAW_OPEN = 0.6;
+const MOUTH_AT = { along: 30, side: 3 };
+
+export const rotate = (point: Vec2, angle: number): Vec2 => ({
   x: point.x * Math.cos(angle) - point.y * Math.sin(angle),
   y: point.x * Math.sin(angle) + point.y * Math.cos(angle),
 });
-const add = (a: Vec2, b: Vec2): Vec2 => ({ x: a.x + b.x, y: a.y + b.y });
-const limb = (from: Vec2, angle: number, length: number): Vec2 => ({ x: from.x + Math.sin(angle) * length, y: from.y + Math.cos(angle) * length });
+export const add = (a: Vec2, b: Vec2): Vec2 => ({ x: a.x + b.x, y: a.y + b.y });
+export const limb = (from: Vec2, angle: number, length: number): Vec2 => ({ x: from.x + Math.sin(angle) * length, y: from.y + Math.cos(angle) * length });
 
 /**
  * Wing for a flap value (+1 = top of the upstroke, −1 = bottom of the downstroke). Seen from the side
@@ -140,7 +189,7 @@ export interface ArcherControl {
 }
 
 /** Pose at `timeMs` (wings loop every DRAGON_FLAP_MS). */
-export const getDragonPose = (timeMs: number, riderKind: DragonRider = 'spear', archer?: ArcherControl): DragonPose => {
+export const getDragonPose = (timeMs: number, riderKind: DragonRider = 'spear', archer?: ArcherControl, breath?: BreathControl): DragonPose => {
   const phase = ((timeMs % DRAGON_FLAP_MS) + DRAGON_FLAP_MS) % DRAGON_FLAP_MS / DRAGON_FLAP_MS * Math.PI * 2;
   const flap = Math.sin(phase);
   // The body rises on the downstroke (a quarter period after the wings peak).
@@ -151,9 +200,15 @@ export const getDragonPose = (timeMs: number, riderKind: DragonRider = 'spear', 
     const t = index / 8;
     return { x: -150 + t * 120, y: 18 - t * 10 + bob + wave(1.6 - t * 1.2) * (1 - t) * 12 };
   });
+  const rear = breath?.rear ?? 0;
+  const thrust = breath?.thrust ?? 0;
+  // Drawing breath the neck curls back and up; breathing fire it stretches forward and down the aim.
   const neck: Vec2[] = Array.from({ length: 6 }, (_, index) => {
     const t = index / 5;
-    return { x: 40 + t * 46, y: -4 - t * 40 + bob + wave(0.9 - t * 0.5) * t * 5 };
+    return {
+      x: 40 + t * 46 - rear * t * 16 + thrust * t * 12,
+      y: -4 - t * 40 + bob + wave(0.9 - t * 0.5) * t * 5 * (1 - thrust) - rear * t * 10 + thrust * t * 8,
+    };
   });
   const head = neck[neck.length - 1];
   const saddle = { x: -4, y: -24 + bob };
@@ -170,7 +225,9 @@ export const getDragonPose = (timeMs: number, riderKind: DragonRider = 'spear', 
   const rearKnee = limb({ x: hip.x + 3, y: hip.y }, 0.7, 30);
   const rearFoot = limb(rearKnee, -0.45, 30);
   // Spear rider: front hand on the reins, rear hand holds the spear up. Archer: both hands on the bow.
+  // Unarmed: both hands on the reins, the rear one a little lower.
   const reins = reach(shoulder, { x: neck[1].x - 4, y: neck[1].y - 6 });
+  const rearReins = reach(shoulder, { x: neck[1].x - 10, y: neck[1].y - 1 });
   const spearArm = reach(shoulder, { x: shoulder.x - 2, y: shoulder.y - 34 + Math.sin(phase) * 2 });
   const spearAngle = -1.05 + Math.sin(phase - 0.6) * 0.04;
   const spearDirection = { x: Math.cos(spearAngle), y: Math.sin(spearAngle) };
@@ -189,10 +246,27 @@ export const getDragonPose = (timeMs: number, riderKind: DragonRider = 'spear', 
     // Like drawStickman's archer: the rear arm holds the bow, the front arm draws the string.
     frontElbow: rig ? rig.stringElbow : reins.elbow,
     frontHand: rig ? rig.stringHand : reins.hand,
-    rearElbow: rig ? rig.woodElbow : spearArm.elbow,
-    rearHand: rig ? rig.woodHand : spearArm.hand,
+    rearElbow: rig ? rig.woodElbow : riderKind === 'unarmed' ? rearReins.elbow : spearArm.elbow,
+    rearHand: rig ? rig.woodHand : riderKind === 'unarmed' ? rearReins.hand : spearArm.hand,
     frontShinAngle: 0.15,
     rearShinAngle: 0.05,
+  };
+
+  const restTilt = 0.15 + wave(0.4) * 0.06;
+  const jaw = Math.min(1, rear * 0.35 + thrust);
+  // The fire leaves between the jaws, half the opening below the snout: tilt the head that much less,
+  // so the stream itself goes along the aim.
+  const aimTilt = (breath?.aim ?? restTilt) - jaw * JAW_OPEN * 0.5;
+  const headTilt = restTilt - rear * 0.55 + thrust * (aimTilt - restTilt);
+  const nose = { x: Math.cos(headTilt), y: Math.sin(headTilt) };
+  // The fire comes out between the jaws: halfway between the upper snout and the dropped lower jaw.
+  const mouthAngle = headTilt + jaw * JAW_OPEN * 0.5;
+  const mouth = {
+    point: {
+      x: head.x + nose.x * MOUTH_AT.along - nose.y * MOUTH_AT.side,
+      y: head.y + nose.y * MOUTH_AT.along + nose.x * MOUTH_AT.side,
+    },
+    angle: mouthAngle,
   };
 
   return {
@@ -200,12 +274,14 @@ export const getDragonPose = (timeMs: number, riderKind: DragonRider = 'spear', 
     tail,
     neck,
     head,
-    headTilt: 0.15 + wave(0.4) * 0.06,
+    headTilt,
+    jaw,
+    mouth,
     nearWing: wing({ x: 8, y: -16 + bob }, flap, 1),
     farWing: wing({ x: 20, y: -20 + bob }, Math.sin(phase - 0.35), 0.85),
     saddle,
     rider,
-    spear: rig ? undefined : {
+    spear: rig || riderKind === 'unarmed' ? undefined : {
       butt: { x: spearArm.hand.x - spearDirection.x * 26, y: spearArm.hand.y - spearDirection.y * 26 },
       tip: { x: spearArm.hand.x + spearDirection.x * 74, y: spearArm.hand.y + spearDirection.y * 74 },
     },
@@ -274,109 +350,4 @@ export const dragonHitZones = (pose: DragonPose): DragonHitZone[] => {
     { part: 'tail', points: tail.slice(tailMiddle), padding: TAIL_WIDTH.base / 2, headshot: false },
   );
   return zones;
-};
-
-const drawWing = (g: Graphics, wingPose: WingPose, membrane: number): void => {
-  const { shoulder, wrist, tip, trail } = wingPose;
-  g.poly([shoulder, wrist, tip, ...trail].flatMap((point) => [point.x, point.y])).fill({ color: membrane });
-  g.moveTo(shoulder.x, shoulder.y).lineTo(wrist.x, wrist.y).lineTo(tip.x, tip.y)
-    .stroke({ width: 4, color: DRAGON_COLORS.bone, cap: 'round', join: 'round' });
-  // Finger bones fanning from the wrist to the trailing edge.
-  trail.slice(0, 2).forEach((point) => g.moveTo(wrist.x, wrist.y).lineTo(point.x, point.y).stroke({ width: 2, color: DRAGON_COLORS.bone, cap: 'round' }));
-};
-
-/** Thick tapering stroke through `points` (width from `from` to `to`). */
-const tapered = (g: Graphics, points: Vec2[], from: number, to: number, color: number): void => {
-  for (let index = 1; index < points.length; index += 1) {
-    const t = index / (points.length - 1);
-    g.moveTo(points[index - 1].x, points[index - 1].y).lineTo(points[index].x, points[index].y)
-      .stroke({ width: from + (to - from) * t, color, cap: 'round' });
-  }
-};
-
-/** Draws the dragon and its rider (spear or bow), at `timeMs`. */
-export const drawDragonRider = (g: Graphics, timeMs: number, riderKind: DragonRider = 'spear', archer?: ArcherControl): DragonPose => {
-  const pose = getDragonPose(timeMs, riderKind, archer);
-  g.clear();
-  drawDragon(g, pose, true);
-  return pose;
-};
-
-/** Draws a dragon pose on top of what's in `g` (in its current transform), with or without the rider. */
-export const drawDragon = (g: Graphics, pose: DragonPose, withRider: boolean): void => {
-  drawWing(g, pose.farWing, DRAGON_COLORS.wingFar);
-  // The rider's far leg is on the other side of the dragon: drawn before the body so it's hidden.
-  if (withRider) {
-    drawRearLeg(g, pose.rider);
-  }
-
-  // Tail: tapering from the body to a spade tip.
-  tapered(g, pose.tail, 4, 22, DRAGON_COLORS.body);
-  const tip = pose.tail[0];
-  const back = pose.tail[1];
-  const angle = Math.atan2(tip.y - back.y, tip.x - back.x);
-  const spade = [{ x: 14, y: 0 }, { x: -2, y: -8 }, { x: 2, y: 0 }, { x: -2, y: 8 }].map((point) => add(tip, rotate(point, angle)));
-  g.poly(spade.flatMap((point) => [point.x, point.y])).fill({ color: DRAGON_COLORS.bodyDark });
-
-  // Legs tucked under the body.
-  const y = pose.bob;
-  [[-30, 0.5], [30, 0.3]].forEach(([x, bend]) => {
-    const hipJoint = { x, y: 12 + y };
-    const knee = limb(hipJoint, 0.8 + bend, 14);
-    const foot = limb(knee, -0.6, 12);
-    g.moveTo(hipJoint.x, hipJoint.y).lineTo(knee.x, knee.y).lineTo(foot.x, foot.y).stroke({ width: 7, color: DRAGON_COLORS.bodyDark, cap: 'round', join: 'round' });
-  });
-
-  // Body with a pale belly and back ridge spikes.
-  g.ellipse(0, 4 + y, 66, 24).fill({ color: DRAGON_COLORS.body });
-  g.ellipse(6, 14 + y, 52, 11).fill({ color: DRAGON_COLORS.belly });
-  [-44, -28, -12, 20].forEach((x) => g.poly([x - 6, -16 + y, x, -28 + y, x + 6, -16 + y]).fill({ color: DRAGON_COLORS.bodyDark }));
-
-  // Neck and head.
-  tapered(g, [{ x: 30, y: -2 + y }, ...pose.neck], 26, 13, DRAGON_COLORS.body);
-  const head = pose.head;
-  const nose = rotate({ x: 1, y: 0 }, pose.headTilt);
-  const along = (distance: number, side = 0): Vec2 => ({ x: head.x + nose.x * distance - nose.y * side, y: head.y + nose.y * distance + nose.x * side });
-  g.ellipse(head.x + nose.x * 4, head.y + nose.y * 4, 15, 10).fill({ color: DRAGON_COLORS.body });
-  g.poly([along(6, -7), along(30, -2), along(31, 3), along(6, 8)].flatMap((point) => [point.x, point.y])).fill({ color: DRAGON_COLORS.body });
-  g.poly([along(10, 5), along(29, 4), along(10, 9)].flatMap((point) => [point.x, point.y])).fill({ color: DRAGON_COLORS.belly });
-  [[-4, -8], [-9, -6]].forEach(([distance, side]) => {
-    const base = along(distance, side);
-    const end = along(distance - 16, side - 9);
-    g.moveTo(base.x, base.y).quadraticCurveTo(along(distance - 6, side - 10).x, along(distance - 6, side - 10).y, end.x, end.y)
-      .stroke({ width: 3.5, color: DRAGON_COLORS.horn, cap: 'round' });
-  });
-  const eye = along(10, -4);
-  g.circle(eye.x, eye.y, 2.6).fill({ color: DRAGON_COLORS.eye });
-  g.circle(eye.x + 0.6, eye.y, 1.1).fill({ color: 0x2b1a14 });
-
-  drawWing(g, pose.nearWing, DRAGON_COLORS.wingNear);
-  if (withRider) {
-    drawDragonRiderOnly(g, pose);
-  }
-};
-
-/** The rider (skeleton look, near leg over the flank, far leg left out) and his weapon. */
-export const drawDragonRiderOnly = (g: Graphics, pose: DragonPose): void => {
-  drawJointPose(g, pose.rider, 0, { append: true, hideRearLeg: true });
-  if (pose.bow) {
-    drawBow(g, pose.bow.rig);
-    const { arrow } = pose.bow;
-    if (arrow) {
-      g.moveTo(arrow.nock.x, arrow.nock.y).lineTo(arrow.tip.x, arrow.tip.y).stroke({ width: 1.6, color: DRAGON_COLORS.spear, cap: 'round' });
-      g.circle(arrow.tip.x, arrow.tip.y, 1.8).fill({ color: DRAGON_COLORS.spearTip });
-    }
-    return;
-  }
-  if (!pose.spear) {
-    return;
-  }
-  const rider = g;
-  rider.moveTo(pose.spear.butt.x, pose.spear.butt.y).lineTo(pose.spear.tip.x, pose.spear.tip.y).stroke({ width: 3, color: DRAGON_COLORS.spear, cap: 'round' });
-  const direction = { x: pose.spear.tip.x - pose.spear.butt.x, y: pose.spear.tip.y - pose.spear.butt.y };
-  const length = Math.hypot(direction.x, direction.y) || 1;
-  const unit = { x: direction.x / length, y: direction.y / length };
-  const point = pose.spear.tip;
-  rider.poly([point.x + unit.x * 10, point.y + unit.y * 10, point.x - unit.y * 4, point.y + unit.x * 4, point.x + unit.y * 4, point.y - unit.x * 4])
-    .fill({ color: DRAGON_COLORS.spearTip });
 };

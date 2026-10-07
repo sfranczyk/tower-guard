@@ -1,6 +1,17 @@
 import { Container, Graphics } from 'pixi.js';
-import { DRAGON_DRAW_MS, DRAGON_SCALE, DRAGON_SHOT_INTERVAL_MS } from '../config';
-import { dragonHitZones, drawDragon, drawDragonRider, type DragonHitZone, type DragonPose } from '../rendering/dragon';
+import {
+  DRAGON_ALTITUDE,
+  DRAGON_DRAW_MS,
+  DRAGON_HOVER_OFFSET,
+  DRAGON_SCALE,
+  DRAGON_SHOT_INTERVAL_MS,
+  FIRE_DRAGON_ALTITUDE,
+  FIRE_DRAGON_BREATH_INTERVAL_MS,
+  FIRE_DRAGON_HOVER_OFFSET,
+} from '../config';
+import { DRAGON_PALETTES, dragonHitZones, type DragonHitZone, type DragonPalette, type DragonPose } from '../rendering/dragon';
+import { drawDragon, drawDragonRider } from '../rendering/dragonArt';
+import { FIRE_BREATH_MS, IGNITE_HEAT, breathControl, drawFireStream, firePuffs, isBreathingFire, puffPosition } from '../rendering/dragonFire';
 import { DRAGON_HIT_MS, dragonFallState, drawThrownRider, lyingDragonPose, riderGibSimulation } from '../rendering/dragonDeath';
 import { GIB_GROUND_Y, drawStickmanGibs, type GibSimulation } from '../rendering/stickmanGibs';
 import { HUMAN_BODY } from '../rendering/bodyColors';
@@ -27,6 +38,19 @@ export interface HitBox {
   headshot: boolean;
 }
 
+/** Fire dragon: local aim limits of the fire (radians, + = down) and how fast the head turns to follow. */
+const FIRE_AIM_MIN = 0.2;
+const FIRE_AIM_MAX = 1.25;
+const FIRE_TURN_PER_S = 1.2;
+
+export type DragonKind = 'dragon' | 'fireDragon';
+
+/** How each kind looks and flies: hide, rider, cruising height and hover distance. */
+const DRAGON_KINDS: Readonly<Record<DragonKind, { palette: DragonPalette; rider: 'archer' | 'unarmed'; altitude: number; hoverOffset: number }>> = {
+  dragon: { palette: DRAGON_PALETTES.dark, rider: 'archer', altitude: DRAGON_ALTITUDE, hoverOffset: DRAGON_HOVER_OFFSET },
+  fireDragon: { palette: DRAGON_PALETTES.red, rider: 'unarmed', altitude: FIRE_DRAGON_ALTITUDE, hoverOffset: FIRE_DRAGON_HOVER_OFFSET },
+};
+
 /** Force range of the rider's explosive death (like enemies blown apart). */
 const RIDER_GIB_FORCE = { min: 1, max: 1.7 };
 
@@ -44,13 +68,15 @@ interface DragonDeath {
 }
 
 /**
- * Flying dragon with an archer rider. Flies in high, hovers in front of the bowman (systems/dragonFlight),
- * and the rider draws and shoots hostile arrows like an enemy archer (CombatSystem aims for it). Arrows hit
+ * Flying dragon. The dark dragon archer flies in high, hovers in front of the bowman (systems/dragonFlight),
+ * and its rider draws and shoots hostile arrows like an enemy archer (CombatSystem aims for it). The red fire
+ * dragon (unarmed rider) flies lower and closer and breathes long streams of fire (rendering/dragonFire.ts;
+ * no damage yet) when the bowman is in reach (CombatSystem calls breathe). Arrows hit
  * the dragon's body or, for a headshot, the rider's head, and stick into it. A killed dragon falls out of
  * the sky and lies flat on the ground; its rider is thrown off, or blown apart by a killing explosive hit. Offers the same interface as Enemy where the combat code shares it.
  */
 export default class DragonEnemy extends Container {
-  public readonly kind = 'dragon' as const;
+  public readonly kind: DragonKind;
   public readonly isArcher = false;
   public readonly isFlying = true;
   public readonly isDown = false;
@@ -61,7 +87,15 @@ export default class DragonEnemy extends Container {
   private readonly art = new Graphics();
   /** The rider once he's off the dragon (thrown or blown apart), in death space. */
   private readonly riderArt = new Graphics();
+  /** The fire stream, in front of the dragon and untinted by hits. */
+  private readonly fireArt = new Graphics();
   private readonly healthBar = new Graphics();
+  private readonly look: (typeof DRAGON_KINDS)[DragonKind];
+  /** Fire dragon: time into the current breath (undefined between breaths), wait until the next, fire aim. */
+  private breathMs?: number;
+  private breathCooldownMs = 0;
+  private fireAim = 0.6;
+  private fireTarget = 0.6;
   private readonly maxHealth: number;
   private health: number;
   private readonly speed: number;
@@ -76,17 +110,19 @@ export default class DragonEnemy extends Container {
   private cheering = false;
   private paused = false;
 
-  public constructor(x: number, health: number, speed: number) {
+  public constructor(x: number, health: number, speed: number, kind: DragonKind = 'dragon') {
     super();
+    this.kind = kind;
+    this.look = DRAGON_KINDS[kind];
     this.maxHealth = Math.max(1, health);
     this.health = this.maxHealth;
     this.speed = speed;
     // Faces left, towards the player's keep.
     this.scale.set(-DRAGON_SCALE, DRAGON_SCALE);
-    this.position.set(x, cruiseAltitude(this.timeMs));
+    this.position.set(x, cruiseAltitude(this.timeMs, this.look.altitude));
     this.zIndex = 1;
     this.healthBar.scale.set(1 / this.scale.x, 1 / this.scale.y);
-    this.addChild(this.art, this.riderArt, this.healthBar);
+    this.addChild(this.art, this.riderArt, this.fireArt, this.healthBar);
     this.pose = this.redraw();
     this.drawHealthBar();
   }
@@ -128,6 +164,9 @@ export default class DragonEnemy extends Container {
       };
       this.healthBar.visible = false;
       this.tension = 0;
+      // Killed mid-breath: the fire goes out.
+      this.breathMs = undefined;
+      this.fireArt.clear();
     }
     return this.health;
   }
@@ -149,9 +188,49 @@ export default class DragonEnemy extends Container {
       return;
     }
     if (!this.cheering) {
-      this.x = flyTowards(this.x, hoverX(targetX), this.speed, deltaMs);
+      this.x = flyTowards(this.x, hoverX(targetX, this.look.hoverOffset), this.speed, deltaMs);
     }
-    this.y = flyTowards(this.y, cruiseAltitude(this.timeMs), 40, deltaMs);
+    this.y = flyTowards(this.y, cruiseAltitude(this.timeMs, this.look.altitude), 40, deltaMs);
+  }
+
+  /** Fire dragon: whether it is pouring out fire right now (for damage once burning is added). */
+  public get isBreathingFire(): boolean {
+    return this.breathMs !== undefined && isBreathingFire(this.breathMs);
+  }
+
+  /**
+   * Fire dragon: the burning part of its stream in world space (centre and radius of every puff still hot
+   * enough to set things alight), empty between breaths.
+   */
+  public getFlames(): Array<{ center: Vec2; radius: number }> {
+    if (this.breathMs === undefined || !this.isAlive()) {
+      return [];
+    }
+    const { point, angle } = this.pose.mouth;
+    return firePuffs(this.breathMs)
+      .filter((puff) => puff.heat >= IGNITE_HEAT)
+      .map((puff) => ({ center: this.toWorld(puffPosition(point, angle, puff)), radius: puff.radius * DRAGON_SCALE }));
+  }
+
+  /** Fire dragon: where the fire leaves the mouth, in world space. */
+  public getMouthPoint(): Vec2 {
+    return this.toWorld(this.pose.mouth.point);
+  }
+
+  /**
+   * Fire dragon with its target in reach: turns the head towards `worldAngle` and, unless it's already
+   * breathing or still catching its breath, starts a breath (rear back, then a long stream of fire).
+   */
+  public breathe(worldAngle: number): void {
+    if (!this.isAlive() || this.cheering || this.kind !== 'fireDragon') {
+      return;
+    }
+    this.fireTarget = Math.min(FIRE_AIM_MAX, Math.max(FIRE_AIM_MIN, normalizeAngle(Math.PI - (worldAngle - this.rotation))));
+    if (this.breathMs === undefined && this.breathCooldownMs <= 0) {
+      this.breathMs = 0;
+      this.fireAim = this.fireTarget;
+      this.breathCooldownMs = FIRE_DRAGON_BREATH_INTERVAL_MS;
+    }
   }
 
   /**
@@ -192,6 +271,7 @@ export default class DragonEnemy extends Container {
     } else {
       if (!this.paused) {
         this.timeMs += deltaMs;
+        this.updateBreath(deltaMs);
       }
       this.pose = this.redraw();
     }
@@ -242,7 +322,7 @@ export default class DragonEnemy extends Container {
     death.timeMs += deltaMs;
     const fall = dragonFallState(DRAGON_HIT_MS + death.timeMs, death.startY);
     this.art.clear();
-    drawDragon(this.art, lyingDragonPose(death.pose, fall.lying), false);
+    drawDragon(this.art, lyingDragonPose(death.pose, fall.lying), false, this.look.palette);
     this.art.position.set(0, fall.y - death.startY);
     this.art.rotation = fall.rotation;
     if (death.riderGibs) {
@@ -256,12 +336,36 @@ export default class DragonEnemy extends Container {
     }
   }
 
+  /** Advances the breath (it runs to the end once started) and the wait until the next; the head follows the target. */
+  private updateBreath(deltaMs: number): void {
+    this.breathCooldownMs = Math.max(0, this.breathCooldownMs - deltaMs);
+    if (this.breathMs === undefined) {
+      return;
+    }
+    this.breathMs += deltaMs;
+    const turn = (FIRE_TURN_PER_S * deltaMs) / 1000;
+    this.fireAim += Math.max(-turn, Math.min(turn, this.fireTarget - this.fireAim));
+    if (this.breathMs >= FIRE_BREATH_MS) {
+      this.breathMs = undefined;
+    }
+  }
+
   private redraw(): DragonPose {
+    const { palette, rider } = this.look;
+    // Once killed the clock stops, so the wings freeze mid-beat while it falls.
+    if (rider === 'unarmed') {
+      const breath = this.breathMs === undefined ? undefined : breathControl(this.breathMs, this.fireAim);
+      const pose = drawDragonRider(this.art, this.timeMs, 'unarmed', undefined, palette, breath);
+      this.fireArt.clear();
+      if (this.breathMs !== undefined) {
+        drawFireStream(this.fireArt, pose.mouth.point, pose.mouth.angle, this.breathMs);
+      }
+      return pose;
+    }
     // The sprite faces left (mirrored) and tilts while falling: turn the world aim into the rider's local aim.
     const local = normalizeAngle(Math.PI - (this.aimAngle - this.rotation));
     const aim = Math.min(AIM_MAX, Math.max(AIM_MIN, local));
-    // Once killed the clock stops, so the wings freeze mid-beat while it falls.
-    return drawDragonRider(this.art, this.timeMs, 'archer', { aim, tension: this.tension });
+    return drawDragonRider(this.art, this.timeMs, 'archer', { aim, tension: this.tension }, palette);
   }
 
   /** Local (sprite) point to world, through the art's own transform (moved while the corpse falls). */
