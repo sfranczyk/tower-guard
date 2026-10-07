@@ -16,5 +16,8 @@ export const setUrlParam = (name: string, value: string | null): void => {
 /** Query parameter holding the animation lab state: present = lab open, value = zoomed animation id. */
 export const LAB_PARAM = 'lab';
 
+/** Query parameter that starts battles with two bowmen (?coop), until the online lobby exists. */
+export const COOP_PARAM = 'coop';
+
 /** Query parameter that opens the sound test panel (?sounds). */
 export const SOUND_LAB_PARAM = 'sounds';

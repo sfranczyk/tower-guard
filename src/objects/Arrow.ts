@@ -30,6 +30,8 @@ export default class Arrow extends Sprite {
   private hostileShot = false;
   /** Who loosed a hostile arrow (its damage depends on it, see ENEMY_DAMAGE). */
   public shooter?: EnemyType;
+  /** Which player loosed a player arrow (co-op: their trails and shrapnel bursts are their own). */
+  public owner = 0;
   /** The battleground's wind (px/s² for a normal arrow), set before firing. */
   public wind = 0;
 

@@ -8,8 +8,8 @@ import { SandboxScene } from '../scenes/SandboxScene';
 import { SoundLabScene } from '../scenes/SoundLabScene';
 import { DEFAULT_ARROW_TRAILS, ENEMY_KEEP_HEALTH, MAX_ARROW_TRAILS } from '../config';
 import { loadSandbox } from './sandboxStorage';
-import type { GameContext, GameTextures, Scene, SceneName } from './Scene';
-import { LAB_PARAM, SOUND_LAB_PARAM, getUrlParam, setUrlParam } from './urlState';
+import { newRun, type GameContext, type GameTextures, type Scene, type SceneName } from './Scene';
+import { COOP_PARAM, LAB_PARAM, SOUND_LAB_PARAM, getUrlParam, setUrlParam } from './urlState';
 
 /** Owns the active scene, switches between scenes and forwards ticker updates. */
 export class SceneManager {
@@ -18,6 +18,8 @@ export class SceneManager {
 
   public constructor(app: Application, ui: DomUi, textures: GameTextures, sound: SoundManager) {
     const sandbox = loadSandbox();
+    // Co-op (two bowmen) for now with ?coop in the URL; the online lobby will set it later.
+    const playerCount = getUrlParam(COOP_PARAM) !== null ? 2 : 1;
     const root = new Container();
     root.sortableChildren = true;
     app.stage.addChild(root);
@@ -30,7 +32,8 @@ export class SceneManager {
       sound,
       session: {
         sandbox,
-        run: { waveIndex: 0, bowmanHealth: sandbox.bowmanHealth, keepHealth: sandbox.keepHealth, enemyKeepHealth: ENEMY_KEEP_HEALTH },
+        run: newRun(sandbox, playerCount, ENEMY_KEEP_HEALTH),
+        playerCount,
         showTrajectory: false,
         arrowTrails: DEFAULT_ARROW_TRAILS,
       },

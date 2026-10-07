@@ -52,6 +52,17 @@ src/
   `FIRST_GROUP_SIZE` is light) in groups growing to `MAX_GROUP_SIZE`; `WaveDirector.update` (called every frame,
   so it pauses with the game) releases the next group once at most `GROUP_RELEASE_ALIVE` enemies stand and
   `GROUP_MIN_GAP_MS` passed, or after `GROUP_MAX_GAP_MS` regardless.
+- **Co-op** (branch `coop`, in progress; plan: host-authoritative online play for two over PeerJS): `ctx.session.playerCount`
+  (2 with `?coop` for now). `GameScene.players` holds one `Player` per bowman (`scenes/PlayerControl.ts`: bowman,
+  `PlayerInput`, health, weapon; players[0] is this browser's: camera, aim overlay, status messages). Controls go
+  through `input/PlayerInput.ts`: `LocalInput` (keyboard and mouse via InputManager) or `ManualInput` (set from
+  outside; drive player 2 from the console with `scene.players[1].input.set({ direction: 1 })`, `.shoot(aim)`,
+  `.pressJump()`). `PlayerControl` moves a bowman and handles the keep; the scene shoots (`Arrow.owner`: trails
+  and shrapnel bursts per player). Enemies go for the nearest bowman out in the open, else the keep
+  (`systems/targeting.ts`, pure); `CombatWorld.bowmen`, and damage events name the bowman. Health is per player
+  (`RunState.bowmanHealths`), a fallen bowman stays down for the run (`Bowman.die(true)` in later waves), and the
+  wave is lost when all have fallen or the keep falls. Player 2 wears `secondPlayerArmor` (bronze, silver trim);
+  the HUD shows a second bar.
 - **Battlegrounds** (`data/battlegrounds.ts`): map themes (sky, sun, hills, tree style, ground colors)
   drawn by `rendering/Background.ts` (hills/dunes and trees/cacti in `rendering/landscape.ts`). Add a new
   map by adding an entry there. Each has a `weather`: `fair` (cumulus, stratus, cirrus), `clear` (no clouds,

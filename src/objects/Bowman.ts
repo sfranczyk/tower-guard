@@ -279,11 +279,15 @@ export class Bowman extends Container {
     this.redraw();
   }
 
-  /** Killed: drops the aim and topples over backwards (see updateAnimation). */
-  public die(): void {
+  /**
+   * Killed: drops the aim and topples over backwards (see updateAnimation); `alreadyFallen` (fell in an
+   * earlier wave) starts him lying on his back.
+   */
+  public die(alreadyFallen = false): void {
     if (this.deathMs === undefined) {
-      this.deathMs = 0;
+      this.deathMs = alreadyFallen ? TOPPLE_MS : 0;
       this.aim.power = 0;
+      this.updateDeath(0);
     }
   }
 

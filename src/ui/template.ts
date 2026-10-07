@@ -72,7 +72,8 @@ const weaponSlot = (index: number): string => {
 
 export const HUD_TOP_TEMPLATE = `
   <div class="hud-chip">${ICON_KEEP}<div><div class="chip-label">Keep</div><div class="meter"><i data-tower-bar></i></div><div class="chip-value" data-tower-health>600 / 600</div></div></div>
-  <div class="hud-chip">${ICON_BOWMAN}<div><div class="chip-label">Bowman</div><div class="meter"><i data-bowman-bar></i></div><div class="chip-value" data-bowman-health>100 / 100</div></div></div>
+  <div class="hud-chip">${ICON_BOWMAN}<div><div class="chip-label" data-bowman-label>Bowman</div><div class="meter"><i data-bowman-bar></i></div><div class="chip-value" data-bowman-health>100 / 100</div></div></div>
+  <div class="hud-chip" data-bowman2-chip hidden>${ICON_BOWMAN}<div><div class="chip-label">Player 2</div><div class="meter"><i data-bowman2-bar></i></div><div class="chip-value" data-bowman2-health>100 / 100</div></div></div>
   <div class="hud-chip">${ICON_WAVE}<div><div class="chip-label">Wave <span data-wave>1 / 1</span></div><div class="pips" data-enemy-pips></div><div class="meter" hidden><i data-wave-bar></i></div><div class="chip-value" data-enemy-count>0 of 0 defeated</div></div></div>
   <div class="hud-spacer"></div>
   <div class="weapons" data-projectiles>${Array.from({ length: WEAPON_SLOTS }, (_, index) => weaponSlot(index)).join('')}</div>

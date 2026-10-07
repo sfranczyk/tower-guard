@@ -36,6 +36,17 @@ export const ARMOR_COLORS: ArmorPalette = {
   bowString: 0x3b3d44,
 };
 
+/**
+ * The second player's armor in co-op: the same cloth, but bronze plates and silver trim instead of steel and
+ * gold, so the two bowmen tell apart at a glance on any map.
+ */
+export const secondPlayerArmor = (palette: ArmorPalette): ArmorPalette => ({
+  ...palette,
+  plate: 0xa86a3a,
+  plateLight: 0xd59a63,
+  gold: 0xdfe4ea,
+});
+
 /** Nocked arrow length (sprite units): at full draw the head sits 16 units past the bow grip. */
 const NOCKED_ARROW_LENGTH = 72;
 

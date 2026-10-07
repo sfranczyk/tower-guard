@@ -32,6 +32,7 @@ import type { EnemyType, Vec2 } from '../types';
 import { solveLaunchAngle } from './ballistics';
 import { segmentHitTime } from './collision';
 import { struckBy } from './lightning';
+import { nearestExposedBowman } from './targeting';
 import { groundAt } from './terrain';
 import type { EffectsSystem } from './EffectsSystem';
 
@@ -51,7 +52,8 @@ const ARCHER_AIM_REFRESH_MS = 250;
 const KAMIKAZE_REACH = 1.2;
 
 export interface CombatWorld {
-  readonly bowman: Bowman;
+  /** One bowman per player (co-op: two); enemies go for the nearest one out in the open. */
+  readonly bowmen: readonly Bowman[];
   readonly playerTower: Tower;
   readonly enemyTower: Tower;
   readonly enemies: readonly Foe[];
@@ -63,9 +65,9 @@ export interface CombatWorld {
 }
 
 export interface CombatEvents {
-  bowmanDamaged(amount: number): void;
-  /** The bowman just caught fire. */
-  bowmanIgnited(): void;
+  bowmanDamaged(bowman: Bowman, amount: number): void;
+  /** `bowman` just caught fire. */
+  bowmanIgnited(bowman: Bowman): void;
   headshot(): void;
   /** A sound-worthy impact at a world position (the scene plays it). */
   sound(id: SoundId, at: Vec2): void;
@@ -109,11 +111,10 @@ export class CombatSystem {
   public update(deltaMs: number, enemiesActive = true): void {
     const activeEnemies = enemiesActive ? this.world.enemies.filter((enemy) => enemy.isAlive()) : [];
     activeEnemies.forEach((enemy) => this.updateEnemy(enemy, deltaMs));
-    // Burning: steady damage until the burn runs out (the bowman counts it down in his animation).
-    const { bowman } = this.world;
-    if (bowman.isBurning && !bowman.isDead) {
-      this.events.bowmanDamaged(burnDamage(bowman.burnRemainingMs, deltaMs));
-    }
+    // Burning: steady damage until the burn runs out (each bowman counts it down in his animation).
+    this.world.bowmen
+      .filter((bowman) => bowman.isBurning && !bowman.isDead)
+      .forEach((bowman) => this.events.bowmanDamaged(bowman, burnDamage(bowman.burnRemainingMs, deltaMs)));
     // Dead enemies finish (then hold) their death animation.
     this.world.enemies.filter((enemy) => !enemy.isAlive()).forEach((enemy) => enemy.updateAnimation(deltaMs, false));
 
@@ -150,10 +151,12 @@ export class CombatSystem {
       this.drawDebugHitboxes(enemy);
       return;
     }
-    const { bowman, playerTower } = this.world;
-    enemy.target = bowman.isInTower ? 'tower' : 'bowman';
-    const bowmanBehindEnemy = enemy.target === 'bowman' && bowman.x > enemy.x + MELEE_REACH;
-    const targetPosition = enemy.target === 'bowman'
+    const { playerTower } = this.world;
+    // The nearest bowman out in the open, or the keep when everyone left is hiding in it.
+    const bowman = nearestExposedBowman(this.world.bowmen, enemy.x);
+    enemy.target = bowman ? 'bowman' : 'tower';
+    const bowmanBehindEnemy = bowman !== undefined && bowman.x > enemy.x + MELEE_REACH;
+    const targetPosition = bowman
       ? { x: bowmanBehindEnemy ? enemy.x + 100 : bowman.x, y: BOWMAN_Y }
       : { x: playerTower.x, y: GROUND_Y };
 
@@ -168,15 +171,15 @@ export class CombatSystem {
 
     // Kamikaze: no swing, it blows itself up on reaching the bowman (jumping doesn't help) or the keep.
     if (enemy.kind === 'kamikaze') {
-      const atKeep = enemy.target === 'tower' && enemy.x <= playerTower.x + TOWER_ATTACK_REACH;
-      const atBowman = enemy.target === 'bowman' && !bowman.isDead && Math.abs(enemy.x - bowman.x) <= MELEE_REACH && Math.abs(enemy.y - bowman.y) <= 60;
+      const atKeep = !bowman && enemy.x <= playerTower.x + TOWER_ATTACK_REACH;
+      const atBowman = bowman !== undefined && Math.abs(enemy.x - bowman.x) <= MELEE_REACH && Math.abs(enemy.y - bowman.y) <= 60;
       if (atKeep || atBowman) {
         this.detonate(enemy);
       }
       return;
     }
 
-    if (enemy.target === 'tower') {
+    if (!bowman) {
       if (enemy.x <= playerTower.x + TOWER_ATTACK_REACH && enemy.canAttack()) {
         // The keep takes the hit when the club lands, with a chip of stone flying off the wall.
         enemy.playAttackAnimation(() => {
@@ -190,14 +193,14 @@ export class CombatSystem {
     // No swing at a bowman who is in the air; once he lands in reach, the enemy swings again.
     const overlapsBowman = Math.abs(enemy.x - bowman.x) <= MELEE_REACH;
     const bowmanAirborne = bowman.y < groundAt(bowman.x) - 20;
-    if (!bowman.isInTower && !bowman.isDead && !bowmanAirborne && overlapsBowman && Math.abs(enemy.y - bowman.y) <= 45) {
+    if (!bowmanAirborne && overlapsBowman && Math.abs(enemy.y - bowman.y) <= 45) {
       if (enemy.canAttack()) {
         // Damage lands with the club: to dodge, the bowman has to get beyond this enemy's strike reach
         // (or into the keep) before it lands; jumping on the spot doesn't help.
         enemy.playAttackAnimation(() => {
           const stillInReach = Math.abs(enemy.x - bowman.x) <= enemy.strikeReach && Math.abs(enemy.y - bowman.y) <= 45 * enemy.size;
           if (stillInReach && !bowman.isInTower && !bowman.isDead) {
-            this.events.bowmanDamaged(rollDamage(enemyDamage(enemy.kind, 'melee', 'bowman')));
+            this.events.bowmanDamaged(bowman, rollDamage(enemyDamage(enemy.kind, 'melee', 'bowman')));
             this.world.effects.bloodBurst({ x: bowman.x, y: bowman.y - 20 });
           }
         });
@@ -223,10 +226,7 @@ export class CombatSystem {
    * aim with the real ballistics and shoot with a little spread.
    */
   private updateArcher(enemy: Enemy, deltaMs: number): void {
-    const { bowman, playerTower } = this.world;
-    const aimPoint = bowman.isInTower
-      ? { x: playerTower.x, y: GROUND_Y - TOWER_HEIGHT * 0.55 }
-      : { x: bowman.x, y: bowman.y - BOWMAN_CHEST };
+    const aimPoint = this.aimPointFrom(enemy.x);
     const inRange = Math.abs(aimPoint.x - enemy.x) <= ENEMY_ARCHER_RANGE;
 
     if (enemy.isDown || !inRange) {
@@ -256,18 +256,16 @@ export class CombatSystem {
    * while the target is in range below it the rider aims with the same ballistics and wind and shoots.
    */
   private updateDragon(dragon: DragonEnemy, deltaMs: number): void {
-    const { bowman, playerTower } = this.world;
-    const aimPoint = bowman.isInTower
-      ? { x: playerTower.x, y: GROUND_Y - TOWER_HEIGHT * 0.55 }
-      : { x: bowman.x, y: bowman.y - BOWMAN_CHEST };
+    const bowman = nearestExposedBowman(this.world.bowmen, dragon.x);
+    const aimPoint = this.aimPointFrom(dragon.x);
     dragon.update(deltaMs, aimPoint.x);
     if (dragon.kind === 'fireDragon') {
-      this.updateFireDragon(dragon, aimPoint, deltaMs);
+      this.updateFireDragon(dragon, bowman, aimPoint, deltaMs);
       return;
     }
     const release = dragon.getBowReleasePoint();
     const inRange = release.x > aimPoint.x && release.x - aimPoint.x <= DRAGON_RANGE;
-    if (!inRange || bowman.isDead) {
+    if (!inRange || this.world.bowmen.every((candidate) => candidate.isDead)) {
       dragon.relax(deltaMs);
       this.archerAim.delete(dragon);
     } else {
@@ -293,23 +291,45 @@ export class CombatSystem {
    * hiding) whenever the target is within FIRE_DRAGON_RANGE of its mouth, ahead of and below it. Its flames
    * set the bowman alight (systems/burning.ts); the burn's damage is applied in update.
    */
-  private updateFireDragon(dragon: DragonEnemy, aimPoint: Vec2, deltaMs: number): void {
-    const { bowman } = this.world;
+  private updateFireDragon(dragon: DragonEnemy, bowman: Bowman | undefined, aimPoint: Vec2, deltaMs: number): void {
     // The hot gas rises towards the end of the stream: aim at his legs rather than his chest.
-    const target = bowman.isInTower ? aimPoint : { x: aimPoint.x, y: bowman.y - FIRE_AIM_ABOVE_FEET };
+    const target = bowman ? { x: aimPoint.x, y: bowman.y - FIRE_AIM_ABOVE_FEET } : aimPoint;
     const mouth = dragon.getMouthPoint();
     const dx = target.x - mouth.x;
     const dy = target.y - mouth.y;
     const inReach = dx < 0 && dy > 0 && Math.hypot(dx, dy) <= FIRE_DRAGON_RANGE;
-    if (inReach && !bowman.isDead) {
+    if (inReach && this.world.bowmen.some((candidate) => !candidate.isDead)) {
       dragon.breathe(Math.atan2(dy, dx));
     }
     dragon.updateAnimation(deltaMs);
-    // The flames set the bowman alight (not inside the keep); staying in them keeps relighting the burn.
-    const body = { left: bowman.x - BOWMAN_HALF_WIDTH, right: bowman.x + BOWMAN_HALF_WIDTH, top: bowman.y - BOWMAN_HEIGHT, bottom: bowman.y };
-    if (!bowman.isInTower && !bowman.isDead && flamesTouch(dragon.getFlames(), body) && bowman.ignite()) {
-      this.events.bowmanIgnited();
+    // The flames set any bowman they touch alight (not inside the keep); staying in them keeps relighting the burn.
+    const flames = dragon.getFlames();
+    if (flames.length === 0) {
+      return;
     }
+    this.world.bowmen
+      .filter((candidate) => !candidate.isInTower && !candidate.isDead && flamesTouch(flames, CombatSystem.bowmanBox(candidate)))
+      .forEach((candidate) => {
+        if (candidate.ignite()) {
+          this.events.bowmanIgnited(candidate);
+        }
+      });
+  }
+
+  /**
+   * Where ranged enemies at `fromX` aim: the chest of the nearest bowman out in the open, or the keep when
+   * everyone left is hiding in it.
+   */
+  private aimPointFrom(fromX: number): Vec2 {
+    const bowman = nearestExposedBowman(this.world.bowmen, fromX);
+    return bowman
+      ? { x: bowman.x, y: bowman.y - BOWMAN_CHEST }
+      : { x: this.world.playerTower.x, y: GROUND_Y - TOWER_HEIGHT * 0.55 };
+  }
+
+  /** A bowman's hit box (feet at his y). */
+  private static bowmanBox(bowman: Bowman): { left: number; right: number; top: number; bottom: number } {
+    return { left: bowman.x - BOWMAN_HALF_WIDTH, right: bowman.x + BOWMAN_HALF_WIDTH, top: bowman.y - BOWMAN_HEIGHT, bottom: bowman.y };
   }
 
   /**
@@ -317,23 +337,23 @@ export class CombatSystem {
    * (enemies are knocked down or killed stiff). The bowman is safe inside the keep.
    */
   public lightningStrike(point: Vec2): void {
-    const { bowman, enemies, effects } = this.world;
+    const { bowmen, enemies, effects } = this.world;
     effects.lightningStrike(point);
     // Ground strikes don't reach flying dragons.
     struckBy(point.x, LIGHTNING_RADIUS, enemies.filter((enemy) => enemy.isAlive() && !enemy.isFlying))
       .forEach((enemy) => enemy.takeDamage(LIGHTNING_DAMAGE, { cause: 'lightning', fromX: point.x }));
-    if (!bowman.isInTower && !bowman.isDead && struckBy(point.x, LIGHTNING_RADIUS, [bowman]).length > 0) {
-      this.events.bowmanDamaged(LIGHTNING_DAMAGE);
-    }
+    struckBy(point.x, LIGHTNING_RADIUS, bowmen.filter((bowman) => !bowman.isInTower && !bowman.isDead))
+      .forEach((bowman) => this.events.bowmanDamaged(bowman, LIGHTNING_DAMAGE));
   }
 
-  /** Enemy arrows hurt the bowman, or the keep while he hides inside it. */
+  /** Enemy arrows hurt any bowman out in the open, or the keep while everyone left hides inside it. */
   private resolveHostileArrow(arrow: Arrow): void {
     const { start, end } = arrow.getTravelSegment();
     const travel = { x: end.x - start.x, y: end.y - start.y };
-    const { bowman, playerTower, effects } = this.world;
+    const { bowmen, playerTower, effects } = this.world;
+    const exposed = bowmen.filter((bowman) => !bowman.isInTower && !bowman.isDead);
 
-    if (bowman.isInTower) {
+    if (exposed.length === 0 && bowmen.some((bowman) => !bowman.isDead)) {
       const towerHit = segmentHitTime(start, travel, {
         left: playerTower.x - TOWER_HALF_WIDTH,
         right: playerTower.x + TOWER_HALF_WIDTH,
@@ -348,18 +368,14 @@ export class CombatSystem {
       return;
     }
 
-    if (bowman.isDead) {
-      return; // Flies over the fallen bowman into the ground.
-    }
-    const bowmanHit = segmentHitTime(start, travel, {
-      left: bowman.x - BOWMAN_HALF_WIDTH,
-      right: bowman.x + BOWMAN_HALF_WIDTH,
-      top: bowman.y - BOWMAN_HEIGHT,
-      bottom: bowman.y,
-    });
-    if (bowmanHit !== undefined) {
-      this.events.bowmanDamaged(rollDamage(arrowDamage(arrow.shooter, 'bowman')));
-      effects.bloodBurst(pointAlong(start, travel, bowmanHit));
+    // The earliest bowman on its path (it flies over the fallen into the ground).
+    const hit = exposed
+      .map((bowman) => ({ bowman, time: segmentHitTime(start, travel, CombatSystem.bowmanBox(bowman)) }))
+      .filter((candidate): candidate is { bowman: Bowman; time: number } => candidate.time !== undefined)
+      .sort((first, second) => first.time - second.time)[0];
+    if (hit) {
+      this.events.bowmanDamaged(hit.bowman, rollDamage(arrowDamage(arrow.shooter, 'bowman')));
+      effects.bloodBurst(pointAlong(start, travel, hit.time));
       arrow.deactivate();
     }
   }
@@ -426,23 +442,26 @@ export class CombatSystem {
 
   /**
    * A kamikaze blows up: it bursts apart, the blast hurts the enemies around it like an explosive arrow,
-   * and the bowman (unless he's in the keep) and the keep take its damage if they're close; the bowman is thrown back.
+   * and the bowmen (unless in the keep) and the keep take its damage if they're close; bowmen are thrown back.
    */
   private detonate(kamikaze: Enemy): void {
-    const { bowman, playerTower, effects } = this.world;
+    const { bowmen, playerTower, effects } = this.world;
     const body = kamikaze.getPhysicsBounds();
     const point = { x: body.x + body.width / 2, y: body.y + body.height / 2 };
     kamikaze.takeDamage(Number.MAX_SAFE_INTEGER, { cause: 'blast', fromX: point.x, point });
     this.explode(point, this.world.enemies.filter((enemy) => enemy.isAlive()), kamikaze);
     const reach = EXPLOSION_RADIUS * KAMIKAZE_REACH;
-    const bowmanDistance = Math.hypot(bowman.x - point.x, bowman.y - BOWMAN_CHEST - point.y);
-    if (!bowman.isInTower && !bowman.isDead && bowmanDistance <= reach) {
-      this.events.bowmanDamaged(rollDamage(enemyDamage('kamikaze', 'melee', 'bowman')));
+    bowmen.filter((bowman) => !bowman.isInTower && !bowman.isDead).forEach((bowman) => {
+      const bowmanDistance = Math.hypot(bowman.x - point.x, bowman.y - BOWMAN_CHEST - point.y);
+      if (bowmanDistance > reach) {
+        return;
+      }
+      this.events.bowmanDamaged(bowman, rollDamage(enemyDamage('kamikaze', 'melee', 'bowman')));
       effects.bloodBurst({ x: bowman.x, y: bowman.y - BOWMAN_CHEST });
       // Thrown away from the blast, harder the closer he stood.
       const { minStrength } = BOWMAN_KNOCKBACK;
       bowman.knockBack(point.x, minStrength + (1 - minStrength) * (1 - bowmanDistance / reach));
-    }
+    });
     if (point.x - (playerTower.x + TOWER_HALF_WIDTH) <= reach) {
       playerTower.takeDamage(rollDamage(enemyDamage('kamikaze', 'melee', 'keep')));
     }

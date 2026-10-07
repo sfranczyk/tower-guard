@@ -1,6 +1,5 @@
 import { Container, Graphics } from 'pixi.js';
 import {
-  BOWMAN_START_X,
   BOWMAN_Y,
   ENEMY_KEEP_HEALTH,
   ENEMY_TOWER_X,
@@ -9,9 +8,6 @@ import {
   HEADSHOT_DAMAGE_MULTIPLIER,
   PLAYER_TOWER_X,
   SHOW_HITBOX_DEBUG,
-  TOWER_ENTRY_ZONE_HEIGHT,
-  TOWER_ENTRY_ZONE_WIDTH,
-  TOWER_EXIT_X_OFFSET,
   SNOW_WIND_DRIFT,
   WORLD_WIDTH,
 } from '../config';
@@ -24,11 +20,14 @@ import { getEnemyStats } from '../data/enemies';
 import { launchSpeed, shrapnelBurst } from '../data/projectiles';
 import { waveEnemyTotal, type WaveSetup } from '../data/sandbox';
 import InputManager, { type AimInput } from '../managers/InputManager';
+import { LocalInput, ManualInput } from '../input/PlayerInput';
 import Arrow from '../objects/Arrow';
 import Bowman from '../objects/Bowman';
 import DragonEnemy from '../objects/DragonEnemy';
 import Enemy from '../objects/Enemy';
-import Tower, { TOWER_HEIGHT } from '../objects/Tower';
+import Tower from '../objects/Tower';
+import { secondPlayerArmor } from '../rendering/armor';
+import { PlayerControl, playerStartX, type Player } from './PlayerControl';
 import { AimOverlay } from '../rendering/AimOverlay';
 import { Background } from '../rendering/Background';
 import { CombatSystem, type Foe } from '../systems/CombatSystem';
@@ -36,6 +35,7 @@ import { EffectsSystem } from '../systems/EffectsSystem';
 import { Snow } from '../rendering/Snow';
 import { WeatherSystem } from '../systems/WeatherSystem';
 import { groundAt } from '../systems/terrain';
+import { livingBowmen } from '../systems/targeting';
 import { WaveDirector } from '../systems/waveDirector';
 import { simulateTrajectory } from '../systems/ballistics';
 import type { EnemyType, ProjectileType, Vec2 } from '../types';
@@ -98,15 +98,15 @@ export class GameScene extends Scene {
   private readonly wind: number;
   private playerTower!: Tower;
   private enemyTower!: Tower;
-  private bowman!: Bowman;
-  private input?: InputManager;
+  /** One per player (co-op: two); players[0] is this browser's. */
+  private players: Player[] = [];
+  private control!: PlayerControl;
+  private localInput?: LocalInput;
 
   private cameraX = 0;
   /** The camera starts on its target, then follows it smoothly. */
   private cameraPlaced = false;
-  private bowmanHealth: number;
   private spawnedEnemies = 0;
-  private selectedProjectile: ProjectileType = 'normal';
   private optionsVisible = false;
   /** Debug toggle (O key): hides and freezes all enemies. */
   private enemiesVisible = true;
@@ -123,13 +123,21 @@ export class GameScene extends Scene {
     const strongest = this.battleground.wind ?? 0;
     this.wind = Math.round((Math.random() * 2 - 1) * strongest);
     this.totalEnemies = waveEnemyTotal(this.wave.enemies);
-    this.bowmanHealth = run.bowmanHealth;
+  }
+
+  /** This browser's player. */
+  private get localPlayer(): Player {
+    return this.players[0];
+  }
+
+  private get coop(): boolean {
+    return this.players.length > 1;
   }
 
   public enter(): void {
     const { ui } = this.ctx;
     ui.showScreen('game');
-    ui.setActiveProjectile(this.selectedProjectile);
+    ui.setActiveProjectile('normal');
 
     this.world.sortableChildren = true;
     this.ctx.root.addChild(this.world);
@@ -141,15 +149,17 @@ export class GameScene extends Scene {
     const hillColor = this.battleground.hills[0];
     this.playerTower = new Tower(PLAYER_TOWER_X, GROUND_Y, { hillColor, enemy: false }, sandbox.keepHealth, run.keepHealth);
     this.enemyTower = new Tower(ENEMY_TOWER_X, GROUND_Y, { hillColor, enemy: true }, ENEMY_KEEP_HEALTH, run.enemyKeepHealth);
-    this.bowman = new Bowman(BOWMAN_START_X, BOWMAN_Y, { x: 50, y: 0, width: WORLD_WIDTH - 100, height: GAME_HEIGHT }, {
-      armorColors: this.battleground.player,
-    });
     this.debugGraphics.zIndex = 4;
-    this.world.addChild(this.playerTower, this.enemyTower, this.bowman, this.aimOverlay, this.debugGraphics);
+    this.world.addChild(this.playerTower, this.enemyTower, this.aimOverlay, this.debugGraphics);
+    this.createPlayers();
+    this.control = new PlayerControl(this.playerTower, {
+      enteredTower: (player) => this.localStatus(player, 'Hidden in tower · move right to exit'),
+      leftTower: (player) => this.localStatus(player, DEFAULT_STATUS),
+    });
 
     this.combat = new CombatSystem(
       {
-        bowman: this.bowman,
+        bowmen: this.players.map((player) => player.bowman),
         playerTower: this.playerTower,
         enemyTower: this.enemyTower,
         enemies: this.enemies,
@@ -159,11 +169,12 @@ export class GameScene extends Scene {
         wind: this.wind,
       },
       {
-        bowmanDamaged: (amount) => {
-          this.bowmanHealth = Math.max(0, this.bowmanHealth - amount);
+        bowmanDamaged: (bowman, amount) => {
+          const player = this.playerOf(bowman);
+          player.health = Math.max(0, player.health - amount);
         },
         headshot: () => this.ctx.ui.setStatus(`Headshot! ×${HEADSHOT_DAMAGE_MULTIPLIER} damage`),
-        bowmanIgnited: () => this.ctx.ui.setStatus('You are on fire! Get out of the flames'),
+        bowmanIgnited: (bowman) => this.localStatus(this.playerOf(bowman), 'You are on fire! Get out of the flames'),
         enemyShot: (from, angle, speed, shooter) => this.fireEnemyArrow(from, angle, speed, shooter),
         sound: (id, at) => this.playSound(id, at),
       },
@@ -206,7 +217,7 @@ export class GameScene extends Scene {
     this.background.update(deltaMs);
     this.weather?.update(deltaMs, this.cameraX);
     this.snow?.update(deltaMs, this.cameraX);
-    this.updateBowman(deltaMs);
+    this.players.forEach((player) => this.updatePlayer(player, deltaMs));
     this.playerTower.update(deltaMs);
     this.enemyTower.update(deltaMs);
 
@@ -230,31 +241,50 @@ export class GameScene extends Scene {
     this.destroyInput();
   }
 
+  /**
+   * The bowmen: this browser's player first (keyboard and mouse), in co-op a second one in bronze armor whose
+   * controls are set from outside (ManualInput; the console for now). A bowman who fell in an earlier wave
+   * starts lying where he fell.
+   */
+  private createPlayers(): void {
+    const { sandbox, run, playerCount } = this.ctx.session;
+    this.players = Array.from({ length: Math.max(1, playerCount) }, (_, index) => {
+      const bowman = new Bowman(playerStartX(index), BOWMAN_Y, { x: 50, y: 0, width: WORLD_WIDTH - 100, height: GAME_HEIGHT }, {
+        armorColors: index === 0 ? this.battleground.player : secondPlayerArmor(this.battleground.player),
+      });
+      bowman.y = groundAt(bowman.x);
+      const health = run.bowmanHealths[index] ?? sandbox.bowmanHealth;
+      if (health <= 0) {
+        bowman.die(true);
+      }
+      this.world.addChild(bowman);
+      return { index, bowman, input: new ManualInput(), local: index === 0, health, projectile: 'normal' as ProjectileType };
+    });
+  }
+
+  private playerOf(bowman: Bowman): Player {
+    return this.players.find((player) => player.bowman === bowman) ?? this.localPlayer;
+  }
+
+  /** Status line message, only for this browser's player. */
+  private localStatus(player: Player, message: string): void {
+    if (player.local) {
+      this.ctx.ui.setStatus(message);
+    }
+  }
+
   private bindInput(): void {
     const { ui } = this.ctx;
-    this.input = new InputManager({
+    this.localInput = new LocalInput(new InputManager({
       eventTarget: this.ctx.app.canvas,
       worldPointFromScreen: (point) => ({ x: point.x + this.cameraX, y: point.y }),
       maxDragDistance: 200,
       screenSize: () => ({ x: viewWidth(), y: GAME_HEIGHT }),
-    });
-
-    this.input.on(InputManager.Events.AIM, (aim: AimInput) => {
-      this.bowman.setAim(aim.direction, aim.power);
-    });
-
-    this.input.on(InputManager.Events.AIM_RELEASE, (aim: AimInput) => {
-      this.bowman.setAim(aim.direction, aim.power);
-      // Knocked down by a blast: the draw is lost.
-      if (aim.power > MIN_SHOT_POWER && !this.bowman.isStunned) {
-        this.aimOverlay.recordRelease(aim, this.bowman.getBowReleasePoint());
-        this.fireArrow(aim, aim.power);
-      }
-      this.bowman.setAim(aim.direction, 0);
-    });
+    }));
+    this.players[0] = { ...this.localPlayer, input: this.localInput };
 
     ui.handlers.toggleOptions = () => this.toggleOptions();
-    ui.handlers.selectProjectile = (type) => this.selectProjectile(type);
+    ui.handlers.selectProjectile = (type) => this.localInput?.queueProjectile(type);
     this.onExit(() => {
       ui.handlers.toggleOptions = undefined;
       ui.handlers.selectProjectile = undefined;
@@ -270,7 +300,7 @@ export class GameScene extends Scene {
       }
       const projectile = PROJECTILE_KEYS[event.code];
       if (projectile) {
-        this.selectProjectile(projectile);
+        this.localInput?.queueProjectile(projectile);
       }
       if (event.code === 'KeyO') {
         this.toggleEnemiesVisible();
@@ -280,72 +310,47 @@ export class GameScene extends Scene {
         if (this.gameEnded) {
           this.endAction?.();
         } else {
-          this.burstShrapnel();
+          this.localInput?.queueBurst();
         }
       }
     });
   }
 
+  /** Stops reading this browser's keyboard and mouse (the wave ended); the local player stands still. */
   private destroyInput(): void {
-    this.input?.destroy();
-    this.input = undefined;
+    this.localInput?.destroy();
+    this.localInput = undefined;
+    if (this.players.length > 0) {
+      this.players[0] = { ...this.localPlayer, input: new ManualInput() };
+    }
   }
 
-  private updateBowman(deltaMs: number): void {
-    const deltaSeconds = deltaMs / 1000;
-    if (this.bowman.isDead) {
-      this.bowman.moveHorizontal(0, deltaSeconds);
-      if (!this.bowman.isInTower) {
-        this.bowman.updateVertical(deltaSeconds);
-      }
-      this.bowman.updateAnimation(deltaMs, false);
-      return;
-    }
-    const direction = this.input?.getMovementDirection() ?? 0;
-    const sprinting = this.input?.isSprintDown() ?? false;
-    if (this.input?.isJumpPressed()) {
-      this.bowman.jump();
-    }
-
-    if (this.bowman.isInTower) {
-      if (direction > 0) {
-        this.exitTower();
-        this.bowman.moveHorizontal(direction, deltaSeconds, sprinting);
-      } else {
-        this.bowman.moveHorizontal(0, deltaSeconds);
-      }
-    } else {
-      this.bowman.moveHorizontal(direction, deltaSeconds, sprinting);
-      this.bowman.updateVertical(deltaSeconds);
-      if (direction < 0 && !this.bowman.isStunned && this.canEnterTower()) {
-        this.enterTower();
+  /** One player's frame: weapon picks, shots and shrapnel bursts from their controls, then moving the bowman. */
+  private updatePlayer(player: Player, deltaMs: number): void {
+    const { bowman, input } = player;
+    const projectile = input.takeProjectile();
+    if (projectile) {
+      player.projectile = projectile;
+      if (player.local) {
+        this.ctx.ui.setActiveProjectile(projectile);
+        this.ctx.ui.setStatus(PROJECTILE_LABELS[projectile]);
       }
     }
-
-    this.bowman.updateAnimation(deltaMs, direction !== 0, sprinting);
-  }
-
-  private canEnterTower(): boolean {
-    const left = this.playerTower.x - TOWER_ENTRY_ZONE_WIDTH * 0.65;
-    const top = BOWMAN_Y - TOWER_ENTRY_ZONE_HEIGHT * 0.55;
-    return this.bowman.x >= left
-      && this.bowman.x <= left + TOWER_ENTRY_ZONE_WIDTH
-      && this.bowman.y >= top
-      && this.bowman.y <= top + TOWER_ENTRY_ZONE_HEIGHT;
-  }
-
-  private enterTower(): void {
-    this.bowman.enterTower();
-    // Feet hidden behind the parapet, head and shoulders above the merlons.
-    this.bowman.setTowerPosition(PLAYER_TOWER_X, GROUND_Y - TOWER_HEIGHT + 40);
-    this.ctx.ui.setStatus('Hidden in tower · move right to exit');
-  }
-
-  private exitTower(): void {
-    this.bowman.exitTower();
-    this.bowman.setHorizontalPosition(this.playerTower.x + TOWER_EXIT_X_OFFSET);
-    this.bowman.y = groundAt(this.bowman.x);
-    this.ctx.ui.setStatus(DEFAULT_STATUS);
+    input.takeShots().forEach((aim) => {
+      bowman.setAim(aim.direction, aim.power);
+      // Knocked down by a blast (or fallen): the draw is lost.
+      if (aim.power > MIN_SHOT_POWER && !bowman.isStunned && !bowman.isDead) {
+        if (player.local) {
+          this.aimOverlay.recordRelease(aim, bowman.getBowReleasePoint());
+        }
+        this.fireArrow(player, aim, aim.power);
+      }
+      bowman.setAim(aim.direction, 0);
+    });
+    if (input.takeBurst()) {
+      this.burstShrapnel(player);
+    }
+    this.control.update(player, deltaMs);
   }
 
   private spawnEnemy(type: EnemyType): void {
@@ -362,16 +367,16 @@ export class GameScene extends Scene {
     this.world.addChild(enemy);
   }
 
-  private fireArrow(aim: AimInput, power: number): void {
-    this.arrows.forEach((arrow) => arrow.ageTrail(this.ctx.session.arrowTrails));
-    const releasePoint = this.bowman.getBowReleasePoint();
-    const type = this.selectedProjectile;
-    this.launchPlayerArrow(type, releasePoint, Math.atan2(aim.direction.y, aim.direction.x), launchSpeed(type, power));
+  private fireArrow(player: Player, aim: AimInput, power: number): void {
+    // Only this player's earlier shots lose their trails.
+    this.arrows.filter((arrow) => arrow.owner === player.index).forEach((arrow) => arrow.ageTrail(this.ctx.session.arrowTrails));
+    const releasePoint = player.bowman.getBowReleasePoint();
+    this.launchPlayerArrow(player.index, player.projectile, releasePoint, Math.atan2(aim.direction.y, aim.direction.x), launchSpeed(player.projectile, power));
     this.playSound('bowShot', releasePoint);
   }
 
   /** A player arrow (with a trail in the battleground's colours) flying from `from`. */
-  private launchPlayerArrow(type: ProjectileType, from: Vec2, angle: number, speed: number): Arrow {
+  private launchPlayerArrow(owner: number, type: ProjectileType, from: Vec2, angle: number, speed: number): Arrow {
     const trail = new Graphics();
     trail.zIndex = 1;
     this.world.addChild(trail);
@@ -380,6 +385,7 @@ export class GameScene extends Scene {
     if (type === 'fragment') {
       arrow.scale.set(FRAGMENT_SCALE);
     }
+    arrow.owner = owner;
     arrow.wind = this.wind;
     arrow.fire(angle, speed, type);
     if (this.ctx.session.arrowTrails === 0) {
@@ -390,16 +396,16 @@ export class GameScene extends Scene {
     return arrow;
   }
 
-  /** Space: every shrapnel arrow still in flight bursts into small arrows fanned around its heading. */
-  private burstShrapnel(): void {
+  /** Space: every shrapnel arrow of this player still in flight bursts into small arrows fanned around its heading. */
+  private burstShrapnel(player: Player): void {
     this.arrows
-      .filter((arrow) => arrow.isActive && !arrow.isStuck && !arrow.hostile && arrow.type === 'shrapnel')
+      .filter((arrow) => arrow.isActive && !arrow.isStuck && !arrow.hostile && arrow.type === 'shrapnel' && arrow.owner === player.index)
       .forEach((arrow) => {
         const point = { x: arrow.x, y: arrow.y };
         const fragments = shrapnelBurst(arrow.velocityVector);
         arrow.deactivate();
         fragments.forEach((velocity) => {
-          this.launchPlayerArrow('fragment', point, Math.atan2(velocity.y, velocity.x), Math.hypot(velocity.x, velocity.y));
+          this.launchPlayerArrow(player.index, 'fragment', point, Math.atan2(velocity.y, velocity.x), Math.hypot(velocity.x, velocity.y));
         });
         this.effects.impact(point);
         this.playSound('shrapnelBurst', point);
@@ -426,16 +432,10 @@ export class GameScene extends Scene {
     this.ctx.sound.play(id, spatialMix(at.x, this.cameraX, viewWidth()));
   }
 
-  private selectProjectile(type: ProjectileType): void {
-    this.selectedProjectile = type;
-    this.ctx.ui.setActiveProjectile(type);
-    this.ctx.ui.setStatus(PROJECTILE_LABELS[type]);
-  }
-
   private toggleOptions(): void {
     this.optionsVisible = !this.optionsVisible;
     this.ctx.ui.setOptionsVisible(this.optionsVisible);
-    this.input?.cancelAim();
+    this.localInput?.cancelAim();
   }
 
   private toggleEnemiesVisible(): void {
@@ -447,22 +447,24 @@ export class GameScene extends Scene {
     this.debugGraphics.clear();
   }
 
+  /** The local player's aim circles and predicted path. */
   private updateAim(): void {
-    const aim = this.input?.getAim();
-    const hasAim = aim !== undefined && aim.power > 0 && !this.bowman.isStunned;
-    const releasePoint = this.bowman.getBowReleasePoint();
-    this.aimOverlay.draw(releasePoint, hasAim ? aim : undefined, hasAim ? this.predictTrajectory(aim, releasePoint) : []);
+    const { bowman, input, projectile } = this.localPlayer;
+    const aim = input.getAim();
+    const hasAim = aim !== undefined && !bowman.isStunned && !bowman.isDead;
+    const releasePoint = bowman.getBowReleasePoint();
+    this.aimOverlay.draw(releasePoint, hasAim ? aim : undefined, hasAim ? this.predictTrajectory(aim, releasePoint, projectile) : []);
   }
 
   /** Path the arrow would take if released now (same integrator, gravity and drag as real arrows). */
-  private predictTrajectory(aim: AimInput, releasePoint: Vec2): Vec2[] {
+  private predictTrajectory(aim: AimInput, releasePoint: Vec2, projectile: ProjectileType): Vec2[] {
     const power = aim.power;
     if (!this.ctx.session.showTrajectory || power <= MIN_SHOT_POWER) {
       return [];
     }
-    const speed = launchSpeed(this.selectedProjectile, power);
+    const speed = launchSpeed(projectile, power);
     const velocity = { x: aim.direction.x * speed, y: aim.direction.y * speed };
-    return simulateTrajectory(releasePoint, velocity, Arrow.getFlightParams(this.selectedProjectile, this.wind), {
+    return simulateTrajectory(releasePoint, velocity, Arrow.getFlightParams(projectile, this.wind), {
       // Same surface (and offset) at which flying arrows stick into the ground.
       groundY: (x) => groundAt(x) - 3,
       minX: 0,
@@ -474,8 +476,9 @@ export class GameScene extends Scene {
     this.ctx.ui.updateHud({
       towerHealth: this.playerTower.getHealth(),
       towerMaxHealth: this.playerTower.maxHealth,
-      bowmanHealth: this.bowmanHealth,
+      bowmanHealth: this.localPlayer.health,
       bowmanMaxHealth: this.ctx.session.sandbox.bowmanHealth,
+      partnerHealth: this.coop ? this.players[1].health : undefined,
       defeatedEnemies: this.defeatedEnemies(),
       totalEnemies: this.totalEnemies,
       wave: this.ctx.session.run.waveIndex + 1,
@@ -484,9 +487,9 @@ export class GameScene extends Scene {
   }
 
   private updateCamera(): void {
-    // Follows the bowman; a view wider than the world shows all of it, centred, with landscape either side.
+    // Follows the local bowman; a view wider than the world shows all of it, centred, with landscape either side.
     const width = viewWidth();
-    const target = width >= WORLD_WIDTH ? centeredCameraX(width) : clamp(this.bowman.x - width / 2, 0, WORLD_WIDTH - width);
+    const target = width >= WORLD_WIDTH ? centeredCameraX(width) : clamp(this.localPlayer.bowman.x - width / 2, 0, WORLD_WIDTH - width);
     this.cameraX = this.cameraPlaced ? this.cameraX + (target - this.cameraX) * CAMERA_SMOOTHING : target;
     this.cameraPlaced = true;
     const shake = this.effects.cameraShake;
@@ -494,10 +497,15 @@ export class GameScene extends Scene {
   }
 
   private checkEndConditions(): void {
-    if (this.bowmanHealth <= 0 || this.playerTower.isDestroyed()) {
-      if (this.bowmanHealth <= 0) {
-        this.bowman.die();
+    // A bowman at 0 falls (for the rest of the run); the wave is lost once all of them have, or the keep.
+    this.players.filter((player) => player.health <= 0 && !player.bowman.isDead).forEach((player) => {
+      player.bowman.die();
+      if (this.coop) {
+        this.ctx.ui.setStatus(player.local ? 'You have fallen · your partner fights on' : 'Your partner has fallen · hold on alone');
       }
+    });
+    const bowmen = this.players.map((player) => player.bowman);
+    if (livingBowmen(bowmen).length === 0 || this.playerTower.isDestroyed()) {
       this.endGame(false);
       return;
     }
@@ -534,7 +542,10 @@ export class GameScene extends Scene {
     const stats = [
       { label: 'enemies defeated', value: `${this.defeatedEnemies()} / ${this.totalEnemies}` },
       { label: 'keep', value: `${Math.ceil(this.playerTower.getHealth())} / ${this.playerTower.maxHealth}` },
-      { label: 'bowman', value: `${Math.ceil(this.bowmanHealth)} / ${sandbox.bowmanHealth}` },
+      ...this.players.map((player) => ({
+        label: this.coop ? `player ${player.index + 1}` : 'bowman',
+        value: `${Math.ceil(player.health)} / ${sandbox.bowmanHealth}`,
+      })),
     ];
     if (hasNextWave) {
       ui.showEndScreen({
@@ -546,7 +557,7 @@ export class GameScene extends Scene {
         onButton: this.endAction = () => {
           session.run = {
             waveIndex: run.waveIndex + 1,
-            bowmanHealth: this.bowmanHealth,
+            bowmanHealths: this.players.map((player) => player.health),
             keepHealth: this.playerTower.getHealth(),
             enemyKeepHealth: this.enemyTower.getHealth(),
           };
@@ -561,7 +572,7 @@ export class GameScene extends Scene {
       stats,
       copy: won
         ? (this.enemyTower.isDestroyed() ? 'The enemy keep has fallen.' : sandbox.waveCount === 1 ? 'The wave is held off.' : `All ${sandbox.waveCount} waves held off.`)
-        : `${this.playerTower.isDestroyed() ? 'The keep has fallen' : 'The bowman has fallen'}. Adjust the sandbox and try again.`,
+        : `${this.playerTower.isDestroyed() ? 'The keep has fallen' : this.coop ? 'Both bowmen have fallen' : 'The bowman has fallen'}. Adjust the sandbox and try again.`,
       buttonLabel: 'Back to sandbox setup',
       onButton: this.endAction = () => this.ctx.goTo('sandbox'),
     });

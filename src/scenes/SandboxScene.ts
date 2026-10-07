@@ -1,6 +1,6 @@
 import { Container } from 'pixi.js';
 import { ENEMY_KEEP_HEALTH } from '../config';
-import { Scene } from '../core/Scene';
+import { Scene, newRun } from '../core/Scene';
 import { centeredCameraX } from '../core/viewport';
 import { saveSandbox } from '../core/sandboxStorage';
 import { BATTLEGROUNDS } from '../data/battlegrounds';
@@ -72,12 +72,7 @@ export class SandboxScene extends Scene {
 
   private startRun(): void {
     const { session } = this.ctx;
-    session.run = {
-      waveIndex: 0,
-      bowmanHealth: session.sandbox.bowmanHealth,
-      keepHealth: session.sandbox.keepHealth,
-      enemyKeepHealth: ENEMY_KEEP_HEALTH,
-    };
+    session.run = newRun(session.sandbox, session.playerCount, ENEMY_KEEP_HEALTH);
     this.ctx.goTo('game');
   }
 }

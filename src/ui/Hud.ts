@@ -5,6 +5,8 @@ export interface HudValues {
   towerMaxHealth: number;
   bowmanHealth: number;
   bowmanMaxHealth: number;
+  /** Co-op: the second player's health (no second bar without it). */
+  partnerHealth?: number;
   defeatedEnemies: number;
   totalEnemies: number;
   wave: number;
@@ -28,6 +30,10 @@ export class Hud {
   private readonly towerValue: HTMLElement;
   private readonly bowmanBar: HTMLElement;
   private readonly bowmanValue: HTMLElement;
+  private readonly bowmanLabel: HTMLElement;
+  private readonly partnerChip: HTMLElement;
+  private readonly partnerBar: HTMLElement;
+  private readonly partnerValue: HTMLElement;
   private readonly wave: HTMLElement;
   private readonly pips: HTMLElement;
   private readonly waveBar: HTMLElement;
@@ -46,6 +52,10 @@ export class Hud {
     this.towerValue = query('[data-tower-health]');
     this.bowmanBar = query('[data-bowman-bar]');
     this.bowmanValue = query('[data-bowman-health]');
+    this.bowmanLabel = query('[data-bowman-label]');
+    this.partnerChip = query('[data-bowman2-chip]');
+    this.partnerBar = query('[data-bowman2-bar]');
+    this.partnerValue = query('[data-bowman2-health]');
     this.wave = query('[data-wave]');
     this.pips = query('[data-enemy-pips]');
     this.waveBar = query('[data-wave-bar]');
@@ -57,6 +67,13 @@ export class Hud {
     this.towerValue.textContent = `${Math.ceil(values.towerHealth)} / ${values.towerMaxHealth}`;
     Hud.setBar(this.bowmanBar, values.bowmanHealth / values.bowmanMaxHealth);
     this.bowmanValue.textContent = `${Math.ceil(values.bowmanHealth)} / ${values.bowmanMaxHealth}`;
+    const coop = values.partnerHealth !== undefined;
+    this.partnerChip.hidden = !coop;
+    this.bowmanLabel.textContent = coop ? 'Player 1' : 'Bowman';
+    if (coop) {
+      Hud.setBar(this.partnerBar, values.partnerHealth! / values.bowmanMaxHealth);
+      this.partnerValue.textContent = `${Math.ceil(values.partnerHealth!)} / ${values.bowmanMaxHealth}`;
+    }
     this.wave.textContent = `${values.wave} / ${values.waveCount}`;
     this.enemyCount.textContent = `${values.defeatedEnemies} of ${values.totalEnemies} defeated`;
 

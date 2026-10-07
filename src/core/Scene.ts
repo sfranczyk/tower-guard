@@ -14,16 +14,27 @@ export interface GameTextures {
 /** A sandbox run in progress: which wave is next and the health carried between waves. */
 export interface RunState {
   waveIndex: number;
-  bowmanHealth: number;
+  /** One per player; a bowman at 0 stays fallen for the rest of the run. */
+  bowmanHealths: number[];
   keepHealth: number;
   enemyKeepHealth: number;
 }
+
+/** A fresh run: wave 1, every bowman and both keeps at full health. */
+export const newRun = (sandbox: SandboxSettings, playerCount: number, enemyKeepHealth: number): RunState => ({
+  waveIndex: 0,
+  bowmanHealths: Array.from({ length: playerCount }, () => sandbox.bowmanHealth),
+  keepHealth: sandbox.keepHealth,
+  enemyKeepHealth,
+});
 
 /** State that survives between scenes. */
 export interface GameSession {
   /** Setup from the sandbox screen (remembered in localStorage). */
   sandbox: SandboxSettings;
   run: RunState;
+  /** Bowmen in the battle: 1, or 2 in co-op (for now `?coop` in the URL; the online lobby comes later). */
+  playerCount: number;
   /** Draw the predicted arrow path while aiming (settings drawer, off by default). */
   showTrajectory: boolean;
   /** How many of the latest shots keep their trail (settings drawer, 0 = none, up to MAX_ARROW_TRAILS). */
