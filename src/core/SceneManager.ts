@@ -45,7 +45,7 @@ export class SceneManager {
     };
 
     ui.handlers.start = () => this.goTo('sandbox');
-    ui.handlers.openGame = () => this.goTo('sandbox');
+    ui.handlers.labMenu = () => this.goTo('menu');
     ui.handlers.openCoop = () => this.goTo('coop');
     ui.handlers.openAnimationLab = () => this.goTo('animationLab');
     ui.handlers.openSoundLab = () => this.goTo('soundLab');

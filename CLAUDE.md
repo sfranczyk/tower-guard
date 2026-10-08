@@ -8,8 +8,8 @@ enemy waves walk in from beyond the enemy keep on the right. PixiJS 8 + TypeScri
 - `npm run dev`: dev server on http://localhost:8080 (or `$PORT`) (add `?debug` to show hitboxes)
   - With `?debug`, `window.__towerGuard.scene` exposes the running `GameScene` in the console, e.g.
     `scene.enemies[0].takeDamage(999, { cause: 'headshot', fromX: 0 })`.
-  - `?lab` opens the animation lab directly, and `?lab=<id>` (e.g. `?lab=archer`) opens one animation zoomed in.
-    Ids are in `AnimationLabScene`.
+  - `?lab` opens the animation lab directly, `?lab=<tab>` one of its tabs (e.g. `?lab=death`) and `?lab=<id>` (e.g.
+    `?lab=run`) one animation zoomed in. Ids are in `scenes/labRows.ts`.
   - `?designs` opens the design lab (menu → Dev tools → "Design lab"); `?designs=<tab or design id>` (e.g. `player`, `fighter`).
   - `?sounds` opens the sound test panel (menu → "Open sound test panel"): every effect and each of its
     variants, the theme with a jump to its loop seam, and the volumes.
@@ -60,7 +60,7 @@ src/
   and a killed bowman falls like the enemies (`Bowman.die()`): CombatSystem tells what hurt him (`BowmanHit`,
   `bowman.noteHit`) and `deathFallFor` (`systems/bowmanDeath.ts`, pure, tested) picks the fall: clubbed → collapse or
   crumple, shot → stiff fall or crumple, burnt → crumple, lightning → stiff, a blast leaves him lying from the
-  knockback; he falls as if hit from where it came (co-op: the `die` event carries the fall). Lab row: `archer-deaths`.
+  knockback; he falls as if hit from where it came (co-op: the `die` event carries the fall). Lab rows: Death tab.
   Within a level enemies arrive in waves (`systems/waveDirector.ts`, pure, tested; not shown in the UI yet):
   `planWaves` spreads each type through the level (tougher types later, by their `arrival`, so the first wave of
   `FIRST_WAVE_SIZE` is light) in waves growing by `WAVE_SIZE_STEP` to `MAX_WAVE_SIZE`; `WaveDirector.update` (called every frame, so it
@@ -193,7 +193,7 @@ src/
   enemies) and hurts the bowman (unless he's in the keep) and the keep within `KAMIKAZE_REACH` × the radius. It also knocks
   the bowman down (`Bowman.knockBack`, `BOWMAN_KNOCKBACK`): stickmanFall's `knockback` then `getUp`, drawn in his
   armor by `drawArmoredJointPose` (`rendering/armoredPose.ts`), sliding further the closer he stood; meanwhile
-  (`isStunned`) he can't move, jump, aim or enter the keep. Killed by it, he stays lying on his back. Lab row: `archer-knockdown`.
+  (`isStunned`) he can't move, jump, aim or enter the keep. Killed by it, he stays lying on his back. Lab row: `knockback`.
   Killed by a direct explosive hit, a kamikaze sets its bomb off: `explode` with `power` = `KAMIKAZE_BLAST_POWER`
   (2: twice the radius and damage, `EffectsSystem.explosion(point, scale)`) where it stood. A kamikaze blown apart
   (that, or its own bomb) throws its pieces `KAMIKAZE_GIB_FORCE` times harder.
@@ -201,7 +201,7 @@ src/
   `ZOMBIE_REST`), attacks with the `'grab'` style (lunge, then yank both hands back to the chest; the hit lands
   on the yank) and is pale green with green blood: `BodyColors` (`rendering/bodyColors.ts`, `HUMAN_BODY` /
   `ZOMBIE_BODY`) colour drawStickman, joint poses (falls, cheers), gibs and `EffectsSystem.bloodBurst`
-  (`enemy.bodyColors`). Lab rows: `kamikaze-run`, `zombie-walk`, `zombie-attack`.
+  (`enemy.bodyColors`). Lab rows: `zombie-shuffle`, `zombie-grab`.
 - **Enemy looks** (`ENEMY_LOOKS` in `data/enemies.ts`): size, club swing and gait per type. The walk/run phase
   advances with the distance covered (`Enemy.stridePhase`, `WALK_STRIDE_PER_RADIAN` / `RUN_STRIDE_PER_RADIAN` × body
   scale), so feet stay planted at any speed and size; `stepMs` only sets the sway of standing poses. Runners run (run
@@ -256,7 +256,7 @@ src/
   then thrusts it forward with the jaw open (`pose.jaw`, `pose.mouth`) for `FIRE_BREATH.flameMs`; `firePuffs` is
   the stream (puffs fly ~`FIRE_REACH` out, swell, cool to smoke and rise), drawn into `DragonEnemy.fireArt`.
   The stream goes along the aim (the head tilts less by half the jaw opening); `getFlames` gives its hot puffs
-  in world space. Lab rows: `fire-dragon`, `fire-dragon-breath`.
+  in world space. Lab row: `fire-breath`.
   Killed by a direct explosive hit (cause `'blast'`), the fire dragon blows up: `CombatSystem.explode` with
   `power` = `FIRE_DRAGON_BLAST_POWER` (3: three times the radius and damage) centred on its body, `EffectsSystem.dragonBlast`
   (an explosion that size in a swarm of fireballs and a dark cloud), the dragon bursts into `DragonGibSimulation`
@@ -267,7 +267,7 @@ src/
   damage (applied in `CombatSystem.update`) for `BURN_DURATION_MS` after the last touch, so staying in the fire
   keeps relighting it. Flames (`rendering/burning.ts`, pure `burnFlames` / `burnSmoke`): translucent tongues
   from the feet, knees, hip, chest, shoulder and head of the current pose (standing, toppling or the knockdown's
-  fall pose) with smoke rising, drawn into `Bowman.flameArt` at `BURN_FLAME_SIZE`. Lab row: `archer-burning`.
+  fall pose) with smoke rising, drawn into `Bowman.flameArt` at `BURN_FLAME_SIZE`. Lab row: `burning`.
 - **Dragon rider** (`rendering/dragon.ts`, also used by the lab): `getDragonPose` is pure (tested: loop, rider in the
   saddle, smooth wings); side-view wing beat with foreshortening, body bob, undulating neck and tail; the
   rider is a JointPose sitting astride: the far leg is drawn before the dragon's body (`drawRearLeg`) so it's
@@ -303,8 +303,11 @@ src/
   are, so a look covers every animation and keeps the hitboxes. `skinKit.ts` places parts in the torso/head frames (works
   lying down too) and `drawHumanoid` draws a `HumanoidLook`; looks are in `enemySkins.ts`, `heavySkins.ts`,
   `playerSkins.ts`; the ideas in `ideas.ts` (+ `ideaHumanoids.ts`, `ideaCreatures.ts`, own `designSkeleton.ts`).
-- **Animation lab** (drawn in Pixi on a cream panel over the meadow, matching the HTML UI) rows live in `scenes/AnimationLabScene.ts`, and scripted sequences in
-  `scenes/labSequences.ts`. Add new animations there so they can be previewed and zoomed.
+- **Animation lab** (drawn in Pixi on a cream panel over the meadow, matching the HTML UI; "← Menu" goes back to the
+  menu, as in the design lab): every animation once, on the bare skeleton (dragons as in the game), in tabs Movement,
+  Combat, Hurt, Death, Cheer. The rows are `LAB_CATEGORIES` in `scenes/labRows.ts` (one per move: the player and the
+  enemies share them, their looks are in the design lab), the looping falls and gibs in `scenes/labSequences.ts`.
+  Add new animations there so they can be previewed and zoomed.
 - **Archer pose**: bow, hands and elbows come from `getArcherRig()` in `rendering/archer.ts`. It pivots
   at the neck and is drawn inside the stickman sprite, so the hands can't drift from the bow.
   `Bowman.getBowReleasePoint()` uses the same rig (string hand). Don't add a separately positioned bow.
@@ -331,7 +334,7 @@ src/
   `pinDurationMs` (`PIN_DURATION_MS` 20 s, zombies `PIN_DURATION_ZOMBIE_MS` 20 s too; brutes and dragons can't be
   pinned and just take the scratch). A pinned enemy plays the struggle (`rendering/stickmanPinned.ts`, pure, tested, kept moderate: leans on the free leg,
   the stuck rear foot at `PINNED_FOOT` yanks him back, looks down at it; the arrow goes in at `Enemy.pinnedFootPoint`)
-  but can still swing or shoot; co-op sends the time left (`EnemySnap.pinned`). Lab row: `pinned-struggle`.
+  but can still swing or shoot; co-op sends the time left (`EnemySnap.pinned`). Lab row: `pinned`.
   Enemy archers shoot at the plain `bowSpeed`, so player arrow tuning doesn't change them. Piercing is light (fast, flat, long) and explosive is heavy (short high arc).
 - **Fire, frost and vortex arrows** (slots from the quiver; tuning `FIRE_*`, `ENEMY_BURN_*`, `FROST_*`, `VORTEX_*`,
   `THROW_GRAVITY`, `FALL_DAMAGE` in config). Fire and frost hit weaker (`MAGIC_HIT_DAMAGE` in CombatSystem), a vortex

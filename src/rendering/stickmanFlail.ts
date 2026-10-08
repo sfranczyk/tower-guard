@@ -1,3 +1,4 @@
+import { FLAIL_SPEED } from '../config';
 import type { Vec2 } from '../types';
 import { STICKMAN_HEAD } from './stickman';
 import type { JointPose } from './stickmanPose';
@@ -19,9 +20,9 @@ const HEAD_OFFSET = -STICKMAN_HEAD.y - TORSO;
 /** Angles: 0 = pointing down, +π/2 = forward (+x). */
 const limb = (from: Vec2, angle: number, length: number): Vec2 => ({ x: from.x + Math.sin(angle) * length, y: from.y + Math.cos(angle) * length });
 
-/** The flailing pose `timeMs` into the throw (arms windmill once every ~420 ms, legs kick faster). */
+/** The flailing pose `timeMs` into the throw (at FLAIL_SPEED 1 the arms windmill once every ~420 ms, legs kick faster). */
 export const getFlailPose = (timeMs: number): JointPose => {
-  const t = timeMs / 1000;
+  const t = (timeMs / 1000) * FLAIL_SPEED;
   const torso = Math.sin(t * 7) * 0.22;
   const hip = { x: 0, y: 0 };
   const shoulder = { x: Math.sin(torso) * TORSO, y: -Math.cos(torso) * TORSO };

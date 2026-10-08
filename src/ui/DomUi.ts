@@ -49,7 +49,8 @@ export interface UiHandlers {
   openAnimationLab?: () => void;
   openSoundLab?: () => void;
   openDesignLab?: () => void;
-  openGame?: () => void;
+  /** Animation and design lab: back to the main menu. */
+  labMenu?: () => void;
   /** Animation lab: leave the zoomed view and return to the list. */
   labBack?: () => void;
   toggleOptions?: () => void;
@@ -181,7 +182,7 @@ export class DomUi {
     this.onClick('[data-open-test]', () => this.handlers.openAnimationLab?.());
     this.onClick('[data-open-sound-lab]', () => this.handlers.openSoundLab?.());
     this.onClick('[data-open-design-lab]', () => this.handlers.openDesignLab?.());
-    this.onClick('[data-open-game]', () => this.handlers.openGame?.());
+    this.onClick('[data-lab-menu]', () => this.handlers.labMenu?.());
     this.onClick('[data-lab-back]', () => this.handlers.labBack?.());
     this.onClick('[data-options]', () => this.handlers.toggleOptions?.());
     this.onClick('[data-close-options]', () => this.handlers.toggleOptions?.());

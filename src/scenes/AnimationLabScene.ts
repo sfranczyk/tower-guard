@@ -1,30 +1,19 @@
 import { Container, Graphics, Rectangle, Text } from 'pixi.js';
-import { BACKDROP_WIDTH, BOWMAN_KNOCKBACK, GAME_HEIGHT, GAME_WIDTH, SHOW_HITBOX_DEBUG } from '../config';
+import { BACKDROP_WIDTH, GAME_HEIGHT, GAME_WIDTH, SHOW_HITBOX_DEBUG } from '../config';
 import { Scene } from '../core/Scene';
 import { centeredCameraX, viewWidth } from '../core/viewport';
 import { LAB_PARAM, getUrlParam, setUrlParam } from '../core/urlState';
 import { BATTLEGROUNDS } from '../data/battlegrounds';
 import { Background } from '../rendering/Background';
-import { armoredFallPose, drawArmoredJointPose } from '../rendering/armoredPose';
-import { drawBowmanFall } from '../rendering/bowmanBody';
-import { STANDING_BURN_POINTS, drawBurning } from '../rendering/burning';
-import { ZOMBIE_BODY } from '../rendering/bodyColors';
-import { drawStickman } from '../rendering/stickman';
-import { DRAGON_PALETTES, type DragonPose } from '../rendering/dragon';
-import { drawDragonRider } from '../rendering/dragonArt';
-import { FIRE_BREATH_MS, breathControl, drawFireStream } from '../rendering/dragonFire';
-import { DRAGON_DEATH_MS, drawDragonDeath, type DragonDeathKind } from '../rendering/dragonDeath';
-import { drawStickmanCheer } from '../rendering/stickmanCheer';
-import { drawPinnedStruggle } from '../rendering/stickmanPinned';
-import { ArcherReadySequence, FallClock, GibReplay, PausingWalk, RUN_PHASE_MS, WALK_PHASE_MS, WalkRunSequence } from './labSequences';
+import { LAB_CATEGORIES, LabClock, type LabCategory, type LabRow } from './labRows';
 
 /** The cream panel the lab sits on (same look as the HTML panels), over the meadow. */
 const PANEL = { x: 14, y: 12, width: GAME_WIDTH - 28, height: GAME_HEIGHT - 24, radius: 20 };
+const TABS = { x: 300, y: 22, width: 104, height: 30, gap: 8 };
 const LIST_TOP = 84;
 const LIST_BOTTOM = PANEL.y + PANEL.height - 10;
 /** Rows visible at once; the rest scroll with the mouse wheel. */
-const VISIBLE_ROWS = 8;
-const DRAGON_DEATH_PAUSE_MS = 1200;
+const VISIBLE_ROWS = 7;
 const ROW_HEIGHT = (LIST_BOTTOM - LIST_TOP) / VISIBLE_ROWS;
 /** Previews are drawn smaller so every full-height stickman fits one under another. */
 const PREVIEW_SCALE = 0.4;
@@ -34,388 +23,31 @@ const DISPLAY_FONT = 'Fredoka, ui-rounded, system-ui, sans-serif';
 const BODY_FONT = 'ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif';
 /** UI palette (index.html tokens). */
 const COLORS = { panel: 0xf6f1e4, panelEdge: 0xded3ba, panelSunk: 0xebe3d0, ink: 0x2c3a38, inkSoft: 0x66756f, accent: 0x3f6965 } as const;
+/** Tiles: dark slate so the white skeleton reads; dragons get the sky. */
+const GROUND_BACKDROP = 0x2c4448;
+const SKY_BACKDROP = 0x80b8d1;
 
 const ZOOM_SCALE = 2.4;
 const ZOOM_FIGURE_X = 280;
 const ZOOM_TEXT_X = 520;
 
-type PreviewRow = {
-  /** Stable id used in the URL (?lab=<id>). */
-  id: string;
-  title: string;
-  description: string;
-  /** Backdrop behind the figure; the dark armored archer needs the light in-game sky colour. */
-  backdrop?: number;
-  /** Draws the current frame of this animation; `originY: 0` keeps the hip at the sprite origin. */
-  render: (sprite: Graphics) => void;
-  /** Shifts the figure right (unscaled units) for animations that travel left, so they stay centred. */
-  offsetX?: number;
-  /** Flying animations get no ground line under them. */
-  flying?: boolean;
-  /** Scale overrides for animations that spread wide (default PREVIEW_SCALE / ZOOM_SCALE). */
-  previewScale?: number;
-  zoomScale?: number;
-};
-
-/** Preview tiles: dark slate so the white skeletons read; the armored archer gets the sky. */
-const DEFAULT_BACKDROP = 0x2c4448;
-const SKY_BACKDROP = 0x80b8d1;
-
-/** Burning row: catches fire, burns for a while, burns out, a pause, again. */
-const LAB_BURN = { catchMs: 250, burnMs: 3000, fadeMs: 700, pauseMs: 900 };
-const labBurnIntensity = (timeMs: number): number => {
-  const { catchMs, burnMs, fadeMs, pauseMs } = LAB_BURN;
-  const t = timeMs % (catchMs + burnMs + fadeMs + pauseMs);
-  if (t < catchMs) {
-    return t / catchMs;
-  }
-  if (t < catchMs + burnMs) {
-    return 1;
-  }
-  return Math.max(0, 1 - (t - catchMs - burnMs) / fadeMs);
-};
-
-/** Fire breath row: flight before each breath, and the aim (radians below level). */
-const FIRE_BREATH_LAB_PAUSE_MS = 1200;
-const FIRE_BREATH_LAB_AIM = 0.55;
-
 /**
- * Every stickman animation in its own row with a description. Clicking a row zooms into it; the
- * zoomed animation is kept in the URL (?lab=<id>) so it survives a refresh.
+ * Every animation once, on the bare skeleton, in tabs by what it is for (labRows.ts). Clicking a row zooms
+ * into it; the tab or zoomed animation is kept in the URL (?lab=<category or row id>) so it survives a refresh.
  */
 export class AnimationLabScene extends Scene {
-  private readonly rows: PreviewRow[] = [
-    {
-      id: 'archer',
-      backdrop: SKY_BACKDROP,
-      title: 'Armored archer · bow draw',
-      description: 'Player character. Draw tension cycles 25–100%; bow, hands and arrow come from the shared rig.',
-      render: (sprite) => drawStickman(sprite, 0, {
-        idleBlend: 1,
-        archerPose: true,
-        bowTension: 0.25 + (Math.sin(this.archerPhase) + 1) * 0.375,
-        skin: 'armored',
-        originY: 0,
-      }),
-    },
-    {
-      id: 'archer-lowered',
-      backdrop: SKY_BACKDROP,
-      title: 'Archer · standing, bow lowered',
-      description: 'Default stance in game: bow held low, pointing at the ground ahead; the other arm hangs free.',
-      render: (sprite) => drawStickman(sprite, 0, {
-        idleBlend: 1, archerPose: true, bowReady: 0, skin: 'armored', originY: 0,
-      }),
-    },
-    {
-      id: 'archer-lowered-walk',
-      backdrop: SKY_BACKDROP,
-      title: 'Archer · walking, bow lowered',
-      description: 'Walk cycle carrying the lowered bow; the free arm swings with the steps.',
-      render: (sprite) => drawStickman(sprite, this.archerWalkPhase, {
-        archerPose: true, bowReady: 0, skin: 'armored', originY: 0,
-      }),
-    },
-    {
-      id: 'archer-ready',
-      backdrop: SKY_BACKDROP,
-      title: 'Archer · walk → stop → raise & draw → walk drawn → stop → lower',
-      description: 'Bow comes up to aim and the string is drawn, walks with it drawn, then releases and lowers.',
-      render: (sprite) => this.archerSequence.render(sprite),
-    },
-    {
-      id: 'walk',
-      title: 'Walk cycle with idle pauses',
-      description: 'Walks 5 steps, blends into a standing pose and holds it for 3 s, then walks again.',
-      render: (sprite) => drawStickman(sprite, this.pausingWalk.phase, { idleBlend: this.pausingWalk.idleBlend, originY: 0 }),
-    },
-    {
-      id: 'sequence',
-      title: 'Sequence: walk → stand → walk → run → walk',
-      description: '5 steps, stand for 2 s, 2 steps, then 10 running steps with 0.4 s blends in and out.',
-      render: (sprite) => this.walkRunSequence.render(sprite),
-    },
-    {
-      id: 'sprint',
-      title: 'Sprint cycle',
-      description: 'Contact, stance on the ground, push-off, heel kick, high knee drive and a short flight phase.',
-      render: (sprite) => drawStickman(sprite, this.runPhase, { running: true, originY: 0 }),
-    },
-    {
-      id: 'enemy-walk',
-      title: 'Enemy walk (armed)',
-      description: 'Walk cycle with a club in the front hand; pauses together with the plain walk.',
-      render: (sprite) => drawStickman(sprite, this.pausingWalk.phase, { idleBlend: this.pausingWalk.idleBlend, armed: true, originY: 0 }),
-    },
-    {
-      id: 'enemy-attack',
-      title: 'Enemy club attack',
-      description: 'Whole-body club swing: winds the club up behind the head leaning back, strikes down with a forward lunge and dip, then recovers smoothly to the stance (no jump at either end).',
-      render: (sprite) => drawStickman(sprite, 0, { idleBlend: 1, armed: true, attackPhase: this.attackPhase, originY: 0 }),
-    },
-    {
-      id: 'dragon-rider',
-      title: 'Dragon rider (flying)',
-      description: 'A red dragon beating its wings in a loop (the far wing a beat behind), bobbing up on each downstroke with its neck and tail undulating; the rider sits astride (far leg hidden behind the dragon) with the reins and a raised spear.',
-      backdrop: SKY_BACKDROP,
-      flying: true,
-      previewScale: 0.17,
-      zoomScale: 1.15,
-      offsetX: 25,
-      render: (sprite) => drawDragonRider(sprite, this.cheerTime),
-    },
-    {
-      id: 'dragon-archer',
-      title: 'Dragon archer (flying)',
-      description: 'The dark brown, nearly black dragon with an archer astride (far leg hidden behind the dragon): bow aimed down ahead, drawing the string and loosing an arrow every 1.6 s.',
-      backdrop: SKY_BACKDROP,
-      flying: true,
-      previewScale: 0.17,
-      zoomScale: 1.15,
-      offsetX: 25,
-      render: (sprite) => drawDragonRider(sprite, this.cheerTime, 'archer', undefined, DRAGON_PALETTES.dark),
-    },
-    {
-      id: 'fire-dragon',
-      title: 'Fire dragon (flying)',
-      description: 'The red fire dragon in flight; its rider carries no weapon and holds the reins in both hands.',
-      backdrop: SKY_BACKDROP,
-      flying: true,
-      previewScale: 0.17,
-      zoomScale: 1.15,
-      offsetX: 25,
-      render: (sprite) => drawDragonRider(sprite, this.cheerTime, 'unarmed', undefined, DRAGON_PALETTES.red),
-    },
-    {
-      id: 'fire-dragon-breath',
-      title: 'Fire dragon · fire breath',
-      description: 'Rears its head back to draw breath, then thrusts it forward with the jaw wide open and pours a long stream of fire down ahead for 2.6 s; the flames swell, cool from white-hot to red and smoke, and the tail of the stream burns out after the mouth closes.',
-      backdrop: SKY_BACKDROP,
-      flying: true,
-      previewScale: 0.075,
-      zoomScale: 0.36,
-      offsetX: -380,
-      render: (sprite) => this.drawFireBreath(sprite),
-    },
-    {
-      id: 'dragon-death',
-      title: 'Dragon death (rider thrown off)',
-      description: 'Hit mid-flight: the wings freeze, the dragon drops tipping nose-down and lands lying flat (neck, head and tail on the ground, the near wing draped over its side, the far wing folded out of sight). The archer is thrown off backwards with his arms and legs flung out, tumbles and ends lying flat on his back; his bow lands beside him.',
-      backdrop: SKY_BACKDROP,
-      previewScale: 0.12,
-      zoomScale: 1,
-      offsetX: 85,
-      render: (sprite) => this.drawDragonDeath(sprite, 'fall'),
-    },
-    {
-      id: 'dragon-explosion',
-      title: 'Dragon explosion',
-      description: 'An explosion blows the dragon into about twenty-five chunks (each wing in four, the body in six wedges, neck and tail in segments, the head) that bounce, tip over and settle flat on the ground, and the rider bursts apart with blood.',
-      backdrop: SKY_BACKDROP,
-      previewScale: 0.12,
-      zoomScale: 1,
-      offsetX: 85,
-      render: (sprite) => this.drawDragonDeath(sprite, 'explode'),
-    },
-    {
-      id: 'dragon-rider-explosion',
-      title: 'Dragon rider explosion',
-      description: 'Only the rider is blown apart (pieces and blood fall from the saddle height); the dragon dies and falls to lie flat as in the dragon death.',
-      backdrop: SKY_BACKDROP,
-      previewScale: 0.12,
-      zoomScale: 1,
-      offsetX: 85,
-      render: (sprite) => this.drawDragonDeath(sprite, 'riderExplode'),
-    },
-    {
-      id: 'runner-run',
-      title: 'Runner: run with a short club',
-      description: 'Runners sprint in with the full run cycle, carrying the short club they swing from below.',
-      render: (sprite) => drawStickman(sprite, this.runPhase, { running: true, armed: true, attackStyle: 'uppercut', originY: 0 }),
-    },
-    {
-      id: 'brute-walk',
-      title: 'Brute: walk with a long club',
-      description: 'Brutes are half again as tall in the game and carry a long club in both hands (shown at normal size here).',
-      render: (sprite) => drawStickman(sprite, this.pausingWalk.phase, { idleBlend: this.pausingWalk.idleBlend, armed: true, attackStyle: 'twoHanded', originY: 0 }),
-    },
-    {
-      id: 'enemy-attack-two-handed',
-      title: 'Enemy two-handed attack',
-      description: 'A longer club gripped with both hands: a big wind-up far behind the head, then a heavy chop into a deep lunge.',
-      render: (sprite) => drawStickman(sprite, 0, { idleBlend: 1, armed: true, attackStyle: 'twoHanded', attackPhase: this.attackPhase, originY: 0 }),
-    },
-    {
-      id: 'enemy-attack-uppercut',
-      title: 'Enemy uppercut attack',
-      description: 'A short club swung from below: crouched wind-up low behind the hip, then up and forward while rising and stepping in.',
-      render: (sprite) => drawStickman(sprite, 0, { idleBlend: 1, armed: true, attackStyle: 'uppercut', attackPhase: this.attackPhase, originY: 0 }),
-    },
-    {
-      id: 'kamikaze-run',
-      title: 'Kamikaze: run with a bomb',
-      description: 'Sprints in unarmed with a bomb strapped to its chest and the fuse sparking; it blows up when it reaches the bowman or the keep.',
-      render: (sprite) => drawStickman(sprite, this.runPhase, { running: true, bomb: true, originY: 0 }),
-    },
-    {
-      id: 'zombie-walk',
-      title: 'Zombie: shuffle with arms out',
-      description: 'Pale green, leaning forward, both arms held out in front and swaying a little while it shuffles slowly.',
-      render: (sprite) => drawStickman(sprite, this.cheerTime / 240, { zombie: true, bodyColors: ZOMBIE_BODY, originY: 0 }),
-    },
-    {
-      id: 'zombie-attack',
-      title: 'Zombie grab attack',
-      description: 'Lunges in reaching further, then yanks both hands back to its chest as if dragging the bowman in; the hit lands on the yank.',
-      render: (sprite) => drawStickman(sprite, this.cheerTime / 240, { idleBlend: 1, zombie: true, bodyColors: ZOMBIE_BODY, attackPhase: this.zombieAttackPhase, originY: 0 }),
-    },
-    {
-      id: 'enemy-archer',
-      title: 'Enemy archer · draw and shoot',
-      description: 'Red-tinted enemy with a bow: raises it, draws, looses and repeats from range.',
-      render: (sprite) => {
-        sprite.tint = 0xffc2b4;
-        const cycle = (this.attackPhase * 0.25) % 1;
-        drawStickman(sprite, 0, {
-          idleBlend: 1,
-          archerPose: true,
-          bowReady: Math.min(1, cycle * 5),
-          bowTension: Math.max(0, Math.min(1, (cycle - 0.2) / 0.6)),
-          originY: 0,
-        });
-      },
-    },
-    {
-      id: 'death',
-      title: 'Death · collapse forward',
-      description: 'Knees buckle, drops to the knees, then collapses face down where it stood.',
-      render: (sprite) => this.fallClock.render(sprite, 'death'),
-    },
-    {
-      id: 'death-crumple',
-      title: 'Death · crumple backwards',
-      description: 'Recoils from the hit, the legs give way, sits down and falls onto its back.',
-      offsetX: 29,
-      render: (sprite) => this.fallClock.render(sprite, 'deathCrumple'),
-    },
-    {
-      id: 'death-stiff',
-      title: 'Death · stiff fall (headshot)',
-      description: 'Head snaps back and the rigid body topples backwards around the feet, with a small bounce.',
-      offsetX: 54,
-      render: (sprite) => this.fallClock.render(sprite, 'deathStiff'),
-    },
-    {
-      id: 'explosive-death',
-      title: 'Explosive death · blown apart',
-      description: 'Body bursts into head, torso, arms and legs that fly, spin, bounce and settle, with blood.',
-      // Pieces fly up to ~350 units back and ~210 up (measured over many seeds): framed to fit.
-      offsetX: 155,
-      previewScale: 0.3,
-      zoomScale: 1,
-      render: (sprite) => this.gibReplay.render(sprite),
-    },
-    {
-      id: 'knockback',
-      title: 'Knockback (explosions)',
-      description: 'Thrown a short distance backwards, lands and ends lying on its back.',
-      offsetX: 54,
-      render: (sprite) => this.fallClock.render(sprite, 'knockback'),
-    },
-    {
-      id: 'knockback-get-up',
-      title: 'Knockback → get up',
-      description: 'Knockback, a moment on the ground, then sits up, pushes off and stands up again.',
-      offsetX: 54,
-      render: (sprite) => this.fallClock.renderKnockbackGetUp(sprite),
-    },
-    {
-      id: 'archer-burning',
-      backdrop: SKY_BACKDROP,
-      title: 'Archer · on fire',
-      description: 'Set alight by the fire dragon: flames lick up from his feet, knees, hips, chest and head, flickering, with smoke rising; it catches quickly and burns out over the last moment (game: steady damage while it lasts).',
-      render: (sprite) => {
-        drawStickman(sprite, 0, { idleBlend: 1, archerPose: true, skin: 'armored', originY: 0 });
-        drawBurning(sprite, STANDING_BURN_POINTS, this.cheerTime, labBurnIntensity(this.cheerTime));
-      },
-    },
-    {
-      id: 'archer-knockdown',
-      backdrop: SKY_BACKDROP,
-      title: 'Archer · knocked down (kamikaze)',
-      description: 'The player thrown onto his back by a kamikaze blast, in armor with the bow in hand, then getting up (game speed).',
-      // The bow reaches far on both sides: framed a bit smaller.
-      offsetX: 45,
-      zoomScale: 1.6,
-      render: (sprite) => this.fallClock.renderKnockbackGetUp(
-        sprite,
-        (target, kind, progress) => drawArmoredJointPose(target, armoredFallPose(kind, progress)),
-        BOWMAN_KNOCKBACK.animationSpeed,
-        BOWMAN_KNOCKBACK.lieMs,
-      ),
-    },
-    {
-      id: 'archer-deaths',
-      backdrop: SKY_BACKDROP,
-      title: 'Archer · deaths',
-      description: 'The player dies like the enemies, by what killed him: clubbed (collapse face down or crumple), shot (stiff fall or crumple), burnt (crumple), lightning (stiff fall); a blast leaves him lying from the knockback. Shown in turn: collapse, crumple, stiff fall.',
-      offsetX: 45,
-      zoomScale: 1.6,
-      render: (sprite) => this.fallClock.renderSequence(
-        sprite,
-        ['death', 'deathCrumple', 'deathStiff'],
-        (target, kind, progress) => drawBowmanFall(target, 'ranger', undefined, armoredFallPose(kind, progress), 0, this.cheerTime),
-      ),
-    },
-    {
-      id: 'pinned-struggle',
-      title: 'Pinned by the foot (pinning arrow)',
-      description: 'One foot is pinned to the ground: he leans forward with the free leg and arms reaching, the stuck leg pulls him back, he looks down at it, catches his breath and tries again. The stuck foot never moves.',
-      render: (sprite) => drawPinnedStruggle(sprite, this.cheerTime, 0, { club: true }),
-    },
-    {
-      id: 'cheer-jump',
-      title: 'Cheer: jump',
-      description: 'Victory hop: crouches, springs up with both arms thrown into a V and lands softly. Enemies cheer like this when they win.',
-      render: (sprite) => drawStickmanCheer(sprite, 'cheerJump', this.cheerTime, 0, { club: true }),
-    },
-    {
-      id: 'cheer-fist',
-      title: 'Cheer: fist pump',
-      description: 'Pumps the club overhead with the other hand on the hip, dipping at the knees with each "yes!".',
-      render: (sprite) => drawStickmanCheer(sprite, 'cheerFist', this.cheerTime, 0, { club: true }),
-    },
-    {
-      id: 'cheer-wave',
-      title: 'Cheer: wave',
-      description: 'Both arms up, waving side to side while swaying and bouncing on the toes.',
-      render: (sprite) => drawStickmanCheer(sprite, 'cheerWave', this.cheerTime, 0, { club: true }),
-    },
-  ];
-  private readonly listSprites = new Map<PreviewRow, Graphics>();
+  private readonly clock = new LabClock();
+  private category: LabCategory = LAB_CATEGORIES[0];
+  private readonly listSprites = new Map<LabRow, Graphics>();
+  private readonly tabs = new Container();
+  private readonly intro = AnimationLabScene.text('', 12, COLORS.inkSoft, 400, 36, 56);
   private readonly list = new Container();
   private readonly zoomView = new Container();
   private zoomSprite = new Graphics();
-  private zoomed?: PreviewRow;
-
-  private archerPhase = 0;
-  private runPhase = 0;
-  private attackPhase = 0;
-  private archerWalkPhase = 0;
-  private cheerTime = 0;
-  /** Zombie grab: a bit slower than the club swings, with a pause in the stance between grabs. */
-  private get zombieAttackPhase(): number {
-    const cycle = (this.cheerTime % 2200) / 1500;
-    return cycle >= 1 ? 0 : Math.max(0.001, cycle * Math.PI * 2);
-  }
+  private zoomed?: LabRow;
   /** The panel and everything on it, centred in views wider than GAME_WIDTH (the meadow fills the rest). */
   private readonly content = new Container();
   private meadow?: Container;
-  private readonly pausingWalk = new PausingWalk();
-  private readonly walkRunSequence = new WalkRunSequence();
-  private readonly archerSequence = new ArcherReadySequence();
-  private readonly fallClock = new FallClock();
-  private readonly gibReplay = new GibReplay();
   private scrollY = 0;
   private readonly listMask = new Graphics().rect(0, LIST_TOP, GAME_WIDTH, LIST_BOTTOM - LIST_TOP).fill({ color: 0xffffff });
   private readonly scrollbar = new Graphics();
@@ -424,34 +56,41 @@ export class AnimationLabScene extends Scene {
     const { ui } = this.ctx;
     ui.showScreen('animationLab');
     if (SHOW_HITBOX_DEBUG) {
-      // Debug console hook (?debug), like GameScene's: e.g. set attackPhase with the ticker stopped.
+      // Debug console hook (?debug), like GameScene's.
       (window as unknown as { __towerGuard?: unknown }).__towerGuard = { scene: this };
       this.onExit(() => {
         delete (window as unknown as { __towerGuard?: unknown }).__towerGuard;
       });
     }
     this.createBackdrop();
-    this.rows.forEach((row, index) => this.createRow(row, index));
     this.list.mask = this.listMask;
-    this.content.addChild(this.listMask, this.list, this.scrollbar, this.zoomView);
+    this.content.addChild(this.tabs, this.intro, this.listMask, this.list, this.scrollbar, this.zoomView);
     this.listenWindow('wheel', (event) => {
       if (!this.zoomed) {
         this.scrollTo(this.scrollY + event.deltaY * 0.5);
       }
     });
-    this.scrollTo(0);
 
     ui.handlers.labBack = () => this.zoomTo(undefined);
     this.onExit(() => {
       ui.handlers.labBack = undefined;
     });
     this.listenWindow('keydown', (event) => {
-      if (event.code === 'Escape' && this.zoomed) {
+      if (event.code !== 'Escape') {
+        return;
+      }
+      if (this.zoomed) {
         this.zoomTo(undefined);
+      } else {
+        this.ctx.goTo('menu');
       }
     });
 
-    this.zoomTo(this.rows.find((row) => row.id === getUrlParam(LAB_PARAM)));
+    const wanted = getUrlParam(LAB_PARAM);
+    const category = LAB_CATEGORIES.find((candidate) => candidate.id === wanted);
+    const rowCategory = LAB_CATEGORIES.find((candidate) => candidate.rows.some((row) => row.id === wanted));
+    this.showCategory(category ?? rowCategory ?? LAB_CATEGORIES[0]);
+    this.zoomTo(rowCategory?.rows.find((row) => row.id === wanted));
   }
 
   public update(deltaMs: number): void {
@@ -459,16 +98,7 @@ export class AnimationLabScene extends Scene {
     if (this.meadow) {
       this.meadow.x = -centeredCameraX();
     }
-    this.archerPhase += deltaMs / 900;
-    this.runPhase += deltaMs / RUN_PHASE_MS;
-    this.attackPhase += deltaMs / 180;
-    this.cheerTime += deltaMs;
-    this.archerWalkPhase += deltaMs / WALK_PHASE_MS;
-    this.pausingWalk.update(deltaMs);
-    this.walkRunSequence.update(deltaMs);
-    this.archerSequence.update(deltaMs);
-    this.fallClock.update(deltaMs);
-    this.gibReplay.update(deltaMs);
+    this.clock.update(deltaMs);
     this.draw();
   }
 
@@ -483,14 +113,42 @@ export class AnimationLabScene extends Scene {
       .roundRect(PANEL.x, PANEL.y + 5, PANEL.width, PANEL.height, PANEL.radius).fill({ color: COLORS.panelEdge })
       .roundRect(PANEL.x, PANEL.y, PANEL.width, PANEL.height, PANEL.radius).fill({ color: COLORS.panel, alpha: 0.97 }));
     this.content.addChild(AnimationLabScene.text('Animation lab', 26, COLORS.ink, 700, 36, 22, DISPLAY_FONT));
-    this.content.addChild(AnimationLabScene.text(
-      'Every stickman animation, one per row. Click a row to zoom in.',
-      12, COLORS.inkSoft, 400, 36, 56,
-    ));
   }
 
-  private createRow(preview: PreviewRow, index: number): void {
-    const { title, description, backdrop = DEFAULT_BACKDROP } = preview;
+  /** Shows a tab's rows (and leaves any zoomed animation). */
+  private showCategory(category: LabCategory): void {
+    this.category = category;
+    this.intro.text = category.intro;
+    this.drawTabs();
+    this.list.removeChildren().forEach((child) => child.destroy({ children: true }));
+    this.listSprites.clear();
+    category.rows.forEach((row, index) => this.createRow(row, index));
+    this.scrollTo(0);
+    this.zoomTo(undefined);
+  }
+
+  private drawTabs(): void {
+    this.tabs.removeChildren().forEach((child) => child.destroy({ children: true }));
+    LAB_CATEGORIES.forEach((category, index) => {
+      const active = category === this.category;
+      const x = TABS.x + index * (TABS.width + TABS.gap);
+      const tab = new Container();
+      tab.eventMode = 'static';
+      tab.cursor = 'pointer';
+      tab.hitArea = new Rectangle(x, TABS.y, TABS.width, TABS.height);
+      tab.on('pointertap', () => this.showCategory(category));
+      tab.addChild(new Graphics().roundRect(x, TABS.y, TABS.width, TABS.height, TABS.height / 2)
+        .fill({ color: active ? COLORS.accent : COLORS.panelSunk }));
+      const label = AnimationLabScene.text(category.tab, 14, active ? 0xffffff : COLORS.ink, 700, x + TABS.width / 2, TABS.y + TABS.height / 2, DISPLAY_FONT);
+      label.anchor.set(0.5);
+      tab.addChild(label);
+      this.tabs.addChild(tab);
+    });
+  }
+
+  private createRow(preview: LabRow, index: number): void {
+    const { title, description } = preview;
+    const backdrop = preview.sky ? SKY_BACKDROP : GROUND_BACKDROP;
     const top = LIST_TOP + index * ROW_HEIGHT;
     const row = new Container();
     row.position.set(0, top);
@@ -530,19 +188,19 @@ export class AnimationLabScene extends Scene {
     number.anchor.set(0.5);
     row.addChild(number);
     row.addChild(AnimationLabScene.text(title, 15, COLORS.ink, 700, TEXT_X, ROW_HEIGHT / 2 - 19, DISPLAY_FONT));
-    row.addChild(AnimationLabScene.text(description, 12, COLORS.inkSoft, 400, TEXT_X, ROW_HEIGHT / 2 + 2));
+    row.addChild(AnimationLabScene.wrapped(description, 12, TEXT_X, ROW_HEIGHT / 2 + 2, PANEL.x + PANEL.width - 40 - TEXT_X));
 
     this.list.addChild(row);
   }
 
   /** Switches between the list (undefined) and one zoomed animation, and records it in the URL. */
-  private zoomTo(preview: PreviewRow | undefined): void {
+  private zoomTo(preview: LabRow | undefined): void {
     this.zoomed = preview;
     this.list.visible = !preview;
     this.scrollbar.visible = !preview && this.maxScroll > 0;
     this.zoomView.visible = Boolean(preview);
     this.ctx.ui.setLabZoomed(Boolean(preview));
-    setUrlParam(LAB_PARAM, preview?.id ?? '');
+    setUrlParam(LAB_PARAM, preview?.id ?? this.category.id);
 
     this.zoomView.removeChildren().forEach((child) => child.destroy({ children: true }));
     this.zoomSprite = new Graphics();
@@ -551,12 +209,12 @@ export class AnimationLabScene extends Scene {
       return;
     }
 
-    const index = this.rows.indexOf(preview);
+    const index = this.category.rows.indexOf(preview);
     const top = LIST_TOP + 4;
     const height = GAME_HEIGHT - top - 16;
     this.zoomView.addChild(new Graphics()
       .roundRect(40, top, ZOOM_TEXT_X - 70, height, 12)
-      .fill({ color: preview.backdrop ?? DEFAULT_BACKDROP }));
+      .fill({ color: preview.sky ? SKY_BACKDROP : GROUND_BACKDROP }));
     const clip = new Graphics().roundRect(40, top, ZOOM_TEXT_X - 70, height, 12).fill({ color: 0xffffff });
     this.zoomView.addChild(clip);
     const [zoomGround, zoomFigure] = AnimationLabScene.createFigure(
@@ -570,15 +228,16 @@ export class AnimationLabScene extends Scene {
     zoomFigure.mask = clip;
     zoomGround.visible = !preview.flying;
     this.zoomView.addChild(zoomGround, zoomFigure);
-    this.zoomView.addChild(AnimationLabScene.text(`Animation ${index + 1} of ${this.rows.length}`, 13, COLORS.accent, 700, ZOOM_TEXT_X, top + 8, DISPLAY_FONT));
-    this.zoomView.addChild(AnimationLabScene.wrapped(preview.title, 26, ZOOM_TEXT_X, top + 30, GAME_WIDTH - ZOOM_TEXT_X - 44, COLORS.ink, 700, DISPLAY_FONT));
-    this.zoomView.addChild(AnimationLabScene.wrapped(preview.description, 14, ZOOM_TEXT_X, top + 104, GAME_WIDTH - ZOOM_TEXT_X - 44));
-    this.zoomView.addChild(AnimationLabScene.wrapped('Esc or “All animations” returns to the list.', 12, ZOOM_TEXT_X, top + height - 24, GAME_WIDTH - ZOOM_TEXT_X - 44, COLORS.inkSoft));
+    const textWidth = GAME_WIDTH - ZOOM_TEXT_X - 44;
+    this.zoomView.addChild(AnimationLabScene.text(`${this.category.tab} · ${index + 1} of ${this.category.rows.length}`, 13, COLORS.accent, 700, ZOOM_TEXT_X, top + 8, DISPLAY_FONT));
+    this.zoomView.addChild(AnimationLabScene.wrapped(preview.title, 26, ZOOM_TEXT_X, top + 30, textWidth, COLORS.ink, 700, DISPLAY_FONT));
+    this.zoomView.addChild(AnimationLabScene.wrapped(preview.description, 14, ZOOM_TEXT_X, top + 104, textWidth));
+    this.zoomView.addChild(AnimationLabScene.wrapped('Esc or “All animations” returns to the list.', 12, ZOOM_TEXT_X, top + height - 24, textWidth, COLORS.inkSoft));
     this.draw();
   }
 
   private get maxScroll(): number {
-    return Math.max(0, this.rows.length * ROW_HEIGHT - (LIST_BOTTOM - LIST_TOP));
+    return Math.max(0, this.category.rows.length * ROW_HEIGHT - (LIST_BOTTOM - LIST_TOP));
   }
 
   private scrollTo(y: number): void {
@@ -627,23 +286,11 @@ export class AnimationLabScene extends Scene {
     return text;
   }
 
-  /** Dragon deaths loop with a pause on the final pose. */
-  /** Fire dragon: a moment of plain flight, then one fire breath aimed down ahead, on a loop. */
-  private drawFireBreath(sprite: Graphics): void {
-    const since = (this.cheerTime % (FIRE_BREATH_LAB_PAUSE_MS + FIRE_BREATH_MS)) - FIRE_BREATH_LAB_PAUSE_MS;
-    const pose: DragonPose = drawDragonRider(sprite, this.cheerTime, 'unarmed', undefined, DRAGON_PALETTES.red, breathControl(since, FIRE_BREATH_LAB_AIM));
-    drawFireStream(sprite, pose.mouth.point, pose.mouth.angle, since);
-  }
-
-  private drawDragonDeath(sprite: Graphics, kind: DragonDeathKind): void {
-    drawDragonDeath(sprite, this.cheerTime % (DRAGON_DEATH_MS + DRAGON_DEATH_PAUSE_MS), kind);
-  }
-
   private draw(): void {
     if (this.zoomed) {
-      this.zoomed.render(this.zoomSprite);
+      this.zoomed.render(this.zoomSprite, this.clock);
       return;
     }
-    this.listSprites.forEach((sprite, row) => row.render(sprite));
+    this.listSprites.forEach((sprite, row) => row.render(sprite, this.clock));
   }
 }

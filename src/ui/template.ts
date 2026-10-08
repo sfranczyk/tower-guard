@@ -25,8 +25,8 @@ export const OVERLAY_TEMPLATE = `
         </div>
       </section>
       <section class="test-screen" data-test>
+        <button class="secondary-button small-button" data-lab-menu>← Menu</button>
         <button class="secondary-button small-button" data-lab-back hidden>← All animations</button>
-        <button class="secondary-button small-button" data-open-game>Battle setup</button>
       </section>
       <div class="drawer" data-drawer hidden>
         <div class="drawer-header"><h2>Settings</h2><button class="round-button" data-close-options aria-label="Close settings">×</button></div>
