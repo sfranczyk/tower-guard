@@ -233,13 +233,14 @@ export const ENEMY_KEEP_HEALTH = 650;
  * passed since the last spawn, or after WAVE_MAX_GAP_MS regardless.
  */
 export const WAVE_SPAWN_INTERVAL_MS = 1100;
-export const LEVEL_START_DELAY_MS = 1500;
+export const LEVEL_START_DELAY_MS = 3000;
 export const WAVE_RELEASE_ALIVE = 1;
 export const WAVE_MIN_GAP_MS = 2500;
-export const WAVE_MAX_GAP_MS = 15000;
-/** Wave sizes: the first FIRST_WAVE_SIZE, each next one bigger by one, up to MAX_WAVE_SIZE. */
-export const FIRST_WAVE_SIZE = 2;
-export const MAX_WAVE_SIZE = 5;
+export const WAVE_MAX_GAP_MS = 20000;
+/** Wave sizes: the first FIRST_WAVE_SIZE, each next one bigger by WAVE_SIZE_STEP, up to MAX_WAVE_SIZE. */
+export const FIRST_WAVE_SIZE = 3;
+export const WAVE_SIZE_STEP = 2;
+export const MAX_WAVE_SIZE = 10;
 
 /** Sound effects: default effects volume (0..1) and the base volume of each sound. */
 export const SOUND_DEFAULT_VOLUME = 0.7;

@@ -24,6 +24,13 @@ describe('wave waves', () => {
     expect(tankWaves.size).toBeGreaterThan(1);
   });
 
+  it('grows by WAVE_SIZE_STEP up to MAX_WAVE_SIZE, the rest in the last wave', () => {
+    const sizes = (basic: number): number[] =>
+      planWaves({ basic, fast: 0, tank: 0, archer: 0, dragon: 0, fireDragon: 0, kamikaze: 0, zombie: 0 }).map((wave) => wave.length);
+    expect(sizes(30)).toEqual([3, 5, 7, 9, 6]);
+    expect(sizes(50)).toEqual([3, 5, 7, 9, 10, 10, 6]);
+  });
+
   it('never leaves a lone enemy as the last wave', () => {
     expect(last(planWaves({ basic: 6, fast: 0, tank: 0, archer: 0, dragon: 0, fireDragon: 0, kamikaze: 0, zombie: 0 })).length).toBeGreaterThan(1);
     expect(planWaves({ basic: 1, fast: 0, tank: 0, archer: 0, dragon: 0, fireDragon: 0, kamikaze: 0, zombie: 0 })).toEqual([['basic']]);

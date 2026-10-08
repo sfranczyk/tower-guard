@@ -5,6 +5,7 @@ import {
   WAVE_MAX_GAP_MS,
   WAVE_MIN_GAP_MS,
   WAVE_RELEASE_ALIVE,
+  WAVE_SIZE_STEP,
   WAVE_SPAWN_INTERVAL_MS,
 } from '../config';
 import { ENEMY_KINDS, ENEMY_TYPES } from '../data/enemyKinds';
@@ -13,7 +14,7 @@ import type { EnemyType } from '../types';
 
 /**
  * Splits a level's enemies into waves and releases them at sensible moments (pure; GameScene calls `update`
- * every frame and spawns what it returns). Waves grow from FIRST_WAVE_SIZE by one up to MAX_WAVE_SIZE; each
+ * every frame and spawns what it returns). Waves grow from FIRST_WAVE_SIZE by WAVE_SIZE_STEP up to MAX_WAVE_SIZE; each
  * type is spread through the level, tougher types starting later, so early waves are light.
  */
 
@@ -31,7 +32,7 @@ export const planWaves = (enemies: LevelEnemyCounts): EnemyType[][] => {
     .sort((a, b) => a.at - b.at || TYPES.indexOf(a.type) - TYPES.indexOf(b.type))
     .map(({ type }) => type);
   const waves: EnemyType[][] = [];
-  for (let start = 0, size = FIRST_WAVE_SIZE; start < order.length; start += size, size = Math.min(MAX_WAVE_SIZE, size + 1)) {
+  for (let start = 0, size = FIRST_WAVE_SIZE; start < order.length; start += size, size = Math.min(MAX_WAVE_SIZE, size + WAVE_SIZE_STEP)) {
     waves.push(order.slice(start, start + size));
   }
   // A lone straggler at the end joins the wave before it.

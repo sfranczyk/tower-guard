@@ -63,7 +63,7 @@ src/
   knockback; he falls as if hit from where it came (co-op: the `die` event carries the fall). Lab row: `archer-deaths`.
   Within a level enemies arrive in waves (`systems/waveDirector.ts`, pure, tested; not shown in the UI yet):
   `planWaves` spreads each type through the level (tougher types later, by their `arrival`, so the first wave of
-  `FIRST_WAVE_SIZE` is light) in waves growing to `MAX_WAVE_SIZE`; `WaveDirector.update` (called every frame, so it
+  `FIRST_WAVE_SIZE` is light) in waves growing by `WAVE_SIZE_STEP` to `MAX_WAVE_SIZE`; `WaveDirector.update` (called every frame, so it
   pauses with the game) releases the first after `LEVEL_START_DELAY_MS`, a wave's enemies `WAVE_SPAWN_INTERVAL_MS`
   apart, and the next wave once at most `WAVE_RELEASE_ALIVE` enemies stand and `WAVE_MIN_GAP_MS` passed, or after
   `WAVE_MAX_GAP_MS` regardless.
