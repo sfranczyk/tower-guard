@@ -2,7 +2,7 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: ["coop"]
+    branches: ["new-looks"]
   workflow_dispatch:
 
 permissions:
