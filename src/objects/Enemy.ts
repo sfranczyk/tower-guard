@@ -14,6 +14,7 @@ import type { BodyColors } from '../rendering/bodyColors';
 import { drawEnemyBody, drawEnemyGibs, enemyGibColors, type EnemyBodyState } from '../rendering/enemyBody';
 import { fromBodyAnchor, spriteToWorld, toBodyAnchor, worldToSprite, type BodyAnchor, type BodyTransform, type Torso } from '../systems/bodyAnchor';
 import { ENEMY_LOOKS, blowsApart, knockbackPush, type EnemyLook } from '../data/enemies';
+import { enemyArchetype } from '../data/enemyKinds';
 import { groundAt } from '../systems/terrain';
 import { STANDING_BURN_POINTS, burnPoints } from '../rendering/burning';
 import { FROZEN_TINT } from '../rendering/afflictionArt';
@@ -142,6 +143,8 @@ export default class Enemy extends Container {
   private shattered = false;
   /** Pieces dropping back to the ground after being blown apart in the air (px/s). */
   private dropSpeed = 0;
+  /** A settled corpse has been drawn as it rests (isSettledCorpse): it isn't redrawn again. */
+  private settledDrawn = false;
   /** Thrown through the air (a vortex threw it out, or it was hit up there), flailing until it lands. */
   private flight?: Flight;
   /** Co-op guest: the host moves it while it flies (it only lands it here). */
@@ -205,13 +208,13 @@ export default class Enemy extends Container {
     return this.animationTime / (this.look.stepMs ?? 150);
   }
 
-  /** Club fighters carry a club; archers, kamikazes and zombies don't. */
+  /** Club fighters carry a club (their archetype); archers, kamikazes and zombies don't. */
   private get carriesClub(): boolean {
-    return !this.isArcher && this.kind !== 'kamikaze' && this.kind !== 'zombie';
+    return enemyArchetype(this.kind).club;
   }
 
   public get isArcher(): boolean {
-    return this.kind === 'archer';
+    return enemyArchetype(this.kind).shoots;
   }
 
   /**
@@ -499,6 +502,15 @@ export default class Enemy extends Container {
    */
   public updateAnimation(deltaMs: number, moving: boolean): void {
     this.afflictions.tick(deltaMs);
+    // A corpse at rest stays as it was last drawn (no redrawing every frame).
+    if (this.isSettledCorpse) {
+      if (this.settledDrawn) {
+        return;
+      }
+      this.settledDrawn = true;
+    } else {
+      this.settledDrawn = false;
+    }
     // Held up by a vortex arrow, it glows in front of the funnel.
     this.zIndex = this.afflictions.levitating ? LEVITATE_Z : 1;
     if (this.flight) {
@@ -826,7 +838,7 @@ export default class Enemy extends Container {
     this.body.scale.set(BODY_SCALE.x * facing, BODY_SCALE.y);
     const blast = worldToSprite(point, this.bodyTransform());
     // A kamikaze's own bomb goes off with it: its pieces fly much farther.
-    const bomb = this.kind === 'kamikaze' ? KAMIKAZE_GIB_FORCE : 1;
+    const bomb = enemyArchetype(this.kind).detonates ? KAMIKAZE_GIB_FORCE : 1;
     const force = (GIB_FORCE_MIN + Math.random() * (GIB_FORCE_MAX - GIB_FORCE_MIN)) * bomb;
     this.gibs = new GibSimulation(blast, Math.floor(Math.random() * 1e9), force);
     drawEnemyGibs(this.body, this.kind, this.gibs, BODY_ORIGIN_Y, this.lookTimeMs);
@@ -841,6 +853,21 @@ export default class Enemy extends Container {
     this.hitStaggerMs = 0;
     this.body.scale.set(BODY_SCALE.x * facing, BODY_SCALE.y);
     this.drawFall();
+  }
+
+  /**
+   * Dead and done moving: its death fall played to the end (and any push slid), or its pieces at rest on the
+   * ground, with nothing burning, icy or held by a vortex on it. Nothing can change it after that.
+   */
+  private get isSettledCorpse(): boolean {
+    const { afflictions } = this;
+    if (this.isAlive() || this.flight || afflictions.isBurning || afflictions.isFrozen || afflictions.isChilled || afflictions.inVortex) {
+      return false;
+    }
+    if (this.gibs) {
+      return this.gibs.settled && this.y >= groundAt(this.x);
+    }
+    return this.fall !== undefined && this.fall.getUpAfterMs === undefined && this.fallProgress >= 1;
   }
 
   private get fallProgress(): number {

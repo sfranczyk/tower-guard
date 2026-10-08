@@ -18,6 +18,7 @@ import { LOOK_AIM_MS, LOOK_RETURN_MS, aimLookAhead, easeTowards, nextLookShift }
 import { centeredCameraX, viewWidth } from '../core/viewport';
 import { BATTLEGROUNDS, aimColorsOf, type Battleground } from '../data/battlegrounds';
 import { getEnemyStats } from '../data/enemies';
+import { isFlyingType } from '../data/enemyKinds';
 import { launchSpeed, shrapnelBurst } from '../data/projectiles';
 import { waveEnemyTotal, type WaveSetup } from '../data/sandbox';
 import InputManager, { type AimInput } from '../managers/InputManager';
@@ -268,6 +269,7 @@ export class GameScene extends Scene {
       this.combat.update(deltaMs, this.enemiesVisible);
     }
 
+    this.pruneArrows();
     this.updateAim();
     this.updateHud();
     this.updateCamera(deltaMs);
@@ -489,7 +491,7 @@ export class GameScene extends Scene {
 
   private spawnEnemy(type: EnemyType): Foe {
     const stats = getEnemyStats(type, 1);
-    const enemy = type === 'dragon' || type === 'fireDragon'
+    const enemy = isFlyingType(type)
       ? new DragonEnemy(ENEMY_SPAWN_X, stats.health, stats.speed, type)
       : new Enemy(ENEMY_SPAWN_X, stats.health, stats.speed, 'bowman', type);
     enemy.visible = this.enemiesVisible;
@@ -546,6 +548,21 @@ export class GameScene extends Scene {
       });
   }
 
+  /**
+   * Drops the arrows that no longer show (gone, with no trail left): out of the list and the world, destroyed. Arrows
+   * stuck in the ground, the stone or an enemy stay, and so does a gone arrow while its trail still fades.
+   */
+  private pruneArrows(): void {
+    for (let index = this.arrows.length - 1; index >= 0; index -= 1) {
+      const arrow = this.arrows[index];
+      if (arrow.isGone) {
+        this.arrows.splice(index, 1);
+        this.guestSync?.forgetArrow(arrow);
+        arrow.dispose();
+      }
+    }
+  }
+
   /** An enemy archer's arrow: reddish, hurts the bowman (or the keep while he hides); `silent` for a co-op guest's copy. */
   private fireEnemyArrow(from: Vec2, angle: number, speed: number, shooter: EnemyType, silent = false): Arrow {
     const trail = new Graphics();
@@ -555,6 +572,8 @@ export class GameScene extends Scene {
     arrow.tint = ENEMY_ARROW_TINT;
     arrow.wind = this.wind;
     arrow.fire(angle, speed, 'normal', true);
+    // Enemy arrows fly clean: no trail to keep, so a gone one can be dropped at once.
+    arrow.hideTrail();
     arrow.shooter = shooter;
     this.arrows.push(arrow);
     this.world.addChild(arrow);

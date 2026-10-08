@@ -1,12 +1,5 @@
-import {
-  ENEMY_BURN_MS,
-  ENEMY_BURN_ZOMBIE_FACTOR,
-  FROST_CHILL_MS,
-  FROST_FREEZE_BRUTE_MS,
-  FROST_FREEZE_HITS,
-  FROST_FREEZE_MS,
-  FROST_SLOW,
-} from '../config';
+import { ENEMY_BURN_MS, FROST_CHILL_MS, FROST_FREEZE_HITS, FROST_SLOW } from '../config';
+import { enemyTraits } from '../data/enemyKinds';
 import type { EnemyType } from '../types';
 
 /**
@@ -40,9 +33,8 @@ export const tickAfflictions = (state: Readonly<Afflictions>, deltaMs: number): 
   };
 };
 
-/** How long a fire arrow (or the fire spreading) sets `type` alight: zombies burn longer, the fire dragon not at all. */
-export const burnDurationMs = (type: EnemyType): number =>
-  type === 'fireDragon' ? 0 : type === 'zombie' ? ENEMY_BURN_MS * ENEMY_BURN_ZOMBIE_FACTOR : ENEMY_BURN_MS;
+/** How long a fire arrow (or the fire spreading) sets `type` alight (its traits: the undead burn longer, the fire dragon not at all). */
+export const burnDurationMs = (type: EnemyType): number => ENEMY_BURN_MS * enemyTraits(type).burnFactor;
 
 /** Set alight (or relit to the full time): fire thaws ice and drives the chill out. */
 export const ignite = (state: Readonly<Afflictions>, type: EnemyType): Afflictions => {
@@ -50,9 +42,8 @@ export const ignite = (state: Readonly<Afflictions>, type: EnemyType): Afflictio
   return duration > 0 ? { burnMs: Math.max(state.burnMs, duration), chillMs: 0, chillHits: 0, frozenMs: 0 } : { ...state };
 };
 
-/** How long a freeze holds `type`; 0 for dragons (only chilled). */
-export const freezeDurationMs = (type: EnemyType): number =>
-  type === 'dragon' || type === 'fireDragon' ? 0 : type === 'tank' ? FROST_FREEZE_BRUTE_MS : FROST_FREEZE_MS;
+/** How long a freeze holds `type` (its traits: ogres briefly); 0 for dragons (only chilled). */
+export const freezeDurationMs = (type: EnemyType): number => enemyTraits(type).freezeMs;
 
 /**
  * Hit by a frost arrow: puts out a fire and chills (a fresh chill restarts its time). The FROST_FREEZE_HITS-th hit

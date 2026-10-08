@@ -77,6 +77,15 @@ export class GuestSync {
     this.shots.push(aim);
   }
 
+  /** The scene dropped a gone arrow: no event can reach it any more. */
+  public forgetArrow(arrow: Arrow): void {
+    this.arrowById.forEach((known, id) => {
+      if (known === arrow) {
+        this.arrowById.delete(id);
+      }
+    });
+  }
+
   public queueBurst(): void {
     this.burst = true;
   }
@@ -148,6 +157,7 @@ export class GuestSync {
       }
       case 'gone':
         this.arrowById.get(event.id)?.deactivate();
+        this.arrowById.delete(event.id);
         break;
       case 'fx': {
         const point = { x: event.x, y: event.y };

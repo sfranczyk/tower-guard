@@ -1,5 +1,6 @@
 import { BATTLEGROUND_IDS, type BattlegroundId } from './battlegrounds';
 import type { EnemyType } from '../types';
+import { ENEMY_KINDS, ENEMY_TYPES } from './enemyKinds';
 import { DEFAULT_LOADOUT, normalizeLoadout, type Loadout } from './loadout';
 
 /**
@@ -7,17 +8,11 @@ import { DEFAULT_LOADOUT, normalizeLoadout, type Loadout } from './loadout';
  * fought, the starting health of the bowman and the keep, and the arrows in the quiver. Pure data + validation.
  */
 
-export const ENEMY_TYPES: readonly EnemyType[] = ['basic', 'fast', 'tank', 'archer', 'dragon', 'fireDragon', 'kamikaze', 'zombie'];
-export const ENEMY_TYPE_LABELS: Readonly<Record<EnemyType, string>> = {
-  basic: 'Fighter',
-  fast: 'Runner',
-  tank: 'Brute',
-  archer: 'Archer',
-  dragon: 'Dragon archer',
-  fireDragon: 'Fire dragon',
-  kamikaze: 'Kamikaze',
-  zombie: 'Zombie',
-};
+export { ENEMY_TYPES } from './enemyKinds';
+/** Each enemy's name in the setup (data/enemyKinds.ts). */
+export const ENEMY_TYPE_LABELS: Readonly<Record<EnemyType, string>> = Object.fromEntries(
+  ENEMY_TYPES.map((type) => [type, ENEMY_KINDS[type].label]),
+) as Record<EnemyType, string>;
 
 export const MIN_WAVES = 1;
 export const MAX_WAVES = 5;

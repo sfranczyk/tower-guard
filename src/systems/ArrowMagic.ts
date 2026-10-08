@@ -13,6 +13,7 @@ import {
   VORTEX_TOP,
 } from '../config';
 import type { SoundId } from '../audio/SoundManager';
+import { enemyArchetype } from '../data/enemyKinds';
 import Bowman from '../objects/Bowman';
 import DragonEnemy from '../objects/DragonEnemy';
 import type Enemy from '../objects/Enemy';
@@ -325,7 +326,7 @@ export class ArrowMagic {
       }
       return;
     }
-    if (enemy.kind === 'kamikaze') {
+    if (enemyArchetype(enemy.kind).detonates) {
       this.hooks.detonate(enemy);
     } else if (enemy.afflictions.isFrozen) {
       this.hooks.shatter(enemy, enemy.x);

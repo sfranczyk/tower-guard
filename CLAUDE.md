@@ -158,7 +158,16 @@ src/
   the reaction: a headshot gives `deathStiff`, an explosion gives `knockback` (survivors get up and fight
   on), and other kills pick `death` or `deathCrumple` at random. `getFallPose()` is
   pure; feet and hands are kept on the ground by `groundedAngle`, and tests check every frame.
-- **Enemy toughness and damage** (`data/enemies.ts`, tested): health per type against a 20-damage arrow
+- **Enemy catalogue** (`data/enemyKinds.ts`, pure, tested): every enemy (`EnemyType`, the id saved in setups and sent
+  in co-op) is an entry in `ENEMY_KINDS`: an **archetype** (how it fights: `fighter`, `runner`, `heavy`, `archer`,
+  `kamikaze`, `grabber`, `skyArcher`, `fireBreather`; `ARCHETYPES` says whether it carries a club, runs, shoots,
+  detonates, flies, breathes fire), a **race** (`human`, `goblin`, `ogre`, `undead`, `dragon`; `RACES` give the
+  traits: heavy = no vortex catches it, freeze and pin durations, burn factor), **magical** (dragons), plus its stats,
+  damage, keep damage, build (size, strike reach) and wave `arrival`. Gameplay code asks `enemyArchetype(type)` and
+  `enemyTraits(type)` (race traits with the variant's overrides), never the id; looks stay per variant
+  (`rendering/enemyBody.ts`, `ICON_ENEMIES`). A new variant (an orc kamikaze) is one entry here plus its look and icon.
+  Now: fighter, archer, kamikaze = human; runner = goblin; brute = ogre; zombie = undead; both dragons = dragon.
+- **Enemy toughness and damage** (`data/enemyKinds.ts` via `data/enemies.ts`, tested): health per type against a 20-damage arrow
   (headshot ×`HEADSHOT_DAMAGE_MULTIPLIER` = 1.25): fighter 35, runner 22, archer 24 (one headshot), brute 110,
   dragon 170. `ENEMY_DAMAGE` gives each type a random range (`rollDamage`) for club swings and, for shooters,
   their arrows (`Arrow.shooter` tells CombatSystem whose arrow hit). The keep (2000 by default) takes the same
@@ -367,6 +376,10 @@ src/
   The co-op keep (`KeepOptions.twin`, `KeepLook.twin`) has a second, lower tower in place of the right wall
   (`KEEP_TURRET`, same footprint and hit box); `Tower.hideSpot(index)` is where each bowman stands when hiding
   (player 1 in the main tower, player 2 in the lower one).
+- **Cleanup and redrawing**: `GameScene.pruneArrows` drops arrows that no longer show (`Arrow.isGone`: gone and no
+  trail left; stuck ones stay), and CombatSystem forgets what stuck or gone arrows hit. A corpse at rest
+  (`Enemy.isSettledCorpse`: fall done or pieces resting, nothing burning, icy or in a vortex; `DragonEnemy.deathSettled`
+  after `DRAGON_SETTLE_MS`) is drawn once more and then not redrawn (96 corpses: ~10 ms → ~0.5 ms a frame).
 - **Coordinates**: the view is `viewWidth()`×540 (see View size) and the battlefield `WORLD_WIDTH`. `GameScene`
   scrolls the `world` container by `cameraX` (negative when the view is wider than the world).
 - **Terrain**: the ground surface is `groundAt(x)` (`systems/terrain.ts`, pure): gentle waves of

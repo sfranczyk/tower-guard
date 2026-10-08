@@ -23,6 +23,7 @@ import type { BodyAnchor } from '../systems/bodyAnchor';
 import { cruiseAltitude, flyTowards, hoverX } from '../systems/dragonFlight';
 import { buffetOffset } from '../systems/vortex';
 import { groundAt } from '../systems/terrain';
+import { enemyArchetype, type FlyingType } from '../data/enemyKinds';
 import type { Bounds, Vec2 } from '../types';
 import type { HitInfo } from './Enemy';
 import { AfflictionLayer, type AfflictionNet } from './AfflictionLayer';
@@ -52,7 +53,8 @@ const FIRE_AIM_MIN = 0.2;
 const FIRE_AIM_MAX = 1.25;
 const FIRE_TURN_PER_S = 1.2;
 
-export type DragonKind = 'dragon' | 'fireDragon';
+/** The dragons (data/enemyKinds: the enemies whose archetype flies). */
+export type DragonKind = FlyingType;
 
 /** How each kind looks and flies: hide, rider, cruising height and hover distance. */
 const DRAGON_KINDS: Readonly<Record<DragonKind, { palette: DragonPalette; rider: 'archer' | 'unarmed'; altitude: number; hoverOffset: number }>> = {
@@ -60,6 +62,11 @@ const DRAGON_KINDS: Readonly<Record<DragonKind, { palette: DragonPalette; rider:
   fireDragon: { palette: DRAGON_PALETTES.red, rider: 'unarmed', altitude: FIRE_DRAGON_ALTITUDE, hoverOffset: FIRE_DRAGON_HOVER_OFFSET },
 };
 
+/**
+ * After this long (ms) a dragon's death is over: it has dropped from its altitude and lies flat, and the thrown rider
+ * has tumbled and come to rest (each takes well under half of it).
+ */
+const DRAGON_SETTLE_MS = 6000;
 /** Force range of the rider's explosive death (like enemies blown apart). */
 const RIDER_GIB_FORCE = { min: 1, max: 1.7 };
 /** The riders' looks (rendering/designs): the dragon archer's hooded bandit; the fire dragon's knight is animated. */
@@ -190,7 +197,7 @@ export default class DragonEnemy extends Container {
         pose: this.pose,
         riderGibs: blast ? riderGibSimulation(this.pose, startY, seed, force) : undefined,
         // The fire dragon's burning gut goes up with it (CombatSystem doubles the blast): it bursts into chunks.
-        dragonGibs: blast && this.kind === 'fireDragon' ? new DragonGibSimulation(this.pose, startY, seed, force, this.look.palette) : undefined,
+        dragonGibs: blast && enemyArchetype(this.kind).breathesFire ? new DragonGibSimulation(this.pose, startY, seed, force, this.look.palette) : undefined,
       };
       this.healthBar.visible = false;
       this.tension = 0;
@@ -284,7 +291,7 @@ export default class DragonEnemy extends Container {
    * breathing or still catching its breath, starts a breath (rear back, then a long stream of fire).
    */
   public breathe(worldAngle: number): void {
-    if (!this.isAlive() || this.cheering || this.kind !== 'fireDragon' || this.afflictions.isTurbulent) {
+    if (!this.isAlive() || this.cheering || !enemyArchetype(this.kind).breathesFire || this.afflictions.isTurbulent) {
       return;
     }
     this.fireTarget = Math.min(FIRE_AIM_MAX, Math.max(FIRE_AIM_MIN, normalizeAngle(Math.PI - (worldAngle - this.rotation))));
@@ -333,8 +340,11 @@ export default class DragonEnemy extends Container {
     // Chilled: slower wing beats and breath.
     const deltaMs = realDeltaMs * this.afflictions.timeScale;
     if (this.death) {
-      this.drawDeath(realDeltaMs);
-      this.afflictions.art.clear();
+      // At rest on the ground it stays as it was last drawn.
+      if (!this.deathSettled) {
+        this.drawDeath(realDeltaMs);
+        this.afflictions.art.clear();
+      }
     } else {
       if (!this.paused) {
         this.timeMs += deltaMs;
@@ -426,6 +436,16 @@ export default class DragonEnemy extends Container {
       const look = this.riderLook(death.timeMs);
       drawThrownRider(this.riderArt, death.pose, death.timeMs, death.startY, (g, rider) => drawHumanoid(g, rider, look));
     }
+  }
+
+  /**
+   * The dragon has fallen and lies flat (or its chunks rest) and the thrown rider lies still (or his pieces rest):
+   * nothing in its death moves any more.
+   */
+  private get deathSettled(): boolean {
+    const death = this.death;
+    return death !== undefined && death.timeMs >= DRAGON_SETTLE_MS
+      && (death.dragonGibs?.settled ?? true) && (death.riderGibs?.settled ?? true);
   }
 
   /** The rider's look once he's off the dragon (both legs show). */

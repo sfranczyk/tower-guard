@@ -223,6 +223,17 @@ export default class Arrow extends Sprite {
     return this;
   }
 
+  /** Gone and its trail too: nothing of it shows any more, so the scene can drop it (`dispose`). */
+  public get isGone(): boolean {
+    return !this.activeProjectile && !this.trailVisible;
+  }
+
+  /** Destroys the arrow and its trail (once it's gone). */
+  public dispose(): void {
+    this.trail.destroy();
+    this.destroy();
+  }
+
   public get hostile(): boolean {
     return this.hostileShot;
   }

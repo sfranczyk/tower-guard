@@ -1,4 +1,5 @@
 import type { Graphics } from 'pixi.js';
+import { enemyArchetype } from '../data/enemyKinds';
 import type { EnemyType } from '../types';
 import type { BodyColors } from './bodyColors';
 import { HUMAN_BODY, ZOMBIE_BODY } from './bodyColors';
@@ -62,7 +63,8 @@ const TWO_PI = Math.PI * 2;
 
 const poseFor = (kind: EnemyType, state: EnemyBodyState): BodyPose => {
   const { club } = lookOf(kind);
-  const zombie = kind === 'zombie';
+  // Grabbers (zombies) walk and stand with their arms held out.
+  const zombie = enemyArchetype(kind).attackStyle === 'grab';
   switch (state.mode) {
     case 'walk':
       // drawStickman's run cycle runs 0.4 ahead of its walk phase (see runProgress there).

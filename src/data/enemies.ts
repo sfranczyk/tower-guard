@@ -1,90 +1,33 @@
-import { ENEMY_SPEED, EXPLOSION_DAMAGE, KNOCKBACK_PUSH_MAX, PIN_DURATION_MS, PIN_DURATION_ZOMBIE_MS, SPLASH_GIB_CHANCE } from '../config';
+import { EXPLOSION_DAMAGE, KNOCKBACK_PUSH_MAX, SPLASH_GIB_CHANCE } from '../config';
 import type { AttackStyle } from '../rendering/attackSwing';
 import type { EnemyType } from '../types';
+import { ENEMY_KINDS, ENEMY_TYPES, enemyArchetype, enemyTraits, type DamageRange, type EnemyDamage, type EnemyStats } from './enemyKinds';
 
-export interface EnemyStats {
-  health: number;
-  speed: number;
-}
+export type { DamageRange, EnemyDamage, EnemyStats } from './enemyKinds';
 
-/**
- * Health per type, against a normal arrow's 20 (headshot ×1.25 = 25, explosive arrow only its blast, 35 at the centre down to 10 at the edge): fighters take
- * two arrows, runners and archers drop to one headshot (two body hits), brutes about six, dragons about nine.
- * Kamikazes die to any normal arrow (they must be stopped before they reach you); zombies shamble but take three.
- */
-const BASE_STATS: Readonly<Record<EnemyType, EnemyStats>> = {
-  basic: { health: 35, speed: ENEMY_SPEED },
-  fast: { health: 22, speed: ENEMY_SPEED * 2.1 },
-  tank: { health: 110, speed: ENEMY_SPEED * 0.6 },
-  // Fragile, keeps its distance and shoots.
-  archer: { health: 24, speed: ENEMY_SPEED * 0.9 },
-  // Flying archer mount: tough, flies in steadily (speed is its horizontal flight speed).
-  dragon: { health: 170, speed: ENEMY_SPEED * 1.2 },
-  // Flies in lower and closer to breathe fire.
-  fireDragon: { health: 170, speed: ENEMY_SPEED * 1.2 },
-  // Sprints at the bowman with a bomb and blows up on contact.
-  kamikaze: { health: 18, speed: ENEMY_SPEED * 2 },
-  // Slow, arms out, hard to put down.
-  zombie: { health: 60, speed: ENEMY_SPEED * 0.45 },
-};
-
-/** Inclusive min..max of a random hit. */
-export type DamageRange = readonly [number, number];
-
-/** What one hit of this type deals to the bowman (the keep takes it × KEEP_DAMAGE_MULTIPLIER). */
-export interface EnemyDamage {
-  /** Club swing (archers too, when caught up close; the zombie's grab; the kamikaze's own explosion). */
-  melee: DamageRange;
-  /** Arrows of shooting types (archer on foot, dragon rider). */
-  arrow?: DamageRange;
-}
-
-/** Damage per type: runners nick, fighters hit, brutes smash. The dragon rider's arrows hit hardest. */
-export const ENEMY_DAMAGE: Readonly<Record<EnemyType, EnemyDamage>> = {
-  basic: { melee: [6, 10] },
-  fast: { melee: [3, 6] },
-  tank: { melee: [14, 22] },
-  archer: { melee: [3, 5], arrow: [7, 10] },
-  dragon: { melee: [0, 0], arrow: [12, 16] },
-  // No hits of its own: its fire sets the bowman alight (BURN_* in config.ts, systems/burning.ts).
-  fireDragon: { melee: [0, 0] },
-  kamikaze: { melee: [24, 32] },
-  zombie: { melee: [8, 12] },
-};
-
-/**
- * How much harder an attack hits the keep than the bowman (1 unless listed): archers' arrows barely scratch
- * the stone (their club hits both alike), brutes smash it and a kamikaze's bomb is made for walls.
- */
-export const KEEP_DAMAGE_MULTIPLIER: Readonly<Partial<Record<EnemyType, Partial<Record<keyof EnemyDamage, number>>>>> = {
-  archer: { arrow: 0.5 },
-  tank: { melee: 2 },
-  kamikaze: { melee: 8 },
-};
+/** Damage per type (data/enemyKinds.ts). */
+export const ENEMY_DAMAGE: Readonly<Record<EnemyType, EnemyDamage>> = Object.fromEntries(
+  ENEMY_TYPES.map((type) => [type, ENEMY_KINDS[type].damage]),
+) as Record<EnemyType, EnemyDamage>;
 
 export type DamageTarget = 'bowman' | 'keep';
 
 /** Damage range of one `attack` by `type` against `target` (a type without arrows uses the archer's). */
 export const enemyDamage = (type: EnemyType, attack: keyof EnemyDamage, target: DamageTarget): DamageRange => {
   const range = attack === 'arrow' ? ENEMY_DAMAGE[type].arrow ?? ENEMY_DAMAGE.archer.arrow! : ENEMY_DAMAGE[type].melee;
-  const factor = target === 'keep' ? KEEP_DAMAGE_MULTIPLIER[type]?.[attack] ?? 1 : 1;
+  const factor = target === 'keep' ? ENEMY_KINDS[type].keepDamage?.[attack] ?? 1 : 1;
   return [range[0] * factor, range[1] * factor];
 };
 
-/** How long a pinning arrow holds this type in place (ms); 0 = it can't be pinned (brutes, dragons). */
-export const pinDurationMs = (type: EnemyType): number => {
-  if (type === 'tank' || type === 'dragon' || type === 'fireDragon') {
-    return 0;
-  }
-  return type === 'zombie' ? PIN_DURATION_ZOMBIE_MS : PIN_DURATION_MS;
-};
+/** How long a pinning arrow holds this type in place (ms); 0 = it can't be pinned (its race's traits: ogres, dragons). */
+export const pinDurationMs = (type: EnemyType): number => enemyTraits(type).pinMs;
 
 /** A random hit within `range` (`roll` 0..1, passed in so tests can pin it). */
 export const rollDamage = ([min, max]: DamageRange, roll = Math.random()): number => Math.round(min + (max - min) * roll);
 
 /** Stats for an enemy type scaled by the level's difficulty multiplier. */
 export const getEnemyStats = (type: EnemyType, difficulty: number): EnemyStats => {
-  const base = BASE_STATS[type];
+  const base = ENEMY_KINDS[type].stats;
   return {
     health: Math.round(base.health * difficulty),
     speed: base.speed * difficulty,
@@ -122,8 +65,9 @@ export const explosionDamage = (distance: number): number => {
 /** Extra push (px) on top of the knockback fall for an enemy `distance` (fraction of the radius) from a blast. */
 export const knockbackPush = (distance: number): number => KNOCKBACK_PUSH_MAX * Math.max(0, 1 - distance) ** 1.5;
 
-/** How each enemy type looks, moves and swings: body size (1 = a normal stickman), club swing, run or walk. */
+/** How each enemy type looks, moves and swings: its build (data/enemyKinds.ts) with its archetype's swing and gait. */
 export interface EnemyLook {
+  /** Body size (1 = a normal stickman). */
   size: number;
   attackStyle: AttackStyle;
   runs: boolean;
@@ -137,18 +81,7 @@ export interface EnemyLook {
   stepMs?: number;
 }
 
-export const ENEMY_LOOKS: Readonly<Record<EnemyType, EnemyLook>> = {
-  basic: { size: 1, attackStyle: 'overhead', runs: false, strikeReach: 55 },
-  // Runners (goblins, three quarters of a man's height) sprint in and stab up from below.
-  fast: { size: 0.75, attackStyle: 'uppercut', runs: true, strikeReach: 45 },
-  // Brutes stand half again as tall and chop with a long club in both hands: hard to step away from.
-  tank: { size: 1.5, attackStyle: 'twoHanded', runs: false, strikeReach: 85 },
-  archer: { size: 1, attackStyle: 'overhead', runs: false, strikeReach: 55 },
-  // Never melees (it shoots from the air); see DragonEnemy.
-  dragon: { size: 1, attackStyle: 'overhead', runs: false, strikeReach: 0 },
-  fireDragon: { size: 1, attackStyle: 'overhead', runs: false, strikeReach: 0 },
-  // Runs in unarmed with a bomb on its chest and detonates on contact (CombatSystem.detonate).
-  kamikaze: { size: 1, attackStyle: 'overhead', runs: true, strikeReach: 0 },
-  // Shuffles with its arms out; grabs and yanks its hands back (hits within arm's reach).
-  zombie: { size: 1, attackStyle: 'grab', runs: false, strikeReach: 50, stepMs: 240 },
-};
+export const ENEMY_LOOKS: Readonly<Record<EnemyType, EnemyLook>> = Object.fromEntries(ENEMY_TYPES.map((type) => {
+  const { attackStyle, runs } = enemyArchetype(type);
+  return [type, { ...ENEMY_KINDS[type].build, attackStyle, runs }];
+})) as Record<EnemyType, EnemyLook>;

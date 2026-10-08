@@ -14,6 +14,7 @@ import {
   VORTEX_THROW,
   VORTEX_TOP,
 } from '../config';
+import { enemyTraits } from '../data/enemyKinds';
 import type { EnemyType, Vec2 } from '../types';
 
 /**
@@ -37,8 +38,8 @@ export const vortexStrength = (ageMs: number): number => {
   return t <= 0 || t >= 1 ? 0 : Math.min(1, t / RAMP_UP);
 };
 
-/** Brutes are too heavy for a vortex to catch (it only slows them, see VORTEX_HEAVY_WALK). */
-export const resistsVortex = (type: EnemyType): boolean => type === 'tank';
+/** Heavy ones (ogres: their traits) are too heavy for a vortex to catch (it only slows them, see VORTEX_HEAVY_WALK). */
+export const resistsVortex = (type: EnemyType): boolean => enemyTraits(type).heavy;
 
 /**
  * One frame of the pull on an enemy `dx` (its x − the centre) away: how far (px) it's dragged towards the centre,

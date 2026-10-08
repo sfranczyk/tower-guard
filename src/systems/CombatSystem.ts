@@ -29,6 +29,7 @@ import {
 import type { SoundId } from '../audio/SoundManager';
 import Arrow from '../objects/Arrow';
 import { enemyDamage, explosionDamage, pinDurationMs, rollDamage, type DamageTarget } from '../data/enemies';
+import { enemyArchetype } from '../data/enemyKinds';
 import { burnDamage, flamesTouch } from './burning';
 import { bowSpeed } from '../data/projectiles';
 import type Bowman from '../objects/Bowman';
@@ -176,6 +177,8 @@ export class CombatSystem {
     arrows
       .filter((arrow) => arrow.isActive && !arrow.isStuck)
       .forEach((arrow) => (arrow.hostile ? this.resolveHostileArrow(arrow) : this.resolveArrow(arrow, activeEnemies, friendly)));
+    // Stuck or gone, an arrow hits nothing more: what it already hit can go.
+    arrows.filter((arrow) => !arrow.isActive || arrow.isStuck).forEach((arrow) => this.arrowHits.delete(arrow));
     arrows
       .filter((arrow) => arrow.isActive && !arrow.isStuck && arrow.y >= groundAt(arrow.x) - 3)
       .forEach((arrow) => {
@@ -229,7 +232,7 @@ export class CombatSystem {
     }
 
     // Kamikaze: no swing, it blows itself up on reaching the bowman (jumping doesn't help) or the keep.
-    if (enemy.kind === 'kamikaze') {
+    if (enemyArchetype(enemy.kind).detonates) {
       const atKeep = !bowman && enemy.x <= playerTower.x + TOWER_ATTACK_REACH;
       const atBowman = bowman !== undefined && Math.abs(enemy.x - bowman.x) <= MELEE_REACH && Math.abs(enemy.y - bowman.y) <= 60;
       if (atKeep || atBowman) {
@@ -318,7 +321,7 @@ export class CombatSystem {
     const bowman = nearestExposedBowman(this.world.bowmen, dragon.x);
     const aimPoint = this.aimPointFrom(dragon.x);
     dragon.update(deltaMs, aimPoint.x);
-    if (dragon.kind === 'fireDragon') {
+    if (enemyArchetype(dragon.kind).breathesFire) {
       this.updateFireDragon(dragon, bowman, aimPoint, deltaMs);
       return;
     }
@@ -756,14 +759,14 @@ export class CombatSystem {
     hitEnemies.add(enemy);
     arrow.registerImpact();
 
-    if (explosive && enemy instanceof DragonEnemy && enemy.kind === 'fireDragon' && !enemy.isAlive()) {
+    if (explosive && enemy instanceof DragonEnemy && enemyArchetype(enemy.kind).breathesFire && !enemy.isAlive()) {
       // A fire dragon killed by a direct explosive hit blows up: FIRE_DRAGON_BLAST_POWER times the blast, centred on its body, and the
       // arrows stuck in it go with it.
       const body = enemy.getPhysicsBounds();
       this.explode({ x: body.x + body.width / 2, y: body.y + body.height / 2 }, activeEnemies, enemy, FIRE_DRAGON_BLAST_POWER, true);
       this.world.arrows.filter((stuck) => stuck.stuckTo === enemy).forEach((stuck) => stuck.deactivate());
       arrow.deactivate();
-    } else if (explosive && enemy.kind === 'kamikaze' && !enemy.isAlive()) {
+    } else if (explosive && enemyArchetype(enemy.kind).detonates && !enemy.isAlive()) {
       // A kamikaze killed by a direct explosive hit sets its bomb off: a twice-as-big blast where it stood.
       const body = enemy.getPhysicsBounds();
       this.explode({ x: body.x + body.width / 2, y: body.y + body.height / 2 }, activeEnemies, enemy, KAMIKAZE_BLAST_POWER);

@@ -7,6 +7,7 @@ import {
   WAVE_SPAWN_INTERVAL_MS,
   WAVE_START_DELAY_MS,
 } from '../config';
+import { ENEMY_KINDS, ENEMY_TYPES } from '../data/enemyKinds';
 import type { WaveEnemyCounts } from '../data/sandbox';
 import type { EnemyType } from '../types';
 
@@ -16,14 +17,15 @@ import type { EnemyType } from '../types';
  * type is spread through the wave, tougher types starting later, so early groups are light.
  */
 
-/** Where in the wave (0..1) each type starts to appear: fighters first, brutes and dragons later. */
-const TYPE_START: Readonly<Record<EnemyType, number>> = { basic: 0, fast: 0.05, zombie: 0.1, archer: 0.15, kamikaze: 0.25, tank: 0.3, dragon: 0.35, fireDragon: 0.4 };
-const TYPES = Object.keys(TYPE_START) as EnemyType[];
+/** Where in the wave (0..1) each type starts to appear (its `arrival`): fighters first, brutes and dragons later. */
+const TYPE_START = (type: EnemyType): number => ENEMY_KINDS[type].arrival;
+/** In order of arrival (ties in a group go to the earlier one). */
+const TYPES = [...ENEMY_TYPES].sort((a, b) => TYPE_START(a) - TYPE_START(b));
 
 /** Every enemy of the wave in spawn order, cut into groups. */
 export const planWaveGroups = (enemies: WaveEnemyCounts): EnemyType[][] => {
   const order = TYPES.flatMap((type) => Array.from({ length: Math.max(0, enemies[type]) }, (_, index) => {
-    const start = TYPE_START[type];
+    const start = TYPE_START(type);
     return { type, at: start + (1 - start) * ((index + 0.5) / enemies[type]) };
   }))
     .sort((a, b) => a.at - b.at || TYPES.indexOf(a.type) - TYPES.indexOf(b.type))
