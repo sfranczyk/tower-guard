@@ -235,6 +235,20 @@ export class FallClock {
     drawStickmanFall(sprite, kind, Math.min(1, (this.timeMs % (duration + FALL_HOLD_MS)) / duration));
   }
 
+  /** Plays `kinds` one after another (each held for a moment), then starts over. */
+  public renderSequence(sprite: Graphics, kinds: readonly FallKind[], draw: FallDrawer): void {
+    const total = kinds.reduce((sum, kind) => sum + FALL_DURATION_MS[kind] + FALL_HOLD_MS, 0);
+    let time = this.timeMs % total;
+    for (const kind of kinds) {
+      const span = FALL_DURATION_MS[kind] + FALL_HOLD_MS;
+      if (time < span) {
+        draw(sprite, kind, Math.min(1, time / FALL_DURATION_MS[kind]));
+        return;
+      }
+      time -= span;
+    }
+  }
+
   /**
    * Knockback, a short pause on the ground (`lieMs`), getting up, a moment standing, then replays;
    * `speed` plays the falls faster (the bowman's are quicker than the enemies').

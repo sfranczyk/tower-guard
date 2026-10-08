@@ -25,6 +25,12 @@ export const PROJECTILE_PHYSICS: Readonly<Record<ProjectileType, ProjectilePhysi
   shrapnel: { mass: 1.15, dragMultiplier: 1.1, speedMultiplier: 1.1 },
   // Heavy barbed iron spike that pins an enemy to the ground: shorter, lower flight than a normal arrow.
   pinning: { mass: 1.35, dragMultiplier: 1.15, speedMultiplier: 1.1 },
+  // A pitch-soaked head that burns in flight: a touch heavier and draggier than a normal arrow.
+  fire: { mass: 1.1, dragMultiplier: 1.1, speedMultiplier: 1.1 },
+  // A crystal head: like a normal arrow.
+  frost: { mass: 1, dragMultiplier: 1, speedMultiplier: 1.1 },
+  // A rune stone for a head: heavy and slow, a high arc like the explosive bolt's but longer.
+  vortex: { mass: 1.5, dragMultiplier: 1.3, speedMultiplier: 1.05 },
   // The small arrows a shrapnel burst releases (never launched from the bow).
   fragment: { mass: 0.45, dragMultiplier: 0.8, speedMultiplier: 1 },
 };

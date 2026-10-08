@@ -159,8 +159,20 @@ export class GuestSync {
           effects.explosion(point, event.scale);
         } else if (event.kind === 'dragonBlast') {
           effects.dragonBlast(point);
-        } else {
+        } else if (event.kind === 'lightning') {
           effects.lightningStrike(point);
+        } else if (event.kind === 'fire') {
+          effects.fireBurst(point);
+        } else if (event.kind === 'frost') {
+          effects.frostBurst(point);
+        } else if (event.kind === 'shatter') {
+          effects.shatter(point);
+        } else if (event.kind === 'firePatch') {
+          effects.firePatch(point);
+        } else if (event.kind === 'vortex') {
+          effects.vortex(point);
+        } else {
+          effects.vortexFade(point);
         }
         break;
       }
@@ -174,7 +186,7 @@ export class GuestSync {
         players[event.player]?.bowman.ignite();
         break;
       case 'die':
-        players[event.player]?.bowman.die();
+        players[event.player]?.bowman.die({ kind: event.kind, fromX: event.fromX });
         break;
       case 'status':
         if (event.player === this.world.localIndex) {
@@ -230,9 +242,16 @@ export class GuestSync {
       }
       player.health = latest.bowmen[index]?.health ?? player.health;
       if (index === localIndex) {
+        // Friendly fire: frozen, pinned, or caught and thrown by a vortex as the host has him (then moved by the host).
+        player.bowman.applyNetState(latest.bowmen[index]?.net ?? {});
+        if (player.bowman.isAloft) {
+          player.bowman.correctTo(lerp(before.x, state.x, t), lerp(before.y, state.y, t));
+          return;
+        }
         this.reconcile(player, latest.bowmen[index], deltaMs);
         return;
       }
+      player.bowman.applyNetState(state.net ?? {});
       if (!player.bowman.isDead) {
         player.bowman.applyRemote({ ...state, x: lerp(before.x, state.x, t), y: lerp(before.y, state.y, t) });
       }

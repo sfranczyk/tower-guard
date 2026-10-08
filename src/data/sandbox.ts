@@ -1,9 +1,10 @@
 import { BATTLEGROUND_IDS, type BattlegroundId } from './battlegrounds';
 import type { EnemyType } from '../types';
+import { DEFAULT_LOADOUT, normalizeLoadout, type Loadout } from './loadout';
 
 /**
  * Sandbox setup chosen on the setup screen: how many waves, what each wave sends and where it's
- * fought, and the starting health of the bowman and the keep. Pure data + validation.
+ * fought, the starting health of the bowman and the keep, and the arrows in the quiver. Pure data + validation.
  */
 
 export const ENEMY_TYPES: readonly EnemyType[] = ['basic', 'fast', 'tank', 'archer', 'dragon', 'fireDragon', 'kamikaze', 'zombie'];
@@ -39,6 +40,8 @@ export interface SandboxSettings {
   waves: WaveSetup[];
   bowmanHealth: number;
   keepHealth: number;
+  /** The arrow in each weapon slot (keys 1–5), the same for every bowman. */
+  loadout: Loadout;
 }
 
 /** Default waves get a little harder each time and alternate battlegrounds. */
@@ -58,6 +61,7 @@ export const createDefaultSandbox = (): SandboxSettings => ({
   })),
   bowmanHealth: 100,
   keepHealth: 2000,
+  loadout: [...DEFAULT_LOADOUT],
 });
 
 const clampInt = (value: unknown, min: number, max: number, fallback: number): number => {
@@ -88,6 +92,7 @@ export const normalizeSandbox = (input: Partial<SandboxSettings> | undefined): S
     }),
     bowmanHealth: clampInt(input.bowmanHealth, HEALTH_LIMITS.bowman.min, HEALTH_LIMITS.bowman.max, defaults.bowmanHealth),
     keepHealth: clampInt(input.keepHealth, HEALTH_LIMITS.keep.min, HEALTH_LIMITS.keep.max, defaults.keepHealth),
+    loadout: normalizeLoadout(input.loadout),
   };
 };
 

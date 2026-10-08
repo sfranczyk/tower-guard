@@ -42,6 +42,8 @@ import { WeatherSystem } from '../systems/WeatherSystem';
 import { groundAt } from '../systems/terrain';
 import { livingBowmen } from '../systems/targeting';
 import { WaveDirector } from '../systems/waveDirector';
+import { firstArrow } from '../data/loadout';
+import { isMagicArrow } from '../systems/ArrowMagic';
 import { simulateTrajectory } from '../systems/ballistics';
 import type { EnemyType, ProjectileType, Vec2 } from '../types';
 import { clamp } from '../utils/math';
@@ -60,16 +62,14 @@ const PROJECTILE_LABELS: Record<ProjectileType, string> = {
   piercing: 'Piercing arrow · light and fast, flat and long, passes through enemies',
   shrapnel: 'Shrapnel arrow · press Space in flight to burst it into three small arrows',
   pinning: 'Pinning arrow · barely hurts, but pins an enemy to the ground for 10 s (zombies 15 s; not brutes or dragons)',
+  fire: 'Fire arrow · sets an enemy alight (the fire spreads to those next to it); in the ground it leaves a fire',
+  frost: 'Frost arrow · slows an enemy; a second hit or a headshot freezes it solid, and a frozen one shatters',
+  vortex: 'Vortex arrow · where it lands a vortex pulls enemies together, then bursts and throws them down',
   fragment: 'Shrapnel fragment',
 };
 
-const PROJECTILE_KEYS: Record<string, ProjectileType> = {
-  Digit1: 'normal',
-  Digit2: 'explosive',
-  Digit3: 'piercing',
-  Digit4: 'shrapnel',
-  Digit5: 'pinning',
-};
+/** Weapon slot keys: Digit1 picks the first slot of the quiver, and so on. */
+const slotOfKey = (code: string): number => (/^Digit[1-9]$/.test(code) ? Number(code.slice(5)) - 1 : -1);
 
 /** Status text for the wind: arrows for its direction, one to three by strength. */
 const windLabel = (wind: number, strongest: number): string => {
@@ -158,7 +158,8 @@ export class GameScene extends Scene {
   public enter(): void {
     const { ui } = this.ctx;
     ui.showScreen('game');
-    ui.setActiveProjectile('normal');
+    ui.setLoadout(this.ctx.session.sandbox.loadout);
+    ui.setActiveProjectile(firstArrow(this.ctx.session.sandbox.loadout));
 
     this.world.sortableChildren = true;
     this.ctx.root.addChild(this.world);
@@ -190,11 +191,13 @@ export class GameScene extends Scene {
         effects: this.effects,
         debug: this.debugGraphics,
         wind: this.wind,
+        friendlyFire: () => this.ctx.session.friendlyFire,
       },
       {
-        bowmanDamaged: (bowman, amount) => {
+        bowmanDamaged: (bowman, amount, hit) => {
           const player = this.playerOf(bowman);
           player.health = Math.max(0, player.health - amount);
+          bowman.noteHit(hit);
         },
         headshot: () => this.ctx.ui.setStatus(`Headshot! ×${HEADSHOT_DAMAGE_MULTIPLIER} damage`),
         bowmanIgnited: (bowman) => this.localStatus(this.playerOf(bowman), 'You are on fire! Get out of the flames'),
@@ -252,6 +255,10 @@ export class GameScene extends Scene {
 
     this.debugGraphics.clear();
     this.effects.update(deltaMs);
+    // Fire, frost and vortex arrows leave flames, glints or motes behind them as they fly.
+    this.arrows
+      .filter((arrow) => arrow.isActive && !arrow.isStuck && isMagicArrow(arrow.type))
+      .forEach((arrow) => this.effects.arrowTrail(arrow.type, { x: arrow.x, y: arrow.y }, deltaMs));
     this.enemies.forEach((enemy) => {
       enemy.visible = this.enemiesVisible;
     });
@@ -364,10 +371,10 @@ export class GameScene extends Scene {
       bowman.y = groundAt(bowman.x);
       const health = run.bowmanHealths[index] ?? sandbox.bowmanHealth;
       if (health <= 0) {
-        bowman.die(true);
+        bowman.die({}, true);
       }
       this.world.addChild(bowman);
-      return { index, bowman, input: new ManualInput() as PlayerInput, local: index === this.localIndex, health, projectile: 'normal' as ProjectileType };
+      return { index, bowman, input: new ManualInput() as PlayerInput, local: index === this.localIndex, health, projectile: firstArrow(sandbox.loadout) as ProjectileType };
     });
   }
 
@@ -413,7 +420,7 @@ export class GameScene extends Scene {
       if (event.code === 'KeyI') {
         this.toggleOptions();
       }
-      const projectile = PROJECTILE_KEYS[event.code];
+      const projectile = this.ctx.session.sandbox.loadout[slotOfKey(event.code)];
       if (projectile) {
         this.localInput?.queueProjectile(projectile);
       }
@@ -590,7 +597,7 @@ export class GameScene extends Scene {
     const releasePoint = bowman.getBowReleasePoint();
     const path = hasAim && aim.power > MIN_SHOT_POWER ? this.simulateShot(aim, releasePoint, projectile) : [];
     this.aimLandingX = path.length > 0 ? path[path.length - 1].x : undefined;
-    this.aimOverlay.draw(releasePoint, hasAim ? aim : undefined, this.ctx.session.showTrajectory ? path : []);
+    this.aimOverlay.draw(releasePoint, hasAim ? aim : undefined, this.ctx.session.showTrajectory ? path : [], this.ctx.session.showCursorCircle);
   }
 
   /** Path the arrow would take if released now (same integrator, gravity and drag as real arrows). */
@@ -653,8 +660,12 @@ export class GameScene extends Scene {
   private checkEndConditions(): void {
     // A bowman at 0 falls (for the rest of the run); the wave is lost once all of them have, or the keep.
     this.players.filter((player) => player.health <= 0 && !player.bowman.isDead).forEach((fallen) => {
-      fallen.bowman.die();
-      this.hostSync?.push({ e: 'die', player: fallen.index });
+      // He falls the way what killed him decides; the guest plays the same fall. Frozen, his ice shatters.
+      if (fallen.bowman.isFrozen) {
+        this.effects.shatter({ x: fallen.bowman.x, y: fallen.bowman.y - 22 });
+      }
+      const kind = fallen.bowman.die();
+      this.hostSync?.push({ e: 'die', player: fallen.index, kind, fromX: Math.round(fallen.bowman.lastHitFromX ?? fallen.bowman.x) });
       if (this.coop) {
         this.players.forEach((player) => this.localStatus(player, player === fallen ? 'You have fallen · your partner fights on' : 'Your partner has fallen · hold on alone'));
       }

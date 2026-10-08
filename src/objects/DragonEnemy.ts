@@ -21,9 +21,14 @@ import { DragonGibSimulation } from '../rendering/dragonGibs';
 import { GIB_GROUND_Y, type GibSimulation } from '../rendering/stickmanGibs';
 import type { BodyAnchor } from '../systems/bodyAnchor';
 import { cruiseAltitude, flyTowards, hoverX } from '../systems/dragonFlight';
+import { buffetOffset } from '../systems/vortex';
 import { groundAt } from '../systems/terrain';
 import type { Bounds, Vec2 } from '../types';
 import type { HitInfo } from './Enemy';
+import { AfflictionLayer, type AfflictionNet } from './AfflictionLayer';
+
+/** Flames on a burning dragon, in its (scaled-down) art units. */
+const AFFLICTION_SIZE = 1.5;
 
 /** Wraps an angle into (−π, π]. */
 const normalizeAngle = (angle: number): number => Math.atan2(Math.sin(angle), Math.cos(angle));
@@ -105,6 +110,8 @@ export default class DragonEnemy extends Container {
   /** The fire stream, in front of the dragon and untinted by hits. */
   private readonly fireArt = new Graphics();
   private readonly healthBar = new Graphics();
+  /** Fire and frost (the dragon archer burns; neither dragon can be frozen, only chilled). */
+  public readonly afflictions: AfflictionLayer;
   private readonly look: (typeof DRAGON_KINDS)[DragonKind];
   /** Fire dragon: time into the current breath (undefined between breaths), wait until the next, fire aim. */
   private breathMs?: number;
@@ -124,6 +131,8 @@ export default class DragonEnemy extends Container {
   private death?: DragonDeath;
   private cheering = false;
   private paused = false;
+  /** Thrown about by turbulence (a vortex arrow): the offset added to where it flies (px). */
+  private buffet = { x: 0, y: 0 };
 
   public constructor(x: number, health: number, speed: number, kind: DragonKind = 'dragon') {
     super();
@@ -137,7 +146,8 @@ export default class DragonEnemy extends Container {
     this.position.set(x, cruiseAltitude(this.timeMs, this.look.altitude));
     this.zIndex = 1;
     this.healthBar.scale.set(1 / this.scale.x, 1 / this.scale.y);
-    this.addChild(this.art, this.riderArt, this.fireArt, this.healthBar);
+    this.afflictions = new AfflictionLayer(kind);
+    this.addChild(this.art, this.riderArt, this.afflictions.art, this.fireArt, this.healthBar);
     this.pose = this.redraw();
     this.drawHealthBar();
   }
@@ -184,6 +194,10 @@ export default class DragonEnemy extends Container {
       };
       this.healthBar.visible = false;
       this.tension = 0;
+      this.afflictions.extinguish();
+      this.afflictions.thaw();
+      // It falls level, not tilted by the gusts any more.
+      this.rotation = 0;
       // Killed mid-breath: the fire goes out.
       this.breathMs = undefined;
       this.fireArt.clear();
@@ -203,26 +217,36 @@ export default class DragonEnemy extends Container {
   }
 
   /** Flies towards its hover point in front of `targetX` at cruising altitude (alive and not cheering). */
-  public update(deltaMs: number, targetX: number): void {
+  public update(realDeltaMs: number, targetX: number): void {
     if (!this.isAlive()) {
       return;
     }
+    // Chilled: it flies slower.
+    const deltaMs = realDeltaMs * this.afflictions.timeScale;
+    // Flies where it means to, then the turbulence throws it about on top of that.
+    this.x -= this.buffet.x;
+    this.y -= this.buffet.y;
     if (!this.cheering) {
       this.x = flyTowards(this.x, hoverX(targetX, this.look.hoverOffset), this.speed, deltaMs);
     }
     this.y = flyTowards(this.y, cruiseAltitude(this.timeMs, this.look.altitude), 40, deltaMs);
+    const { x, y } = buffetOffset(this.timeMs, this.afflictions.turbulence);
+    this.buffet = { x, y };
+    this.x += x;
+    this.y += y;
   }
 
   /** Co-op: the rider's bow and the fire dragon's breath, for the guest. */
-  public getNetState(): { aim: number; tension: number; breathMs?: number; fireAim: number } {
-    return { aim: this.aimAngle, tension: this.tension, breathMs: this.breathMs, fireAim: this.fireAim };
+  public getNetState(): { aim: number; tension: number; breathMs?: number; fireAim: number; af?: AfflictionNet } {
+    return { aim: this.aimAngle, tension: this.tension, breathMs: this.breathMs, fireAim: this.fireAim, af: this.afflictions.getNetState() };
   }
 
   /** Co-op guest: flies where the host has it, with the host's bow and breath (no AI runs on the guest). */
-  public applyNetState(state: { x: number; y: number; aim: number; tension: number; breathMs?: number; fireAim: number }): void {
+  public applyNetState(state: { x: number; y: number; aim: number; tension: number; breathMs?: number; fireAim: number; af?: AfflictionNet }): void {
     if (!this.isAlive()) {
       return;
     }
+    this.afflictions.applyNetState(state.af);
     this.position.set(state.x, state.y);
     this.aimAngle = state.aim;
     this.tension = state.tension;
@@ -260,7 +284,7 @@ export default class DragonEnemy extends Container {
    * breathing or still catching its breath, starts a breath (rear back, then a long stream of fire).
    */
   public breathe(worldAngle: number): void {
-    if (!this.isAlive() || this.cheering || this.kind !== 'fireDragon') {
+    if (!this.isAlive() || this.cheering || this.kind !== 'fireDragon' || this.afflictions.isTurbulent) {
       return;
     }
     this.fireTarget = Math.min(FIRE_AIM_MAX, Math.max(FIRE_AIM_MIN, normalizeAngle(Math.PI - (worldAngle - this.rotation))));
@@ -275,10 +299,11 @@ export default class DragonEnemy extends Container {
    * Turns the bow towards `worldAngle` and draws; returns true on the frame the arrow is loosed (then waits
    * DRAGON_SHOT_INTERVAL_MS, drawing over the last DRAGON_DRAW_MS of it).
    */
-  public aim(worldAngle: number, deltaMs: number): boolean {
+  public aim(worldAngle: number, realDeltaMs: number): boolean {
     if (!this.isAlive() || this.cheering) {
       return false;
     }
+    const deltaMs = realDeltaMs * this.afflictions.timeScale;
     this.aimAngle = worldAngle;
     this.shotTimerMs -= deltaMs;
     this.tension = Math.max(0, Math.min(1, 1 - this.shotTimerMs / DRAGON_DRAW_MS));
@@ -302,18 +327,33 @@ export default class DragonEnemy extends Container {
     return this.toWorld(nock);
   }
 
-  public updateAnimation(deltaMs: number): void {
-    this.flashMs = Math.max(0, this.flashMs - deltaMs);
+  public updateAnimation(realDeltaMs: number): void {
+    this.flashMs = Math.max(0, this.flashMs - realDeltaMs);
+    this.afflictions.tick(realDeltaMs);
+    // Chilled: slower wing beats and breath.
+    const deltaMs = realDeltaMs * this.afflictions.timeScale;
     if (this.death) {
-      this.drawDeath(deltaMs);
+      this.drawDeath(realDeltaMs);
+      this.afflictions.art.clear();
     } else {
       if (!this.paused) {
         this.timeMs += deltaMs;
         this.updateBreath(deltaMs);
       }
+      // Buffeted, it tilts with the gusts, and the fire chokes off.
+      this.rotation = buffetOffset(this.timeMs, this.afflictions.turbulence).tilt;
+      if (this.afflictions.isTurbulent) {
+        this.breathMs = undefined;
+      }
       this.pose = this.redraw();
+      // Flames (or frost) along the body, neck, tail and the rider.
+      const points = dragonHitZones(this.pose).map(({ points: zone }) => ({
+        x: zone.reduce((sum, point) => sum + point.x, 0) / zone.length,
+        y: zone.reduce((sum, point) => sum + point.y, 0) / zone.length,
+      }));
+      this.afflictions.draw(points, AFFLICTION_SIZE);
     }
-    const tint = this.flashMs > 0 ? 0xffb0a8 : 0xffffff;
+    const tint = this.flashMs > 0 ? 0xffb0a8 : this.afflictions.tint;
     this.art.tint = tint;
     this.riderArt.tint = tint;
   }

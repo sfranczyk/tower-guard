@@ -149,10 +149,12 @@ export class HostSync {
     return {
       bowmen: players.map(({ bowman, health }) => {
         const aim = bowman.getAim();
+        const net = bowman.getNetState();
         return {
           x: round(bowman.x), y: round(bowman.y), vx: round(bowman.velocityX),
           ax: aim.direction.x, ay: aim.direction.y, power: aim.power,
           inTower: bowman.isInTower, health,
+          net: net.af || net.th || net.pin ? net : undefined,
         };
       }),
       enemies: living.filter((enemy) => !(enemy instanceof DragonEnemy)).map((enemy) => ({

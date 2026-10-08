@@ -4,6 +4,9 @@ import arrowExplosiveAsset from './assets/arrow-explosive.svg';
 import arrowPiercingAsset from './assets/arrow-piercing.svg';
 import arrowShrapnelAsset from './assets/arrow-shrapnel.svg';
 import arrowPinningAsset from './assets/arrow-pinning.svg';
+import arrowFireAsset from './assets/arrow-fire.svg';
+import arrowFrostAsset from './assets/arrow-frost.svg';
+import arrowVortexAsset from './assets/arrow-vortex.svg';
 import { SoundManager } from './audio/SoundManager';
 import { GAME_HEIGHT, GAME_WIDTH, MAX_RENDER_RESOLUTION } from './config';
 import { setViewWidth } from './core/viewport';
@@ -12,15 +15,18 @@ import { SceneManager } from './core/SceneManager';
 import { DomUi } from './ui/DomUi';
 
 const loadTextures = async (): Promise<GameTextures> => {
-  const [normal, piercing, explosive, shrapnel, pinning] = await Promise.all([
+  const [normal, piercing, explosive, shrapnel, pinning, fire, frost, vortex] = await Promise.all([
     Assets.load<Texture>(arrowAsset),
     Assets.load<Texture>(arrowPiercingAsset),
     Assets.load<Texture>(arrowExplosiveAsset),
     Assets.load<Texture>(arrowShrapnelAsset),
     Assets.load<Texture>(arrowPinningAsset),
+    Assets.load<Texture>(arrowFireAsset),
+    Assets.load<Texture>(arrowFrostAsset),
+    Assets.load<Texture>(arrowVortexAsset),
   ]);
   // Shrapnel fragments are small normal arrows (drawn at a smaller scale).
-  return { arrows: { normal, piercing, explosive, shrapnel, pinning, fragment: normal } };
+  return { arrows: { normal, piercing, explosive, shrapnel, pinning, fire, frost, vortex, fragment: normal } };
 };
 
 const bootstrap = async (): Promise<void> => {

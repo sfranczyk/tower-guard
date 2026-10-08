@@ -85,11 +85,16 @@ export interface HumanoidLook {
   /** Something held in the far or near fist (drawn over the forearm, under the fist). */
   heldFar?: (g: Graphics, elbow: Vec2, hand: Vec2) => void;
   heldNear?: (g: Graphics, elbow: Vec2, hand: Vec2) => void;
-  /** The bow, drawn over everything but the string hand. */
-  bow?: (g: Graphics, pose: BodyPose) => void;
+  /**
+   * The bow, in two layers: `'back'` (limbs and string) with the far hand that holds it, behind the body, so the
+   * near arm swings in front of it; `'front'` (the nocked arrow) over everything but the string hand.
+   */
+  bow?: (g: Graphics, pose: BodyPose, layer: BowLayer) => void;
   /** Leave out the far leg (a rider's, hidden behind the mount). */
   hideFarLeg?: boolean;
 }
+
+export type BowLayer = 'back' | 'front';
 
 const drawLimb = (g: Graphics, root: Vec2, joint: Vec2, end: Vec2, look: LimbLook): void => {
   limb(g, root, joint, look.upperWidth[0], look.upperWidth[1], look.upper);
@@ -98,7 +103,8 @@ const drawLimb = (g: Graphics, root: Vec2, joint: Vec2, end: Vec2, look: LimbLoo
 
 /**
  * Back to front: far arm, far leg, back gear, torso, near leg, head, club, near arm. An archer's bow
- * arm is the far one (as in drawStickman) with the bow drawn over the body, the string hand last.
+ * arm is the far one (as in drawStickman) with the bow in it, behind the body; the arrow goes over the
+ * body and the string hand last.
  */
 export const drawHumanoid = (g: Graphics, pose: BodyPose, look: HumanoidLook): void => {
   const frame = torsoFrame(pose);
@@ -106,6 +112,9 @@ export const drawHumanoid = (g: Graphics, pose: BodyPose, look: HumanoidLook): v
   drawLimb(g, pose.shoulder, pose.rearElbow, pose.rearHand, look.armFar);
   look.heldFar?.(g, pose.rearElbow, pose.rearHand);
   g.circle(pose.rearHand.x, pose.rearHand.y, look.handRadius).fill({ color: look.handFar });
+  if (pose.bow && look.bow) {
+    look.bow(g, pose, 'back');
+  }
   if (!look.hideFarLeg) {
     drawLimb(g, pose.hip, pose.rearKnee, pose.rearFoot, look.legFar);
     footShape(g, pose.rearFoot, pose.rearShinAngle, look.foot.length, look.foot.height, look.foot.colorFar);
@@ -119,7 +128,7 @@ export const drawHumanoid = (g: Graphics, pose: BodyPose, look: HumanoidLook): v
     look.club(g, pose.club.butt, pose.club.tip);
   }
   if (pose.bow && look.bow) {
-    look.bow(g, pose);
+    look.bow(g, pose, 'front');
   }
   drawLimb(g, pose.shoulder, pose.frontElbow, pose.frontHand, look.arm);
   look.heldNear?.(g, pose.frontElbow, pose.frontHand);
@@ -137,12 +146,21 @@ export const woodenClub = (wood: number, dark: number, grip: number, width: numb
   limb(g, point(length * 0.72), point(length * 0.78), width * 1.6, width * 1.65, dark);
 };
 
-/** Bow limbs bent through the grip, the string to the nock and, while drawn, the arrow. */
-export const drawBowWith = (wood: number, woodDark: number, string: number, arrow: number) => (g: Graphics, pose: BodyPose): void => {
+/** Bow limbs bent through the grip and the string to the nock (`'back'`) and, while drawn, the arrow (`'front'`). */
+export const drawBowWith = (wood: number, woodDark: number, string: number, arrow: number) => (g: Graphics, pose: BodyPose, layer: BowLayer): void => {
   if (!pose.bow) {
     return;
   }
   const { rig, tension } = pose.bow;
+  if (layer === 'front') {
+    if (tension > 0.05) {
+      const aim = unit(rig.stringNock, rig.woodHand);
+      const tip = { x: rig.woodHand.x + aim.x * 8, y: rig.woodHand.y + aim.y * 8 };
+      g.moveTo(rig.stringNock.x, rig.stringNock.y).lineTo(tip.x, tip.y).stroke({ width: 1.6, color: arrow, cap: 'round' });
+      shape(g, [tip, { x: tip.x - aim.x * 5 - aim.y * 2.5, y: tip.y - aim.y * 5 + aim.x * 2.5 }, { x: tip.x - aim.x * 5 + aim.y * 2.5, y: tip.y - aim.y * 5 - aim.x * 2.5 }], 0xc9ced4);
+    }
+    return;
+  }
   const curve = (width: number, color: number): void => {
     g.moveTo(rig.bowTop.x, rig.bowTop.y).quadraticCurveTo(rig.bowControl.x, rig.bowControl.y, rig.bowBottom.x, rig.bowBottom.y)
       .stroke({ width, color, cap: 'round', join: 'round' });
@@ -151,12 +169,6 @@ export const drawBowWith = (wood: number, woodDark: number, string: number, arro
   curve(3, wood);
   g.moveTo(rig.bowTop.x, rig.bowTop.y).lineTo(rig.stringNock.x, rig.stringNock.y).lineTo(rig.bowBottom.x, rig.bowBottom.y)
     .stroke({ width: 1, color: string });
-  if (tension > 0.05) {
-    const aim = unit(rig.stringNock, rig.woodHand);
-    const tip = { x: rig.woodHand.x + aim.x * 8, y: rig.woodHand.y + aim.y * 8 };
-    g.moveTo(rig.stringNock.x, rig.stringNock.y).lineTo(tip.x, tip.y).stroke({ width: 1.6, color: arrow, cap: 'round' });
-    shape(g, [tip, { x: tip.x - aim.x * 5 - aim.y * 2.5, y: tip.y - aim.y * 5 + aim.x * 2.5 }, { x: tip.x - aim.x * 5 + aim.y * 2.5, y: tip.y - aim.y * 5 - aim.x * 2.5 }], 0xc9ced4);
-  }
 };
 
 /** Arrows sticking out of a quiver on the back, between `bottom` and `top`. */

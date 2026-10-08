@@ -59,7 +59,7 @@ export const EXPLOSION_RADIUS = 72;
  * A fire dragon killed by a direct explosive hit blows up: the arrow's explosion this many times over (radius and
  * damage), in a cloud of fire, and the dragon and rider burst apart.
  */
-export const FIRE_DRAGON_BLAST_POWER = 2;
+export const FIRE_DRAGON_BLAST_POWER = 3;
 /**
  * A kamikaze killed by a direct explosive hit sets its bomb off: the arrow's explosion this many times over (radius
  * and damage). A kamikaze blown apart (by that or its own bomb) throws its pieces KAMIKAZE_GIB_FORCE times harder.
@@ -96,6 +96,69 @@ export const PIN_DURATION_MS = 10000;
 export const PIN_DURATION_ZOMBIE_MS = 15000;
 export const PIN_DAMAGE: readonly [number, number] = [0, 4];
 export const ENEMY_TOWER_DAMAGE = 16;
+/**
+ * Fire arrow (systems/afflictions.ts, systems/ArrowMagic.ts): hits for FIRE_ARROW_DAMAGE × PROJECTILE_DAMAGE and
+ * sets the enemy alight for ENEMY_BURN_MS (zombies × ENEMY_BURN_ZOMBIE_FACTOR; the fire dragon doesn't burn),
+ * ENEMY_BURN_DPS dealt every BURN_TICK_MS. Each tick a burning enemy may set others within FIRE_SPREAD_RADIUS
+ * alight (FIRE_SPREAD_CHANCE). In the ground it leaves a fire FIRE_PATCH_RADIUS wide for FIRE_PATCH_MS.
+ */
+export const FIRE_ARROW_DAMAGE = 0.3;
+export const ENEMY_BURN_MS = 4000;
+export const ENEMY_BURN_ZOMBIE_FACTOR = 1.5;
+export const ENEMY_BURN_DPS = 5;
+export const BURN_TICK_MS = 250;
+export const FIRE_SPREAD_RADIUS = 32;
+export const FIRE_SPREAD_CHANCE = 0.12;
+export const FIRE_PATCH_MS = 3500;
+export const FIRE_PATCH_RADIUS = 28;
+/**
+ * Frost arrow: hits for FROST_ARROW_DAMAGE × PROJECTILE_DAMAGE and chills for FROST_CHILL_MS (everything it does
+ * runs at FROST_SLOW speed). The FROST_FREEZE_HITS-th hit in a row (while still chilled), or a headshot, freezes it solid for
+ * FROST_FREEZE_MS (brutes FROST_FREEZE_BRUTE_MS; dragons are only chilled). Frozen enemies killed, or caught in
+ * an explosion, shatter. Fire thaws them.
+ */
+export const FROST_ARROW_DAMAGE = 0.2;
+export const FROST_CHILL_MS = 12000;
+export const FROST_SLOW = 0.45;
+export const FROST_FREEZE_HITS = 2;
+export const FROST_FREEZE_MS = 12000;
+export const FROST_FREEZE_BRUTE_MS = 5000;
+/**
+ * Vortex arrow (systems/vortex.ts): where it lands a vortex opens for VORTEX_MS. It pulls ground enemies within
+ * VORTEX_RADIUS to its centre (up to VORTEX_PULL_SPEED px/s), lifts them up the funnel (VORTEX_RISE_SPEED px/s)
+ * and at VORTEX_TOP throws them up and out (VORTEX_THROW, px/s). Brutes are too heavy to be caught: inside its
+ * reach they only walk at VORTEX_HEAVY_WALK of their pace. At
+ * the end it dies away and flings out the ones it hasn't lifted yet (VORTEX_FLING). Thrown enemies fall under
+ * THROW_GRAVITY and take FALL_DAMAGE on landing: perSpeed × how much faster than safeSpeed they hit the ground.
+ * The arrow itself does no damage: an enemy it hits glows and levitates straight up (towards VORTEX_LEVITATE_HEIGHT
+ * at VORTEX_LEVITATE_SPEED px/s, rising above the funnel) while the vortex lasts, then drops, taking VORTEX_LEVITATE_FALL × the fall damage.
+ * Each further vortex arrow that hits it lifts it VORTEX_LEVITATE_BOOST px higher (at most VORTEX_LEVITATE_MAX); a
+ * brute only rises VORTEX_LEVITATE_HEAVY as high.
+ */
+export const VORTEX_MS = 4200;
+export const VORTEX_RADIUS = 150;
+export const VORTEX_PULL_SPEED = 190;
+export const VORTEX_HEAVY_WALK = 0.45;
+export const VORTEX_RISE_SPEED = 85;
+export const VORTEX_TOP = 130;
+export const VORTEX_THROW = { up: [420, 560], side: [110, 260] } as const;
+export const VORTEX_FLING = { up: [170, 260], side: [170, 290] } as const;
+export const THROW_GRAVITY = 1100;
+export const FALL_DAMAGE = { safeSpeed: 220, perSpeed: 0.025 } as const;
+export const VORTEX_LEVITATE_SPEED = 110;
+export const VORTEX_LEVITATE_HEIGHT = 280;
+export const VORTEX_LEVITATE_FALL = 0.5;
+export const VORTEX_LEVITATE_BOOST = 110;
+export const VORTEX_LEVITATE_MAX = 400;
+export const VORTEX_LEVITATE_HEAVY = 0.15;
+/**
+ * A vortex arrow hitting a dragon: a ring of wind swirls round it for DRAGON_TURBULENCE_MS and it's buffeted
+ * (DRAGON_BUFFET: px sideways and up and down, tilt in radians). Meanwhile the fire dragon can't breathe fire and
+ * the dragon archer's rider shoots DRAGON_TURBULENCE_SPREAD times as wide.
+ */
+export const DRAGON_TURBULENCE_MS = 4200;
+export const DRAGON_TURBULENCE_SPREAD = 4;
+export const DRAGON_BUFFET = { x: 14, y: 20, tilt: 0.16 } as const;
 /** Enemy archers: stop and shoot from this distance, draw time, pause between shots, aim error. */
 export const ENEMY_ARCHER_RANGE = 340;
 export const ENEMY_ARCHER_DRAW_MS = 900;
@@ -146,6 +209,12 @@ export const GRAVITY = 2200;
  * ~22 px by itself, plus a slide of up to `pushMax` px (scaled by closeness, from `minStrength` at the edge).
  * He lies `lieMs` before getting up, and the animations play `animationSpeed`× faster than the enemies'.
  */
+/**
+ * Friendly fire (settings drawer, on by default): the players' arrows and what they do (blasts, fire, frost,
+ * vortices, pins) hit the bowmen out in the open as they hit enemies. An arrow spares the bowman who loosed it for
+ * its first FRIENDLY_FIRE_GRACE_MS (it leaves the bow inside his hit box).
+ */
+export const FRIENDLY_FIRE_GRACE_MS = 200;
 export const BOWMAN_KNOCKBACK = { pushMax: 40, minStrength: 0.35, lieMs: 250, animationSpeed: 1.3 } as const;
 export const JUMP_BUFFER_MS = 110;
 

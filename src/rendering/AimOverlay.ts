@@ -32,7 +32,8 @@ export class AimOverlay extends Graphics {
     this.lastReleaseOrigin = { ...origin };
   }
 
-  public draw(origin: Vec2, aim: AimInput | undefined, trajectory: readonly Vec2[] = []): void {
+  /** `showCursor`: also draw the circles at the drag start (settings drawer); the ones at the bow always show. */
+  public draw(origin: Vec2, aim: AimInput | undefined, trajectory: readonly Vec2[] = [], showCursor = true): void {
     this.clear();
     this.drawPreviousRelease();
     this.drawTrajectory(trajectory);
@@ -42,17 +43,24 @@ export class AimOverlay extends Graphics {
 
     const aimColor = this.colors.aim;
     const visualRadius = aim.strength.distance * AIM_VISUAL_RADIUS_FACTOR;
-    const cursorRadius = Math.hypot(aim.start.x - aim.current.x, aim.start.y - aim.current.y);
+    this.circle(origin.x, origin.y, visualRadius).fill({ color: aimColor, alpha: 0.1 });
+    this.ring(origin, visualRadius, aimColor, 0.8);
+    this.segment(origin, { x: origin.x + aim.direction.x * visualRadius, y: origin.y + aim.direction.y * visualRadius }, aimColor, 0.9, 1.5);
+    // See-through centre dot, so the bowman shows through it.
+    this.dot(origin, 4, aimColor, 0.35);
+    if (showCursor) {
+      this.drawCursorCircles(aim, visualRadius);
+    }
+  }
 
+  /** Circles at the drag start: the power circle, one through the cursor and a line towards it. */
+  private drawCursorCircles(aim: AimInput, visualRadius: number): void {
+    const aimColor = this.colors.aim;
+    const cursorRadius = Math.hypot(aim.start.x - aim.current.x, aim.start.y - aim.current.y);
     // Nearly clear at the cursor, so the battlefield under the drag stays visible.
     this.circle(aim.start.x, aim.start.y, visualRadius).fill({ color: aimColor, alpha: 0.03 });
-    this.circle(origin.x, origin.y, visualRadius).fill({ color: aimColor, alpha: 0.1 });
     this.ring(aim.start, visualRadius, aimColor, 0.8);
-    this.ring(origin, visualRadius, aimColor, 0.8);
     this.ring(aim.start, cursorRadius, aimColor, 0.45);
-    this.segment(origin, { x: origin.x + aim.direction.x * visualRadius, y: origin.y + aim.direction.y * visualRadius }, aimColor, 0.9, 1.5);
-    // Both centre dots are see-through, so the bowman and the drag start show through them.
-    this.dot(origin, 4, aimColor, 0.35);
     this.dot(aim.start, 4, aimColor, 0.35);
 
     const dx = aim.current.x - aim.start.x;

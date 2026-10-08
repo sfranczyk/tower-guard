@@ -7,13 +7,24 @@ import { RUN_STRIDE_PER_RADIAN } from '../rendering/runCycle';
 import { FALL_DURATION_MS, getFallPose, type FallKind, type FallPose } from '../rendering/stickmanFall';
 import { CHEER_KINDS, getCheerPose, type CheerKind } from '../rendering/stickmanCheer';
 import { PINNED_FOOT, getPinnedPose } from '../rendering/stickmanPinned';
+import { getFlailPose } from '../rendering/stickmanFlail';
+import { stepFlight, type Flight } from '../systems/flight';
 import { GibSimulation } from '../rendering/stickmanGibs';
 import type { BodyColors } from '../rendering/bodyColors';
 import { drawEnemyBody, drawEnemyGibs, enemyGibColors, type EnemyBodyState } from '../rendering/enemyBody';
 import { fromBodyAnchor, spriteToWorld, toBodyAnchor, worldToSprite, type BodyAnchor, type BodyTransform, type Torso } from '../systems/bodyAnchor';
 import { ENEMY_LOOKS, blowsApart, knockbackPush, type EnemyLook } from '../data/enemies';
 import { groundAt } from '../systems/terrain';
+import { STANDING_BURN_POINTS, burnPoints } from '../rendering/burning';
+import { FROZEN_TINT } from '../rendering/afflictionArt';
 import type { Bounds, EnemyType, Vec2 } from '../types';
+import { AfflictionLayer, type AfflictionNet } from './AfflictionLayer';
+
+/** Co-op: a thrown enemy's flight for the guest (its position comes in the snapshot). */
+export interface ThrowNet {
+  vx: number;
+  spin: number;
+}
 
 const ATTACK_ANIMATION_DURATION_MS = 1_130;
 
@@ -21,8 +32,11 @@ export type EnemyTarget = 'bowman' | 'tower';
 
 /** What dealt the damage, and from which side, so the right reaction plays. */
 export interface HitInfo {
-  /** 'blast' = hit directly by an explosive arrow (a kill blows the body apart). */
-  cause: 'arrow' | 'headshot' | 'explosion' | 'blast' | 'lightning';
+  /**
+   * 'blast' = hit directly by an explosive arrow (a kill blows the body apart); 'burn' = a fire arrow's burn;
+   * 'shatter' = killed while frozen (it bursts into pieces of ice); 'fall' = landing after a vortex threw it.
+   */
+  cause: 'arrow' | 'headshot' | 'explosion' | 'blast' | 'lightning' | 'burn' | 'shatter' | 'fall';
   /** World x the hit came from; the enemy turns to face it before falling. */
   fromX: number;
   /** World point of impact (used for 'blast' to throw the pieces away from it). */
@@ -75,6 +89,18 @@ const GIB_FORCE_MAX = 1.7;
 const TORSO_TO_NECK = 43;
 const TORSO_TO_SHOULDER = 35;
 
+/** Blown apart up in the air: the pieces' frame drops back to the ground this fast (px/s²). */
+const DROP_GRAVITY = 1400;
+/** A thrown enemy lands into the knockback this far through it (hitting the ground on its back). */
+const LANDING_PROGRESS = 0.72;
+/** Lifted this high (px) in a vortex, it flails. */
+const FLAIL_LIFT = 4;
+/** Drawn over the vortex while levitating (the vortex is at 3). */
+const LEVITATE_Z = 4;
+
+/** Flames and frost glints in container units (the bowman's at his scale, to match). */
+const AFFLICTION_SIZE = 0.5;
+
 /** Container scale of a normal-sized enemy (bigger types multiply it by their size). */
 const ENEMY_SCALE = 2 / 3;
 const RUN_LEAN = 0.14;
@@ -112,7 +138,19 @@ export default class Enemy extends Container {
   private bowTension = 0;
   private aimAngle = Math.PI;
   private bowCooldownMs = 0;
+  /** Killed while frozen: its pieces are ice. */
+  private shattered = false;
+  /** Pieces dropping back to the ground after being blown apart in the air (px/s). */
+  private dropSpeed = 0;
+  /** Thrown through the air (a vortex threw it out, or it was hit up there), flailing until it lands. */
+  private flight?: Flight;
+  /** Co-op guest: the host moves it while it flies (it only lands it here). */
+  private flightFromNet = false;
+  /** Host: told when it lands from a throw, with the speed it hit the ground at (for the fall damage). */
+  public onLanded?: (impactSpeed: number) => void;
   public target: EnemyTarget;
+  /** Fire, frost and vortex (fire, frost and vortex arrows): drawn over the body. */
+  public readonly afflictions: AfflictionLayer;
   /** Co-op host: hears about every hit and swing, to replay them on the guest's screen. */
   public netHooks?: { damaged(amount: number, hit: HitInfo): void; attacked(): void };
 
@@ -127,7 +165,8 @@ export default class Enemy extends Container {
     this.look = ENEMY_LOOKS[kind];
     this.body = new Graphics();
     this.drawPlaceholder();
-    this.addChild(this.body);
+    this.afflictions = new AfflictionLayer(kind);
+    this.addChild(this.body, this.afflictions.art);
     this.healthBar = new Graphics();
     this.addChild(this.healthBar);
     this.health = Math.max(0, health);
@@ -179,7 +218,12 @@ export default class Enemy extends Container {
    * Archer: face `angle`, raise the bow, draw, and return true on the frame the arrow is released.
    * Call every frame while standing in range; call relaxBow() otherwise.
    */
-  public aimBow(angle: number, deltaMs: number): boolean {
+  public aimBow(angle: number, realDeltaMs: number): boolean {
+    // Chilled archers draw slower; frozen or caught in a vortex, not at all.
+    const deltaMs = this.afflictions.inVortex ? 0 : realDeltaMs * this.afflictions.timeScale;
+    if (deltaMs === 0) {
+      return false;
+    }
     this.aimAngle = angle;
     this.velocity = { x: 0, y: 0 };
     this.body.scale.x = Math.cos(angle) < 0 ? -BODY_SCALE.x : BODY_SCALE.x;
@@ -199,7 +243,8 @@ export default class Enemy extends Container {
   }
 
   /** Archer: lower the bow (walking, knocked down, no target). */
-  public relaxBow(deltaMs: number): void {
+  public relaxBow(realDeltaMs: number): void {
+    const deltaMs = realDeltaMs * this.afflictions.timeScale;
     this.bowCooldownMs = Math.max(0, this.bowCooldownMs - deltaMs);
     this.bowTension = Math.max(0, this.bowTension - deltaMs / 200);
     this.bowReady = Math.max(0, this.bowReady - deltaMs / BOW_LOWER_MS);
@@ -251,16 +296,39 @@ export default class Enemy extends Container {
     // Explosions throw the closer ones further (a direct hit counts as the centre).
     const blastDistance = hit.blastDistance ?? (hit.cause === 'blast' ? 0 : 1);
     const push = hit.cause === 'explosion' || hit.cause === 'blast' ? knockbackPush(blastDistance) : 0;
+    // Up in the air (lifted or flying) it falls back down first and lands lying.
+    const aloft = this.flight !== undefined || this.afflictions.inVortex;
     if (this.health === 0) {
       this.alive = false;
       this.velocity = { x: 0, y: 0 };
       this.healthBar.visible = false;
-      if (blowsApart(hit.cause, blastDistance)) {
+      if (hit.cause === 'fall') {
+        // Already lying from the landing: it just doesn't get up.
+        if (this.fall) {
+          this.fall.getUpAfterMs = undefined;
+        }
+      } else if (hit.cause === 'shatter') {
+        this.afflictions.thaw();
+        this.shattered = true;
+        this.afflictions.extinguish();
         this.blowApart(hit.fromX, hit.point ?? { x: this.x, y: this.y - 20 });
+      } else if (blowsApart(hit.cause, blastDistance)) {
+        this.afflictions.thaw();
+        this.afflictions.extinguish();
+        this.blowApart(hit.fromX, hit.point ?? { x: this.x, y: this.y - 20 });
+      } else if (aloft) {
+        this.afflictions.thaw();
+        if (!this.flight) {
+          this.throwInAir(0, 0, 0);
+        }
       } else {
+        this.afflictions.thaw();
         this.startFall(Enemy.deathKind(hit.cause), hit.fromX, undefined, push);
       }
+    } else if (aloft) {
+      // Hit while up in the air: it keeps flying (or stays in the funnel).
     } else if (hit.cause === 'explosion' || hit.cause === 'blast' || hit.cause === 'lightning') {
+      this.afflictions.thaw();
       this.startFall('knockback', hit.fromX, KNOCKDOWN_LIE_MS, push);
     }
 
@@ -290,9 +358,13 @@ export default class Enemy extends Container {
     return this.isAlive() && this.cheer !== undefined;
   }
 
-  /** True while a surviving enemy is knocked down (can't move or attack). */
+  /** True while a surviving enemy is knocked down or flying through the air (can't move or attack). */
   public get isDown(): boolean {
-    return this.isAlive() && this.fall !== undefined;
+    return this.isAlive() && (this.fall !== undefined || this.flight !== undefined);
+  }
+
+  public get isThrown(): boolean {
+    return this.flight !== undefined;
   }
 
   public clearHitTint(): void {
@@ -303,7 +375,7 @@ export default class Enemy extends Container {
   }
 
   public applyHitReaction(pushX: number): void {
-    if (!this.isAlive() || this.fall) {
+    if (!this.isAlive() || this.fall || this.afflictions.isFrozen) {
       return;
     }
     this.hitStaggerMs = Math.max(this.hitStaggerMs, 120);
@@ -320,14 +392,50 @@ export default class Enemy extends Container {
     this.netHooks?.attacked();
   }
 
-  /** Pins the enemy to the ground for `durationMs` (a fresh pin restarts the time). */
+  /** Pins the enemy to the ground for `durationMs` (a fresh pin restarts the time); not while it's up in the air. */
   public pin(durationMs: number): void {
-    if (this.isAlive()) {
+    if (this.isAlive() && !this.flight && !this.afflictions.inVortex) {
       if (this.pinnedMs <= 0) {
         this.struggleMs = 0;
       }
       this.pinnedMs = Math.max(this.pinnedMs, durationMs);
     }
+  }
+
+  /**
+   * Held by a vortex this frame at `x`, lifted `lift` px off the ground (it flails once off its feet) and turned
+   * `lean` (leaning into the pull on the ground, tumbling up in the funnel); `levitating` when the vortex arrow hit
+   * it (it glows). Meanwhile it can't walk or swing.
+   */
+  public holdInVortex(x: number, lift: number, lean: number, levitating = false): void {
+    if (!this.isAlive() || this.fall || this.flight) {
+      return;
+    }
+    this.x = Math.max(PLAYER_TOWER_X + PUSH_MARGIN, Math.min(WORLD_WIDTH - PUSH_MARGIN, x));
+    this.y = groundAt(this.x) - lift;
+    this.afflictions.holdInVortex(lift, lean, levitating);
+    this.velocity = { x: 0, y: 0 };
+    this.attackTimerMs = 0;
+    this.pendingImpact = undefined;
+  }
+
+  /**
+   * Thrown through the air at (`vx`, `vy`) px/s, tumbling at `spin` radians/s: it flails (or flies as a block of
+   * ice) and lands on its back into the knockback; then `onLanded` (the host deals the fall damage).
+   */
+  public throwInAir(vx: number, vy: number, spin: number): void {
+    if (this.gibs || this.fall) {
+      return;
+    }
+    const rotation = this.afflictions.inVortex ? this.afflictions.lean : 0;
+    this.afflictions.releaseVortex();
+    this.flight = { x: this.x, y: this.y, vx, vy, rotation, spin, timeMs: 0 };
+    this.velocity = { x: 0, y: 0 };
+    this.attackTimerMs = 0;
+    this.hitStaggerMs = 0;
+    this.pendingImpact = undefined;
+    // Faces against the way it flies, so it falls backwards along it.
+    this.body.scale.x = (vx > 0 ? -1 : 1) * BODY_SCALE.x;
   }
 
   /** Where the stuck foot of a pinned enemy is (world): its rear foot, behind it (it faces the way it walked). */
@@ -344,24 +452,37 @@ export default class Enemy extends Container {
   }
 
   /** Co-op: what the guest needs besides the position (walking speed; an archer's bow; time left pinned). */
-  public getNetState(): { vx: number; aim?: number; tension?: number; ready?: number; pinned?: number } {
+  public getNetState(): { vx: number; aim?: number; tension?: number; ready?: number; pinned?: number; af?: AfflictionNet; th?: ThrowNet } {
     const pinned = this.pinnedMs > 0 ? this.pinnedMs : undefined;
+    const af = this.afflictions.getNetState();
+    const th = this.flight ? { vx: Math.round(this.flight.vx), spin: Math.round(this.flight.spin * 10) / 10 } : undefined;
     return this.isArcher
-      ? { vx: this.velocity.x, aim: this.aimAngle, tension: this.bowTension, ready: this.bowReady, pinned }
-      : { vx: this.velocity.x, pinned };
+      ? { vx: this.velocity.x, aim: this.aimAngle, tension: this.bowTension, ready: this.bowReady, pinned, af, th }
+      : { vx: this.velocity.x, pinned, af, th };
   }
 
   /**
    * Co-op guest: puts the enemy where the host has it (no AI runs on the guest); walking speed drives the
    * stride and facing, an archer's bow follows the host's aim and draw.
    */
-  public applyNetState(state: { x: number; y: number; vx: number; aim?: number; tension?: number; ready?: number; pinned?: number }): void {
+  public applyNetState(state: { x: number; y: number; vx: number; aim?: number; tension?: number; ready?: number; pinned?: number; af?: AfflictionNet; th?: ThrowNet }): void {
     if (!this.isAlive()) {
+      return;
+    }
+    if (state.th && !this.flight && !this.fall) {
+      this.throwInAir(state.th.vx, 0, state.th.spin);
+      this.flightFromNet = true;
+    }
+    if (this.flight) {
+      // The host flies it; this side tumbles it and lands it.
+      this.flight = { ...this.flight, vy: state.y >= this.y ? 1 : -1, x: state.x, y: state.y };
+      this.position.set(state.x, state.y);
       return;
     }
     this.position.set(state.x, state.y);
     this.velocity = { x: state.vx, y: 0 };
     this.pinnedMs = state.pinned ?? 0;
+    this.afflictions.applyNetState(state.af);
     if (this.isArcher && state.aim !== undefined) {
       this.aimAngle = state.aim;
       this.bowTension = state.tension ?? 0;
@@ -372,13 +493,115 @@ export default class Enemy extends Container {
     }
   }
 
+  /**
+   * Counts the afflictions down (real time), plays the animation at their pace (slowed when chilled, held when
+   * frozen) and draws them over the body.
+   */
   public updateAnimation(deltaMs: number, moving: boolean): void {
-    this.lookTimeMs += deltaMs;
-    if (this.gibs) {
-      this.gibs.step(deltaMs);
-      drawEnemyGibs(this.body, this.kind, this.gibs, BODY_ORIGIN_Y, this.lookTimeMs);
+    this.afflictions.tick(deltaMs);
+    // Held up by a vortex arrow, it glows in front of the funnel.
+    this.zIndex = this.afflictions.levitating ? LEVITATE_Z : 1;
+    if (this.flight) {
+      this.updateFlight(deltaMs);
       return;
     }
+    if (this.gibs) {
+      this.dropToGround(deltaMs);
+      this.gibs.step(deltaMs);
+      this.lookTimeMs += deltaMs;
+      drawEnemyGibs(this.body, this.kind, this.gibs, BODY_ORIGIN_Y, this.lookTimeMs);
+      this.body.tint = this.shattered ? FROZEN_TINT : 0xffffff;
+      this.afflictions.art.clear();
+      return;
+    }
+    const lifted = this.afflictions.inVortex && this.afflictions.lift > FLAIL_LIFT && !this.fall && !this.afflictions.isFrozen;
+    if (lifted) {
+      // Off its feet in the funnel: flailing, tumbling round.
+      this.lookTimeMs += deltaMs;
+      this.drawBody({ mode: 'joints', pose: getFlailPose(this.lookTimeMs), club: this.carriesClub });
+      this.body.rotation = this.afflictions.lean;
+    } else {
+      this.animate(deltaMs * this.afflictions.timeScale, moving);
+      if (this.afflictions.inVortex && !this.fall) {
+        // Leaning into the pull, flailing a little.
+        this.body.rotation += this.afflictions.lean + Math.sin(this.lookTimeMs / 90) * 0.06;
+      }
+    }
+    this.body.tint = this.afflictions.tint;
+    this.afflictions.draw(this.afflictionPoints(this.fall || lifted ? undefined : STANDING_BURN_POINTS), AFFLICTION_SIZE, this.afflictionPoints(STANDING_BURN_POINTS));
+  }
+
+  /**
+   * Flying (thrown by a vortex): falls, tumbles, flails (a frozen one flies as a block of ice) and lands on its back
+   * into the knockback (a living one gets up later); then onLanded.
+   */
+  private updateFlight(deltaMs: number): void {
+    const flight = this.flight!;
+    this.lookTimeMs += deltaMs;
+    // A co-op guest's living enemy flies where the host has it (it only tumbles and lands it here).
+    const driven = this.flightFromNet && this.isAlive();
+    const step = stepFlight(flight, deltaMs, groundAt, PLAYER_TOWER_X + PUSH_MARGIN, WORLD_WIDTH - PUSH_MARGIN);
+    const landed = driven ? flight.vy > 0 && this.y >= groundAt(this.x) - 0.5 : step.landed;
+    if (landed) {
+      this.land(flight.vx, step.impactSpeed);
+      return;
+    }
+    this.flight = driven ? { ...step.flight, x: flight.x, y: flight.y, vy: flight.vy } : step.flight;
+    this.position.set(this.flight.x, this.flight.y);
+    if (this.afflictions.isFrozen) {
+      this.drawBody({ mode: 'stand', phase: 0 });
+    } else {
+      this.drawBody({ mode: 'joints', pose: getFlailPose(this.lookTimeMs), club: this.carriesClub });
+    }
+    this.body.rotation = this.flight.rotation;
+    this.body.tint = this.afflictions.tint;
+    this.afflictions.draw(this.afflictionPoints(), AFFLICTION_SIZE, this.afflictionPoints(STANDING_BURN_POINTS));
+  }
+
+  /** Hits the ground on its back, sliding on the way it flew; a living one gets up after a while. */
+  private land(vx: number, impactSpeed: number): void {
+    this.flight = undefined;
+    this.flightFromNet = false;
+    this.y = groundAt(this.x);
+    this.body.rotation = 0;
+    // Falls backwards away from `fromX`: put that behind where it came from.
+    this.startFall('knockback', this.x - Math.sign(vx || 1), this.isAlive() ? KNOCKDOWN_LIE_MS : undefined);
+    if (this.fall) {
+      this.fall.timeMs = FALL_DURATION_MS.knockback * LANDING_PROGRESS;
+      this.drawFall();
+    }
+    const landed = this.onLanded;
+    this.onLanded = undefined;
+    landed?.(impactSpeed);
+  }
+
+  /** Blown apart up in the air: the pieces' frame drops back to the ground. */
+  private dropToGround(deltaMs: number): void {
+    const ground = groundAt(this.x);
+    if (this.y >= ground) {
+      this.dropSpeed = 0;
+      return;
+    }
+    this.dropSpeed += (DROP_GRAVITY * deltaMs) / 1000;
+    this.y = Math.min(ground, this.y + (this.dropSpeed * deltaMs) / 1000);
+  }
+
+  /** Body points (where flames burn and frost glints) in container space: the fall pose's joints, or `standing`. */
+  private afflictionPoints(standing?: readonly Vec2[]): Vec2[] {
+    const { body } = this;
+    const pose = this.jointPose();
+    const points = standing ?? (pose ? burnPoints(pose) : STANDING_BURN_POINTS);
+    const cos = Math.cos(body.rotation);
+    const sin = Math.sin(body.rotation);
+    return points.map(({ x, y }) => {
+      const scaledX = x * body.scale.x;
+      const scaledY = y * body.scale.y;
+      return { x: body.x + scaledX * cos - scaledY * sin, y: body.y + scaledX * sin + scaledY * cos };
+    });
+  }
+
+  private animate(deltaMs: number, moving: boolean): void {
+    this.lookTimeMs += deltaMs;
     this.positionHealthBar();
     if (this.fall) {
       // Dead enemies keep playing (then holding) their death; survivors get back up.
@@ -444,6 +667,11 @@ export default class Enemy extends Container {
     return this.alive && this.health > 0;
   }
 
+  /** Health left (e.g. whether a hit will kill it). */
+  public get currentHealth(): number {
+    return this.health;
+  }
+
   public getHealthRatio(): number {
     return this.health / this.maxHealth;
   }
@@ -492,11 +720,19 @@ export default class Enemy extends Container {
     return Enemy.boundsAround([{ x: centerX, y: centerY }], radius);
   }
 
-  public update(deltaMs: number, target?: Vec2, stopDistance = 0): void {
+  public update(realDeltaMs: number, target?: Vec2, stopDistance = 0): void {
+    // A pin holds for its full time; everything else runs at the afflictions' pace (slowed, or held when frozen).
+    this.pinnedMs = Math.max(0, this.pinnedMs - realDeltaMs);
+    const deltaMs = realDeltaMs * this.afflictions.timeScale;
     // The pause between swings runs down all the time, also while the bowman is out of reach.
     this.attackCooldown = Math.max(0, this.attackCooldown - deltaMs);
-    this.pinnedMs = Math.max(0, this.pinnedMs - deltaMs);
     if (!this.isAlive() || this.fall) {
+      return;
+    }
+    // Frozen solid, held by a vortex (which also sets its position) or flying: no walking of its own.
+    if (this.afflictions.isFrozen || this.afflictions.inVortex || this.flight) {
+      this.velocity.x = 0;
+      this.velocity.y = 0;
       return;
     }
     // Pinned: struggles on the spot.
@@ -539,14 +775,15 @@ export default class Enemy extends Container {
       this.velocity.y = 0;
     }
 
-    const deltaSeconds = deltaMs / 1000;
+    // A brute in a vortex's reach struggles on against the wind.
+    const deltaSeconds = (deltaMs * this.afflictions.headwind) / 1000;
     this.x += this.velocity.x * deltaSeconds;
     this.y = groundAt(this.x);
   }
 
   /** Ready to start a swing (not down, not mid-swing, pause over); starting one restarts the pause. */
   public canAttack(): boolean {
-    if (this.fall || this.attackTimerMs > 0 || this.attackCooldown > 0) {
+    if (this.fall || this.flight || this.attackTimerMs > 0 || this.attackCooldown > 0 || this.afflictions.isFrozen || this.afflictions.inVortex) {
       return false;
     }
     this.attackCooldown = ENEMY_ATTACK_INTERVAL_MS;
@@ -571,12 +808,16 @@ export default class Enemy extends Container {
     if (cause === 'explosion') {
       return 'knockback';
     }
+    if (cause === 'burn') {
+      return 'deathCrumple';
+    }
     return Math.random() < 0.5 ? 'death' : 'deathCrumple';
   }
 
   /** Explosive kill: the body bursts into pieces thrown away from the impact point. */
   private blowApart(fromX: number, point: Vec2): void {
     this.pendingImpact = undefined;
+    this.flight = undefined;
     const facing = fromX >= this.x ? 1 : -1;
     this.fall = undefined;
     this.attackTimerMs = 0;
@@ -642,19 +883,31 @@ export default class Enemy extends Container {
     this.drawFall();
   }
 
-  /** The current fall pose and a mapping from its sprite space to world space (only while falling). */
+  /** The joint pose drawn while falling, flying or flailing in a vortex (undefined otherwise). */
+  private jointPose(): FallPose | undefined {
+    if (this.fall) {
+      return getFallPose(this.fall.kind, this.fallProgress);
+    }
+    const flailing = this.flight || (this.afflictions.inVortex && this.afflictions.lift > FLAIL_LIFT);
+    return flailing && !this.afflictions.isFrozen ? getFlailPose(this.lookTimeMs) : undefined;
+  }
+
+  /** The current joint pose (falling, flying) and a mapping from its sprite space to world space. */
   private fallPointsWorld(): { pose: FallPose; toWorld: (point: Vec2) => Vec2 } | undefined {
-    if (!this.fall) {
+    const pose = this.jointPose();
+    if (!pose) {
       return undefined;
     }
-    const pose = getFallPose(this.fall.kind, this.fallProgress);
     const { body } = this;
+    const cos = Math.cos(body.rotation);
+    const sin = Math.sin(body.rotation);
     return {
       pose,
-      toWorld: (point) => ({
-        x: this.x + (body.x + point.x * body.scale.x) * this.scale.x,
-        y: this.y + (body.y + point.y * body.scale.y) * this.scale.y,
-      }),
+      toWorld: (point) => {
+        const x = point.x * body.scale.x;
+        const y = point.y * body.scale.y;
+        return { x: this.x + (body.x + x * cos - y * sin) * this.scale.x, y: this.y + (body.y + x * sin + y * cos) * this.scale.y };
+      },
     };
   }
 
@@ -691,11 +944,8 @@ export default class Enemy extends Container {
       const hip = { x: piece.x - dir.x * TORSO_TO_NECK / 2, y: piece.y - dir.y * TORSO_TO_NECK / 2 };
       return { hip, shoulder: { x: hip.x + dir.x * TORSO_TO_SHOULDER, y: hip.y + dir.y * TORSO_TO_SHOULDER } };
     }
-    if (this.fall) {
-      const { hip, shoulder } = getFallPose(this.fall.kind, this.fallProgress);
-      return { hip, shoulder };
-    }
-    return STANDING_TORSO;
+    const pose = this.jointPose();
+    return pose ? { hip: pose.hip, shoulder: pose.shoulder } : STANDING_TORSO;
   }
 
   private static boundsAround(points: Vec2[], padding: number): Bounds {

@@ -64,7 +64,7 @@ export class PlayerControl {
     } else {
       bowman.moveHorizontal(direction, deltaSeconds, sprinting);
       bowman.updateVertical(deltaSeconds);
-      if (direction < 0 && !bowman.isStunned && this.canEnterTower(bowman)) {
+      if (direction < 0 && !bowman.isStunned && !bowman.isPinned && this.canEnterTower(bowman)) {
         this.enterTower(player);
       }
     }

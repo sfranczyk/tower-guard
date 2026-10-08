@@ -1,8 +1,14 @@
 import { Graphics, type Container } from 'pixi.js';
 import { EXPLOSION_RADIUS, FIRE_DRAGON_BLAST_POWER, LIGHTNING_RADIUS } from '../config';
 import { HUMAN_BODY, type BodyColors } from '../rendering/bodyColors';
-import type { Vec2 } from '../types';
+import type { ProjectileType, Vec2 } from '../types';
+import { MagicVisuals } from './magicVisuals';
 import { groundAt } from './terrain';
+
+/** Effects a co-op host replays on the guest's screen. */
+export type EffectKind =
+  | 'blood' | 'greenBlood' | 'impact' | 'explosion' | 'dragonBlast' | 'lightning'
+  | 'fire' | 'frost' | 'shatter' | 'firePatch' | 'vortex' | 'vortexFade';
 
 type BloodParticle = {
   sprite: Graphics;
@@ -52,9 +58,53 @@ export class EffectsSystem {
   private shake: Vec2 = { x: 0, y: 0 };
 
   /** Co-op host: told about every effect, to replay it on the guest's screen. */
-  public onEffect?: (kind: 'blood' | 'greenBlood' | 'impact' | 'explosion' | 'dragonBlast' | 'lightning', point: Vec2, scale?: number) => void;
+  public onEffect?: (kind: EffectKind, point: Vec2, scale?: number) => void;
+  /** The fire, frost and vortex arrows' visuals. */
+  private readonly magic: MagicVisuals;
 
-  public constructor(private readonly container: Container) {}
+  public constructor(private readonly container: Container) {
+    this.magic = new MagicVisuals(container, (sprite, point, zIndex, spec) => this.spawn(sprite, point, zIndex, spec));
+  }
+
+  /** A fire arrow strikes. */
+  public fireBurst(point: Vec2): void {
+    this.onEffect?.('fire', point);
+    this.magic.fireBurst(point);
+  }
+
+  /** A frost arrow strikes. */
+  public frostBurst(point: Vec2): void {
+    this.onEffect?.('frost', point);
+    this.magic.frostBurst(point);
+  }
+
+  /** A frozen enemy shatters. */
+  public shatter(point: Vec2): void {
+    this.onEffect?.('shatter', point);
+    this.magic.shatter(point);
+  }
+
+  /** A fire arrow in the ground leaves a fire burning there for a while. */
+  public firePatch(point: Vec2): void {
+    this.onEffect?.('firePatch', point);
+    this.magic.firePatch(point);
+  }
+
+  /** A vortex arrow opens a vortex (it ends with vortexFade). */
+  public vortex(point: Vec2): void {
+    this.onEffect?.('vortex', point);
+    this.magic.vortex(point);
+  }
+
+  public vortexFade(point: Vec2): void {
+    this.onEffect?.('vortexFade', point);
+    this.magic.vortexFade(point);
+  }
+
+  /** Flames, frost or motes behind a magic arrow in flight (local only: a co-op guest flies its own copies). */
+  public arrowTrail(type: ProjectileType, point: Vec2, deltaMs: number): void {
+    this.magic.arrowTrail(type, point, deltaMs);
+  }
 
   /** Current camera shake offset; add it to the world container's position. */
   public get cameraShake(): Vec2 {
@@ -156,24 +206,26 @@ export class EffectsSystem {
   }
 
   /**
-   * A fire dragon blown up by an explosive arrow: an explosion twice the size inside a swarm of fireballs from
-   * its burning gut, rolling out and rising into a big dark cloud.
+   * A fire dragon blown up by an explosive arrow: an explosion FIRE_DRAGON_BLAST_POWER times the size inside a
+   * swarm of fireballs from its burning gut, rolling out and rising into a big dark cloud.
    */
   public dragonBlast(point: Vec2): void {
     this.onEffect?.('dragonBlast', point);
     const scale = FIRE_DRAGON_BLAST_POWER;
-    for (let index = 0; index < 16; index += 1) {
-      const smoke = new Graphics().circle(0, 0, random(16, 28)).fill({ color: pick([0x3d3330, 0x4b4140, 0x5c5250]) });
-      this.spawn(smoke, { x: point.x + random(-40, 40), y: point.y + random(-25, 25) }, 4, {
-        velocity: { x: random(-70, 70), y: random(-90, -30) },
+    // The cloud and fireballs were made for a blast of power 2; they grow with it.
+    const size = scale / 2;
+    for (let index = 0; index < Math.round(16 * size); index += 1) {
+      const smoke = new Graphics().circle(0, 0, random(16, 28) * size).fill({ color: pick([0x3d3330, 0x4b4140, 0x5c5250]) });
+      this.spawn(smoke, { x: point.x + random(-40, 40) * size, y: point.y + random(-25, 25) * size }, 4, {
+        velocity: { x: random(-70, 70) * size, y: random(-90, -30) * size },
         lifeMs: random(1500, 2300), gravity: -25, drag: 1, grow: 1.6, startAlpha: 0.55,
       });
     }
     this.explosionParticles(point, scale);
-    for (let index = 0; index < 26; index += 1) {
-      const fire = new Graphics().circle(0, 0, random(8, 18)).fill({ color: pick(FIRE_COLORS) });
+    for (let index = 0; index < Math.round(26 * size); index += 1) {
+      const fire = new Graphics().circle(0, 0, random(8, 18) * size).fill({ color: pick(FIRE_COLORS) });
       this.spawn(fire, point, 5, {
-        velocity: burst(-Math.PI, Math.PI, 90, 320),
+        velocity: burst(-Math.PI, Math.PI, 90 * size, 320 * size),
         lifeMs: random(700, 1200), gravity: -60, drag: 2.2, grow: 0.9, startAlpha: 0.95,
       });
     }
@@ -205,6 +257,7 @@ export class EffectsSystem {
 
   public update(deltaMs: number): void {
     const deltaSeconds = deltaMs / 1000;
+    this.magic.update(deltaMs);
     this.bloodParticles = this.bloodParticles.filter((particle) => {
       particle.lifeMs -= deltaMs;
       particle.velocity.y += BLOOD_GRAVITY * deltaSeconds;

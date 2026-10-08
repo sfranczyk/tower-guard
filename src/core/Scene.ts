@@ -51,6 +51,13 @@ export interface GameSession {
   coopNotice?: string;
   /** Draw the predicted arrow path while aiming (settings drawer, off by default). */
   showTrajectory: boolean;
+  /** Draw the aim circles at the drag start too, not just at the bow (settings drawer, on by default). */
+  showCursorCircle: boolean;
+  /**
+   * Friendly fire (settings drawer, on by default): the players' arrows and what they do hit the bowmen as they hit
+   * enemies. In co-op the host's setting counts.
+   */
+  friendlyFire: boolean;
   /** How many of the latest shots keep their trail (settings drawer, 0 = none, up to MAX_ARROW_TRAILS). */
   arrowTrails: number;
 }

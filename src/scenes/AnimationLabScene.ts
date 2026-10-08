@@ -6,6 +6,7 @@ import { LAB_PARAM, getUrlParam, setUrlParam } from '../core/urlState';
 import { BATTLEGROUNDS } from '../data/battlegrounds';
 import { Background } from '../rendering/Background';
 import { armoredFallPose, drawArmoredJointPose } from '../rendering/armoredPose';
+import { drawBowmanFall } from '../rendering/bowmanBody';
 import { STANDING_BURN_POINTS, drawBurning } from '../rendering/burning';
 import { ZOMBIE_BODY } from '../rendering/bodyColors';
 import { drawStickman } from '../rendering/stickman';
@@ -351,6 +352,19 @@ export class AnimationLabScene extends Scene {
         (target, kind, progress) => drawArmoredJointPose(target, armoredFallPose(kind, progress)),
         BOWMAN_KNOCKBACK.animationSpeed,
         BOWMAN_KNOCKBACK.lieMs,
+      ),
+    },
+    {
+      id: 'archer-deaths',
+      backdrop: SKY_BACKDROP,
+      title: 'Archer · deaths',
+      description: 'The player dies like the enemies, by what killed him: clubbed (collapse face down or crumple), shot (stiff fall or crumple), burnt (crumple), lightning (stiff fall); a blast leaves him lying from the knockback. Shown in turn: collapse, crumple, stiff fall.',
+      offsetX: 45,
+      zoomScale: 1.6,
+      render: (sprite) => this.fallClock.renderSequence(
+        sprite,
+        ['death', 'deathCrumple', 'deathStiff'],
+        (target, kind, progress) => drawBowmanFall(target, 'ranger', undefined, armoredFallPose(kind, progress), 0, this.cheerTime),
       ),
     },
     {

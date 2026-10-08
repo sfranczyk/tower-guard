@@ -78,6 +78,12 @@ export class InputManager extends EventEmitter {
     }
     this.dragStart = this.worldPointFromScreen(point);
     this.dragStartScreen = point;
+    // Keep getting the drag (and the release) when the pointer leaves the canvas, or even the browser window.
+    try {
+      this.eventTarget.setPointerCapture(event.pointerId);
+    } catch {
+      // Not every pointer can be captured (e.g. synthetic events); moves still come through the window.
+    }
     this.handlePointerMove(event);
   };
 
@@ -123,7 +129,8 @@ export class InputManager extends EventEmitter {
     window.addEventListener('keydown', this.keyDownHandler);
     window.addEventListener('keyup', this.keyUpHandler);
     this.eventTarget.addEventListener('pointerdown', this.pointerDownHandler);
-    this.eventTarget.addEventListener('pointermove', this.pointerMoveHandler);
+    // On the window, so drawing the bow goes on while the pointer is over the HUD or anywhere else on the page.
+    window.addEventListener('pointermove', this.pointerMoveHandler);
     window.addEventListener('pointerup', this.pointerUpHandler);
     window.addEventListener('pointercancel', this.pointerUpHandler);
   }
@@ -178,7 +185,7 @@ export class InputManager extends EventEmitter {
     window.removeEventListener('keydown', this.keyDownHandler);
     window.removeEventListener('keyup', this.keyUpHandler);
     this.eventTarget.removeEventListener('pointerdown', this.pointerDownHandler);
-    this.eventTarget.removeEventListener('pointermove', this.pointerMoveHandler);
+    window.removeEventListener('pointermove', this.pointerMoveHandler);
     window.removeEventListener('pointerup', this.pointerUpHandler);
     window.removeEventListener('pointercancel', this.pointerUpHandler);
     this.removeAllListeners();

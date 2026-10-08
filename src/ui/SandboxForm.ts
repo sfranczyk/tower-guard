@@ -10,9 +10,19 @@ import {
   type SandboxSettings,
   type WaveSetup,
 } from '../data/sandbox';
+import { LOADOUT_SLOTS, clearSlot, isArrowType, placeArrow } from '../data/loadout';
 import type { EnemyType } from '../types';
 import { ICON_BOWMAN, ICON_ENEMIES, ICON_KEEP } from './icons';
 import { mapThumbnail } from './mapThumbnail';
+import { QuiverDrag, type QuiverDragSource, type QuiverDropTarget } from './quiverDrag';
+import { quiverPage } from './quiverPage';
+
+/** The form's pages: the levels (maps and enemies) and the quiver (the arrows in the weapon slots). */
+type SandboxPage = 'levels' | 'quiver';
+const PAGES: ReadonlyArray<{ id: SandboxPage; label: string }> = [
+  { id: 'levels', label: 'Levels' },
+  { id: 'quiver', label: 'Quiver' },
+];
 
 export interface SandboxFormCallbacks {
   /** `level` is the level being edited (its battleground is previewed behind the form). */
@@ -22,14 +32,18 @@ export interface SandboxFormCallbacks {
 }
 
 /**
- * The sandbox setup form. The run is a row of levels (tabs, each with its map and enemy count, plus add and
- * remove); below, the selected level's battleground (map cards) and enemies (a card per type with − / +).
- * Bowman and keep health sit in the header. In the code a level is still a "wave" (SandboxSettings.waves).
+ * The sandbox setup form, in two pages. Levels: the run is a row of levels (tabs, each with its map and enemy
+ * count, plus add and remove); below, the selected level's battleground (map cards) and enemies (a card per type
+ * with − / +). Quiver: which arrow goes in each weapon slot (`quiverPage`). Bowman and keep health sit in the
+ * header. In the code a level is still a "wave" (SandboxSettings.waves).
  */
 export class SandboxForm {
   private settings?: SandboxSettings;
   /** The level being edited. */
   private selected = 0;
+  private page: SandboxPage = 'levels';
+  /** The quiver slot the next picked arrow goes into. */
+  private selectedSlot = 0;
 
   public constructor(private readonly root: HTMLElement, private readonly callbacks: SandboxFormCallbacks) {
     root.addEventListener('input', (event) => {
@@ -38,23 +52,36 @@ export class SandboxForm {
       }
     });
     root.addEventListener('click', (event) => this.onClick(event.target as HTMLElement));
+    new QuiverDrag(root, (source, target) => this.onQuiverDrop(source, target));
   }
 
   public render(settings: SandboxSettings): void {
     this.settings = settings;
     this.selected = Math.min(this.selected, settings.waveCount - 1);
-    const level = settings.waves[this.selected];
     const numberInput = (attribute: string, value: number, limits: { min: number; max: number; step: number }): string =>
       `<input type="number" ${attribute} value="${value}" min="${limits.min}" max="${limits.max}" step="${limits.step}">`;
 
     this.root.innerHTML = `
       <div class="sandbox-head">
         <div><div class="eyebrow">Sandbox</div><h2>Battle setup</h2></div>
+        <div class="sandbox-pages" role="tablist" aria-label="Setup pages">
+          ${PAGES.map(({ id, label }) => `<button type="button" class="sandbox-page${id === this.page ? ' active' : ''}" role="tab" aria-selected="${id === this.page}" data-page="${id}">${label}</button>`).join('')}
+        </div>
         <div class="sandbox-health">
           <label class="health-field" title="Bowman health">${ICON_BOWMAN}<span>Bowman</span>${numberInput('data-bowman-health', settings.bowmanHealth, HEALTH_LIMITS.bowman)}</label>
           <label class="health-field" title="Keep health">${ICON_KEEP}<span>Keep</span>${numberInput('data-keep-health', settings.keepHealth, HEALTH_LIMITS.keep)}</label>
         </div>
       </div>
+      ${this.page === 'levels' ? this.levelsPage(settings) : quiverPage(settings.loadout, this.selectedSlot)}
+      <div class="sandbox-actions">
+        <button class="secondary-button" data-sandbox-back>Back</button>
+        <button class="primary-button" data-sandbox-start>Start battle</button>
+      </div>`;
+  }
+
+  private levelsPage(settings: SandboxSettings): string {
+    const level = settings.waves[this.selected];
+    return `
       <div class="level-tabs" role="tablist" aria-label="Levels">
         ${settings.waves.slice(0, settings.waveCount).map((wave, index) => this.levelTab(wave, index)).join('')}
         ${settings.waveCount < MAX_WAVES ? '<button type="button" class="level-add" data-level-add>+ Add level</button>' : ''}
@@ -72,10 +99,6 @@ export class SandboxForm {
         <div class="enemy-cards">
           ${ENEMY_TYPES.map((type) => this.enemyCard(type, level.enemies[type])).join('')}
         </div>
-      </div>
-      <div class="sandbox-actions">
-        <button class="secondary-button" data-sandbox-back>Back</button>
-        <button class="primary-button" data-sandbox-start>Start battle</button>
       </div>`;
   }
 
@@ -108,7 +131,25 @@ export class SandboxForm {
     const tab = target.closest<HTMLElement>('[data-level]');
     const map = target.closest<HTMLElement>('[data-map]');
     const step = target.closest<HTMLButtonElement>('[data-step]');
-    if (tab) {
+    const page = target.closest<HTMLElement>('[data-page]');
+    const slotClear = target.closest<HTMLElement>('[data-slot-clear]');
+    const slot = target.closest<HTMLElement>('[data-slot]');
+    const arrow = target.closest<HTMLElement>('[data-arrow]');
+    if (page) {
+      this.page = page.dataset.page as SandboxPage;
+      this.render(settings);
+    } else if (slotClear) {
+      this.selectedSlot = Number(slotClear.dataset.slotClear);
+      this.update({ ...settings, loadout: clearSlot(settings.loadout, this.selectedSlot) }, this.selected);
+    } else if (slot) {
+      this.selectedSlot = Number(slot.dataset.slot);
+      this.render(settings);
+    } else if (arrow && isArrowType(arrow.dataset.arrow)) {
+      const loadout = placeArrow(settings.loadout, this.selectedSlot, arrow.dataset.arrow);
+      // Move on to the next slot, so filling the quiver is one click per arrow.
+      this.selectedSlot = (this.selectedSlot + 1) % LOADOUT_SLOTS;
+      this.update({ ...settings, loadout }, this.selected);
+    } else if (tab) {
       this.selected = Number(tab.dataset.level);
       this.render(settings);
       this.emit();
@@ -135,6 +176,24 @@ export class SandboxForm {
       this.callbacks.start();
     } else if (target.closest('[data-sandbox-back]')) {
       this.callbacks.back();
+    }
+  }
+
+  /** An arrow card or a slot's arrow dropped on a slot (placed there, swapping), or a slot's back on the list (emptied). */
+  private onQuiverDrop(source: QuiverDragSource, target: QuiverDropTarget): void {
+    const settings = this.settings;
+    if (!settings) {
+      return;
+    }
+    const type = 'arrow' in source ? source.arrow : settings.loadout[source.slot];
+    if (target === 'arrows') {
+      if ('slot' in source) {
+        this.selectedSlot = source.slot;
+        this.update({ ...settings, loadout: clearSlot(settings.loadout, source.slot) }, this.selected);
+      }
+    } else if (type) {
+      this.selectedSlot = target.slot;
+      this.update({ ...settings, loadout: placeArrow(settings.loadout, target.slot, type) }, this.selected);
     }
   }
 

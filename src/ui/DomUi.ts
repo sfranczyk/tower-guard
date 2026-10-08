@@ -4,11 +4,12 @@ import type { ProjectileType } from '../types';
 import type { AudioSettings } from '../audio/audioSettings';
 import type { SoundId } from '../audio/SoundManager';
 import type { SandboxSettings } from '../data/sandbox';
+import type { ArrowType } from '../data/loadout';
 import { Hud, type HudValues } from './Hud';
 import { CoopPanel, type CoopView } from './CoopPanel';
 import { SandboxForm } from './SandboxForm';
 import { SoundLabPanel, type SoundLabMusic, type SoundLabMusicState, type SoundLabRow } from './SoundLabPanel';
-import { HUD_BOTTOM_TEMPLATE, HUD_TOP_TEMPLATE, OVERLAY_TEMPLATE } from './template';
+import { HUD_BOTTOM_TEMPLATE, HUD_TOP_TEMPLATE, OVERLAY_TEMPLATE, weaponSlots } from './template';
 
 /** Breathing room kept around the canvas + HUD stack inside the window. */
 const PAGE_MARGIN = 16;
@@ -62,6 +63,9 @@ export interface UiHandlers {
   coopSetup?: () => void;
   coopLeave?: () => void;
   trajectoryChange?: (enabled: boolean) => void;
+  cursorCircleChange?: (enabled: boolean) => void;
+  /** Friendly fire (the players' arrows and their effects hit the bowmen too) toggled in the settings drawer. */
+  friendlyFireChange?: (enabled: boolean) => void;
   /** Number of shots that keep their trail (0..3) picked in the settings drawer. */
   arrowTrailsChange?: (count: number) => void;
   /** A music or effects toggle/volume (0..1) changed in the settings drawer. */
@@ -102,8 +106,10 @@ export class DomUi {
   private readonly coopPanel: CoopPanel;
   private readonly soundLabScreen: HTMLElement;
   private readonly soundLabPanel: SoundLabPanel;
-  private readonly projectileButtons: HTMLButtonElement[];
+  private readonly weaponsRoot: HTMLElement;
   private readonly trajectoryInput: HTMLInputElement;
+  private readonly cursorCircleInput: HTMLInputElement;
+  private readonly friendlyFireInput: HTMLInputElement;
   private readonly trailButtons: HTMLButtonElement[];
   private readonly soundInput: HTMLInputElement;
   private readonly volumeInput: HTMLInputElement;
@@ -155,8 +161,10 @@ export class DomUi {
       audioChange: (changes) => this.handlers.soundLabAudioChange?.(changes),
       back: () => this.handlers.soundLabBack?.(),
     });
-    this.projectileButtons = Array.from(this.host.querySelectorAll<HTMLButtonElement>('[data-projectile]'));
+    this.weaponsRoot = this.query<HTMLElement>('[data-projectiles]');
     this.trajectoryInput = this.query<HTMLInputElement>('[data-trajectory]');
+    this.cursorCircleInput = this.query<HTMLInputElement>('[data-cursor-circle]');
+    this.friendlyFireInput = this.query<HTMLInputElement>('[data-friendly-fire]');
     this.trailButtons = Array.from(this.host.querySelectorAll<HTMLButtonElement>('[data-trail-count]'));
     this.soundInput = this.query<HTMLInputElement>('[data-sound]');
     this.volumeInput = this.query<HTMLInputElement>('[data-volume]');
@@ -175,14 +183,17 @@ export class DomUi {
     this.onClick('[data-options]', () => this.handlers.toggleOptions?.());
     this.onClick('[data-close-options]', () => this.handlers.toggleOptions?.());
     this.endButton.addEventListener('click', () => this.onEndButton?.());
-    this.projectileButtons.forEach((button) => {
-      button.addEventListener('click', () => {
+    this.weaponsRoot.addEventListener('click', (event) => {
+      const button = (event.target as HTMLElement).closest<HTMLButtonElement>('[data-projectile]');
+      if (button) {
         this.handlers.selectProjectile?.(button.dataset.projectile as ProjectileType);
         // Drop focus so Space (shrapnel burst) doesn't press the slot again.
         button.blur();
-      });
+      }
     });
     this.trajectoryInput.addEventListener('change', () => this.handlers.trajectoryChange?.(this.trajectoryInput.checked));
+    this.cursorCircleInput.addEventListener('change', () => this.handlers.cursorCircleChange?.(this.cursorCircleInput.checked));
+    this.friendlyFireInput.addEventListener('change', () => this.handlers.friendlyFireChange?.(this.friendlyFireInput.checked));
     this.trailButtons.forEach((button) => button.addEventListener('click', () => {
       this.handlers.arrowTrailsChange?.(Number(button.dataset.trailCount));
       // Drop focus so Space (shrapnel burst) doesn't press it again.
@@ -234,8 +245,13 @@ export class DomUi {
     root.setProperty('--backdrop', theme.backdrop);
   }
 
+  /** The weapon slots in the HUD, from the battle setup's quiver. */
+  public setLoadout(loadout: readonly (ArrowType | null)[]): void {
+    this.weaponsRoot.innerHTML = weaponSlots(loadout);
+  }
+
   public setActiveProjectile(type: ProjectileType): void {
-    this.projectileButtons.forEach((button) => {
+    this.weaponsRoot.querySelectorAll<HTMLButtonElement>('[data-projectile]').forEach((button) => {
       button.classList.toggle('active', button.dataset.projectile === type);
     });
   }
@@ -263,6 +279,14 @@ export class DomUi {
 
   public setTrajectoryOption(showTrajectory: boolean): void {
     this.trajectoryInput.checked = showTrajectory;
+  }
+
+  public setCursorCircleOption(showCursorCircle: boolean): void {
+    this.cursorCircleInput.checked = showCursorCircle;
+  }
+
+  public setFriendlyFireOption(enabled: boolean): void {
+    this.friendlyFireInput.checked = enabled;
   }
 
   public setArrowTrailsOption(count: number): void {

@@ -37,6 +37,8 @@ export class SceneManager {
         run: newRun(sandbox, playerCount, ENEMY_KEEP_HEALTH),
         playerCount,
         showTrajectory: false,
+        showCursorCircle: true,
+        friendlyFire: true,
         arrowTrails: DEFAULT_ARROW_TRAILS,
       },
       goTo: (scene) => this.goTo(scene),
@@ -52,12 +54,20 @@ export class SceneManager {
     ui.handlers.trajectoryChange = (enabled) => {
       this.ctx.session.showTrajectory = enabled;
     };
+    ui.handlers.cursorCircleChange = (enabled) => {
+      this.ctx.session.showCursorCircle = enabled;
+    };
+    ui.handlers.friendlyFireChange = (enabled) => {
+      this.ctx.session.friendlyFire = enabled;
+    };
     ui.handlers.arrowTrailsChange = (count) => {
       this.ctx.session.arrowTrails = Math.max(0, Math.min(MAX_ARROW_TRAILS, Math.round(count)));
       ui.setArrowTrailsOption(this.ctx.session.arrowTrails);
     };
     ui.handlers.audioChange = (changes) => sound.updateSettings(changes);
     ui.setTrajectoryOption(this.ctx.session.showTrajectory);
+    ui.setCursorCircleOption(this.ctx.session.showCursorCircle);
+    ui.setFriendlyFireOption(this.ctx.session.friendlyFire);
     ui.setArrowTrailsOption(this.ctx.session.arrowTrails);
     ui.setAudioOptions(sound.settings);
 

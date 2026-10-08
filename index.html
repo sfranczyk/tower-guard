@@ -155,6 +155,35 @@
         .stepper button { width: 24px; height: 24px; border-radius: 8px; background: var(--panel); color: var(--ink); font-family: var(--display); font-weight: 700; font-size: 16px; line-height: 1; box-shadow: 0 2px 0 var(--panel-edge); pointer-events: auto; }
         .stepper button:disabled { opacity: .35; cursor: default; }
         .stepper output { min-width: 22px; font-family: var(--display); font-weight: 600; font-size: 16px; text-align: center; }
+        .sandbox-pages { display: flex; gap: 4px; margin-right: auto; padding: 4px; border-radius: 14px; background: var(--panel-sunk); }
+        .sandbox-page { padding: 6px 16px; border-radius: 10px; background: none; color: var(--ink-soft); font-family: var(--display); font-weight: 600; font-size: 15px; pointer-events: auto; }
+        .sandbox-page:hover { color: var(--ink); }
+        .sandbox-page.active { background: #fffaf0; color: var(--ink); box-shadow: 0 2px 0 var(--panel-edge); }
+        /* Quiver page: the five weapon slots, then a card per arrow type. */
+        .quiver-editor { padding: 8px 12px 12px; border-radius: 14px; background: #fffaf0; box-shadow: 0 3px 0 var(--panel-edge); }
+        .quiver-row { display: flex; align-items: center; gap: 16px; margin-bottom: 10px; }
+        .quiver-row .sandbox-section-label { margin: 0; white-space: nowrap; }
+        .quiver-slots { display: flex; gap: 20px; padding-top: 8px; }
+        .quiver-slot-wrap { position: relative; }
+        .quiver-slot { width: 50px; height: 50px; pointer-events: auto; outline: 3px solid transparent; outline-offset: 2px; transition: transform .08s ease, outline-color .15s ease; }
+        .quiver-slot .weapon-art { width: 40px; height: 40px; }
+        .quiver-slot.empty { border-color: var(--panel-edge); }
+        .quiver-slot.selected { outline-color: var(--gold); transform: translateY(-3px); }
+        .quiver-clear { position: absolute; top: -8px; right: -8px; width: 20px; height: 20px; border-radius: 10px; background: var(--panel); color: var(--bad); font-family: var(--display); font-weight: 700; font-size: 14px; line-height: 1; box-shadow: 0 2px 0 var(--panel-edge); pointer-events: auto; }
+        .arrow-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+        .arrow-card { position: relative; display: flex; align-items: center; gap: 7px; padding: 4px 22px 4px 4px; border-radius: 10px; background: var(--panel-sunk); color: var(--ink); text-align: left; box-shadow: 0 2px 0 var(--panel-edge); transition: transform .08s ease; pointer-events: auto; }
+        .arrow-card:hover { transform: translateY(-1px); }
+        .arrow-card .weapon-art { flex-shrink: 0; width: 32px; height: 32px; padding: 1px; border-radius: 8px; background: var(--panel); }
+        .arrow-text { display: flex; flex-direction: column; line-height: 1.15; min-width: 0; }
+        .arrow-text strong { font-family: var(--display); font-weight: 600; font-size: 12.5px; }
+        .arrow-text small { color: var(--ink-soft); font-size: 10.5px; }
+        .arrow-slot { position: absolute; top: 5px; right: 5px; display: grid; place-items: center; width: 16px; height: 16px; border-radius: 8px; background: var(--accent); color: #fff; font-family: var(--display); font-size: 10px; }
+        .arrow-card:not(.packed) { opacity: .7; }
+        .arrow-card, .quiver-slot:not(.empty) { cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none; }
+        .quiver-dragging, .quiver-dragging * { cursor: grabbing !important; }
+        .quiver-slot.drop-target { outline-color: var(--accent); transform: translateY(-3px) scale(1.06); }
+        .quiver-ghost { position: fixed; left: 0; top: 0; z-index: 1000; pointer-events: none; filter: drop-shadow(0 6px 10px rgba(0, 0, 0, .3)); }
+        .quiver-ghost .weapon-art { width: 100%; height: 100%; }
         .sandbox-actions { position: sticky; bottom: -20px; display: flex; justify-content: flex-end; gap: 12px; margin: 14px -24px -20px; padding: 10px 24px 16px; background: rgba(246, 241, 228, .97); }
         .map-thumb { display: block; }
         .sound-lab-card { width: min(820px, calc(100% - 28px)); }

@@ -7,8 +7,9 @@ import { GIB_GROUND_Y } from './stickmanGibs';
 /**
  * The exploded dragon (pure, sprite space, ground at GIB_GROUND_Y): about twenty-five polygon chunks cut from
  * the pose at the blast (each wing in four, the body in six wedges, neck and tail in short segments, the
- * head) thrown away from the blast. They bounce, then tip over to lie flat and stop. Seeded, so tests and
- * replays are deterministic.
+ * head) burst out in every direction from the blast like shrapnel, fast at first and slowed by the air (up,
+ * sideways and down alike, a little more upwards). They fall, bounce, then tip over to lie flat and stop. Seeded,
+ * so tests and replays are deterministic.
  */
 
 /** A chunk of the exploded dragon. */
@@ -30,6 +31,13 @@ export interface DragonPiece {
 }
 
 const BOUNCE = 0.3;
+/** Burst speed away from the blast (sprite units/s, × force), and how much more upwards than down. */
+const BURST_SPEED = { min: 520, max: 980 };
+const BURST_LIFT = { min: 40, max: 140 };
+/** A piece's direction strays this far (radians) from straight out of the blast. */
+const BURST_SCATTER = 0.45;
+/** Air drag on flying pieces (1/s): the burst slows quickly, then they drop. */
+const AIR_DRAG = 1.6;
 const FRICTION = 0.7;
 const SPIN_DAMPING = 0.6;
 /** How fast a chunk on the ground tips over to lie flat (1/s). */
@@ -128,17 +136,19 @@ export class DragonGibSimulation {
       const local = points.map((point) => ({ x: point.x - middle.x, y: point.y - middle.y }));
       const dx = middle.x - blast.x;
       const dy = middle.y - blast.y;
-      const distance = Math.hypot(dx, dy) || 1;
-      const speed = (70 + random() * 120) * force;
+      // Straight out of the blast, scattered; the chunks at its very centre fly off any way.
+      const out = Math.hypot(dx, dy) > 4 ? Math.atan2(dy, dx) : random() * Math.PI * 2;
+      const direction = out + (random() - 0.5) * 2 * BURST_SCATTER;
+      const speed = (BURST_SPEED.min + random() * (BURST_SPEED.max - BURST_SPEED.min)) * force;
       return {
         outline: local,
         color,
         x: middle.x,
         y: middle.y,
-        vx: (dx / distance) * speed + (random() - 0.5) * 60,
-        vy: (dy / distance) * speed - (160 + random() * 180) * Math.sqrt(force),
+        vx: Math.cos(direction) * speed,
+        vy: Math.sin(direction) * speed - (BURST_LIFT.min + random() * (BURST_LIFT.max - BURST_LIFT.min)) * Math.sqrt(force),
         angle: 0,
-        spin: (random() - 0.5) * 12,
+        spin: (random() - 0.5) * 20,
         flatAngle: DragonGibSimulation.broadSideDown(local, -principalAxis(local)),
         grounded: false,
         resting: false,
@@ -182,6 +192,11 @@ export class DragonGibSimulation {
   private static stepPiece(piece: DragonPiece, dt: number): void {
     if (piece.resting) {
       return;
+    }
+    if (!piece.grounded) {
+      const drag = Math.exp(-AIR_DRAG * dt);
+      piece.vx *= drag;
+      piece.vy *= drag;
     }
     piece.vy += DEATH_GRAVITY * dt;
     piece.x += piece.vx * dt;

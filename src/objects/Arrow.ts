@@ -36,6 +36,8 @@ export default class Arrow extends Sprite {
   public netHooks?: { stuck(target: AnchorTarget | undefined, point: Vec2): void; gone(): void };
   /** The battleground's wind (px/s² for a normal arrow), set before firing. */
   public wind = 0;
+  /** How long it has been flying (ms; friendly fire spares the one who loosed it at first). */
+  public flightMs = 0;
 
   public constructor(
     x: number,
@@ -69,6 +71,7 @@ export default class Arrow extends Sprite {
     this.activeProjectile = true;
     this.projectileType = projectileType;
     this.hitCount = 0;
+    this.flightMs = 0;
     this.rotation = angle;
     this.velocity.x = Math.cos(angle) * power;
     this.velocity.y = Math.sin(angle) * power;
@@ -92,6 +95,7 @@ export default class Arrow extends Sprite {
       return;
     }
 
+    this.flightMs += deltaMs;
     this.segmentStart = { x: this.x, y: this.y };
     const state = { x: this.x, y: this.y, vx: this.velocity.x, vy: this.velocity.y };
     advanceProjectile(state, deltaMs / 1000, Arrow.getFlightParams(this.projectileType, this.wind));

@@ -43,13 +43,18 @@ src/
 - **Sandbox**: Start game opens `SandboxScene`, a form (`ui/SandboxForm.ts`). The UI calls waves *levels* (the
   code still says wave): level tabs (map thumbnail, enemy count, add/remove, 1–5), the selected level's
   battleground (map cards) and enemies (a card per type with − / +), bowman/keep health in the header; the
-  canvas behind shows the selected level's map. Settings are pure data
+  canvas behind shows the selected level's map. A second page, Quiver (`ui/quiverPage.ts`), fills the five weapon
+  slots (keys 1–5) with any arrows (click a slot then an arrow, or drag them: `ui/quiverDrag.ts`), each at most once, slots may stay empty (`data/loadout.ts`, pure, tested;
+  `SandboxSettings.loadout`); the HUD's slots are built from it (`DomUi.setLoadout`). Settings are pure data
   in `data/sandbox.ts` (`normalizeSandbox` clamps everything) and persist in localStorage via
   `core/sandboxStorage.ts`. `ctx.session.sandbox` holds them, and `ctx.session.run` (`RunState`) the
   current wave index and health carried between waves. Each `GameScene` plays one wave. A cleared wave
   offers "Next wave" (health carries over) until the last one, and then Victory. Defeat goes back to setup.
   The world keeps running after a wave ends (the end screen only overlays it): on defeat the enemies cheer,
-  and a killed bowman topples over backwards (`Bowman.die()`).
+  and a killed bowman falls like the enemies (`Bowman.die()`): CombatSystem tells what hurt him (`BowmanHit`,
+  `bowman.noteHit`) and `deathFallFor` (`systems/bowmanDeath.ts`, pure, tested) picks the fall: clubbed → collapse or
+  crumple, shot → stiff fall or crumple, burnt → crumple, lightning → stiff, a blast leaves him lying from the
+  knockback; he falls as if hit from where it came (co-op: the `die` event carries the fall). Lab row: `archer-deaths`.
   Within a wave enemies arrive in groups (`systems/waveDirector.ts`, pure, tested; no visible "waves" in the
   UI): `planWaveGroups` spreads each type through the wave (tougher types later, so the first group of
   `FIRST_GROUP_SIZE` is light) in groups growing to `MAX_GROUP_SIZE`; `WaveDirector.update` (called every frame,
@@ -78,7 +83,7 @@ src/
     and corrects him when the host disagrees, and sends its controls every 33 ms (shots are loosed by the host).
   - Gameplay: enemies go for the nearest bowman out in the open, else the keep (`systems/targeting.ts`, pure);
     `CombatWorld.bowmen`, damage events name the bowman. Health is per player (`RunState.bowmanHealths`), a
-    fallen bowman stays down for the run (`Bowman.die(true)`), the wave is lost when all have fallen or the keep
+    fallen bowman stays down for the run (`Bowman.die({}, true)`), the wave is lost when all have fallen or the keep
     falls. Player 2 wears `secondPlayerArmor` (bronze, silver trim) and hides in the keep's lower second tower.
   - Not yet: a local preview of the guest's own arrows (they appear after a round trip), the guest's lightning
     bolts are its own (only the host's strikes hurt; their sparks arrive as effects), no reconnecting, and a
@@ -101,7 +106,8 @@ src/
   `useTerrain`) and wind: each wave rolls one up to the map's `wind` (px/s²). Wind is part of `FlightParams`
   (scaled per projectile like drag), so arrows, the trajectory preview and enemy archer aim all use it;
   the status line shows its direction and strength.
-- **Aim overlay** (`rendering/AimOverlay.ts`): while aiming, circles at the drag start and at the bow; after a shot
+- **Aim overlay** (`rendering/AimOverlay.ts`): while aiming, circles at the drag start and at the bow (the ones at the
+  drag start can be turned off in the settings drawer, `session.showCursorCircle`); after a shot
   a ghost of it (power circle and direction) stays where that shot was loosed, not following the bowman.
 - **Aim camera** (`core/camera.ts`, pure, tested): while the local player draws, the view slides towards where the
   shot would land (`GameScene.updateAim` simulates it every frame, same ballistics as the preview, whether the
@@ -115,8 +121,8 @@ src/
   optional `halo` adds a dark outline, used on Frostpeak Pass).
 - **UI** is HTML (`ui/template.ts`, styles in `index.html`) in the landscape style: flat shapes, cream panels,
   chunky gold/cream buttons (`primary-button`, `secondary-button`), the Fredoka display font, flat SVG icons
-  (`ui/icons.ts`) and health bars in the HUD (`ui/Hud.ts`). Weapons are square slots (up to `WEAPON_SLOTS` = 5 in
-  `ui/template.ts`): icon only (name in the tooltip), key in the corner, ammo count underneath (∞ for now). The sandbox form shows enemy type icons in its columns and picks
+  (`ui/icons.ts`) and health bars in the HUD (`ui/Hud.ts`). Weapons are square slots (`LOADOUT_SLOTS` = 5, from the quiver,
+  `weaponSlots` in `ui/template.ts`): icon only (name in the tooltip), key in the corner, ammo count underneath (∞ for now). The sandbox form shows enemy type icons in its columns and picks
   each wave's map from thumbnails (`ui/mapThumbnail.ts`, a tiny SVG landscape built from the palette). The page backdrop and accent follow the map:
   each battleground has `ui: { accent, backdrop }` and scenes call `DomUi.setTheme`. The menu is drawn over
   a live battlefield (`MenuScene`), with the labs under "Dev tools"; the settings drawer works in the menu
@@ -226,8 +232,8 @@ src/
   The stream goes along the aim (the head tilts less by half the jaw opening); `getFlames` gives its hot puffs
   in world space. Lab rows: `fire-dragon`, `fire-dragon-breath`.
   Killed by a direct explosive hit (cause `'blast'`), the fire dragon blows up: `CombatSystem.explode` with
-  `power` = `FIRE_DRAGON_BLAST_POWER` (2: twice the radius and damage) centred on its body, `EffectsSystem.dragonBlast`
-  (a double-size explosion in a swarm of fireballs and a dark cloud), the dragon bursts into `DragonGibSimulation`
+  `power` = `FIRE_DRAGON_BLAST_POWER` (3: three times the radius and damage) centred on its body, `EffectsSystem.dragonBlast`
+  (an explosion that size in a swarm of fireballs and a dark cloud), the dragon bursts into `DragonGibSimulation`
   chunks and the rider into gibs (`DragonDeath.dragonGibs`), and arrows stuck in it are gone (`Arrow.stuckTo`).
   The dragon archer keeps the old blast death (rider blown apart, dragon falls).
 - **Burning**: the fire dragon's flames (`flamesTouch` in `systems/burning.ts`, pure, puff cores vs the bowman's box;
@@ -250,7 +256,8 @@ src/
   `drawDragonRiderOnly` (`rendering/dragonArt.ts`, the drawing of dragon.ts's poses) draw the parts separately. The thrown rider (`rendering/dragonRiderFall.ts`) blends
   joint angles (limb lengths kept) from the saddle to limbs flung out, tumbles onto his back and settles
   flat, kept above the ground every frame; his bow lands flat beside him. The exploded dragon
-  (`rendering/dragonGibs.ts`, seeded) is ~25 polygon chunks that bounce, tip over onto their broad side and stop.
+  (`rendering/dragonGibs.ts`, seeded) is ~25 polygon chunks that burst out in every direction (slowed by air drag),
+  fall, bounce, tip over onto their broad side and stop.
 - **Explosive death** (`rendering/stickmanGibs.ts`): `GibSimulation` blows the standing stickman into
   10 pieces plus blood (seeded and deterministic, so it's testable), and `drawStickmanGibs` draws it.
   In the game an enemy is blown apart (random force 1–1.7×) when killed by a direct explosive hit (cause
@@ -300,6 +307,35 @@ src/
   the stuck rear foot at `PINNED_FOOT` yanks him back, looks down at it; the arrow goes in at `Enemy.pinnedFootPoint`)
   but can still swing or shoot; co-op sends the time left (`EnemySnap.pinned`). Lab row: `pinned-struggle`.
   Enemy archers shoot at the plain `bowSpeed`, so player arrow tuning doesn't change them. Piercing is light (fast, flat, long) and explosive is heavy (short high arc).
+- **Fire, frost and vortex arrows** (slots from the quiver; tuning `FIRE_*`, `ENEMY_BURN_*`, `FROST_*`, `VORTEX_*`,
+  `THROW_GRAVITY`, `FALL_DAMAGE` in config). Fire and frost hit weaker (`MAGIC_HIT_DAMAGE` in CombatSystem), a vortex
+  arrow not at all: the enemy it hits glows violet and levitates straight up (`levitateHeight`) over the vortex it
+  opens, and drops when it dies away (`VORTEX_LEVITATE_FALL` of the fall damage); a further vortex arrow lifts it
+  `VORTEX_LEVITATE_BOOST` higher. Brutes are never caught (`resistsVortex`): in reach they walk at `VORTEX_HEAVY_WALK`
+  (`AfflictionLayer.slowByWind`), and a direct hit only lifts them a little (`VORTEX_LEVITATE_HEAVY`). Nothing is
+  pinned while up in the air. A dragon it hits gets no ground
+  vortex but a ring of wind (`drawAirVortex`) and turbulence for `DRAGON_TURBULENCE_MS` (`AfflictionLayer.stir`,
+  `buffetOffset`): thrown about and tilted, the fire dragon can't breathe fire, the archer shoots
+  `DRAGON_TURBULENCE_SPREAD` × wider. What they do is
+  `systems/ArrowMagic.ts` (host only). An enemy's state is `AfflictionLayer` (`objects/`, on Enemy and DragonEnemy;
+  logic in `systems/afflictions.ts`, pure, tested): burning (`BURN_TICK_MS` damage, cause `'burn'`, spreads to
+  neighbours), chilled (`timeScale` slows everything it does) and frozen (an ice block; a killing hit or any blast
+  shatters it, cause `'shatter'`, ice gibs). Fire thaws, frost puts fire out; the fire dragon doesn't burn, dragons
+  are only chilled. A fire arrow in the ground leaves a fire patch. The vortex (`systems/vortex.ts`, pure, tested)
+  pulls ground enemies in, lifts them up the funnel (`Enemy.holdInVortex`, flailing: `rendering/stickmanFlail.ts`) and
+  throws them out at the top (`Enemy.throwInAir`, `systems/flight.ts`); dying away it flings the rest. A thrown enemy
+  lands on its back into the knockback and `onLanded` deals the fall damage (cause `'fall'`); a kamikaze goes off, a
+  frozen one shatters. Visuals: `systems/magicVisuals.ts` via EffectsSystem (fx events in co-op), `rendering/vortexArt.ts`,
+  `rendering/afflictionArt.ts`; co-op snapshots carry `af` (afflictions) and `th` (thrown).
+- **Friendly fire** (settings drawer, `session.friendlyFire`, on by default; co-op: the host's setting): the players'
+  arrows and what they do hit the bowmen out in the open as they hit enemies (CombatSystem `friendlyTargets`): the
+  same damage (top `BOWMAN_HEAD` px is a headshot), blasts and splash (`explode`, knocked down; a kamikaze's own blast
+  keeps its own bowman damage), fire (`Bowman.ignite`, his own burn), frost (`Bowman.chill`: slowed, frozen = stunned in
+  an ice block; a blast or landing breaks the ice instead of shattering him, killed frozen he topples stiff), vortices
+  (ArrowMagic's `Walker` = Enemy | Bowman: pulled, lifted, thrown, `cause: 'fall'`; a direct hit levitates him) and pins
+  (`Bowman.pin`, no walking, jumping or hiding, still shoots). An arrow spares its own shooter for its first
+  `FRIENDLY_FIRE_GRACE_MS`. Bowman keeps an `AfflictionLayer` ('basic') for frost and vortex; co-op sends
+  `BowmanSnap.net` (`Bowman.getNetState`), and a guest's own bowman held by a vortex follows the host.
 - **Enemy archers** (`EnemyType 'archer'`): `CombatSystem.updateArcher` walks them into
   `ENEMY_ARCHER_RANGE`, aims with `solveLaunchAngle` (same ballistics as the player, cached ~250 ms) and
   fires hostile arrows (`Arrow.hostile`, no trail) through the `enemyShot` event. Hostile arrows hit the

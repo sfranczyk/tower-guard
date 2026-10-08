@@ -2,8 +2,12 @@ import type { SoundId } from '../audio/SoundManager';
 import type { RunState } from '../core/Scene';
 import type { SandboxSettings } from '../data/sandbox';
 import type { AimInput } from '../managers/InputManager';
-import type { HitInfo } from '../objects/Enemy';
+import type { HitInfo, ThrowNet } from '../objects/Enemy';
+import type { FallKind } from '../rendering/stickmanFall';
 import type { EnemyType, ProjectileType } from '../types';
+import type { AfflictionNet } from '../objects/AfflictionLayer';
+import type { BowmanNet } from '../objects/Bowman';
+import type { EffectKind } from '../systems/EffectsSystem';
 
 /**
  * Co-op messages (host-authoritative): the host runs the battle and sends `frame`s (a snapshot of the world
@@ -63,6 +67,8 @@ export interface BowmanSnap {
   vx: number;
   inTower: boolean;
   health: number;
+  /** Friendly fire: frost, a vortex, a throw, a pin (Bowman.getNetState). */
+  net?: BowmanNet;
 }
 
 /** A ground enemy: position and walking speed; archers also their bow (world aim angle, draw and raise 0..1). */
@@ -76,6 +82,10 @@ export interface EnemySnap {
   ready?: number;
   /** Time left pinned to the ground (ms). */
   pinned?: number;
+  /** Burning, chilled, frozen or held by a vortex (fire, frost and vortex arrows). */
+  af?: AfflictionNet;
+  /** Thrown through the air by a vortex. */
+  th?: ThrowNet;
 }
 
 /** A dragon: position, the archer rider's bow, and the fire dragon's breath (ms into it) and aim. */
@@ -87,6 +97,7 @@ export interface DragonSnap {
   tension: number;
   breathMs?: number;
   fireAim: number;
+  af?: AfflictionNet;
 }
 
 export interface Snapshot {
@@ -97,7 +108,7 @@ export interface Snapshot {
   enemyKeep: number;
 }
 
-export type EffectKind = 'blood' | 'greenBlood' | 'impact' | 'explosion' | 'dragonBlast' | 'lightning';
+export type { EffectKind };
 
 /** Things that happen once, in order. */
 export type GameEvent =
@@ -115,7 +126,8 @@ export type GameEvent =
   | { e: 'sound'; id: SoundId; x: number; y: number }
   | { e: 'knock'; player: number; fromX: number; strength: number }
   | { e: 'ignite'; player: number }
-  | { e: 'die'; player: number }
+  /** A bowman falls: in this fall (stickmanFall), hit from `fromX`. */
+  | { e: 'die'; player: number; kind: FallKind; fromX: number }
   /** A status line message for one player. */
   | { e: 'status'; player: number; text: string };
 
