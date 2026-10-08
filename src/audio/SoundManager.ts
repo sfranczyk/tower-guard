@@ -1,3 +1,4 @@
+import arrowFleshSound from '../assets/sounds/arrow-flesh.mp3';
 import bowShotSound from '../assets/sounds/bow-shot.mp3';
 import explosionSound from '../assets/sounds/explosion.mp3';
 import groan1 from '../assets/sounds/groan-1.mp3';
@@ -20,6 +21,7 @@ export type SoundId = keyof typeof SOUND_VOLUMES;
 /** Every sound has one or more variants; a play picks one at random (never the same twice in a row). */
 const SOURCES: Record<SoundId, readonly string[]> = {
   bowShot: [bowShotSound],
+  arrowFlesh: [arrowFleshSound],
   groan: [groan1, groan2, groan3, groan4, groan5, groan6, groan7, groan8],
   explosion: [explosionSound],
   thunder: [thunderSound],

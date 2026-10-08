@@ -125,7 +125,9 @@ export class ArrowHits {
     if (hit) {
       // He falls as if shot from where the arrow came from.
       this.events.bowmanDamaged(hit.bowman, rollDamage(arrowDamage(arrow.shooter, 'bowman')), { cause: 'arrow', fromX: start.x });
-      effects.bloodBurst(pointAlong(start, travel, hit.time));
+      const point = pointAlong(start, travel, hit.time);
+      effects.bloodBurst(point);
+      this.events.sound('arrowFlesh', point);
       arrow.deactivate();
     }
   }
@@ -254,6 +256,9 @@ export class ArrowHits {
       }
     } else {
       effects.bloodBurst(impactPoint);
+      if (!explosive) {
+        this.events.sound('arrowFlesh', impactPoint);
+      }
     }
     const fromX = arrow.x < bowman.x ? bowman.x - 1 : bowman.x + 1;
     this.events.bowmanDamaged(bowman, ArrowHits.arrowHitDamage(arrow, headshot), { cause: explosive ? 'blast' : 'arrow', fromX });
@@ -307,6 +312,10 @@ export class ArrowHits {
       effects.frostBurst(impactPoint);
     } else {
       effects.bloodBurst(impactPoint, enemy.bodyColors);
+      // The arrow sinking in (an explosive arrow's hit is just its blast).
+      if (arrow.type !== 'explosive') {
+        this.events.sound('arrowFlesh', impactPoint);
+      }
     }
     // A fire arrow thaws a frozen enemy before it hurts it (so it doesn't shatter).
     if (arrow.type === 'fire' && frozen) {

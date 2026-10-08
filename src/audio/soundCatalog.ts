@@ -14,6 +14,11 @@ export const SOUND_INFO: Readonly<Record<SoundId, SoundInfo>> = {
     description: 'Every arrow loosed, by the bowman and by enemy archers.',
     source: 'Pciu.m4a',
   },
+  arrowFlesh: {
+    title: 'Arrow into flesh',
+    description: 'An arrow sinking into a body: enemies, dragons and the bowman (enemy arrows, or his own with friendly fire). Not into ice, and not an explosive arrow (that is just the blast).',
+    source: 'Pghrt.m4a',
+  },
   groan: {
     title: 'Enemy groan',
     description: 'An enemy hit by an arrow, kills and headshots included (not when an explosive arrow kills). One of eight takes, never the same twice in a row.',

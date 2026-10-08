@@ -354,7 +354,8 @@ src/
   bowman (not once he's dead), or the keep while he hides, and never hit enemies. Tuning lives in `config.ts` (`ENEMY_ARCHER_*`, `ENEMY_ARROW_*`).
 - **Sound**: `ctx.sound` (`audio/SoundManager.ts`) plays the effects in `assets/sounds/` (the user's own
   recordings from `human/`, trimmed and normalized with ffmpeg). `CombatSystem` emits `sound(id, at)` events
-  and `GameScene` plays them through `spatialMix` (pan by screen position, quieter off screen). Enemies
+  and `GameScene` plays them through `spatialMix` (pan by screen position, quieter off screen). An arrow sinking into
+  a body (enemy, dragon, bowman) plays `arrowFlesh` (`Pghrt.m4a`; not into ice, not an explosive arrow). Enemies
   groan on every arrow hit, kills and headshots included (8 random variants), except an explosive arrow that
   kills (just the blast); falls are silent. New sounds: add the mp3, its id in
   `SOURCES` (an array of variants), its volume in `config.ts` (`SOUND_VOLUMES`) and its description in

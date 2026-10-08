@@ -237,7 +237,7 @@ export const MAX_GROUP_SIZE = 5;
 
 /** Sound effects: default effects volume (0..1) and the base volume of each sound. */
 export const SOUND_DEFAULT_VOLUME = 0.7;
-export const SOUND_VOLUMES = { bowShot: 0.7, groan: 0.75, explosion: 1, thunder: 1, shrapnelBurst: 0.6 } as const;
+export const SOUND_VOLUMES = { bowShot: 0.7, arrowFlesh: 0.8, groan: 0.75, explosion: 1, thunder: 1, shrapnelBurst: 0.6 } as const;
 /** Base playback rate per sound (thunder is the explosion recording slowed down). */
 export const SOUND_RATES: Partial<Record<keyof typeof SOUND_VOLUMES, number>> = { thunder: 0.5, shrapnelBurst: 1.7 };
 /** Theme music volume (0..1), loop range in the file (see MusicPlayer) and fade time when toggled. */
