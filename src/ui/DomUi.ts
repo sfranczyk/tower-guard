@@ -4,10 +4,11 @@ import type { ProjectileType } from '../types';
 import type { AudioSettings } from '../audio/audioSettings';
 import type { SoundId } from '../audio/SoundManager';
 import type { SandboxSettings } from '../data/sandbox';
-import type { ArrowType } from '../data/loadout';
+import type { ArrowType, Loadout } from '../data/loadout';
 import { Hud, type HudValues } from './Hud';
 import { CoopPanel, type CoopView } from './CoopPanel';
 import { SandboxForm } from './SandboxForm';
+import type { PartnerQuiver } from './quiverPage';
 import { SoundLabPanel, type SoundLabMusic, type SoundLabMusicState, type SoundLabRow } from './SoundLabPanel';
 import { HUD_BOTTOM_TEMPLATE, HUD_TOP_TEMPLATE, OVERLAY_TEMPLATE, weaponSlots } from './template';
 
@@ -62,6 +63,7 @@ export interface UiHandlers {
   coopJoin?: (code: string) => void;
   coopSetup?: () => void;
   coopLeave?: () => void;
+  coopLoadout?: (loadout: Loadout) => void;
   trajectoryChange?: (enabled: boolean) => void;
   cursorCircleChange?: (enabled: boolean) => void;
   /** Friendly fire (the players' arrows and their effects hit the bowmen too) toggled in the settings drawer. */
@@ -152,6 +154,7 @@ export class DomUi {
       join: (code) => this.handlers.coopJoin?.(code),
       setup: () => this.handlers.coopSetup?.(),
       leave: () => this.handlers.coopLeave?.(),
+      loadoutChange: (loadout) => this.handlers.coopLoadout?.(loadout),
     });
     this.soundLabScreen = this.query('[data-sound-lab]');
     this.soundLabPanel = new SoundLabPanel(this.query('[data-sound-lab-panel]'), {
@@ -267,6 +270,11 @@ export class DomUi {
 
   public renderSandbox(settings: SandboxSettings): void {
     this.sandboxForm.render(settings);
+  }
+
+  /** Co-op host: the guest's quiver, shown on the battle setup's Quiver page (undefined alone). */
+  public setSandboxPartner(partner: PartnerQuiver | undefined): void {
+    this.sandboxForm.setPartner(partner);
   }
 
   public renderSoundLab(rows: readonly SoundLabRow[], music: SoundLabMusic, settings: Readonly<AudioSettings>): void {

@@ -16,7 +16,7 @@ export const ARROW_INFO: Readonly<Record<ArrowType, { name: string; summary: str
   explosive: { name: 'Explosive bolt', summary: 'Heavy, short high arc, area damage' },
   piercing: { name: 'Piercing arrow', summary: 'Light and fast, passes through enemies' },
   shrapnel: { name: 'Shrapnel arrow', summary: 'Space in flight bursts it into three' },
-  pinning: { name: 'Pinning arrow', summary: 'Pins an enemy to the ground for 10 s' },
+  pinning: { name: 'Pinning arrow', summary: 'Pins an enemy to the ground for 20 s' },
   fire: { name: 'Fire arrow', summary: 'Weak hit; sets enemies alight, the fire spreads' },
   frost: { name: 'Frost arrow', summary: 'Weak hit; slows, a second hit or a headshot freezes' },
   vortex: { name: 'Vortex arrow', summary: 'No damage; a vortex lifts enemies and throws them' },

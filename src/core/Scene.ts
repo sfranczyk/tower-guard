@@ -1,4 +1,5 @@
 import type { Application, Container, Texture } from 'pixi.js';
+import type { Loadout } from '../data/loadout';
 import type { SandboxSettings } from '../data/sandbox';
 import type { ProjectileType } from '../types';
 import type { SoundManager } from '../audio/SoundManager';
@@ -14,6 +15,11 @@ export interface NetLink {
   transport: Transport;
   /** Guest: the wind of the wave the host started (the host rolls it). */
   wind: number;
+  /**
+   * Each player's quiver, by player index (0 the host, 1 the guest): each picks their own (the host on the battle
+   * setup's Quiver page, the guest in the lobby) and sends it on every change; undefined until it arrives.
+   */
+  loadouts: Array<Loadout | undefined>;
 }
 
 export interface GameTextures {

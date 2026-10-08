@@ -1,5 +1,6 @@
 import type { SoundId } from '../audio/SoundManager';
 import type { RunState } from '../core/Scene';
+import type { Loadout } from '../data/loadout';
 import type { SandboxSettings } from '../data/sandbox';
 import type { AimInput } from '../managers/InputManager';
 import type { HitInfo, ThrowNet } from '../objects/Enemy';
@@ -154,4 +155,6 @@ export type NetMessage =
   | { t: 'end'; info: EndInfo }
   /** Host → guest: the host went back to the battle setup. */
   | { t: 'lobby' }
+  /** Either way: the sender's own quiver (sent on linking up and on every change; handled by net/coopLink). */
+  | { t: 'loadout'; loadout: Loadout }
   | InputMessage;

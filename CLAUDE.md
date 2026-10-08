@@ -66,8 +66,13 @@ src/
 - **Co-op online** (branch `coop`): two bowmen, host-authoritative over PeerJS (`peerjs`, its free public broker
   only to find each other; `?net=local` links two tabs with a BroadcastChannel instead). Menu → "Co-op online" →
   `CoopScene` (lobby, `ui/CoopPanel.ts`): host a room (5-character code, `net/roomCode.ts`) or join one. The host
-  sets up the battle (SandboxScene, back = lobby) and starts it; the guest waits in the lobby. `ctx.session.net`
-  (`NetLink`: role, code, `Transport`, the wave's wind) and `playerCount` 2; `net/coopLink.ts` links up and handles
+  sets up the battle (SandboxScene, back = lobby) and starts it; the guest waits in the lobby, meanwhile picking their own
+  quiver there (`CoopPanel`, the same `quiverPage` and `ui/quiverEditing.ts` as the setup's Quiver page; starts from and is
+  saved into the guest's own stored setup). Each sends their quiver (`{ t: 'loadout' }`, on linking up and on every
+  change; `net/coopLink.ts` takes these messages out of the transport so they arrive in any scene) and sees the other's
+  (`partnerQuiver`: the host in the lobby and on the Quiver page, the guest under their own); `NetLink.loadouts` holds both
+  by player and `loadoutOf(session, index)` is what each fights with (HUD slots, keys, the host checks the guest's picks). `ctx.session.net`
+  (`NetLink`: role, code, `Transport`, the wave's wind, both quivers) and `playerCount` 2; `net/coopLink.ts` links up and handles
   a dropped link (guest back to the lobby with a notice; host plays on, player 2 stands still); Esc in a co-op
   battle leaves the room.
   - Players: `GameScene.players`, one `Player` per bowman (`scenes/PlayerControl.ts`: bowman, `PlayerInput`,

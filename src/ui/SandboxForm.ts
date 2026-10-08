@@ -10,12 +10,11 @@ import {
   type SandboxSettings,
   type WaveSetup,
 } from '../data/sandbox';
-import { LOADOUT_SLOTS, clearSlot, isArrowType, placeArrow } from '../data/loadout';
 import type { EnemyType } from '../types';
 import { ICON_BOWMAN, ICON_ENEMIES, ICON_KEEP } from './icons';
 import { mapThumbnail } from './mapThumbnail';
-import { QuiverDrag, type QuiverDragSource, type QuiverDropTarget } from './quiverDrag';
-import { quiverPage } from './quiverPage';
+import { editQuiverIn } from './quiverEditing';
+import { quiverPage, type PartnerQuiver } from './quiverPage';
 
 /** The form's pages: the levels (maps and enemies) and the quiver (the arrows in the weapon slots). */
 type SandboxPage = 'levels' | 'quiver';
@@ -44,6 +43,8 @@ export class SandboxForm {
   private page: SandboxPage = 'levels';
   /** The quiver slot the next picked arrow goes into. */
   private selectedSlot = 0;
+  /** Co-op: the partner's quiver, shown (not editable) on the Quiver page. */
+  private partner?: PartnerQuiver;
 
   public constructor(private readonly root: HTMLElement, private readonly callbacks: SandboxFormCallbacks) {
     root.addEventListener('input', (event) => {
@@ -52,7 +53,26 @@ export class SandboxForm {
       }
     });
     root.addEventListener('click', (event) => this.onClick(event.target as HTMLElement));
-    new QuiverDrag(root, (source, target) => this.onQuiverDrop(source, target));
+    editQuiverIn(
+      root,
+      () => (this.settings && this.page === 'quiver' ? { loadout: this.settings.loadout, slot: this.selectedSlot } : undefined),
+      ({ loadout, slot, changed }) => {
+        this.selectedSlot = slot;
+        if (changed) {
+          this.update({ ...this.settings!, loadout }, this.selected);
+        } else {
+          this.render(this.settings!);
+        }
+      },
+    );
+  }
+
+  /** Co-op: the partner's quiver to show next to the player's own (undefined alone); redraws if it's open. */
+  public setPartner(partner: PartnerQuiver | undefined): void {
+    this.partner = partner;
+    if (this.settings && this.page === 'quiver') {
+      this.render(this.settings);
+    }
   }
 
   public render(settings: SandboxSettings): void {
@@ -72,7 +92,7 @@ export class SandboxForm {
           <label class="health-field" title="Keep health">${ICON_KEEP}<span>Keep</span>${numberInput('data-keep-health', settings.keepHealth, HEALTH_LIMITS.keep)}</label>
         </div>
       </div>
-      ${this.page === 'levels' ? this.levelsPage(settings) : quiverPage(settings.loadout, this.selectedSlot)}
+      ${this.page === 'levels' ? this.levelsPage(settings) : quiverPage(settings.loadout, this.selectedSlot, this.partner)}
       <div class="sandbox-actions">
         <button class="secondary-button" data-sandbox-back>Back</button>
         <button class="primary-button" data-sandbox-start>Start battle</button>
@@ -132,23 +152,10 @@ export class SandboxForm {
     const map = target.closest<HTMLElement>('[data-map]');
     const step = target.closest<HTMLButtonElement>('[data-step]');
     const page = target.closest<HTMLElement>('[data-page]');
-    const slotClear = target.closest<HTMLElement>('[data-slot-clear]');
-    const slot = target.closest<HTMLElement>('[data-slot]');
-    const arrow = target.closest<HTMLElement>('[data-arrow]');
+    // (The quiver's own clicks are editQuiverIn's.)
     if (page) {
       this.page = page.dataset.page as SandboxPage;
       this.render(settings);
-    } else if (slotClear) {
-      this.selectedSlot = Number(slotClear.dataset.slotClear);
-      this.update({ ...settings, loadout: clearSlot(settings.loadout, this.selectedSlot) }, this.selected);
-    } else if (slot) {
-      this.selectedSlot = Number(slot.dataset.slot);
-      this.render(settings);
-    } else if (arrow && isArrowType(arrow.dataset.arrow)) {
-      const loadout = placeArrow(settings.loadout, this.selectedSlot, arrow.dataset.arrow);
-      // Move on to the next slot, so filling the quiver is one click per arrow.
-      this.selectedSlot = (this.selectedSlot + 1) % LOADOUT_SLOTS;
-      this.update({ ...settings, loadout }, this.selected);
     } else if (tab) {
       this.selected = Number(tab.dataset.level);
       this.render(settings);
@@ -176,24 +183,6 @@ export class SandboxForm {
       this.callbacks.start();
     } else if (target.closest('[data-sandbox-back]')) {
       this.callbacks.back();
-    }
-  }
-
-  /** An arrow card or a slot's arrow dropped on a slot (placed there, swapping), or a slot's back on the list (emptied). */
-  private onQuiverDrop(source: QuiverDragSource, target: QuiverDropTarget): void {
-    const settings = this.settings;
-    if (!settings) {
-      return;
-    }
-    const type = 'arrow' in source ? source.arrow : settings.loadout[source.slot];
-    if (target === 'arrows') {
-      if ('slot' in source) {
-        this.selectedSlot = source.slot;
-        this.update({ ...settings, loadout: clearSlot(settings.loadout, source.slot) }, this.selected);
-      }
-    } else if (type) {
-      this.selectedSlot = target.slot;
-      this.update({ ...settings, loadout: placeArrow(settings.loadout, target.slot, type) }, this.selected);
     }
   }
 

@@ -5,6 +5,7 @@ import { centeredCameraX } from '../core/viewport';
 import { saveSandbox } from '../core/sandboxStorage';
 import { BATTLEGROUNDS } from '../data/battlegrounds';
 import { normalizeSandbox, type SandboxSettings } from '../data/sandbox';
+import { partnerLoadout, setPartnerLoadoutListener, shareLoadout } from '../net/coopLink';
 import { Background } from '../rendering/Background';
 
 /**
@@ -26,6 +27,10 @@ export class SandboxScene extends Scene {
     ui.showScreen('sandbox');
     ui.renderSandbox(session.sandbox);
     this.showPreview(session.sandbox);
+    // Co-op host: the guest picks their own quiver in the lobby; it shows (as it changes) on the Quiver page.
+    const showPartner = (): void => ui.setSandboxPartner(session.net ? { label: "Partner's quiver", loadout: partnerLoadout(session) } : undefined);
+    showPartner();
+    setPartnerLoadoutListener(showPartner);
 
     ui.handlers.sandboxChange = (settings, level) => this.applySettings(settings, level);
     ui.handlers.sandboxStart = () => this.startRun();
@@ -35,6 +40,8 @@ export class SandboxScene extends Scene {
       ui.handlers.sandboxChange = undefined;
       ui.handlers.sandboxStart = undefined;
       ui.handlers.sandboxBack = undefined;
+      setPartnerLoadoutListener(undefined);
+      ui.setSandboxPartner(undefined);
     });
 
     this.listenWindow('keydown', (event) => {
@@ -46,8 +53,13 @@ export class SandboxScene extends Scene {
 
   private applySettings(settings: SandboxSettings, level: number): void {
     const normalized = normalizeSandbox(settings);
+    const changedQuiver = normalized.loadout.join() !== this.ctx.session.sandbox.loadout.join();
     this.ctx.session.sandbox = normalized;
     saveSandbox(normalized);
+    // Co-op host: the guest sees the host's quiver.
+    if (changedQuiver) {
+      shareLoadout(this.ctx.session, normalized.loadout);
+    }
     this.showPreview(normalized, level);
   }
 

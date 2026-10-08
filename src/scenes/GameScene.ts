@@ -21,7 +21,7 @@ import { isFlyingType } from '../data/enemyKinds';
 import { waveEnemyTotal, type WaveSetup } from '../data/sandbox';
 import InputManager from '../managers/InputManager';
 import { LocalInput, ManualInput, RecordingInput, type PlayerInput } from '../input/PlayerInput';
-import { leaveCoop } from '../net/coopLink';
+import { leaveCoop, loadoutOf } from '../net/coopLink';
 import { GuestSync } from '../net/GuestSync';
 import { HostSync } from '../net/HostSync';
 import type { EndInfo, NetMessage } from '../net/protocol';
@@ -43,7 +43,7 @@ import { WeatherSystem } from '../systems/WeatherSystem';
 import { groundAt } from '../systems/terrain';
 import { livingBowmen } from '../systems/targeting';
 import { WaveDirector } from '../systems/waveDirector';
-import { firstArrow } from '../data/loadout';
+import { firstArrow, type Loadout } from '../data/loadout';
 import type { EnemyType, ProjectileType, Vec2 } from '../types';
 
 const MIN_SHOT_POWER = 0.05;
@@ -150,6 +150,11 @@ export class GameScene extends Scene {
     return this.players[this.localIndex];
   }
 
+  /** This browser's player's quiver. */
+  private get localLoadout(): Loadout {
+    return loadoutOf(this.ctx.session, this.localIndex);
+  }
+
   private get coop(): boolean {
     return this.players.length > 1;
   }
@@ -157,8 +162,9 @@ export class GameScene extends Scene {
   public enter(): void {
     const { ui } = this.ctx;
     ui.showScreen('game');
-    ui.setLoadout(this.ctx.session.sandbox.loadout);
-    ui.setActiveProjectile(firstArrow(this.ctx.session.sandbox.loadout));
+    // Each player fights with their own quiver (co-op: picked by each; alone: the battle setup's).
+    ui.setLoadout(this.localLoadout);
+    ui.setActiveProjectile(firstArrow(this.localLoadout));
 
     this.world.sortableChildren = true;
     this.ctx.root.addChild(this.world);
@@ -360,7 +366,7 @@ export class GameScene extends Scene {
         bowman.die({}, true);
       }
       this.world.addChild(bowman);
-      return { index, bowman, input: new ManualInput() as PlayerInput, local: index === this.localIndex, health, projectile: firstArrow(sandbox.loadout) as ProjectileType };
+      return { index, bowman, input: new ManualInput() as PlayerInput, local: index === this.localIndex, health, projectile: firstArrow(loadoutOf(this.ctx.session, index)) as ProjectileType };
     });
   }
 
@@ -406,7 +412,7 @@ export class GameScene extends Scene {
       if (event.code === 'KeyI') {
         this.toggleOptions();
       }
-      const projectile = this.ctx.session.sandbox.loadout[slotOfKey(event.code)];
+      const projectile = this.localLoadout[slotOfKey(event.code)];
       if (projectile) {
         this.localInput?.queueProjectile(projectile);
       }
@@ -436,7 +442,9 @@ export class GameScene extends Scene {
   /** One player's frame: weapon picks, shots and shrapnel bursts from their controls, then moving the bowman. */
   private updatePlayer(player: Player, deltaMs: number): void {
     const { bowman, input } = player;
-    const projectile = input.takeProjectile();
+    // Only an arrow from that player's own quiver (the guest's picks come over the network).
+    const picked = input.takeProjectile();
+    const projectile = picked && (loadoutOf(this.ctx.session, player.index) as readonly ProjectileType[]).includes(picked) ? picked : undefined;
     if (projectile) {
       player.projectile = projectile;
       if (player.local) {

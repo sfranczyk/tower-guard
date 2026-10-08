@@ -184,6 +184,14 @@
         .quiver-slot.drop-target { outline-color: var(--accent); transform: translateY(-3px) scale(1.06); }
         .quiver-ghost { position: fixed; left: 0; top: 0; z-index: 1000; pointer-events: none; filter: drop-shadow(0 6px 10px rgba(0, 0, 0, .3)); }
         .quiver-ghost .weapon-art { width: 100%; height: 100%; }
+        .partner-quiver { display: flex; align-items: center; gap: 16px; margin-top: 12px; padding-top: 10px; border-top: 2px dashed var(--panel-edge); }
+        .partner-quiver .sandbox-section-label { margin: 0; white-space: nowrap; }
+        .partner-slots { display: flex; gap: 10px; }
+        .partner-slots .weapon-slot { width: 40px; height: 40px; cursor: default; }
+        .partner-slots .weapon-slot .weapon-art { width: 32px; height: 32px; }
+        .partner-slots .weapon-slot.empty { border-color: var(--panel-edge); }
+        .partner-waiting { color: var(--ink-soft); font-size: 14px; }
+        .coop-body > .partner-quiver { flex-direction: column; gap: 6px; margin-top: 0; padding-top: 0; border-top: 0; }
         .sandbox-actions { position: sticky; bottom: -20px; display: flex; justify-content: flex-end; gap: 12px; margin: 14px -24px -20px; padding: 10px 24px 16px; background: rgba(246, 241, 228, .97); }
         .map-thumb { display: block; }
         .sound-lab-card { width: min(820px, calc(100% - 28px)); }
@@ -203,6 +211,8 @@
         /* ---------- End screen (the battle keeps going behind it) ---------- */
         .end-screen { background: rgba(20, 30, 32, .18); }
         .coop-card { width: min(380px, calc(100% - 28px)); text-align: center; }
+        .coop-card.coop-wide { width: min(760px, calc(100% - 28px)); }
+        .coop-card .quiver-editor { text-align: left; }
         .coop-body { display: flex; flex-direction: column; align-items: stretch; gap: 12px; }
         .coop-copy, .coop-status { margin: 0; font-size: 15px; line-height: 1.4; }
         .coop-status { font-family: var(--display); font-weight: 500; }
