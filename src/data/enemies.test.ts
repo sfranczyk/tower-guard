@@ -159,11 +159,11 @@ describe('strike reach', () => {
 });
 
 describe('pinDurationMs', () => {
-  it('pins most enemies for 10 s and zombies for 15 s', () => {
+  it('pins most enemies and zombies for 20 s', () => {
     (['basic', 'fast', 'archer', 'kamikaze'] as const).forEach((type) => expect(pinDurationMs(type)).toBe(PIN_DURATION_MS));
-    expect(PIN_DURATION_MS).toBe(10000);
+    expect(PIN_DURATION_MS).toBe(20000);
     expect(pinDurationMs('zombie')).toBe(PIN_DURATION_ZOMBIE_MS);
-    expect(PIN_DURATION_ZOMBIE_MS).toBe(15000);
+    expect(PIN_DURATION_ZOMBIE_MS).toBe(20000);
   });
 
   it('only scratches: 0 to 4 damage', () => {

@@ -37,7 +37,7 @@ export class SceneManager {
         run: newRun(sandbox, playerCount, ENEMY_KEEP_HEALTH),
         playerCount,
         showTrajectory: false,
-        showCursorCircle: true,
+        showCursorCircle: false,
         friendlyFire: true,
         arrowTrails: DEFAULT_ARROW_TRAILS,
       },

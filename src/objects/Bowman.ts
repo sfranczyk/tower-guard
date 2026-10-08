@@ -368,7 +368,8 @@ export class Bowman extends Container {
       return;
     }
     const clampedDirection = clamp(direction, -1, 1);
-    if (this.inTower && clampedDirection === 0) {
+    // In the keep, or at the edge of the battlefield walking further into it: he just stands.
+    if ((this.inTower && clampedDirection === 0) || this.isAgainstEdge(clampedDirection)) {
       this.horizontalSpeed = 0;
       return;
     }
@@ -717,6 +718,13 @@ export class Bowman extends Container {
     } else if (this.afflictions.inVortex && !this.knockdown && !this.deathFall) {
       body.rotation += this.afflictions.lean + (this.isFlailing ? 0 : Math.sin(this.lookTimeMs / 90) * 0.06);
     }
+  }
+
+  /** At the edge of the board with `direction` pointing out of it (he can't walk that way, and doesn't try). */
+  public isAgainstEdge(direction: number): boolean {
+    const halfWidth = this.bodyWidth / 2;
+    return (direction < 0 && this.x <= this.boardBounds.x + halfWidth)
+      || (direction > 0 && this.x >= this.boardBounds.x + this.boardBounds.width - halfWidth);
   }
 
   private constrainToBoard(): void {

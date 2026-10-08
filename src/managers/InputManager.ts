@@ -23,6 +23,8 @@ export interface InputManagerConfig {
   leftKey?: string;
   rightKey?: string;
   upKey?: string;
+  /** Leaves the keep. */
+  downKey?: string;
   sprintKey?: string;
   isPointerBlocked?: (point: Vec2) => boolean;
   worldPointFromScreen: (point: Vec2) => Vec2;
@@ -58,6 +60,7 @@ export class InputManager extends EventEmitter {
   private lastScreenPoint: Vec2 | undefined;
   private lastAim: AimInput | undefined;
   private jumpConsumed = false;
+  private exitConsumed = false;
 
   private readonly keyDownHandler = (event: KeyboardEvent): void => {
     this.keyState.add(event.code);
@@ -67,6 +70,9 @@ export class InputManager extends EventEmitter {
     this.keyState.delete(event.code);
     if (event.code === this.upKey) {
       this.jumpConsumed = false;
+    }
+    if (event.code === this.downKey) {
+      this.exitConsumed = false;
     }
   };
 
@@ -112,6 +118,7 @@ export class InputManager extends EventEmitter {
   private readonly leftKey: string;
   private readonly rightKey: string;
   private readonly upKey: string;
+  private readonly downKey: string;
   private readonly sprintKey: string;
 
   public constructor(config: InputManagerConfig) {
@@ -124,6 +131,7 @@ export class InputManager extends EventEmitter {
     this.leftKey = config.leftKey ?? 'ArrowLeft';
     this.rightKey = config.rightKey ?? 'ArrowRight';
     this.upKey = config.upKey ?? 'KeyW';
+    this.downKey = config.downKey ?? 'KeyS';
     this.sprintKey = config.sprintKey ?? 'ShiftLeft';
 
     window.addEventListener('keydown', this.keyDownHandler);
@@ -145,6 +153,15 @@ export class InputManager extends EventEmitter {
     const left = this.isDown(this.leftKey) || this.isDown('KeyA');
     const right = this.isDown(this.rightKey) || this.isDown('KeyD');
     return Number(right) - Number(left);
+  }
+
+  /** True once per press of the exit key (S). */
+  public isExitPressed(): boolean {
+    if (!this.isDown(this.downKey) || this.exitConsumed) {
+      return false;
+    }
+    this.exitConsumed = true;
+    return true;
   }
 
   public isJumpPressed(): boolean {

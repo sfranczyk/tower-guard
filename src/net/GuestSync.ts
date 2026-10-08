@@ -334,6 +334,7 @@ export class GuestSync {
       sprint: this.input.isSprintDown(),
       aim: aim ? toNetAim(aim) : undefined,
       jump: this.input.takeJump(),
+      exit: this.input.takeExit(),
       shots: this.shots.map(toNetAim),
       burst: this.burst,
       projectile: this.projectile,

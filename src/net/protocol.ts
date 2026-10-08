@@ -51,6 +51,8 @@ export interface InputMessage {
   sprint: boolean;
   aim?: NetAim;
   jump: boolean;
+  /** Leave the keep (S). */
+  exit: boolean;
   shots: NetAim[];
   burst: boolean;
   projectile?: ProjectileType;
@@ -97,6 +99,8 @@ export interface DragonSnap {
   tension: number;
   breathMs?: number;
   fireAim: number;
+  /** Which side of its target it hovers on (1: right, facing left); the guest plays the turn itself. */
+  side: 1 | -1;
   af?: AfflictionNet;
 }
 

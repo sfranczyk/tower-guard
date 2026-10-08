@@ -63,6 +63,9 @@ export class HostSync {
     if (message.jump) {
       input.pressJump();
     }
+    if (message.exit) {
+      input.pressExit();
+    }
     message.shots.forEach((shot) => input.shoot(fromNetAim(shot)));
     if (message.burst) {
       input.pressBurst();

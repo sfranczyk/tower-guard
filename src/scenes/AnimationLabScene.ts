@@ -370,7 +370,7 @@ export class AnimationLabScene extends Scene {
     {
       id: 'pinned-struggle',
       title: 'Pinned by the foot (pinning arrow)',
-      description: 'One foot is pinned to the ground: he lunges forward with the free leg and arms reaching, the stuck leg yanks him back, he looks down at it and tries again. The stuck foot never moves.',
+      description: 'One foot is pinned to the ground: he leans forward with the free leg and arms reaching, the stuck leg pulls him back, he looks down at it, catches his breath and tries again. The stuck foot never moves.',
       render: (sprite) => drawPinnedStruggle(sprite, this.cheerTime, 0, { club: true }),
     },
     {

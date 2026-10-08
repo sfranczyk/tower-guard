@@ -48,8 +48,8 @@ import type { EnemyType, ProjectileType, Vec2 } from '../types';
 
 const MIN_SHOT_POWER = 0.05;
 const DEFAULT_STATUS = 'Drag from the bowman and release to fire';
-/** Enemies walk in from just in front of the enemy keep. */
-const ENEMY_SPAWN_X = WORLD_WIDTH - 50;
+/** Enemies come in from beyond the right edge of the battlefield (out of view), past the enemy keep. */
+const ENEMY_SPAWN_X = WORLD_WIDTH + 60;
 
 const PROJECTILE_LABELS: Record<ProjectileType, string> = {
   normal: 'Normal arrow · reliable damage',
@@ -176,7 +176,7 @@ export class GameScene extends Scene {
     this.world.addChild(this.playerTower, this.enemyTower, this.aimOverlay, this.debugGraphics);
     this.createPlayers();
     this.control = new PlayerControl(this.playerTower, {
-      enteredTower: (player) => this.localStatus(player, 'Hidden in tower · move right to exit'),
+      enteredTower: (player) => this.localStatus(player, 'Hidden in tower · press S to exit'),
       leftTower: (player) => this.localStatus(player, DEFAULT_STATUS),
     });
 
@@ -349,7 +349,7 @@ export class GameScene extends Scene {
   private createPlayers(): void {
     const { sandbox, run, playerCount } = this.ctx.session;
     this.players = Array.from({ length: Math.max(1, playerCount) }, (_, index) => {
-      const bowman = new Bowman(playerStartX(index), BOWMAN_Y, { x: 50, y: 0, width: WORLD_WIDTH - 100, height: GAME_HEIGHT }, {
+      const bowman = new Bowman(playerStartX(index), BOWMAN_Y, { x: 0, y: 0, width: WORLD_WIDTH, height: GAME_HEIGHT }, {
         armorColors: index === 0 ? this.battleground.player : secondPlayerArmor(this.battleground.player),
         // Player 1 is the ranger; in co-op player 2 is the keep warden.
         look: index === 0 ? 'ranger' : 'warden',

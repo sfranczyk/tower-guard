@@ -12,7 +12,7 @@ export const MAX_VIEW_SCALE = 1.4;
 export const MAX_RENDER_RESOLUTION = 4;
 export const RENDER_SCALE = 1;
 /** The battlefield, keep to keep (independent of the view width); the camera follows the bowman across it. */
-export const WORLD_WIDTH = 3600;
+export const WORLD_WIDTH = 2400;
 /**
  * Width of the backdrop behind menus, labs and the lobby (centred in the view), and of one stretch of the hills
  * drawing, which repeats (mirrored every other time) across the battlefield.
@@ -25,14 +25,14 @@ export const CAMERA_ZOOM = 1;
 export const GROUND_Y = 490;
 /** The ground surface waves up and down by this much around GROUND_Y (see systems/terrain.ts). */
 export const TERRAIN_AMPLITUDE = 7;
-export const PLAYER_TOWER_X = 70;
-export const ENEMY_TOWER_X = WORLD_WIDTH - 70;
-export const BOWMAN_START_X = 160;
+export const PLAYER_TOWER_X = 160;
+export const ENEMY_TOWER_X = WORLD_WIDTH - 160;
+export const BOWMAN_START_X = 250;
 export const BOWMAN_Y = GROUND_Y;
 
-export const TOWER_ENTRY_ZONE_WIDTH = 30;
+/** Jumping within this zone under the keep (centred on it, about its footprint) takes the bowman inside. */
+export const TOWER_ENTRY_ZONE_WIDTH = 100;
 export const TOWER_ENTRY_ZONE_HEIGHT = 90;
-export const TOWER_EXIT_X_OFFSET = 20;
 
 /** How many of the latest shots keep their trail (settings drawer, 0 = no trails, up to MAX_ARROW_TRAILS). */
 export const DEFAULT_ARROW_TRAILS = 1;
@@ -89,11 +89,11 @@ export const SPLASH_GIB_CHANCE = { near: 0.3, far: 0.7, max: 0.95, min: 0.05 } a
 export const KNOCKBACK_PUSH_MAX = 110;
 export const PIERCING_DAMAGE_MULTIPLIER = 0.62;
 /**
- * Pinning arrow: an enemy it hits stays put this long (zombies longer; brutes and dragons can't be pinned), and
+ * Pinning arrow: an enemy it hits stays put this long (zombies as long; brutes and dragons can't be pinned), and
  * takes only a scratch, PIN_DAMAGE (random within the range, no headshot bonus).
  */
-export const PIN_DURATION_MS = 10000;
-export const PIN_DURATION_ZOMBIE_MS = 15000;
+export const PIN_DURATION_MS = 20000;
+export const PIN_DURATION_ZOMBIE_MS = 20000;
 export const PIN_DAMAGE: readonly [number, number] = [0, 4];
 export const ENEMY_TOWER_DAMAGE = 16;
 /**
@@ -175,6 +175,12 @@ export const DRAGON_HOVER_OFFSET = 260;
 export const DRAGON_RANGE = 520;
 export const DRAGON_DRAW_MS = 900;
 export const DRAGON_SHOT_INTERVAL_MS = 2800;
+/**
+ * Dragons turn round (systems/dragonFlight.ts) when their target gets DRAGON_TURN_PAST px behind them, or when
+ * there's no room in front of it by the world's edge; the turn takes DRAGON_TURN_MS (no shooting or fire meanwhile).
+ */
+export const DRAGON_TURN_PAST = 60;
+export const DRAGON_TURN_MS = 700;
 /**
  * Fire dragon: flies lower (FIRE_DRAGON_ALTITUDE) and hovers closer (FIRE_DRAGON_HOVER_OFFSET) so its fire
  * (rendering/dragonFire.ts, ~290 px long at DRAGON_SCALE) reaches the bowman; it breathes when he's within

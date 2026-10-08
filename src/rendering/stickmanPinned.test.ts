@@ -34,10 +34,10 @@ describe('getPinnedPose', () => {
   });
 
   it('lunges forward, then gets yanked back', () => {
-    const lunge = getPinnedPose(PINNED_STRUGGLE_MS * 0.32);
-    const yank = getPinnedPose(PINNED_STRUGGLE_MS * 0.46);
-    expect(lunge.shoulder.x).toBeGreaterThan(15);
-    expect(yank.shoulder.x).toBeLessThan(lunge.shoulder.x - 15);
+    const lunge = getPinnedPose(PINNED_STRUGGLE_MS * 0.28);
+    const yank = getPinnedPose(PINNED_STRUGGLE_MS * 0.42);
+    expect(lunge.shoulder.x).toBeGreaterThan(12);
+    expect(yank.shoulder.x).toBeLessThan(lunge.shoulder.x - 10);
   });
 
   it('loops seamlessly and moves smoothly', () => {

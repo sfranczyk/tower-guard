@@ -197,7 +197,9 @@ export class EnemyAI {
       return;
     }
     const release = dragon.getBowReleasePoint();
-    const inRange = release.x > aimPoint.x && release.x - aimPoint.x <= DRAGON_RANGE;
+    // In front of it (it faces either way) and in range; it doesn't shoot while turning round.
+    const ahead = (aimPoint.x - release.x) * dragon.facingX;
+    const inRange = !dragon.isTurning && ahead > 0 && ahead <= DRAGON_RANGE;
     if (!inRange || this.world.bowmen.every((candidate) => candidate.isDead)) {
       dragon.relax(deltaMs);
       this.archerAim.delete(dragon);
@@ -231,7 +233,7 @@ export class EnemyAI {
     const mouth = dragon.getMouthPoint();
     const dx = target.x - mouth.x;
     const dy = target.y - mouth.y;
-    const inReach = dx < 0 && dy > 0 && Math.hypot(dx, dy) <= FIRE_DRAGON_RANGE;
+    const inReach = dx * dragon.facingX > 0 && dy > 0 && Math.hypot(dx, dy) <= FIRE_DRAGON_RANGE;
     if (inReach && this.world.bowmen.some((candidate) => !candidate.isDead)) {
       dragon.breathe(Math.atan2(dy, dx));
     }

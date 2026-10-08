@@ -5,14 +5,15 @@ import { drawJointPose, type JointPose, type JointPoseOptions } from './stickman
 
 /**
  * A stickman pinned to the ground by one foot (the pinning arrow went through the rear foot), trying to tear
- * free, as a loop (pure, tested): he lunges forward with the free leg and his arms reaching out, the stuck leg
- * stretches and yanks him back, he looks down at the foot and shifts his weight, then steps back to try again.
+ * free, as a loop (pure, tested): he leans forward with the free leg and his arms reaching out, the stuck leg
+ * stretches and pulls him back, he looks down at the foot and shifts his weight, then steps back, catches his
+ * breath and tries again. Kept moderate: a tug and a look, not a fit.
  * The stuck foot never moves; legs are solved with two-bone IK so they keep their length.
  *
  * Sprite space like drawStickman with originY 0: hip at (0, 0) standing, facing +x, feet at y ≈ 57.
  */
 
-export const PINNED_STRUGGLE_MS = 1400;
+export const PINNED_STRUGGLE_MS = 2800;
 /** Where the stuck (rear) foot is, in sprite space: the pinning arrow goes in here. */
 export const PINNED_FOOT: Readonly<Vec2> = { x: -16, y: 57.2 };
 
@@ -24,9 +25,9 @@ const TORSO = 35;
 const NECK = 8;
 const HEAD_OFFSET = -STICKMAN_HEAD.y - TORSO;
 /** How high the free foot lifts while stepping. */
-const STEP_LIFT = 8;
+const STEP_LIFT = 5;
 /** A quick shudder of effort while he strains forward. */
-const STRAIN = { amplitude: 0.025, rate: 0.045 };
+const STRAIN = { amplitude: 0.01, rate: 0.03 };
 
 /** One key of the loop: hip, torso lean (+ = forward), head tilt, free foot x, arm angles (0 = down, + = forward). */
 interface StruggleKey {
@@ -47,14 +48,15 @@ const REST: Omit<StruggleKey, 'p'> = {
 
 const KEYS: readonly StruggleKey[] = [
   { p: 0, ...REST },
-  // Lunges forward: free foot out in front, arms reaching, the stuck leg stretched behind.
-  { p: 0.32, hip: { x: 12, y: 7 }, torso: 0.55, head: 0.1, footX: 34, frontUpper: 1.5, frontFore: 1.7, rearUpper: 1.0, rearFore: 1.3 },
-  // The foot holds: yanked back upright, arms flung back.
-  { p: 0.46, hip: { x: 4, y: 3 }, torso: -0.18, head: -0.3, footX: 34, frontUpper: -0.6, frontFore: -0.3, rearUpper: -0.9, rearFore: -0.6 },
-  // Crouches and looks down at the stuck foot, one arm reaching down to it, the other out for balance.
-  { p: 0.68, hip: { x: -2, y: 10 }, torso: 0.2, head: 0.45, footX: 30, frontUpper: 0.9, frontFore: 1.4, rearUpper: -0.5, rearFore: -0.2 },
-  { p: 0.86, hip: { x: 0, y: 5 }, torso: 0.1, head: 0.2, footX: 30, frontUpper: 0.4, frontFore: 0.7, rearUpper: -0.2, rearFore: 0.1 },
-  // Steps back to stand and try again.
+  // Leans forward: free foot a step out in front, arms reaching, the stuck leg stretched behind.
+  { p: 0.28, hip: { x: 6, y: 3 }, torso: 0.32, head: 0.1, footX: 27, frontUpper: 0.9, frontFore: 1.1, rearUpper: 0.6, rearFore: 0.8 },
+  // The foot holds: pulled back upright, arms swinging back a little.
+  { p: 0.42, hip: { x: 2, y: 1 }, torso: -0.05, head: -0.12, footX: 27, frontUpper: -0.2, frontFore: 0, rearUpper: -0.35, rearFore: -0.15 },
+  // Bends and looks down at the stuck foot, one arm reaching down to it.
+  { p: 0.62, hip: { x: -1, y: 5 }, torso: 0.15, head: 0.4, footX: 24, frontUpper: 0.6, frontFore: 1.0, rearUpper: -0.3, rearFore: 0 },
+  { p: 0.8, hip: { x: 0, y: 2 }, torso: 0.05, head: 0.2, footX: 22, frontUpper: 0.3, frontFore: 0.5, rearUpper: -0.15, rearFore: 0.1 },
+  // Steps back, stands a moment and tries again.
+  { p: 0.9, ...REST },
   { p: 1, ...REST },
 ];
 
@@ -89,7 +91,7 @@ export const getPinnedPose = (timeMs: number): JointPose => {
 
   const hip = { x: lerp(from.hip.x, to.hip.x, t), y: lerp(from.hip.y, to.hip.y, t) };
   // Straining forward he shudders a little (fades in and out with the lunge).
-  const strain = Math.sin(timeMs * STRAIN.rate) * STRAIN.amplitude * Math.max(0, Math.sin(Math.PI * Math.min(1, p / 0.46)));
+  const strain = Math.sin(timeMs * STRAIN.rate) * STRAIN.amplitude * Math.max(0, Math.sin(Math.PI * Math.min(1, p / 0.42)));
   const torso = mix('torso') + strain;
   const shoulder = { x: hip.x + Math.sin(torso) * TORSO, y: hip.y - Math.cos(torso) * TORSO };
   const headAngle = torso + mix('head');

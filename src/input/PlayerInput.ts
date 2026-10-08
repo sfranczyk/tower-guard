@@ -11,6 +11,8 @@ export interface PlayerInput {
   isSprintDown(): boolean;
   /** True once per press (the press is consumed). */
   isJumpPressed(): boolean;
+  /** Leave the keep (S); true once per press. */
+  isExitPressed(): boolean;
   /** The bow being drawn right now (undefined when not aiming). */
   getAim(): AimInput | undefined;
   /** Shots released since the last call, with the aim at release. */
@@ -52,6 +54,10 @@ export class LocalInput implements PlayerInput {
 
   public isJumpPressed(): boolean {
     return this.manager.isJumpPressed();
+  }
+
+  public isExitPressed(): boolean {
+    return this.manager.isExitPressed();
   }
 
   public getAim(): AimInput | undefined {
@@ -107,6 +113,7 @@ export class ManualInput implements PlayerInput {
   public sprint = false;
   public aim?: AimInput;
   private jump = false;
+  private exit = false;
   private shots: AimInput[] = [];
   private burst = false;
   private projectile?: ProjectileType;
@@ -120,6 +127,10 @@ export class ManualInput implements PlayerInput {
 
   public pressJump(): void {
     this.jump = true;
+  }
+
+  public pressExit(): void {
+    this.exit = true;
   }
 
   public shoot(aim: AimInput): void {
@@ -147,6 +158,12 @@ export class ManualInput implements PlayerInput {
     const jump = this.jump;
     this.jump = false;
     return jump;
+  }
+
+  public isExitPressed(): boolean {
+    const exit = this.exit;
+    this.exit = false;
+    return exit;
   }
 
   public getAim(): AimInput | undefined {
@@ -184,6 +201,7 @@ export class ManualInput implements PlayerInput {
  */
 export class RecordingInput implements PlayerInput {
   private jumped = false;
+  private exited = false;
 
   public constructor(private readonly inner: PlayerInput) {}
 
@@ -206,6 +224,19 @@ export class RecordingInput implements PlayerInput {
     const jumped = this.jumped;
     this.jumped = false;
     return jumped;
+  }
+
+  public isExitPressed(): boolean {
+    const pressed = this.inner.isExitPressed();
+    this.exited ||= pressed;
+    return pressed;
+  }
+
+  /** Whether exit was pressed since the last call. */
+  public takeExit(): boolean {
+    const exited = this.exited;
+    this.exited = false;
+    return exited;
   }
 
   public getAim(): AimInput | undefined {

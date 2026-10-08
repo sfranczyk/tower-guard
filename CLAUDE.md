@@ -110,7 +110,7 @@ src/
   (scaled per projectile like drag), so arrows, the trajectory preview and enemy archer aim all use it;
   the status line shows its direction and strength.
 - **Aim overlay** (`rendering/AimOverlay.ts`): while aiming, circles at the drag start and at the bow (the ones at the
-  drag start can be turned off in the settings drawer, `session.showCursorCircle`); after a shot
+  drag start are off by default and can be turned on in the settings drawer, `session.showCursorCircle`); after a shot
   a ghost of it (power circle and direction) stays where that shot was loosed, not following the bowman.
 - **Aim camera** (`core/camera.ts`, pure, tested): while the local player draws, the view slides towards where the
   shot would land (`GameScene.updateAim` simulates it every frame, same ballistics as the preview, whether the
@@ -139,7 +139,10 @@ src/
   least `GAME_WIDTH` (1134, 2.1:1) wide. A window wider than 2.1:1, or one big enough to pass `MAX_VIEW_SCALE`
   (1.4 CSS px per game px), widens the view (up to `MAX_VIEW_WIDTH`) instead of scaling everything up. Read the
   current width with `viewWidth()` every frame, never `GAME_WIDTH`, for anything that spans the screen. The
-  battlefield is `WORLD_WIDTH` (3600, three screens or so); `GameScene` follows the bowman across it (and would
+  battlefield is `WORLD_WIDTH` (2400, about two screens; keeps at `PLAYER_TOWER_X` / `ENEMY_TOWER_X`, 160 px in from the ends;
+  the bowman hides in his by jumping under it, `TOWER_ENTRY_ZONE_WIDTH`, presses S to come out (`PlayerInput.isExitPressed`, sent in co-op), and can walk out
+  behind it to the edge, where he stands while the key is held, `Bowman.isAgainstEdge`; enemies follow him there;
+  they come in from beyond the right edge); `GameScene` follows the bowman across it (and would
   centre it, `centeredCameraX(width, WORLD_WIDTH)`, in a view wider than it). Menus, labs and the lobby show a
   `BACKDROP_WIDTH` (1200) landscape, centred (`centeredCameraX()`; `new Background(..., BACKDROP_WIDTH)`). The hills
   drawing is one `BACKDROP_WIDTH` stretch that `Background` repeats, every other copy mirrored; the landscape (sky,
@@ -222,7 +225,9 @@ src/
   `cheerWave`), legs solved with two-bone IK so planted feet don't slide; tests check limb lengths, ground,
   knees and loop continuity. `Enemy.celebrate()` picks one at random when the enemies win.
 - **Dragon archer enemy** (`EnemyType 'dragon'`, `objects/DragonEnemy.ts`): flies at `DRAGON_ALTITUDE`, hovers
-  `DRAGON_HOVER_OFFSET` in front of the bowman (`systems/dragonFlight.ts`, pure), and `CombatSystem.updateDragon`
+  `DRAGON_HOVER_OFFSET` in front of the bowman (`systems/dragonFlight.ts`, pure), on either side of him: it turns round
+  (`nextHoverSide`; the sprite's x scale swings through over `DRAGON_TURN_MS`, no shots or fire meanwhile) when he gets
+  `DRAGON_TURN_PAST` behind it or the world's edge leaves no room in front of him (co-op sends the side), and `CombatSystem.updateDragon`
   aims the rider's bow like an enemy archer (same ballistics and wind) and fires hostile arrows. Hit zones
   (`dragonHitZones` in `rendering/dragon.ts`, pure; `getHitBoxes` maps them to world space): the rider and the
   dragon's head are headshots (the rider needs a lobbed arrow, the body shields him from below); the body
@@ -314,8 +319,8 @@ src/
   `GameScene.burstShrapnel` swaps them in.
   Pinning arrows (slot 5, heavy barbed spike) only scratch (`PIN_DAMAGE`, 0–4, no headshot bonus) and pin the enemy
   to the ground: the arrow sticks through its foot into the ground and `Enemy.pin` keeps it from walking for
-  `pinDurationMs` (`PIN_DURATION_MS` 10 s, zombies `PIN_DURATION_ZOMBIE_MS` 15 s; brutes and dragons can't be
-  pinned and just take the scratch). A pinned enemy plays the struggle (`rendering/stickmanPinned.ts`, pure, tested: lunges with the free leg,
+  `pinDurationMs` (`PIN_DURATION_MS` 20 s, zombies `PIN_DURATION_ZOMBIE_MS` 20 s too; brutes and dragons can't be
+  pinned and just take the scratch). A pinned enemy plays the struggle (`rendering/stickmanPinned.ts`, pure, tested, kept moderate: leans on the free leg,
   the stuck rear foot at `PINNED_FOOT` yanks him back, looks down at it; the arrow goes in at `Enemy.pinnedFootPoint`)
   but can still swing or shoot; co-op sends the time left (`EnemySnap.pinned`). Lab row: `pinned-struggle`.
   Enemy archers shoot at the plain `bowSpeed`, so player arrow tuning doesn't change them. Piercing is light (fast, flat, long) and explosive is heavy (short high arc).
