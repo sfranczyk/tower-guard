@@ -10,6 +10,7 @@ enemy waves walk in from the enemy keep on the right. PixiJS 8 + TypeScript (str
     `scene.enemies[0].takeDamage(999, { cause: 'headshot', fromX: 0 })`.
   - `?lab` opens the animation lab directly, and `?lab=<id>` (e.g. `?lab=archer`) opens one animation zoomed in.
     Ids are in `AnimationLabScene`.
+  - `?designs` opens the design lab (menu → Dev tools → "Design lab"); `?designs=<tab or design id>` (e.g. `player`, `fighter`).
   - `?sounds` opens the sound test panel (menu → "Open sound test panel"): every effect and each of its
     variants, the theme with a jump to its loop seam, and the volumes.
 - `npm run check`: type-check (`tsc --noEmit`, includes noUnusedLocals/Parameters)
@@ -39,8 +40,10 @@ src/
 - **Scenes**: extend `Scene` from `core/Scene.ts`. Register window listeners with `listenWindow()`
   and teardown with `onExit()` so cleanup runs automatically. `ctx.goTo('menu' | 'game' | 'animationLab')`
   switches scenes, and `SceneManager` destroys everything under `ctx.root` on each switch.
-- **Sandbox** (no levels): Start game opens `SandboxScene`, a form (`ui/SandboxForm.ts`) for the wave
-  count (1–5), enemies per type and battleground per wave, and bowman/keep health. Settings are pure data
+- **Sandbox**: Start game opens `SandboxScene`, a form (`ui/SandboxForm.ts`). The UI calls waves *levels* (the
+  code still says wave): level tabs (map thumbnail, enemy count, add/remove, 1–5), the selected level's
+  battleground (map cards) and enemies (a card per type with − / +), bowman/keep health in the header; the
+  canvas behind shows the selected level's map. Settings are pure data
   in `data/sandbox.ts` (`normalizeSandbox` clamps everything) and persist in localStorage via
   `core/sandboxStorage.ts`. `ctx.session.sandbox` holds them, and `ctx.session.run` (`RunState`) the
   current wave index and health carried between waves. Each `GameScene` plays one wave. A cleared wave
@@ -161,6 +164,9 @@ src/
   the bowman down (`Bowman.knockBack`, `BOWMAN_KNOCKBACK`): stickmanFall's `knockback` then `getUp`, drawn in his
   armor by `drawArmoredJointPose` (`rendering/armoredPose.ts`), sliding further the closer he stood; meanwhile
   (`isStunned`) he can't move, jump, aim or enter the keep. Killed by it, he stays lying on his back. Lab row: `archer-knockdown`.
+  Killed by a direct explosive hit, a kamikaze sets its bomb off: `explode` with `power` = `KAMIKAZE_BLAST_POWER`
+  (2: twice the radius and damage, `EffectsSystem.explosion(point, scale)`) where it stood. A kamikaze blown apart
+  (that, or its own bomb) throws its pieces `KAMIKAZE_GIB_FORCE` times harder.
 - **Zombie** (`EnemyType 'zombie'`): shuffles slowly with its arms held out (`pose.zombie`,
   `ZOMBIE_REST`), attacks with the `'grab'` style (lunge, then yank both hands back to the chest; the hit lands
   on the yank) and is pale green with green blood: `BodyColors` (`rendering/bodyColors.ts`, `HUMAN_BODY` /
@@ -169,8 +175,20 @@ src/
 - **Enemy looks** (`ENEMY_LOOKS` in `data/enemies.ts`): size, club swing and gait per type. The walk/run phase
   advances with the distance covered (`Enemy.stridePhase`, `WALK_STRIDE_PER_RADIAN` / `RUN_STRIDE_PER_RADIAN` × body
   scale), so feet stay planted at any speed and size; `stepMs` only sets the sway of standing poses. Runners run (run
-  cycle) and swing a short club from below; Brutes are 1.5× tall (container scale, so hitboxes and arrow
+  cycle), are 0.75× tall and stab from below; Brutes are 1.5× tall (container scale, so hitboxes and arrow
   anchors scale too; the health bar keeps its size) and chop two-handed with a long club.
+- **Enemy bodies** (`rendering/enemyBody.ts`): enemies are drawn in their looks from the design lab, not as
+  stickmen: fighter = raider, runner = goblin (dagger), archer = hooded bandit, brute = ogre, kamikaze = sapper
+  (wrapped in dynamite, a stick in each hand), zombie = rotting peasant. `Enemy` passes its state (walk/run phase,
+  stand, attack progress, archer bow, or a JointPose for falls, cheers and the pinned struggle) to `drawEnemyBody`,
+  which builds the BodyPose with drawStickman's numbers and draws the look, so moves, sprite transform and hitboxes
+  are unchanged (archers walk upright). Blown apart, the same `GibSimulation` is drawn in the look
+  (`drawEnemyGibs` → `designs/lookGibs.ts`: torso with its clothes and gear, head with its face, limbs with hands, feet
+  and what the hands held, bloody stumps); `enemyGibColors` gives the blood (red / green; `EffectsSystem` tells them
+  apart by the blood colour). The design lab shows it as "Blown apart". Dragon riders are the bandit (dragon archer) and a
+  dragon knight (fire dragon) via `drawDragonWithRider`, also when thrown off (`drawThrownRider`'s `drawRider`) or
+  blown apart (`drawLookGibs`).
+  The near dragon wing is drawn over the rider, so it hides him on the upstroke.
 - **Club attacks** (`rendering/attackSwing.ts`, pure keyframes by progress, `pose.attackStyle`): `overhead`
   (one-handed, enemies in the game), `twoHanded` (longer club in both hands; the rear hand reaches the shaft
   by IK) and `uppercut` (short club from below); `CLUBS` sets each club's length. Wind-up, a fast strike
@@ -207,6 +225,11 @@ src/
   the stream (puffs fly ~`FIRE_REACH` out, swell, cool to smoke and rise), drawn into `DragonEnemy.fireArt`.
   The stream goes along the aim (the head tilts less by half the jaw opening); `getFlames` gives its hot puffs
   in world space. Lab rows: `fire-dragon`, `fire-dragon-breath`.
+  Killed by a direct explosive hit (cause `'blast'`), the fire dragon blows up: `CombatSystem.explode` with
+  `power` = `FIRE_DRAGON_BLAST_POWER` (2: twice the radius and damage) centred on its body, `EffectsSystem.dragonBlast`
+  (a double-size explosion in a swarm of fireballs and a dark cloud), the dragon bursts into `DragonGibSimulation`
+  chunks and the rider into gibs (`DragonDeath.dragonGibs`), and arrows stuck in it are gone (`Arrow.stuckTo`).
+  The dragon archer keeps the old blast death (rider blown apart, dragon falls).
 - **Burning**: the fire dragon's flames (`flamesTouch` in `systems/burning.ts`, pure, puff cores vs the bowman's box;
   not in the keep) set the bowman alight (`Bowman.ignite`, status line message): `BURN_DAMAGE_PER_S` of steady
   damage (applied in `CombatSystem.update`) for `BURN_DURATION_MS` after the last touch, so staying in the fire
@@ -239,12 +262,26 @@ src/
   they were (`knockbackPush`, applied over the fall in `Enemy.updateFall`). The lab uses force 1, and every lab figure is clipped to its frame.
 - **Bow ready**: `pose.bowReady` blends the archer between the lowered bow (0) and aiming (1). `Bowman`
   raises the bow while the player draws (aim power > 0) and lowers it after the shot.
+- **Design lab** (`scenes/DesignLabScene.ts`, catalogue in `rendering/designs/catalog.ts`): looks in tabs. *Enemies*:
+  the enemies' looks (in the game now, see Enemy bodies) over all their animations, each with an "Old" stickman tile.
+  *Player*: the ranger and keep warden, next to the old armored archer. *Ideas*: free proposals, each less of a stickman.
+  The looks draw over `BodyPose` (`rendering/designs/bodyPoses.ts`, pure, tested): the game's walk, run, club swings,
+  grab and archer rig as joint positions with drawStickman's numbers, plus the fall, cheer and pinned JointPoses as they
+  are, so a look covers every animation and keeps the hitboxes. `skinKit.ts` places parts in the torso/head frames (works
+  lying down too) and `drawHumanoid` draws a `HumanoidLook`; looks are in `enemySkins.ts`, `heavySkins.ts`,
+  `playerSkins.ts`; the ideas in `ideas.ts` (+ `ideaHumanoids.ts`, `ideaCreatures.ts`, own `designSkeleton.ts`).
 - **Animation lab** (drawn in Pixi on a cream panel over the meadow, matching the HTML UI) rows live in `scenes/AnimationLabScene.ts`, and scripted sequences in
   `scenes/labSequences.ts`. Add new animations there so they can be previewed and zoomed.
 - **Archer pose**: bow, hands and elbows come from `getArcherRig()` in `rendering/archer.ts`. It pivots
   at the neck and is drawn inside the stickman sprite, so the hands can't drift from the bow.
   `Bowman.getBowReleasePoint()` uses the same rig (string hand). Don't add a separately positioned bow.
-- **Skins**: `pose.skin` picks the look. `'skeleton'` is the thin white bones used by enemies and previews.
+- **Player look** (`rendering/bowmanBody.ts`): `Bowman` draws player 1 as the ranger and, in co-op, player 2 as the
+  keep warden (`BowmanConfig.look`; `rendering/designs/playerSkins.ts`), coloured from the battleground's `player`
+  ArmorPalette (ranger: hood, cloak, sleeves = `limb`; warden: tabard = `limb`, helm = `plate`, tower = `gold`, so
+  `secondPlayerArmor` makes his helm bronze). `bowmanBody` (bodyPoses, tested) blends walk, sprint and standing like
+  drawStickman under the archer rig; falls draw the bow in the rear hand (`bowInRearHand`). The sprite lean, aim
+  and bow release point are the same as before. The armored skin below is no longer used in the game.
+- **Skins**: `pose.skin` picks the look. `'skeleton'` is the thin white bones of the animation lab and previews.
   `'armored'` is the player's armored archer: thick dark limbs, plus hood, armor, quiver and bow from
   `rendering/armor.ts`, drawn on the same skeleton so every animation still works. Its colours are an
   `ArmorPalette` (`pose.armorColors`, default `ARMOR_COLORS`): each battleground has a `player` palette picked
@@ -256,6 +293,12 @@ src/
   Shrapnel arrows (slot 4) burst on Space in flight into `SHRAPNEL_FRAGMENTS` small `'fragment'` arrows
   fanned around the heading (`shrapnelBurst`, pure), each dealing `SHRAPNEL_FRAGMENT_DAMAGE` of a normal hit;
   `GameScene.burstShrapnel` swaps them in.
+  Pinning arrows (slot 5, heavy barbed spike) only scratch (`PIN_DAMAGE`, 0–4, no headshot bonus) and pin the enemy
+  to the ground: the arrow sticks through its foot into the ground and `Enemy.pin` keeps it from walking for
+  `pinDurationMs` (`PIN_DURATION_MS` 10 s, zombies `PIN_DURATION_ZOMBIE_MS` 15 s; brutes and dragons can't be
+  pinned and just take the scratch). A pinned enemy plays the struggle (`rendering/stickmanPinned.ts`, pure, tested: lunges with the free leg,
+  the stuck rear foot at `PINNED_FOOT` yanks him back, looks down at it; the arrow goes in at `Enemy.pinnedFootPoint`)
+  but can still swing or shoot; co-op sends the time left (`EnemySnap.pinned`). Lab row: `pinned-struggle`.
   Enemy archers shoot at the plain `bowSpeed`, so player arrow tuning doesn't change them. Piercing is light (fast, flat, long) and explosive is heavy (short high arc).
 - **Enemy archers** (`EnemyType 'archer'`): `CombatSystem.updateArcher` walks them into
   `ENEMY_ARCHER_RANGE`, aims with `solveLaunchAngle` (same ballistics as the player, cached ~250 ms) and
@@ -280,6 +323,11 @@ src/
   (`keepTones`), and `keepDamageStage` (pure, tested) picks the look from health: cracks (≤60%), broken
   merlons, torn banners and rubble (≤30%), fire and smoke (≤10%). `Tower` redraws only when the stage changes
   and animates the torch, fire and smoke in `update(deltaMs)`.
+  A hit doesn't flash the keep: `Tower.takeDamage(amount, at?)` knocks grey stone chips off where it lands (more for
+  a harder hit; `CHIPS`), which bounce and fade; a health bar like the enemies' sits above it (`showHealth`, off for
+  the menu's keeps). Arrows hit its silhouette, not a box: `keepHitParts` (`rendering/keep.ts`, pure, tested:
+  plinth, walls, gatehouse, shaft, top, the co-op lower tower) via `Tower.hitTime`; `?debug` draws them cyan.
+  Arrows that hit a keep (but explosive ones) stick into the stone (`Arrow.stickToWall`) and stay there.
   The co-op keep (`KeepOptions.twin`, `KeepLook.twin`) has a second, lower tower in place of the right wall
   (`KEEP_TURRET`, same footprint and hit box); `Tower.hideSpot(index)` is where each bowman stands when hiding
   (player 1 in the main tower, player 2 in the lower one).

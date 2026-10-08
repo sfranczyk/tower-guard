@@ -139,8 +139,8 @@ export interface EnemyLook {
 
 export const ENEMY_LOOKS: Readonly<Record<EnemyType, EnemyLook>> = {
   basic: { size: 1, attackStyle: 'overhead', runs: false, strikeReach: 55 },
-  // Runners sprint in and swing a short club from below.
-  fast: { size: 1, attackStyle: 'uppercut', runs: true, strikeReach: 45 },
+  // Runners (goblins, three quarters of a man's height) sprint in and stab up from below.
+  fast: { size: 0.75, attackStyle: 'uppercut', runs: true, strikeReach: 45 },
   // Brutes stand half again as tall and chop with a long club in both hands: hard to step away from.
   tank: { size: 1.5, attackStyle: 'twoHanded', runs: false, strikeReach: 85 },
   archer: { size: 1, attackStyle: 'overhead', runs: false, strikeReach: 55 },

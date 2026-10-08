@@ -97,7 +97,7 @@ export interface Snapshot {
   enemyKeep: number;
 }
 
-export type EffectKind = 'blood' | 'greenBlood' | 'impact' | 'explosion' | 'lightning';
+export type EffectKind = 'blood' | 'greenBlood' | 'impact' | 'explosion' | 'dragonBlast' | 'lightning';
 
 /** Things that happen once, in order. */
 export type GameEvent =
@@ -111,7 +111,7 @@ export type GameEvent =
   /** An arrow stuck into an enemy (at a world point) or the ground. */
   | { e: 'stick'; id: number; enemy?: number; x: number; y: number }
   | { e: 'gone'; id: number }
-  | { e: 'fx'; kind: EffectKind; x: number; y: number }
+  | { e: 'fx'; kind: EffectKind; x: number; y: number; scale?: number }
   | { e: 'sound'; id: SoundId; x: number; y: number }
   | { e: 'knock'; player: number; fromX: number; strength: number }
   | { e: 'ignite'; player: number }

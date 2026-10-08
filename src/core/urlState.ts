@@ -21,3 +21,6 @@ export const COOP_PARAM = 'coop';
 
 /** Query parameter that opens the sound test panel (?sounds). */
 export const SOUND_LAB_PARAM = 'sounds';
+
+/** Query parameter holding the enemy design lab state: present = lab open, value = zoomed design id. */
+export const DESIGN_LAB_PARAM = 'designs';

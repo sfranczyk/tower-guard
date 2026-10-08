@@ -156,7 +156,9 @@ export class GuestSync {
         } else if (event.kind === 'impact') {
           effects.impact(point);
         } else if (event.kind === 'explosion') {
-          effects.explosion(point);
+          effects.explosion(point, event.scale);
+        } else if (event.kind === 'dragonBlast') {
+          effects.dragonBlast(point);
         } else {
           effects.lightningStrike(point);
         }

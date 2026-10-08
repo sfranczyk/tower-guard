@@ -56,6 +56,17 @@ export const PROJECTILE_DAMAGE = 20;
 export const HEADSHOT_DAMAGE_MULTIPLIER = 1.25;
 export const EXPLOSION_RADIUS = 72;
 /**
+ * A fire dragon killed by a direct explosive hit blows up: the arrow's explosion this many times over (radius and
+ * damage), in a cloud of fire, and the dragon and rider burst apart.
+ */
+export const FIRE_DRAGON_BLAST_POWER = 2;
+/**
+ * A kamikaze killed by a direct explosive hit sets its bomb off: the arrow's explosion this many times over (radius
+ * and damage). A kamikaze blown apart (by that or its own bomb) throws its pieces KAMIKAZE_GIB_FORCE times harder.
+ */
+export const KAMIKAZE_BLAST_POWER = 2;
+export const KAMIKAZE_GIB_FORCE = 1.8;
+/**
  * Explosion damage by distance from the blast: `centre` at the middle (and for the enemy an explosive arrow hits
  * directly), falling off linearly to `edge` at EXPLOSION_RADIUS. The arrow itself does no damage.
  */
@@ -77,9 +88,13 @@ export const SHRAPNEL_FRAGMENT_DAMAGE = 0.55;
 export const SPLASH_GIB_CHANCE = { near: 0.3, far: 0.7, max: 0.95, min: 0.05 } as const;
 export const KNOCKBACK_PUSH_MAX = 110;
 export const PIERCING_DAMAGE_MULTIPLIER = 0.62;
-/** Pinning arrow: an enemy it hits stays put this long (zombies longer; brutes and dragons can't be pinned). */
-export const PIN_DURATION_MS = 7000;
-export const PIN_DURATION_ZOMBIE_MS = 10000;
+/**
+ * Pinning arrow: an enemy it hits stays put this long (zombies longer; brutes and dragons can't be pinned), and
+ * takes only a scratch, PIN_DAMAGE (random within the range, no headshot bonus).
+ */
+export const PIN_DURATION_MS = 10000;
+export const PIN_DURATION_ZOMBIE_MS = 15000;
+export const PIN_DAMAGE: readonly [number, number] = [0, 4];
 export const ENEMY_TOWER_DAMAGE = 16;
 /** Enemy archers: stop and shoot from this distance, draw time, pause between shots, aim error. */
 export const ENEMY_ARCHER_RANGE = 340;
@@ -111,7 +126,7 @@ export const FIRE_DRAGON_BREATH_INTERVAL_MS = 6500;
  * damage for BURN_DURATION_MS after the flames last touched him; staying in the fire keeps relighting it.
  */
 export const BURN_DURATION_MS = 4000;
-export const BURN_DAMAGE_PER_S = 6;
+export const BURN_DAMAGE_PER_S = 3;
 /** Dragon drawn at this scale (its art is ~300 px long with the tail). */
 export const DRAGON_SCALE = 0.42;
 export const ENEMY_GROUND_Y = GROUND_Y;
@@ -123,8 +138,8 @@ export const WALK_DECELERATION = 1100;
 export const SPRINT_DECELERATION = 480;
 /** Sprint top speed as a multiple of walking speed (120 px/s → 270 px/s). */
 export const SPRINT_MAX_MULTIPLIER = 2.25;
-export const JUMP_SPEED = 420;
-/** Bowman gravity: with JUMP_SPEED this gives a ~40 px jump lasting ~0.38 s. */
+export const JUMP_SPEED = 594;
+/** Bowman gravity: with JUMP_SPEED this gives a ~80 px jump lasting ~0.54 s. */
 export const GRAVITY = 2200;
 /**
  * A kamikaze blast knocks the bowman down (stickmanFall's knockback, then getUp): the fall throws him back

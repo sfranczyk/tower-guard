@@ -21,13 +21,46 @@ import { drawJointPose, drawRearLeg } from './stickmanPose';
 
 /** Drawing of the dragon poses from rendering/dragon.ts, in the flat landscape style, in a palette. */
 
+/**
+ * A bat wing: the membrane between the arm and the finger bones, its trailing edge scalloped (each span
+ * curves in towards the wrist), a darker band along the arm, the fingers fanning from the wrist and a
+ * small claw on the wrist.
+ */
 const drawWing = (g: Graphics, wingPose: WingPose, membrane: number, bone: number): void => {
   const { shoulder, wrist, tip, trail } = wingPose;
-  g.poly([shoulder, wrist, tip, ...trail].flatMap((point) => [point.x, point.y])).fill({ color: membrane });
+  // The edge from the tip back to the body, through each finger's end.
+  const edge = [tip, ...trail];
+  const scalloped = (shade: number, alpha: number, inset: number): void => {
+    g.moveTo(shoulder.x, shoulder.y).lineTo(wrist.x, wrist.y).lineTo(tip.x, tip.y);
+    for (let index = 1; index < edge.length; index += 1) {
+      const from = edge[index - 1];
+      const to = edge[index];
+      const middle = { x: (from.x + to.x) / 2, y: (from.y + to.y) / 2 };
+      const control = { x: middle.x + (wrist.x - middle.x) * inset, y: middle.y + (wrist.y - middle.y) * inset };
+      g.quadraticCurveTo(control.x, control.y, to.x, to.y);
+    }
+    g.closePath().fill({ color: shade, alpha });
+  };
+  scalloped(membrane, 1, 0.22);
+  // Darker leading band: the membrane is thicker along the arm.
+  g.poly(flat([shoulder, wrist, tip, mix(wrist, tip, 0.35, trail[0], 0.2), mix(shoulder, wrist, 0.5, trail[2], 0.35)])).fill({ color: 0x000000, alpha: 0.12 });
   g.moveTo(shoulder.x, shoulder.y).lineTo(wrist.x, wrist.y).lineTo(tip.x, tip.y)
     .stroke({ width: 4, color: bone, cap: 'round', join: 'round' });
   // Finger bones fanning from the wrist to the trailing edge.
   trail.slice(0, 2).forEach((point) => g.moveTo(wrist.x, wrist.y).lineTo(point.x, point.y).stroke({ width: 2, color: bone, cap: 'round' }));
+  // Wrist claw, hooked forward along the arm.
+  const arm = { x: wrist.x - shoulder.x, y: wrist.y - shoulder.y };
+  const length = Math.hypot(arm.x, arm.y) || 1;
+  const along = { x: arm.x / length, y: arm.y / length };
+  g.moveTo(wrist.x, wrist.y)
+    .quadraticCurveTo(wrist.x + along.x * 7 - along.y * 2, wrist.y + along.y * 7 + along.x * 2, wrist.x + along.x * 9 + along.y * 3, wrist.y + along.y * 9 - along.x * 3)
+    .stroke({ width: 2.2, color: bone, cap: 'round' });
+};
+
+/** A point `t` of the way from a to b, then `u` of the way towards c. */
+const mix = (a: Vec2, b: Vec2, t: number, c: Vec2, u: number): Vec2 => {
+  const p = { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t };
+  return { x: p.x + (c.x - p.x) * u, y: p.y + (c.y - p.y) * u };
 };
 
 /** Thick tapering stroke through `points` (width from `from` to `to`). */
@@ -101,11 +134,17 @@ const drawHead = (g: Graphics, pose: DragonPose, palette: DragonPalette): void =
   g.circle(eye.x + 0.6, eye.y, 1.1).fill({ color: 0x2b1a14 });
 };
 
-/** Draws a dragon pose on top of what's in `g` (in its current transform), with or without the rider. */
-export const drawDragon = (g: Graphics, pose: DragonPose, withRider: boolean, palette: DragonPalette = DRAGON_PALETTES.red): void => {
+/**
+ * Draws a dragon pose on top of what's in `g` (in its current transform), with or without the rider
+ * (or with a rider drawn by `withRider` itself). The rider sits between the body and the near wing, so
+ * the near wing hides him while it's raised.
+ */
+export const drawDragon = (
+  g: Graphics, pose: DragonPose, withRider: boolean | ((g: Graphics) => void), palette: DragonPalette = DRAGON_PALETTES.red,
+): void => {
   drawWing(g, pose.farWing, palette.wingFar, palette.bone);
   // The rider's far leg is on the other side of the dragon: drawn before the body so it's hidden.
-  if (withRider) {
+  if (withRider === true) {
     drawRearLeg(g, pose.rider);
   }
 
@@ -135,10 +174,12 @@ export const drawDragon = (g: Graphics, pose: DragonPose, withRider: boolean, pa
   tapered(g, [{ x: 30, y: -2 + y }, ...pose.neck], 26, 13, palette.body);
   drawHead(g, pose, palette);
 
-  drawWing(g, pose.nearWing, palette.wingNear, palette.bone);
-  if (withRider) {
+  if (withRider === true) {
     drawDragonRiderOnly(g, pose);
+  } else if (withRider) {
+    withRider(g);
   }
+  drawWing(g, pose.nearWing, palette.wingNear, palette.bone);
 };
 
 /** The rider (skeleton look, near leg over the flank, far leg left out) and his weapon. */

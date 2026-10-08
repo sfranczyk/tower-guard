@@ -83,6 +83,12 @@ const bowInHand = (hand: Vec2, angle: number): ArcherRig => {
   };
 };
 
+/** The bow in the rear (bow) hand of a fall pose, at the angle it's carried to the forearm. */
+export const bowInRearHand = (pose: JointPose): ArcherRig => {
+  const forearm = Math.atan2(pose.rearHand.y - pose.rearElbow.y, pose.rearHand.x - pose.rearElbow.x);
+  return bowInHand(pose.rearHand, forearm + BOW_TO_FOREARM);
+};
+
 /**
  * Draws a joint pose (falls, getting up) with the player's armored archer look: thick dark limbs, quiver,
  * armor and hood turned with the torso and head, and the bow still in the rear (bow) hand.

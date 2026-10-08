@@ -10,11 +10,15 @@ import {
   FIRE_DRAGON_HOVER_OFFSET,
 } from '../config';
 import { DRAGON_PALETTES, dragonHitZones, type DragonHitZone, type DragonPalette, type DragonPose } from '../rendering/dragon';
-import { drawDragon, drawDragonRider } from '../rendering/dragonArt';
+import { drawDragon } from '../rendering/dragonArt';
+import { dragonArcherLook, dragonKnightLook, drawDragonWithRider } from '../rendering/designs/heavySkins';
+import { drawHumanoid, type HumanoidLook } from '../rendering/designs/skinKit';
+import { drawLookGibs } from '../rendering/designs/lookGibs';
+import { HUMAN_BODY, type BodyColors } from '../rendering/bodyColors';
 import { FIRE_BREATH_MS, IGNITE_HEAT, breathControl, drawFireStream, firePuffs, isBreathingFire, puffPosition } from '../rendering/dragonFire';
 import { DRAGON_HIT_MS, dragonFallState, drawThrownRider, lyingDragonPose, riderGibSimulation } from '../rendering/dragonDeath';
-import { GIB_GROUND_Y, drawStickmanGibs, type GibSimulation } from '../rendering/stickmanGibs';
-import { HUMAN_BODY } from '../rendering/bodyColors';
+import { DragonGibSimulation } from '../rendering/dragonGibs';
+import { GIB_GROUND_Y, type GibSimulation } from '../rendering/stickmanGibs';
 import type { BodyAnchor } from '../systems/bodyAnchor';
 import { cruiseAltitude, flyTowards, hoverX } from '../systems/dragonFlight';
 import { groundAt } from '../systems/terrain';
@@ -53,6 +57,13 @@ const DRAGON_KINDS: Readonly<Record<DragonKind, { palette: DragonPalette; rider:
 
 /** Force range of the rider's explosive death (like enemies blown apart). */
 const RIDER_GIB_FORCE = { min: 1, max: 1.7 };
+/** The riders' looks (rendering/designs): the dragon archer's hooded bandit; the fire dragon's knight is animated. */
+const DRAGON_ARCHER_LOOK = dragonArcherLook();
+/** Colours of a blown-apart rider's pieces. */
+const RIDER_GIB_COLORS: Readonly<Record<'archer' | 'unarmed', BodyColors>> = {
+  archer: { ...HUMAN_BODY, bone: 0xd2a07a, boneRear: 0x5a4a6a },
+  unarmed: { ...HUMAN_BODY, bone: 0x6d7380, boneRear: 0xa8343a },
+};
 
 /**
  * A killed dragon (rendering/dragonDeath.ts): it falls in "death space", the dragon's own sprite space with
@@ -65,6 +76,8 @@ interface DragonDeath {
   pose: DragonPose;
   /** Killed by a direct explosive hit: the rider is blown apart instead of thrown off. */
   riderGibs?: GibSimulation;
+  /** A fire dragon killed by a direct explosive hit blows up too: its chunks, in death space. */
+  dragonGibs?: DragonGibSimulation;
 }
 
 /**
@@ -159,11 +172,15 @@ export default class DragonEnemy extends Container {
     if (this.health === 0) {
       const startY = GIB_GROUND_Y - (groundAt(this.x) - this.y) / DRAGON_SCALE;
       const force = RIDER_GIB_FORCE.min + Math.random() * (RIDER_GIB_FORCE.max - RIDER_GIB_FORCE.min);
+      const blast = hit?.cause === 'blast';
+      const seed = Math.floor(Math.random() * 1e9);
       this.death = {
         timeMs: 0,
         startY,
         pose: this.pose,
-        riderGibs: hit?.cause === 'blast' ? riderGibSimulation(this.pose, startY, Math.floor(Math.random() * 1e9), force) : undefined,
+        riderGibs: blast ? riderGibSimulation(this.pose, startY, seed, force) : undefined,
+        // The fire dragon's burning gut goes up with it (CombatSystem doubles the blast): it bursts into chunks.
+        dragonGibs: blast && this.kind === 'fireDragon' ? new DragonGibSimulation(this.pose, startY, seed, force, this.look.palette) : undefined,
       };
       this.healthBar.visible = false;
       this.tension = 0;
@@ -341,20 +358,39 @@ export default class DragonEnemy extends Container {
   private drawDeath(deltaMs: number): void {
     const death = this.death!;
     death.timeMs += deltaMs;
-    const fall = dragonFallState(DRAGON_HIT_MS + death.timeMs, death.startY);
     this.art.clear();
-    drawDragon(this.art, lyingDragonPose(death.pose, fall.lying), false, this.look.palette);
-    this.art.position.set(0, fall.y - death.startY);
-    this.art.rotation = fall.rotation;
+    if (death.dragonGibs) {
+      // Blown apart: the chunks fly, bounce and settle (death space, drawn so its origin stays where it was hit).
+      death.dragonGibs.step(deltaMs);
+      this.art.position.set(0, -death.startY);
+      this.art.rotation = 0;
+      const { bone } = this.look.palette;
+      death.dragonGibs.pieces.forEach((piece) => {
+        this.art.poly(DragonGibSimulation.outlineOf(piece).flatMap((point) => [point.x, point.y]))
+          .fill({ color: piece.color })
+          .stroke({ width: 1.5, color: bone, join: 'round' });
+      });
+    } else {
+      const fall = dragonFallState(DRAGON_HIT_MS + death.timeMs, death.startY);
+      drawDragon(this.art, lyingDragonPose(death.pose, fall.lying), false, this.look.palette);
+      this.art.position.set(0, fall.y - death.startY);
+      this.art.rotation = fall.rotation;
+    }
     if (death.riderGibs) {
       death.riderGibs.step(deltaMs);
-      drawStickmanGibs(this.riderArt, death.riderGibs, -death.startY);
+      drawLookGibs(this.riderArt, death.riderGibs, this.riderLook(death.timeMs), RIDER_GIB_COLORS[this.look.rider], -death.startY);
       this.riderArt.x = death.pose.rider.hip.x;
     } else {
       this.riderArt.clear();
       this.riderArt.position.set(0, -death.startY);
-      drawThrownRider(this.riderArt, death.pose, death.timeMs, death.startY);
+      const look = this.riderLook(death.timeMs);
+      drawThrownRider(this.riderArt, death.pose, death.timeMs, death.startY, (g, rider) => drawHumanoid(g, rider, look));
     }
+  }
+
+  /** The rider's look once he's off the dragon (both legs show). */
+  private riderLook(timeMs: number): HumanoidLook {
+    return { ...(this.look.rider === 'archer' ? DRAGON_ARCHER_LOOK : dragonKnightLook(timeMs)), hideFarLeg: false };
   }
 
   /** Advances the breath (it runs to the end once started) and the wait until the next; the head follows the target. */
@@ -376,7 +412,7 @@ export default class DragonEnemy extends Container {
     // Once killed the clock stops, so the wings freeze mid-beat while it falls.
     if (rider === 'unarmed') {
       const breath = this.breathMs === undefined ? undefined : breathControl(this.breathMs, this.fireAim);
-      const pose = drawDragonRider(this.art, this.timeMs, 'unarmed', undefined, palette, breath);
+      const pose = drawDragonWithRider(this.art, this.timeMs, 'unarmed', dragonKnightLook(this.timeMs), palette, undefined, breath);
       this.fireArt.clear();
       if (this.breathMs !== undefined) {
         drawFireStream(this.fireArt, pose.mouth.point, pose.mouth.angle, this.breathMs);
@@ -386,7 +422,7 @@ export default class DragonEnemy extends Container {
     // The sprite faces left (mirrored) and tilts while falling: turn the world aim into the rider's local aim.
     const local = normalizeAngle(Math.PI - (this.aimAngle - this.rotation));
     const aim = Math.min(AIM_MAX, Math.max(AIM_MIN, local));
-    return drawDragonRider(this.art, this.timeMs, 'archer', { aim, tension: this.tension }, palette);
+    return drawDragonWithRider(this.art, this.timeMs, 'archer', DRAGON_ARCHER_LOOK, palette, { aim, tension: this.tension });
   }
 
   /** Local (sprite) point to world, through the art's own transform (moved while the corpse falls). */

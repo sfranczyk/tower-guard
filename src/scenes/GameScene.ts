@@ -59,7 +59,7 @@ const PROJECTILE_LABELS: Record<ProjectileType, string> = {
   explosive: 'Explosive bolt · heavy, short high arc, area damage on impact',
   piercing: 'Piercing arrow · light and fast, flat and long, passes through enemies',
   shrapnel: 'Shrapnel arrow · press Space in flight to burst it into three small arrows',
-  pinning: 'Pinning arrow · pins an enemy to the ground for a while (not brutes or dragons)',
+  pinning: 'Pinning arrow · barely hurts, but pins an enemy to the ground for 10 s (zombies 15 s; not brutes or dragons)',
   fragment: 'Shrapnel fragment',
 };
 
@@ -233,7 +233,7 @@ export class GameScene extends Scene {
       this.snow = new Snow(this.ctx.root, this.wind * SNOW_WIND_DRIFT);
     }
     const hint = this.battleground.weather === 'storm' ? 'beware of lightning' : this.wind !== 0 ? windLabel(this.wind, this.battleground.wind ?? 0) : 'defend your keep';
-    ui.setStatus(`Wave ${run.waveIndex + 1} of ${sandbox.waveCount} · ${this.battleground.name} · ${hint}`);
+    ui.setStatus(`Level ${run.waveIndex + 1} of ${sandbox.waveCount} · ${this.battleground.name} · ${hint}`);
   }
 
   /** The world keeps running after the wave ends; the end screen just overlays it. */
@@ -358,6 +358,8 @@ export class GameScene extends Scene {
     this.players = Array.from({ length: Math.max(1, playerCount) }, (_, index) => {
       const bowman = new Bowman(playerStartX(index), BOWMAN_Y, { x: 50, y: 0, width: WORLD_WIDTH - 100, height: GAME_HEIGHT }, {
         armorColors: index === 0 ? this.battleground.player : secondPlayerArmor(this.battleground.player),
+        // Player 1 is the ranger; in co-op player 2 is the keep warden.
+        look: index === 0 ? 'ranger' : 'warden',
       });
       bowman.y = groundAt(bowman.x);
       const health = run.bowmanHealths[index] ?? sandbox.bowmanHealth;
@@ -703,15 +705,15 @@ export class GameScene extends Scene {
     ];
     if (hasNextWave) {
       const info: EndInfo = {
-        title: `Wave ${run.waveIndex + 1} cleared!`,
+        title: `Level ${run.waveIndex + 1} cleared!`,
         outcome: 'win',
         stats,
-        copy: `Next: wave ${run.waveIndex + 2} of ${sandbox.waveCount} at ${BATTLEGROUNDS[sandbox.waves[run.waveIndex + 1].battleground].name}.`,
+        copy: `Next: level ${run.waveIndex + 2} of ${sandbox.waveCount} at ${BATTLEGROUNDS[sandbox.waves[run.waveIndex + 1].battleground].name}.`,
       };
       this.hostSync?.sendEnd(info);
       ui.showEndScreen({
         ...info,
-        buttonLabel: 'Next wave',
+        buttonLabel: 'Next level',
         onButton: this.endAction = () => {
           session.run = {
             waveIndex: run.waveIndex + 1,
@@ -729,7 +731,7 @@ export class GameScene extends Scene {
       outcome: won ? 'win' : 'loss',
       stats,
       copy: won
-        ? (this.enemyTower.isDestroyed() ? 'The enemy keep has fallen.' : sandbox.waveCount === 1 ? 'The wave is held off.' : `All ${sandbox.waveCount} waves held off.`)
+        ? (this.enemyTower.isDestroyed() ? 'The enemy keep has fallen.' : sandbox.waveCount === 1 ? 'The level is held off.' : `All ${sandbox.waveCount} levels held off.`)
         : `${this.playerTower.isDestroyed() ? 'The keep has fallen' : this.coop ? 'Both bowmen have fallen' : 'The bowman has fallen'}. Adjust the sandbox and try again.`,
     };
     this.hostSync?.sendEnd(info);

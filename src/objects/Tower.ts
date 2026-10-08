@@ -1,7 +1,8 @@
 import { Container, Graphics } from 'pixi.js';
-import { KEEP_BASE, KEEP_FIRE_SPOT, KEEP_SMOKE_SPOT, KEEP_TURRET, drawKeep } from '../rendering/keep';
+import { KEEP_BASE, KEEP_FIRE_SPOT, KEEP_SMOKE_SPOT, KEEP_TURRET, drawKeep, keepHitParts } from '../rendering/keep';
+import { segmentHitTime, type AxisBounds } from '../systems/collision';
 import type { Vec2 } from '../types';
-import { keepDamageStage, keepTones, type KeepDamage } from '../rendering/keepStyle';
+import { keepDamageStage, keepTones, type KeepDamage, type KeepTones } from '../rendering/keepStyle';
 
 /** The keep is drawn at half size: 200×406 drawing space → ~100×203 in the world. */
 const KEEP_SCALE = 0.5;
@@ -19,16 +20,40 @@ export interface KeepOptions {
   enemy: boolean;
   /** Co-op: a second, lower tower for the second bowman to hide in. */
   twin?: boolean;
+  /** Health bar above it (default on; the menu's backdrop keeps have none). */
+  showHealth?: boolean;
 }
 
+/** Health bar above the keep (like the enemies'), in world px. */
+const HEALTH_BAR = { width: 86, height: 8, y: -224 };
+
+/** Stone chips knocked off by a hit: how many (by damage), how they fly and how long they lie before fading. */
+const CHIPS = { min: 3, max: 16, perDamage: 1 / 6, gravity: 900, bounce: 0.3, lifeMs: { min: 1400, max: 2200 }, fadeMs: 400 };
+
+interface Chip {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  size: number;
+  spin: number;
+  angle: number;
+  color: number;
+  lifeMs: number;
+  ageMs: number;
+}
+
+const random = (min: number, max: number): number => min + Math.random() * (max - min);
+
 /** A hidden bowman's feet in the main tower: this far below the top of the drawing, behind the parapet. */
-const HIDE_BELOW_TOP = 40;
+const HIDE_BELOW_TOP = 34;
 /** In the lower tower: this far below the top of its cornice (as deep as in the main tower). */
-const HIDE_BELOW_CORNICE = 11;
+const HIDE_BELOW_CORNICE = 5;
 
 /**
  * A keep with health. The flat-style drawing (rendering/keep.ts) is redrawn only when the damage stage
- * changes; the torch flame, and at the last stage fire and smoke, are animated every frame.
+ * changes; the torch flame, and at the last stage fire and smoke, are animated every frame. A hit knocks grey
+ * stone chips off where it lands; a health bar sits above it; hits follow its silhouette (`hitTime`).
  */
 export default class Tower extends Container {
   public readonly maxHealth: number;
@@ -38,15 +63,20 @@ export default class Tower extends Container {
   private readonly flames = new Graphics();
   private readonly smoke = new Graphics();
   private readonly options: KeepOptions;
+  private readonly tones: KeepTones;
+  /** Chips and the health bar, in the keep's own (unscaled) space: origin at its bottom centre on the ground. */
+  private readonly chipsArt = new Graphics();
+  private readonly healthBar = new Graphics();
+  private chips: Chip[] = [];
   private damage: KeepDamage = 0;
   private drawn = false;
-  private damageFlashMs = 0;
   private timeMs = 0;
 
   /** `currentHealth` lets a keep start a wave already damaged (health carries over between waves). */
   public constructor(x: number, y: number, options: KeepOptions, health = 100, currentHealth = health) {
     super();
     this.options = options;
+    this.tones = keepTones(options.hillColor);
     this.maxHealth = Math.max(1, health);
     this.health = Math.max(0, Math.min(this.maxHealth, currentHealth));
     this.groundY = y;
@@ -55,7 +85,9 @@ export default class Tower extends Container {
     art.addChild(this.body, this.flames, this.smoke);
     art.position.set(-KEEP_BASE.x * KEEP_SCALE, -KEEP_BASE.y * KEEP_SCALE);
     art.scale.set(KEEP_SCALE);
-    this.addChild(art);
+    this.healthBar.position.set(0, HEALTH_BAR.y);
+    this.healthBar.visible = options.showHealth ?? true;
+    this.addChild(art, this.chipsArt, this.healthBar);
     this.position.set(x, y);
     this.zIndex = 1;
     this.redraw();
@@ -64,19 +96,38 @@ export default class Tower extends Container {
   public update(deltaMs = 16): void {
     this.y = this.groundY;
     this.timeMs += deltaMs;
-    this.damageFlashMs = Math.max(0, this.damageFlashMs - deltaMs);
-    this.alpha = this.damageFlashMs > 0 ? 0.72 + Math.sin(this.damageFlashMs / 18) * 0.2 : 1;
     this.drawFlames();
+    this.updateChips(deltaMs);
   }
 
-  public takeDamage(amount: number): number {
+  /** Takes a hit (at a world point, where the chips fly off; somewhere on its enemy-facing side if not given). */
+  public takeDamage(amount: number, at?: Vec2): number {
     if (this.isDestroyed()) {
       return this.health;
     }
     this.health = Math.max(0, this.health - Math.max(0, amount));
-    this.damageFlashMs = 140;
+    this.knockChips(amount, at);
     this.redraw();
     return this.health;
+  }
+
+  /** The keep's silhouette in world space (rendering/keep.ts `keepHitParts`). */
+  public hitParts(): AxisBounds[] {
+    const { x, groundY } = this;
+    return keepHitParts(this.options.twin).map((part) => ({
+      left: x + (part.left - KEEP_BASE.x) * KEEP_SCALE,
+      right: x + (part.right - KEEP_BASE.x) * KEEP_SCALE,
+      top: groundY + (part.top - KEEP_BASE.y) * KEEP_SCALE,
+      bottom: groundY + (part.bottom - KEEP_BASE.y) * KEEP_SCALE,
+    }));
+  }
+
+  /** When (0..1 along it) the segment `start → start + travel` first hits the keep's silhouette, if it does. */
+  public hitTime(start: Vec2, travel: Vec2): number | undefined {
+    return this.hitParts()
+      .map((part) => segmentHitTime(start, travel, part))
+      .filter((time): time is number => time !== undefined)
+      .sort((first, second) => first - second)[0];
   }
 
   /**
@@ -97,7 +148,7 @@ export default class Tower extends Container {
   public setHealth(health: number): void {
     const next = Math.max(0, Math.min(this.maxHealth, health));
     if (next < this.health) {
-      this.damageFlashMs = 140;
+      this.knockChips(this.health - next);
     }
     this.health = next;
     this.redraw();
@@ -115,14 +166,86 @@ export default class Tower extends Container {
     return this.health <= 0;
   }
 
+  /** Grey stone chips fly off where it was hit (more for a harder hit), bounce on the ground and fade. */
+  private knockChips(amount: number, at?: Vec2): void {
+    const count = Math.round(Math.max(CHIPS.min, Math.min(CHIPS.max, CHIPS.min + amount * CHIPS.perDamage)));
+    // Somewhere on the side facing the enemies (the player's keep faces right, the enemy keep left).
+    const side = this.options.enemy ? -1 : 1;
+    const local = at
+      ? { x: at.x - this.x, y: at.y - this.groundY }
+      : { x: side * random(25, 45), y: -random(20, 160) };
+    const outward = Math.sign(local.x) || side;
+    const { base, shade, deep, cap } = this.tones;
+    const colors = [base, shade, deep, cap, 0x8a8a86];
+    for (let index = 0; index < count; index += 1) {
+      this.chips.push({
+        x: local.x + random(-4, 4),
+        y: local.y + random(-4, 4),
+        vx: outward * random(30, 150),
+        vy: -random(40, 170),
+        size: random(1.5, 3.6),
+        spin: random(-12, 12),
+        angle: random(0, Math.PI),
+        color: colors[Math.floor(Math.random() * colors.length)],
+        lifeMs: random(CHIPS.lifeMs.min, CHIPS.lifeMs.max),
+        ageMs: 0,
+      });
+    }
+  }
+
+  private updateChips(deltaMs: number): void {
+    const seconds = deltaMs / 1000;
+    this.chips = this.chips.filter((chip) => {
+      chip.ageMs += deltaMs;
+      if (chip.ageMs >= chip.lifeMs) {
+        return false;
+      }
+      chip.vy += CHIPS.gravity * seconds;
+      chip.x += chip.vx * seconds;
+      chip.y += chip.vy * seconds;
+      chip.angle += chip.spin * seconds;
+      // The keeps stand on flat ground: bounce a little, then lie still.
+      if (chip.y >= -chip.size / 2 && chip.vy > 0) {
+        chip.y = -chip.size / 2;
+        chip.vy = Math.abs(chip.vy) > 60 ? -chip.vy * CHIPS.bounce : 0;
+        chip.vx *= 0.5;
+        chip.spin *= 0.5;
+        if (chip.vy === 0) {
+          chip.vx = 0;
+          chip.spin = 0;
+        }
+      }
+      return true;
+    });
+    const art = this.chipsArt;
+    art.clear();
+    this.chips.forEach((chip) => {
+      const fade = Math.min(1, (chip.lifeMs - chip.ageMs) / CHIPS.fadeMs);
+      const cos = Math.cos(chip.angle) * chip.size;
+      const sin = Math.sin(chip.angle) * chip.size;
+      art.poly([chip.x + cos, chip.y + sin, chip.x - sin * 0.8, chip.y + cos * 0.8, chip.x - cos, chip.y - sin, chip.x + sin * 0.7, chip.y - cos * 0.7])
+        .fill({ color: chip.color, alpha: fade });
+    });
+  }
+
+  private drawHealthBar(): void {
+    const ratio = Math.max(0, Math.min(1, this.getHealthRatio()));
+    const color = ratio > 0.6 ? 0x6fd36b : ratio > 0.3 ? 0xf2c94c : 0xe5534b;
+    const { width, height } = HEALTH_BAR;
+    this.healthBar.clear()
+      .rect(-width / 2 - 1, -height / 2 - 1, width + 2, height + 2).fill({ color: 0x1b1a20, alpha: 0.85 })
+      .rect(-width / 2, -height / 2, width * ratio, height).fill({ color });
+  }
+
   private redraw(): void {
+    this.drawHealthBar();
     const damage = keepDamageStage(this.getHealthRatio());
     if (this.drawn && damage === this.damage) {
       return;
     }
     this.drawn = true;
     this.damage = damage;
-    drawKeep(this.body, { tones: keepTones(this.options.hillColor), enemy: this.options.enemy, damage, twin: this.options.twin });
+    drawKeep(this.body, { tones: this.tones, enemy: this.options.enemy, damage, twin: this.options.twin });
   }
 
   /** Flickering torch; at the last stage fire in the arrow slit and smoke rising from the top. */

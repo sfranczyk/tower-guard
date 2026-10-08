@@ -8,8 +8,8 @@ import { normalizeSandbox, type SandboxSettings } from '../data/sandbox';
 import { Background } from '../rendering/Background';
 
 /**
- * Sandbox setup: number of waves, enemies and battleground per wave, bowman and keep health.
- * The form is HTML (DomUi); the canvas behind it previews the first wave's battleground.
+ * Sandbox setup: the levels (waves in the code), each with its enemies and battleground, and bowman and keep
+ * health. The form is HTML (DomUi); the canvas behind it shows the battleground of the level being edited.
  */
 export class SandboxScene extends Scene {
   private preview?: Container;
@@ -27,7 +27,7 @@ export class SandboxScene extends Scene {
     ui.renderSandbox(session.sandbox);
     this.showPreview(session.sandbox);
 
-    ui.handlers.sandboxChange = (settings) => this.applySettings(settings);
+    ui.handlers.sandboxChange = (settings, level) => this.applySettings(settings, level);
     ui.handlers.sandboxStart = () => this.startRun();
     // Co-op host: back to the lobby (the partner stays connected).
     ui.handlers.sandboxBack = () => this.ctx.goTo(this.ctx.session.net ? 'coop' : 'menu');
@@ -44,21 +44,16 @@ export class SandboxScene extends Scene {
     });
   }
 
-  private applySettings(settings: SandboxSettings): void {
+  private applySettings(settings: SandboxSettings, level: number): void {
     const normalized = normalizeSandbox(settings);
-    const waveCountChanged = normalized.waveCount !== this.ctx.session.sandbox.waveCount;
     this.ctx.session.sandbox = normalized;
     saveSandbox(normalized);
-    if (waveCountChanged) {
-      // Show or hide wave rows.
-      this.ctx.ui.renderSandbox(normalized);
-    }
-    this.showPreview(normalized);
+    this.showPreview(normalized, level);
   }
 
-  /** Draws the first wave's battleground behind the form. */
-  private showPreview(settings: SandboxSettings): void {
-    const id = settings.waves[0].battleground;
+  /** Draws the battleground of the level being edited behind the form. */
+  private showPreview(settings: SandboxSettings, level = 0): void {
+    const id = settings.waves[Math.min(level, settings.waveCount - 1)].battleground;
     if (id === this.previewId) {
       return;
     }

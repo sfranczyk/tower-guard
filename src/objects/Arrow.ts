@@ -122,6 +122,16 @@ export default class Arrow extends Sprite {
     }
   }
 
+  /**
+   * Sticks into a wall it hit at `impact`, tip first: it stops there, pointing the way it flew, with its tip a
+   * little way into the stone (`sink`: how far its centre stays back from the tip's point).
+   */
+  public stickToWall(impact: Vec2, sink: number): this {
+    const heading = Math.atan2(this.velocity.y, this.velocity.x);
+    this.x = impact.x - Math.cos(heading) * sink;
+    return this.stickToGround(impact.y - Math.sin(heading) * sink);
+  }
+
   public stickToGround(y: number): this {
     this.netHooks?.stuck(undefined, { x: this.x, y });
     this.stuck = true;
@@ -148,6 +158,11 @@ export default class Arrow extends Sprite {
   /** Current velocity (px/s), e.g. for a shrapnel burst. */
   public get velocityVector(): Vec2 {
     return { x: this.velocity.x, y: this.velocity.y };
+  }
+
+  /** What the arrow is stuck in (undefined when flying or in the ground). */
+  public get stuckTo(): AnchorTarget | undefined {
+    return this.stuckTarget;
   }
 
   public get isStuck(): boolean {

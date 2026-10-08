@@ -18,6 +18,7 @@ export const OVERLAY_TEMPLATE = `
             <div class="dev-tools" data-dev-tools hidden>
               <button class="secondary-button small-button" data-open-test>Animation lab</button>
               <button class="secondary-button small-button" data-open-sound-lab>Sound lab</button>
+              <button class="secondary-button small-button" data-open-design-lab>Design lab</button>
             </div>
           </div>
         </div>
@@ -63,7 +64,7 @@ const WEAPONS: ReadonlyArray<{ type: keyof typeof ICON_WEAPONS; name: string }> 
   { type: 'explosive', name: 'Explosive bolt' },
   { type: 'piercing', name: 'Piercing arrow' },
   { type: 'shrapnel', name: 'Shrapnel arrow (Space in flight to burst)' },
-  { type: 'pinning', name: 'Pinning arrow (pins an enemy in place)' },
+  { type: 'pinning', name: 'Pinning arrow (pins an enemy in place for 10 s)' },
 ];
 const weaponSlot = (index: number): string => {
   const weapon = WEAPONS[index];
@@ -79,7 +80,7 @@ export const HUD_TOP_TEMPLATE = `
   <div class="hud-chip">${ICON_KEEP}<div><div class="chip-label">Keep</div><div class="meter"><i data-tower-bar></i></div><div class="chip-value" data-tower-health>600 / 600</div></div></div>
   <div class="hud-chip">${ICON_BOWMAN}<div><div class="chip-label" data-bowman-label>Bowman</div><div class="meter"><i data-bowman-bar></i></div><div class="chip-value" data-bowman-health>100 / 100</div></div></div>
   <div class="hud-chip" data-bowman2-chip hidden>${ICON_BOWMAN}<div><div class="chip-label">Player 2</div><div class="meter"><i data-bowman2-bar></i></div><div class="chip-value" data-bowman2-health>100 / 100</div></div></div>
-  <div class="hud-chip">${ICON_WAVE}<div><div class="chip-label">Wave <span data-wave>1 / 1</span></div><div class="pips" data-enemy-pips></div><div class="meter" hidden><i data-wave-bar></i></div><div class="chip-value" data-enemy-count>0 of 0 defeated</div></div></div>
+  <div class="hud-chip">${ICON_WAVE}<div><div class="chip-label">Level <span data-wave>1 / 1</span></div><div class="pips" data-enemy-pips></div><div class="meter" hidden><i data-wave-bar></i></div><div class="chip-value" data-enemy-count>0 of 0 defeated</div></div></div>
   <div class="hud-spacer"></div>
   <div class="weapons" data-projectiles>${Array.from({ length: WEAPON_SLOTS }, (_, index) => weaponSlot(index)).join('')}</div>
   <div class="hud-spacer"></div>

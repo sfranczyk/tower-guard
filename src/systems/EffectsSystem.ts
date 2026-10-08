@@ -1,5 +1,5 @@
 import { Graphics, type Container } from 'pixi.js';
-import { EXPLOSION_RADIUS, LIGHTNING_RADIUS } from '../config';
+import { EXPLOSION_RADIUS, FIRE_DRAGON_BLAST_POWER, LIGHTNING_RADIUS } from '../config';
 import { HUMAN_BODY, type BodyColors } from '../rendering/bodyColors';
 import type { Vec2 } from '../types';
 import { groundAt } from './terrain';
@@ -52,7 +52,7 @@ export class EffectsSystem {
   private shake: Vec2 = { x: 0, y: 0 };
 
   /** Co-op host: told about every effect, to replay it on the guest's screen. */
-  public onEffect?: (kind: 'blood' | 'greenBlood' | 'impact' | 'explosion' | 'lightning', point: Vec2) => void;
+  public onEffect?: (kind: 'blood' | 'greenBlood' | 'impact' | 'explosion' | 'dragonBlast' | 'lightning', point: Vec2, scale?: number) => void;
 
   public constructor(private readonly container: Container) {}
 
@@ -63,7 +63,8 @@ export class EffectsSystem {
 
   /** Spray of blood (red for humans, green for zombies) and a stain on the ground. */
   public bloodBurst(point: Vec2, colors: BodyColors = HUMAN_BODY): void {
-    this.onEffect?.(colors === HUMAN_BODY ? 'blood' : 'greenBlood', point);
+    // Told apart by the blood itself (an enemy's look has its own piece colours).
+    this.onEffect?.(colors.blood === HUMAN_BODY.blood ? 'blood' : 'greenBlood', point);
     for (let index = 0; index < 8; index += 1) {
       const particle = new Graphics()
         .circle(0, 0, 1.5 + Math.random() * 2)
@@ -95,19 +96,25 @@ export class EffectsSystem {
    * Explosion: flash, shockwave, fireballs, sparks and smoke, plus dirt and a scorch mark when it
    * happens at ground level. Also shakes the camera.
    */
-  public explosion(point: Vec2): void {
-    this.onEffect?.('explosion', point);
-    const radius = EXPLOSION_RADIUS;
+  public explosion(point: Vec2, scale = 1): void {
+    this.onEffect?.('explosion', point, scale === 1 ? undefined : scale);
+    this.explosionParticles(point, scale);
+  }
+
+  /** The explosion itself, `scale` times the size (radius, particles and their speed). */
+  private explosionParticles(point: Vec2, scale: number): void {
+    const radius = EXPLOSION_RADIUS * scale;
+    const count = (base: number): number => Math.round(base * scale);
     const onGround = point.y >= groundAt(point.x) - 12;
     // On the ground everything is thrown upwards; in the air it bursts in all directions.
     const [minAngle, maxAngle] = onGround ? [-Math.PI * 0.95, -Math.PI * 0.05] : [-Math.PI, Math.PI];
     const still = { x: 0, y: 0 };
 
     // Smoke first so it sits behind the fire.
-    for (let index = 0; index < 7; index += 1) {
-      const puff = new Graphics().circle(0, 0, random(9, 15)).fill({ color: pick([0x5f5f63, 0x77777b, 0x4b4b50]) });
+    for (let index = 0; index < count(7); index += 1) {
+      const puff = new Graphics().circle(0, 0, random(9, 15) * scale).fill({ color: pick([0x5f5f63, 0x77777b, 0x4b4b50]) });
       this.spawn(puff, point, 4, {
-        velocity: { x: random(-35, 35), y: random(-70, -25) },
+        velocity: { x: random(-35, 35) * scale, y: random(-70, -25) * scale },
         lifeMs: random(900, 1400), gravity: -15, drag: 1.2, grow: 1.3, startAlpha: 0.5,
       });
     }
@@ -115,18 +122,18 @@ export class EffectsSystem {
     const shockwave = new Graphics().circle(0, 0, radius * 0.3).stroke({ width: 4, color: 0xffb347 });
     this.spawn(shockwave, point, 5, { velocity: still, lifeMs: 320, gravity: 0, drag: 0, grow: 2.4, startAlpha: 0.85 });
 
-    for (let index = 0; index < 12; index += 1) {
-      const fireball = new Graphics().circle(0, 0, random(5, 11)).fill({ color: pick(FIRE_COLORS) });
+    for (let index = 0; index < count(12); index += 1) {
+      const fireball = new Graphics().circle(0, 0, random(5, 11) * scale).fill({ color: pick(FIRE_COLORS) });
       this.spawn(fireball, point, 5, {
-        velocity: burst(minAngle, maxAngle, 60, 210),
+        velocity: burst(minAngle, maxAngle, 60 * scale, 210 * scale),
         lifeMs: random(320, 560), gravity: -80, drag: 4, grow: 0.5,
       });
     }
 
-    for (let index = 0; index < 14; index += 1) {
+    for (let index = 0; index < count(14); index += 1) {
       const spark = new Graphics().circle(0, 0, random(1, 2)).fill({ color: 0xfff1a8 });
       this.spawn(spark, point, 6, {
-        velocity: burst(minAngle, maxAngle, 200, 420),
+        velocity: burst(minAngle, maxAngle, 200 * scale, 420 * scale),
         lifeMs: random(380, 700), gravity: 600, drag: 1.5, grow: 0,
       });
     }
@@ -146,6 +153,30 @@ export class EffectsSystem {
     }
 
     this.shakeMs = SHAKE_DURATION_MS;
+  }
+
+  /**
+   * A fire dragon blown up by an explosive arrow: an explosion twice the size inside a swarm of fireballs from
+   * its burning gut, rolling out and rising into a big dark cloud.
+   */
+  public dragonBlast(point: Vec2): void {
+    this.onEffect?.('dragonBlast', point);
+    const scale = FIRE_DRAGON_BLAST_POWER;
+    for (let index = 0; index < 16; index += 1) {
+      const smoke = new Graphics().circle(0, 0, random(16, 28)).fill({ color: pick([0x3d3330, 0x4b4140, 0x5c5250]) });
+      this.spawn(smoke, { x: point.x + random(-40, 40), y: point.y + random(-25, 25) }, 4, {
+        velocity: { x: random(-70, 70), y: random(-90, -30) },
+        lifeMs: random(1500, 2300), gravity: -25, drag: 1, grow: 1.6, startAlpha: 0.55,
+      });
+    }
+    this.explosionParticles(point, scale);
+    for (let index = 0; index < 26; index += 1) {
+      const fire = new Graphics().circle(0, 0, random(8, 18)).fill({ color: pick(FIRE_COLORS) });
+      this.spawn(fire, point, 5, {
+        velocity: burst(-Math.PI, Math.PI, 90, 320),
+        lifeMs: random(700, 1200), gravity: -60, drag: 2.2, grow: 0.9, startAlpha: 0.95,
+      });
+    }
   }
 
   /** Ground lightning strike: a white flash, blue-white sparks thrown up, smoke, a scorch mark, a shake. */

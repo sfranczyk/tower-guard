@@ -78,7 +78,7 @@ export class HostSync {
 
   /** Effects and the bowmen's knockdowns, fires and so on are replayed on the guest. */
   public watch(effects: EffectsSystem): void {
-    effects.onEffect = (kind, point) => this.push({ e: 'fx', kind, x: round(point.x), y: round(point.y) });
+    effects.onEffect = (kind, point, scale) => this.push({ e: 'fx', kind, x: round(point.x), y: round(point.y), scale });
     this.world.players.forEach(({ bowman, index }) => {
       bowman.netHooks = {
         knockedBack: (fromX, strength) => this.push({ e: 'knock', player: index, fromX, strength }),

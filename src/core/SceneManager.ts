@@ -3,6 +3,7 @@ import type { SoundManager } from '../audio/SoundManager';
 import type { DomUi } from '../ui/DomUi';
 import { AnimationLabScene } from '../scenes/AnimationLabScene';
 import { CoopScene } from '../scenes/CoopScene';
+import { DesignLabScene } from '../scenes/DesignLabScene';
 import { GameScene } from '../scenes/GameScene';
 import { MenuScene } from '../scenes/MenuScene';
 import { SandboxScene } from '../scenes/SandboxScene';
@@ -10,7 +11,7 @@ import { SoundLabScene } from '../scenes/SoundLabScene';
 import { DEFAULT_ARROW_TRAILS, ENEMY_KEEP_HEALTH, MAX_ARROW_TRAILS } from '../config';
 import { loadSandbox } from './sandboxStorage';
 import { newRun, type GameContext, type GameTextures, type Scene, type SceneName } from './Scene';
-import { COOP_PARAM, LAB_PARAM, SOUND_LAB_PARAM, getUrlParam, setUrlParam } from './urlState';
+import { COOP_PARAM, DESIGN_LAB_PARAM, LAB_PARAM, SOUND_LAB_PARAM, getUrlParam, setUrlParam } from './urlState';
 
 /** Owns the active scene, switches between scenes and forwards ticker updates. */
 export class SceneManager {
@@ -46,6 +47,7 @@ export class SceneManager {
     ui.handlers.openCoop = () => this.goTo('coop');
     ui.handlers.openAnimationLab = () => this.goTo('animationLab');
     ui.handlers.openSoundLab = () => this.goTo('soundLab');
+    ui.handlers.openDesignLab = () => this.goTo('designLab');
     // The settings drawer works wherever it's opened (menu or game).
     ui.handlers.trajectoryChange = (enabled) => {
       this.ctx.session.showTrajectory = enabled;
@@ -62,10 +64,12 @@ export class SceneManager {
     app.ticker.add((ticker) => this.current?.update(ticker.deltaMS));
   }
 
-  /** Opens the animation lab or sound panel when the URL says so (e.g. after a refresh), otherwise the menu. */
+  /** Opens the animation lab, design lab or sound panel when the URL says so (e.g. after a refresh), otherwise the menu. */
   public start(): void {
     if (getUrlParam(LAB_PARAM) !== null) {
       this.goTo('animationLab');
+    } else if (getUrlParam(DESIGN_LAB_PARAM) !== null) {
+      this.goTo('designLab');
     } else {
       this.goTo(getUrlParam(SOUND_LAB_PARAM) !== null ? 'soundLab' : 'menu');
     }
@@ -78,6 +82,9 @@ export class SceneManager {
       setUrlParam(LAB_PARAM, '');
     }
     setUrlParam(SOUND_LAB_PARAM, name === 'soundLab' ? '' : null);
+    if (name !== 'designLab') {
+      setUrlParam(DESIGN_LAB_PARAM, null);
+    }
     this.current?.exit();
     this.ctx.root.removeChildren().forEach((child) => child.destroy({ children: true }));
     this.current = this.createScene(name);
@@ -96,6 +103,8 @@ export class SceneManager {
         return new AnimationLabScene(this.ctx);
       case 'soundLab':
         return new SoundLabScene(this.ctx);
+      case 'designLab':
+        return new DesignLabScene(this.ctx);
       case 'game':
         return new GameScene(this.ctx);
     }

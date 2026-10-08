@@ -44,13 +44,15 @@ export class AimOverlay extends Graphics {
     const visualRadius = aim.strength.distance * AIM_VISUAL_RADIUS_FACTOR;
     const cursorRadius = Math.hypot(aim.start.x - aim.current.x, aim.start.y - aim.current.y);
 
-    this.circle(aim.start.x, aim.start.y, visualRadius).fill({ color: aimColor, alpha: 0.1 });
+    // Nearly clear at the cursor, so the battlefield under the drag stays visible.
+    this.circle(aim.start.x, aim.start.y, visualRadius).fill({ color: aimColor, alpha: 0.03 });
     this.circle(origin.x, origin.y, visualRadius).fill({ color: aimColor, alpha: 0.1 });
     this.ring(aim.start, visualRadius, aimColor, 0.8);
     this.ring(origin, visualRadius, aimColor, 0.8);
     this.ring(aim.start, cursorRadius, aimColor, 0.45);
     this.segment(origin, { x: origin.x + aim.direction.x * visualRadius, y: origin.y + aim.direction.y * visualRadius }, aimColor, 0.9, 1.5);
-    this.dot(origin, 4, aimColor, 1);
+    // Both centre dots are see-through, so the bowman and the drag start show through them.
+    this.dot(origin, 4, aimColor, 0.35);
     this.dot(aim.start, 4, aimColor, 0.35);
 
     const dx = aim.current.x - aim.start.x;

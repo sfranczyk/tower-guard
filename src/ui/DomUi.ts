@@ -46,12 +46,14 @@ export interface UiHandlers {
   start?: () => void;
   openAnimationLab?: () => void;
   openSoundLab?: () => void;
+  openDesignLab?: () => void;
   openGame?: () => void;
   /** Animation lab: leave the zoomed view and return to the list. */
   labBack?: () => void;
   toggleOptions?: () => void;
   selectProjectile?: (type: ProjectileType) => void;
-  sandboxChange?: (settings: SandboxSettings) => void;
+  /** `level`: the level being edited (its battleground is shown behind the form). */
+  sandboxChange?: (settings: SandboxSettings, level: number) => void;
   sandboxStart?: () => void;
   sandboxBack?: () => void;
   openCoop?: () => void;
@@ -134,7 +136,7 @@ export class DomUi {
     this.devTools = this.query('[data-dev-tools]');
     this.sandboxScreen = this.query('[data-sandbox]');
     this.sandboxForm = new SandboxForm(this.query('[data-sandbox-form]'), {
-      change: (settings) => this.handlers.sandboxChange?.(settings),
+      change: (settings, level) => this.handlers.sandboxChange?.(settings, level),
       start: () => this.handlers.sandboxStart?.(),
       back: () => this.handlers.sandboxBack?.(),
     });
@@ -167,6 +169,7 @@ export class DomUi {
     this.onClick('[data-dev-toggle]', () => this.toggleDevTools());
     this.onClick('[data-open-test]', () => this.handlers.openAnimationLab?.());
     this.onClick('[data-open-sound-lab]', () => this.handlers.openSoundLab?.());
+    this.onClick('[data-open-design-lab]', () => this.handlers.openDesignLab?.());
     this.onClick('[data-open-game]', () => this.handlers.openGame?.());
     this.onClick('[data-lab-back]', () => this.handlers.labBack?.());
     this.onClick('[data-options]', () => this.handlers.toggleOptions?.());
@@ -241,7 +244,7 @@ export class DomUi {
     this.optionsDrawer.hidden = !visible;
   }
 
-  /** Rebuilds the sandbox setup form (e.g. after the wave count changes). */
+  /** Rebuilds the sandbox setup form (e.g. after the level count changes). */
   public renderCoop(view: CoopView): void {
     this.coopPanel.render(view);
   }

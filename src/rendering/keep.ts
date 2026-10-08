@@ -1,4 +1,5 @@
 import type { Graphics } from 'pixi.js';
+import type { AxisBounds } from '../systems/collision';
 import type { KeepDamage, KeepTones } from './keepStyle';
 
 /**
@@ -26,6 +27,22 @@ const ENEMY_BANNER = [0x9a2c37, 0x6e1f28] as const;
 const BANNER_EMBLEM = 0xe2b44c;
 const WOOD = [0x8a6238, 0x6b4a2e, 0x5a3c23] as const;
 const IRON = 0x4c4c55;
+
+const part = (x: number, y: number, width: number, height: number): AxisBounds => ({ left: x, right: x + width, top: y, bottom: y + height });
+
+/**
+ * The keep's solid parts in drawing space, for hit tests that follow its silhouette: the plinth, the side walls
+ * with their merlons, the gatehouse, the tower shaft and its top with the merlons (pennants and their poles
+ * don't count); the co-op keep has its lower second tower in place of the right wall.
+ */
+export const keepHitParts = (twin = false): AxisBounds[] => [
+  part(4, 372, 192, 32),
+  part(12, 290, 46, 82),
+  twin ? part(KEEP_TURRET.left - 4, KEEP_TURRET.cornice - 12, KEEP_TURRET.right - KEEP_TURRET.left + 8, 372 - KEEP_TURRET.cornice + 12) : part(142, 290, 46, 82),
+  part(56, 276, 88, 96),
+  part(62, 70, 76, 206),
+  part(52, 24, 96, 46),
+];
 
 export interface KeepLook {
   tones: KeepTones;

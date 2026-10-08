@@ -52,7 +52,7 @@ export interface StickmanPose {
 }
 
 /** Bomb strapped to a kamikaze's chest, with the fuse sparking (flickers with `phase`). */
-const drawBomb = (sprite: Graphics, center: Point, phase: number): void => {
+export const drawBomb = (sprite: Graphics, center: Point, phase: number): void => {
   sprite.circle(center.x, center.y, 9).fill({ color: 0x2c2c34 }).stroke({ width: 1.5, color: 0x141418 });
   sprite.circle(center.x - 3, center.y - 3, 2.6).fill({ color: 0x6a6a78 });
   sprite.rect(center.x - 2.5, center.y - 11.5, 5, 3).fill({ color: 0x8a8a96 });
@@ -65,14 +65,14 @@ const drawBomb = (sprite: Graphics, center: Point, phase: number): void => {
 };
 
 /** Two-handed grip: the rear hand holds the shaft this far behind the front fist. */
-const TWO_HAND_GRIP = 9;
+export const TWO_HAND_GRIP = 9;
 
 /**
  * Elbow and hand of a 21+21 arm reaching from the shoulder towards `target`. Of the two IK solutions it
  * takes the one where the forearm turns the same way as a natural elbow flexion (the arm angle
  * increasing from upper arm to forearm), so the elbow never bends backwards.
  */
-const reachArm = (shoulder: Point, target: Point): { elbow: Point; hand: Point } => {
+export const reachArm = (shoulder: Point, target: Point): { elbow: Point; hand: Point } => {
   const length = 21;
   const distance = Math.max(1, Math.min(length * 2 - 0.01, Math.hypot(target.x - shoulder.x, target.y - shoulder.y)));
   const base = Math.atan2(target.x - shoulder.x, target.y - shoulder.y);
@@ -85,13 +85,13 @@ const reachArm = (shoulder: Point, target: Point): { elbow: Point; hand: Point }
 };
 
 /** Knee bend while standing: soft knees pointing slightly forward. */
-const IDLE_KNEE_BEND = -0.35;
+export const IDLE_KNEE_BEND = -0.35;
 
 /** Head circle in stickman sprite space (shared with hitboxes). */
 export const STICKMAN_HEAD = { x: 0, y: -52, radius: 10 } as const;
 
 /** Walking feet swing between ±WALK_HALF_STRIDE; each step (π of phase) the planted foot moves a full stride back. */
-const WALK_HALF_STRIDE = 22;
+export const WALK_HALF_STRIDE = 22;
 /** How far the body moves (sprite units) per radian of walk phase with the planted foot not sliding. */
 export const WALK_STRIDE_PER_RADIAN = (WALK_HALF_STRIDE * 2) / Math.PI;
 

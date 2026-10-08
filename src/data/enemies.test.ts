@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { ENEMY_SPEED, EXPLOSION_DAMAGE, HEADSHOT_DAMAGE_MULTIPLIER, PROJECTILE_DAMAGE } from '../config';
-import { ENEMY_DAMAGE, ENEMY_LOOKS, enemyDamage, blowsApart, explosionDamage, getEnemyStats, knockbackPush, rollDamage, splashGibChance } from './enemies';
+import { ENEMY_SPEED, EXPLOSION_DAMAGE, HEADSHOT_DAMAGE_MULTIPLIER, PIN_DAMAGE, PIN_DURATION_MS, PIN_DURATION_ZOMBIE_MS, PROJECTILE_DAMAGE } from '../config';
+import { ENEMY_DAMAGE, ENEMY_LOOKS, enemyDamage, blowsApart, explosionDamage, getEnemyStats, knockbackPush, pinDurationMs, rollDamage, splashGibChance } from './enemies';
 
 describe('getEnemyStats', () => {
   it('returns base stats at difficulty 1', () => {
@@ -143,7 +143,7 @@ describe('knockbackPush', () => {
 
 describe('ENEMY_LOOKS', () => {
   it('makes runners run with an uppercut and brutes 1.5× tall with a two-handed club', () => {
-    expect(ENEMY_LOOKS.fast).toMatchObject({ size: 1, attackStyle: 'uppercut', runs: true });
+    expect(ENEMY_LOOKS.fast).toMatchObject({ size: 0.75, attackStyle: 'uppercut', runs: true });
     expect(ENEMY_LOOKS.tank).toMatchObject({ size: 1.5, attackStyle: 'twoHanded', runs: false });
     expect(ENEMY_LOOKS.basic.size).toBe(1);
   });
@@ -155,5 +155,23 @@ describe('strike reach', () => {
     expect(ENEMY_LOOKS.basic.strikeReach).toBeGreaterThan(ENEMY_LOOKS.fast.strikeReach);
     // Swings start within 25 px (CombatSystem MELEE_REACH), so the bowman always has to move to dodge.
     (['basic', 'fast', 'tank', 'archer'] as const).forEach((type) => expect(ENEMY_LOOKS[type].strikeReach).toBeGreaterThan(25));
+  });
+});
+
+describe('pinDurationMs', () => {
+  it('pins most enemies for 10 s and zombies for 15 s', () => {
+    (['basic', 'fast', 'archer', 'kamikaze'] as const).forEach((type) => expect(pinDurationMs(type)).toBe(PIN_DURATION_MS));
+    expect(PIN_DURATION_MS).toBe(10000);
+    expect(pinDurationMs('zombie')).toBe(PIN_DURATION_ZOMBIE_MS);
+    expect(PIN_DURATION_ZOMBIE_MS).toBe(15000);
+  });
+
+  it('only scratches: 0 to 4 damage', () => {
+    expect(rollDamage(PIN_DAMAGE, 0)).toBe(0);
+    expect(rollDamage(PIN_DAMAGE, 1)).toBe(4);
+  });
+
+  it("can't pin brutes or dragons", () => {
+    (['tank', 'dragon', 'fireDragon'] as const).forEach((type) => expect(pinDurationMs(type)).toBe(0));
   });
 });

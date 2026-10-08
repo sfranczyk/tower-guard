@@ -8,12 +8,15 @@ import {
   ENEMY_ARROW_POWER,
   ENEMY_TOWER_DAMAGE,
   EXPLOSION_RADIUS,
+  FIRE_DRAGON_BLAST_POWER,
   FIRE_DRAGON_RANGE,
   GROUND_Y,
   HEADSHOT_DAMAGE_MULTIPLIER,
+  KAMIKAZE_BLAST_POWER,
   LIGHTNING_DAMAGE,
   LIGHTNING_RADIUS,
   PIERCING_DAMAGE_MULTIPLIER,
+  PIN_DAMAGE,
   PROJECTILE_DAMAGE,
   SHOW_HITBOX_DEBUG,
   SHRAPNEL_FRAGMENT_DAMAGE,
@@ -42,6 +45,8 @@ const TOWER_HALF_WIDTH = 48;
 const PIERCING_MAX_IMPACTS = 5;
 /** A pinning arrow's centre sits this far back from where its tip goes into the ground (the sprite is ~36 px long). */
 const PIN_SINK = 13;
+/** An arrow hitting a keep sticks into the stone with its centre this far back from the point of impact. */
+const WALL_SINK = 14;
 /** Bowman hit box (feet at bowman.y) and where enemy archers aim on him. */
 const BOWMAN_HALF_WIDTH = 7;
 const BOWMAN_HEIGHT = 40;
@@ -117,6 +122,12 @@ export class CombatSystem {
     this.world.bowmen
       .filter((bowman) => bowman.isBurning && !bowman.isDead)
       .forEach((bowman) => this.events.bowmanDamaged(bowman, burnDamage(bowman.burnRemainingMs, deltaMs)));
+    if (SHOW_HITBOX_DEBUG) {
+      // Cyan: the keeps' silhouettes that arrows hit.
+      [this.world.playerTower, this.world.enemyTower].forEach((tower) => tower.hitParts().forEach((part) => {
+        this.world.debug.rect(part.left, part.top, part.right - part.left, part.bottom - part.top).stroke({ width: 1, color: 0x55e0ff, alpha: 0.9 });
+      }));
+    }
     // Dead enemies finish (then hold) their death animation.
     this.world.enemies.filter((enemy) => !enemy.isAlive()).forEach((enemy) => enemy.updateAnimation(deltaMs, false));
 
@@ -185,8 +196,8 @@ export class CombatSystem {
       if (enemy.x <= playerTower.x + TOWER_ATTACK_REACH && enemy.canAttack()) {
         // The keep takes the hit when the club lands, with a chip of stone flying off the wall.
         enemy.playAttackAnimation(() => {
-          playerTower.takeDamage(rollDamage(enemyDamage(enemy.kind, 'melee', 'keep')));
-          this.world.effects.impact({ x: playerTower.x + TOWER_HALF_WIDTH - 4, y: enemy.y - 30 * enemy.scale.y });
+          // Chips fly off the wall where the club lands.
+          playerTower.takeDamage(rollDamage(enemyDamage(enemy.kind, 'melee', 'keep')), { x: playerTower.x + TOWER_HALF_WIDTH - 4, y: enemy.y - 30 * enemy.scale.y });
         });
       }
       return;
@@ -356,16 +367,12 @@ export class CombatSystem {
     const exposed = bowmen.filter((bowman) => !bowman.isInTower && !bowman.isDead);
 
     if (exposed.length === 0 && bowmen.some((bowman) => !bowman.isDead)) {
-      const towerHit = segmentHitTime(start, travel, {
-        left: playerTower.x - TOWER_HALF_WIDTH,
-        right: playerTower.x + TOWER_HALF_WIDTH,
-        top: GROUND_Y - TOWER_HEIGHT,
-        bottom: GROUND_Y,
-      });
+      // Follows the keep's silhouette; chips fly off where it lands.
+      const towerHit = playerTower.hitTime(start, travel);
       if (towerHit !== undefined) {
-        playerTower.takeDamage(rollDamage(arrowDamage(arrow.shooter, 'keep')));
-        effects.impact(pointAlong(start, travel, towerHit));
-        arrow.deactivate();
+        const impact = pointAlong(start, travel, towerHit);
+        playerTower.takeDamage(rollDamage(arrowDamage(arrow.shooter, 'keep')), impact);
+        arrow.stickToWall(impact, WALL_SINK);
       }
       return;
     }
@@ -395,12 +402,7 @@ export class CombatSystem {
       .sort((first, second) => first.time - second.time)[0];
 
     const { enemyTower } = this.world;
-    const towerHit = segmentHitTime(start, travel, {
-      left: enemyTower.x - TOWER_HALF_WIDTH,
-      right: enemyTower.x + TOWER_HALF_WIDTH,
-      top: GROUND_Y - TOWER_HEIGHT,
-      bottom: GROUND_Y,
-    });
+    const towerHit = enemyTower.hitTime(start, travel);
 
     if (towerHit !== undefined && (enemyHit === undefined || towerHit <= enemyHit.time)) {
       this.hitTower(arrow, pointAlong(start, travel, towerHit), activeEnemies);
@@ -433,13 +435,15 @@ export class CombatSystem {
 
   private hitTower(arrow: Arrow, impactPoint: Vec2, activeEnemies: readonly Foe[]): void {
     const explosive = arrow.type === 'explosive';
-    this.world.enemyTower.takeDamage(ENEMY_TOWER_DAMAGE * (explosive ? 1.25 : 1));
+    // Chips fly off where it lands.
+    this.world.enemyTower.takeDamage(ENEMY_TOWER_DAMAGE * (explosive ? 1.25 : 1), impactPoint);
     if (explosive) {
       this.explode(impactPoint, activeEnemies);
+      arrow.deactivate();
     } else {
-      this.world.effects.impact(impactPoint);
+      // Sticks into the stone and stays there.
+      arrow.stickToWall(impactPoint, WALL_SINK);
     }
-    arrow.deactivate();
   }
 
   /**
@@ -465,7 +469,7 @@ export class CombatSystem {
       bowman.knockBack(point.x, minStrength + (1 - minStrength) * (1 - bowmanDistance / reach));
     });
     if (point.x - (playerTower.x + TOWER_HALF_WIDTH) <= reach) {
-      playerTower.takeDamage(rollDamage(enemyDamage('kamikaze', 'melee', 'keep')));
+      playerTower.takeDamage(rollDamage(enemyDamage('kamikaze', 'melee', 'keep')), { x: playerTower.x + TOWER_HALF_WIDTH - 4, y: point.y });
     }
   }
 
@@ -473,21 +477,27 @@ export class CombatSystem {
    * Explosion visuals plus splash damage and knockback for every living enemy whose body centre is
    * within EXPLOSION_RADIUS (except `directHit`, which already took the blast at its centre); damage falls off with distance.
    */
-  private explode(point: Vec2, activeEnemies: readonly Foe[], directHit?: Foe): void {
-    this.world.effects.explosion(point);
+  private explode(point: Vec2, activeEnemies: readonly Foe[], directHit?: Foe, power = 1, dragon = false): void {
+    if (dragon) {
+      this.world.effects.dragonBlast(point);
+    } else {
+      this.world.effects.explosion(point, power);
+    }
     this.events.sound('explosion', point);
+    // `power` scales both the reach and the damage (a fire dragon blowing up: FIRE_DRAGON_BLAST_POWER).
+    const radius = EXPLOSION_RADIUS * power;
     activeEnemies
       .filter((candidate) => candidate !== directHit && candidate.isAlive())
       .forEach((candidate) => {
         const body = candidate.getPhysicsBounds();
         const dx = body.x + body.width / 2 - point.x;
         const dy = body.y + body.height / 2 - point.y;
-        if (Math.hypot(dx, dy) > EXPLOSION_RADIUS) {
+        if (Math.hypot(dx, dy) > radius) {
           return;
         }
         // Survivors are knocked down away from the blast and get back up; the rest die thrown back.
-        const blastDistance = Math.hypot(dx, dy) / EXPLOSION_RADIUS;
-        candidate.takeDamage(explosionDamage(blastDistance), { cause: 'explosion', fromX: point.x, point, blastDistance });
+        const blastDistance = Math.hypot(dx, dy) / radius;
+        candidate.takeDamage(explosionDamage(blastDistance) * power, { cause: 'explosion', fromX: point.x, point, blastDistance });
       });
   }
 
@@ -509,13 +519,17 @@ export class CombatSystem {
     const baseDamage = arrow.type === 'piercing'
       ? PROJECTILE_DAMAGE * Math.pow(PIERCING_DAMAGE_MULTIPLIER, arrow.impacts)
       : arrow.type === 'fragment' ? PROJECTILE_DAMAGE * SHRAPNEL_FRAGMENT_DAMAGE : PROJECTILE_DAMAGE;
-    const damage = explosive ? explosionDamage(0) : headshot ? baseDamage * HEADSHOT_DAMAGE_MULTIPLIER : baseDamage;
-    if (headshot && !explosive) {
+    // A pinning arrow only scratches (it's about holding them, not hurting them; no headshot bonus).
+    const pinning = arrow.type === 'pinning';
+    const damage = explosive
+      ? explosionDamage(0)
+      : pinning ? rollDamage(PIN_DAMAGE) : headshot ? baseDamage * HEADSHOT_DAMAGE_MULTIPLIER : baseDamage;
+    if (headshot && !explosive && !pinning) {
       this.events.headshot();
     }
     const fromLeft = arrow.x < enemy.x;
     enemy.applyHitReaction(fromLeft ? 6 : -4);
-    const cause = explosive ? 'blast' : headshot ? 'headshot' : 'arrow';
+    const cause = explosive ? 'blast' : headshot && !pinning ? 'headshot' : 'arrow';
     enemy.takeDamage(damage, { cause, fromX: fromLeft ? enemy.x - 1 : enemy.x + 1, point: impactPoint });
     // Every arrow hit makes the enemy cry out (kills and headshots too); an explosive kill is just the blast.
     if (!explosive || enemy.isAlive()) {
@@ -524,7 +538,19 @@ export class CombatSystem {
     hitEnemies.add(enemy);
     arrow.registerImpact();
 
-    if (explosive) {
+    if (explosive && enemy instanceof DragonEnemy && enemy.kind === 'fireDragon' && !enemy.isAlive()) {
+      // A fire dragon killed by a direct explosive hit blows up: twice the blast, centred on its body, and the
+      // arrows stuck in it go with it.
+      const body = enemy.getPhysicsBounds();
+      this.explode({ x: body.x + body.width / 2, y: body.y + body.height / 2 }, activeEnemies, enemy, FIRE_DRAGON_BLAST_POWER, true);
+      this.world.arrows.filter((stuck) => stuck.stuckTo === enemy).forEach((stuck) => stuck.deactivate());
+      arrow.deactivate();
+    } else if (explosive && enemy.kind === 'kamikaze' && !enemy.isAlive()) {
+      // A kamikaze killed by a direct explosive hit sets its bomb off: a twice-as-big blast where it stood.
+      const body = enemy.getPhysicsBounds();
+      this.explode({ x: body.x + body.width / 2, y: body.y + body.height / 2 }, activeEnemies, enemy, KAMIKAZE_BLAST_POWER);
+      arrow.deactivate();
+    } else if (explosive) {
       this.explode(impactPoint, activeEnemies, enemy);
       arrow.deactivate();
     } else if (arrow.type === 'piercing') {
@@ -533,13 +559,13 @@ export class CombatSystem {
         arrow.deactivate();
       }
     } else if (arrow.type === 'pinning' && enemy.isAlive() && !(enemy instanceof DragonEnemy) && pinDurationMs(enemy.kind) > 0) {
-      // Through the foot into the ground: the enemy is held there for a while.
+      // Through the rear foot into the ground: the enemy is held there for a while, struggling.
       enemy.pin(pinDurationMs(enemy.kind));
       const heading = Math.atan2(arrow.velocityVector.y, arrow.velocityVector.x);
-      const ground = groundAt(enemy.x);
-      arrow.position.set(enemy.x - Math.cos(heading) * PIN_SINK, ground - Math.sin(heading) * PIN_SINK);
+      const foot = enemy.pinnedFootPoint();
+      arrow.position.set(foot.x - Math.cos(heading) * PIN_SINK, foot.y - Math.sin(heading) * PIN_SINK);
       arrow.stickToGround(arrow.y);
-      effects.impact({ x: enemy.x, y: ground - 2 });
+      effects.impact({ x: foot.x, y: foot.y - 2 });
     } else {
       // Pinned to the body: it rides along with walking, falls and the corpse.
       arrow.stickToEnemy(enemy, impactPoint);

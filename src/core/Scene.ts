@@ -5,7 +5,7 @@ import type { SoundManager } from '../audio/SoundManager';
 import type { DomUi } from '../ui/DomUi';
 import type { Transport } from '../net/Transport';
 
-export type SceneName = 'menu' | 'coop' | 'sandbox' | 'animationLab' | 'soundLab' | 'game';
+export type SceneName = 'menu' | 'coop' | 'sandbox' | 'animationLab' | 'soundLab' | 'designLab' | 'game';
 
 /** Co-op online: this browser's role, the room and the link to the other browser. */
 export interface NetLink {

@@ -61,8 +61,8 @@ export class MenuScene extends Scene {
     this.background = new Background(world, battleground, BACKDROP_WIDTH);
     const hillColor = battleground.hills[0];
     this.keeps = [
-      new Tower(MENU_KEEPS.player, groundAt(MENU_KEEPS.player), { hillColor, enemy: false }),
-      new Tower(MENU_KEEPS.enemy, groundAt(MENU_KEEPS.enemy), { hillColor, enemy: true }),
+      new Tower(MENU_KEEPS.player, groundAt(MENU_KEEPS.player), { hillColor, enemy: false, showHealth: false }),
+      new Tower(MENU_KEEPS.enemy, groundAt(MENU_KEEPS.enemy), { hillColor, enemy: true, showHealth: false }),
     ];
     this.bowman = new Bowman(MENU_BOWMAN_X, groundAt(MENU_BOWMAN_X), { x: 0, y: 0, width: BACKDROP_WIDTH, height: GAME_HEIGHT }, {
       armorColors: battleground.player,

@@ -4,10 +4,11 @@ import { groundAt } from '../systems/terrain';
 import { approach, clamp } from '../utils/math';
 import { getArcherRig, toArcherLocalAngle } from '../rendering/archer';
 import type { ArmorPalette } from '../rendering/armor';
-import { armoredFallPose, drawArmoredJointPose } from '../rendering/armoredPose';
+import { armoredFallPose } from '../rendering/armoredPose';
 import { STANDING_BURN_POINTS, burnPoints, drawBurning } from '../rendering/burning';
 import { relight } from '../systems/burning';
-import { drawStickman } from '../rendering/stickman';
+import { drawBowmanBody, drawBowmanFall, type BowmanLook } from '../rendering/bowmanBody';
+import { BODY_FOOT_Y } from '../rendering/designs/bodyPoses';
 import { FALL_DURATION_MS, getFallPose } from '../rendering/stickmanFall';
 import {
   BOWMAN_KNOCKBACK,
@@ -33,8 +34,8 @@ const GROUND_SNAP = 4;
 /** Time for the dead bowman to topple over backwards, and how far (just short of flat: armor). */
 const TOPPLE_MS = 650;
 const TOPPLE_ANGLE = Math.PI / 2 - 0.12;
-/** Hip to feet in body-sprite space (drawStickman's standing feet). */
-const HIP_TO_FEET = 55;
+/** Hip to feet in body-sprite space (the standing BodyPose's feet). */
+const HIP_TO_FEET = BODY_FOOT_Y;
 /** A burn fades out over its last this many ms; flames are drawn this much bigger than in the lab, to read at game size. */
 const BURN_FADE_MS = 700;
 const BURN_FLAME_SIZE = 1.6;
@@ -61,10 +62,15 @@ export interface BowmanConfig {
   maxHealth?: number;
   /** Armor colours (the battleground's `player` palette). */
   armorColors?: ArmorPalette;
+  /** Ranger (default, player 1) or keep warden (the co-op second player). */
+  look?: BowmanLook;
 }
 
 export class Bowman extends Container {
   private readonly armorColors?: ArmorPalette;
+  private readonly look: BowmanLook;
+  /** Always-running clock for the look's own motion (the cloak). */
+  private lookTimeMs = 0;
   public readonly maxHealth: number;
   public health: number;
   /** Time since death; undefined while alive. */
@@ -112,6 +118,7 @@ export class Bowman extends Container {
     this.movementSpeed = config.movementSpeed ?? 120;
     this.maxHealth = config.maxHealth ?? 100;
     this.armorColors = config.armorColors;
+    this.look = config.look ?? 'ranger';
     this.health = this.maxHealth;
 
     this.bodySprite = new Graphics();
@@ -329,6 +336,7 @@ export class Bowman extends Container {
   }
 
   public updateAnimation(deltaMs: number, moving: boolean, sprinting = false): void {
+    this.lookTimeMs += deltaMs;
     this.updateBody(deltaMs, moving, sprinting);
     this.updateBurn(deltaMs);
   }
@@ -464,29 +472,29 @@ export class Bowman extends Container {
     // Accelerates like a falling plank; backwards = away from the facing direction.
     const angle = -this.facingDirection * TOPPLE_ANGLE * t * t;
     const feet = HIP_TO_FEET * this.bodySprite.scale.y;
+    // Pivot about the feet: redraw() has just put the hip where the standing pose wants it.
+    const hipY = this.bodySprite.y;
     this.bodySprite.rotation = angle;
-    this.bodySprite.position.set(Math.sin(angle) * feet, BODY_ORIGIN_Y + feet - Math.cos(angle) * feet);
+    this.bodySprite.position.set(Math.sin(angle) * feet, hipY + feet - Math.cos(angle) * feet);
   }
 
   private redraw(): void {
-    this.bodySprite.scale.x = this.facingDirection;
+    const body = this.bodySprite;
+    body.scale.x = this.facingDirection;
     if (this.knockdown) {
-      drawArmoredJointPose(this.bodySprite, armoredFallPose(this.knockdown.kind, this.knockdownProgress), BODY_ORIGIN_Y, this.armorColors);
+      drawBowmanFall(body, this.look, this.armorColors, armoredFallPose(this.knockdown.kind, this.knockdownProgress), BODY_ORIGIN_Y, this.lookTimeMs);
       return;
     }
-    drawStickman(this.bodySprite, this.animationTime, {
+    // Leaning into the walk, more when sprinting (as drawStickman leans the sprite).
+    body.rotation = (0.06 + 0.04 * this.animationRunningBlend) * (1 - this.animationIdleBlend) * this.leanDirection;
+    drawBowmanBody(body, this.look, this.armorColors, {
+      phase: this.animationTime,
       idleBlend: this.animationIdleBlend,
       runningBlend: this.animationRunningBlend,
-      originY: BODY_ORIGIN_Y,
-      archerPose: true,
-      bowTension: this.aim.power,
-      bowReady: this.bowReady,
-      bowAngle: this.aimAngle,
-      facingDirection: this.facingDirection,
-      leanDirection: this.leanDirection,
-      skin: 'armored',
-      armorColors: this.armorColors,
-    });
+      localAngle: toArcherLocalAngle(this.aimAngle, body.rotation, this.facingDirection),
+      tension: this.aim.power,
+      ready: this.bowReady,
+    }, BODY_ORIGIN_Y, this.lookTimeMs);
   }
 
   private constrainToBoard(): void {

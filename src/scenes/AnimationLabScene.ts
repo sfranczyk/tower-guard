@@ -14,6 +14,7 @@ import { drawDragonRider } from '../rendering/dragonArt';
 import { FIRE_BREATH_MS, breathControl, drawFireStream } from '../rendering/dragonFire';
 import { DRAGON_DEATH_MS, drawDragonDeath, type DragonDeathKind } from '../rendering/dragonDeath';
 import { drawStickmanCheer } from '../rendering/stickmanCheer';
+import { drawPinnedStruggle } from '../rendering/stickmanPinned';
 import { ArcherReadySequence, FallClock, GibReplay, PausingWalk, RUN_PHASE_MS, WALK_PHASE_MS, WalkRunSequence } from './labSequences';
 
 /** The cream panel the lab sits on (same look as the HTML panels), over the meadow. */
@@ -351,6 +352,12 @@ export class AnimationLabScene extends Scene {
         BOWMAN_KNOCKBACK.animationSpeed,
         BOWMAN_KNOCKBACK.lieMs,
       ),
+    },
+    {
+      id: 'pinned-struggle',
+      title: 'Pinned by the foot (pinning arrow)',
+      description: 'One foot is pinned to the ground: he lunges forward with the free leg and arms reaching, the stuck leg yanks him back, he looks down at it and tries again. The stuck foot never moves.',
+      render: (sprite) => drawPinnedStruggle(sprite, this.cheerTime, 0, { club: true }),
     },
     {
       id: 'cheer-jump',

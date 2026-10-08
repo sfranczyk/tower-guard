@@ -148,8 +148,13 @@ const drawRiderGibs = (g: Graphics, pose: DragonPose, sinceMs: number): void => 
   g.resetTransform();
 };
 
-/** Draws (appends) the thrown rider and his bow `sinceMs` after the hit, in death space. */
-export const drawThrownRider = (g: Graphics, pose: DragonPose, sinceMs: number, startY = FLY_Y): void => {
+/**
+ * Draws (appends) the thrown rider and his bow `sinceMs` after the hit, in death space; `drawRider` draws
+ * the rider in a look of its own instead of the skeleton.
+ */
+export const drawThrownRider = (
+  g: Graphics, pose: DragonPose, sinceMs: number, startY = FLY_Y, drawRider?: (g: Graphics, rider: JointPose) => void,
+): void => {
   if (pose.bow) {
     const rig = pose.bow.rig;
     const lift = (point: Vec2): Vec2 => lifted(point, startY);
@@ -157,7 +162,12 @@ export const drawThrownRider = (g: Graphics, pose: DragonPose, sinceMs: number, 
     const nock = { x: (bow.bowTop.x + bow.bowBottom.x) / 2, y: (bow.bowTop.y + bow.bowBottom.y) / 2 };
     drawBow(g, { ...rig, ...bow, stringNock: nock });
   }
-  drawJointPose(g, thrownRider(seatedRider(pose, startY), sinceMs).pose, 0, { append: true });
+  const rider = thrownRider(seatedRider(pose, startY), sinceMs).pose;
+  if (drawRider) {
+    drawRider(g, rider);
+  } else {
+    drawJointPose(g, rider, 0, { append: true });
+  }
 };
 
 /** Draws a dragon death at `timeMs` (0 = still flying, the hit comes at DRAGON_HIT_MS); the dragon archer by default. */
