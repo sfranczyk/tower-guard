@@ -41,4 +41,25 @@ describe('useTerrain', () => {
     useTerrain();
     expect(Math.max(...Array.from({ length: 1200 }, (_, x) => Math.abs(groundAt(x) - GROUND_Y)))).toBeLessThanOrEqual(TERRAIN_AMPLITUDE + 1e-9);
   });
+
+  it('packs more, shorter waves in with more waviness, and stays walkable on the roughest map', () => {
+    const crests = (wavesPer: number): number => {
+      useTerrain(26, wavesPer);
+      let count = 0;
+      for (let x = 400; x < 3000; x += 1) {
+        if (groundAt(x) < groundAt(x - 1) && groundAt(x) <= groundAt(x + 1)) {
+          count += 1;
+        }
+      }
+      return count;
+    };
+    expect(crests(1.5)).toBeGreaterThan(crests(1));
+    useTerrain(26, 1.5);
+    for (let x = 1; x < WORLD_WIDTH; x += 1) {
+      // Steeper than the meadow, but no cliffs (under ~30°).
+      expect(Math.abs(groundAt(x) - groundAt(x - 1))).toBeLessThan(0.6);
+    }
+    expect(groundAt(PLAYER_TOWER_X + 100)).toBeCloseTo(GROUND_Y, 6);
+    useTerrain();
+  });
 });

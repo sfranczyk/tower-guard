@@ -1,6 +1,7 @@
 import { Graphics } from 'pixi.js';
-import { BACKDROP_WIDTH, GAME_HEIGHT, GROUND_Y, WORLD_WIDTH } from '../config';
+import { BACKDROP_WIDTH, GAME_HEIGHT, WORLD_WIDTH } from '../config';
 import type { Battleground } from '../data/battlegrounds';
+import { groundAt } from '../systems/terrain';
 
 /** Far and near hills (or lower, smoother dunes) between the sky and the ground, one BACKDROP_WIDTH stretch (Background repeats it). */
 export const drawHills = ({ hills: [far, near], hillShape }: Battleground): Graphics => {
@@ -73,7 +74,8 @@ const drawMountains = (g: Graphics, far: number, near: number): void => {
 /** Saguaro: a rounded trunk with one or two arms bending upwards. */
 const drawCactus = (graphics: Graphics, x: number, height: number, colors: readonly [number, number, number], arms: number): void => {
   const [main, light, dark] = colors;
-  const top = GROUND_Y - height;
+  // Standing on the ground where it is (the terrain dips and rises).
+  const top = groundAt(x) - height;
   const armDefs = [
     { side: -1, at: 0.45, reach: 13, rise: 0.3 },
     { side: 1, at: 0.6, reach: 11, rise: 0.22 },
@@ -90,7 +92,10 @@ const drawCactus = (graphics: Graphics, x: number, height: number, colors: reado
   graphics.roundRect(x - 2.5, top + 4, 2, height - 6, 1).fill({ color: light });
 };
 
-/** The row of trees (round, pine) or sparse cacti standing on the horizon, from x `left` to `right`. */
+/**
+ * The row of trees (round, pine) or sparse cacti standing on the horizon, from x `left` to `right`, each on the ground
+ * where it stands (`groundAt`: in a dip it stands lower, on a rise its foot is behind the ground).
+ */
 export const drawVegetation = ({ trees }: Battleground, left = 0, right = WORLD_WIDTH): Graphics => {
   const forest = new Graphics();
   const [main, light, dark] = trees.colors;
@@ -109,11 +114,12 @@ export const drawVegetation = ({ trees }: Battleground, left = 0, right = WORLD_
   }
   for (let x = 20 - Math.ceil(-Math.min(0, left) / 92) * 92; x < right; x += 92) {
     const height = 38 + ((((x / 92) % 3) + 3) % 3) * 14;
+    const ground = groundAt(x);
     if (trees.style === 'snowPine') {
       // Pines with snow on every layer's top.
-      forest.rect(x - 2, GROUND_Y - 12, 4, 12).fill({ color: trees.trunk });
+      forest.rect(x - 2, ground - 12, 4, 12).fill({ color: trees.trunk });
       [[0, 30, light], [14, 24, main], [26, 17, dark]].forEach(([lift, halfWidth, color]) => {
-        const base = GROUND_Y - 10 - lift;
+        const base = ground - 10 - lift;
         const tip = base - height * 0.8;
         forest.poly([x - halfWidth, base, x, tip, x + halfWidth, base]).fill({ color });
         forest.poly([x - halfWidth * 0.42, tip + height * 0.34, x, tip, x + halfWidth * 0.42, tip + height * 0.34, x, tip + height * 0.27])
@@ -121,16 +127,16 @@ export const drawVegetation = ({ trees }: Battleground, left = 0, right = WORLD_
       });
     } else if (trees.style === 'pine') {
       // Layered triangular pines.
-      forest.rect(x - 2, GROUND_Y - 12, 4, 12).fill({ color: trees.trunk });
+      forest.rect(x - 2, ground - 12, 4, 12).fill({ color: trees.trunk });
       [[0, 30, light], [14, 24, main], [26, 17, dark]].forEach(([lift, halfWidth, color]) => {
-        const base = GROUND_Y - 10 - lift;
+        const base = ground - 10 - lift;
         forest.poly([x - halfWidth, base, x, base - height * 0.8, x + halfWidth, base]).fill({ color });
       });
     } else {
-      forest.circle(x, GROUND_Y - height, 18).fill({ color: main });
-      forest.circle(x - 14, GROUND_Y - height + 12, 15).fill({ color: light });
-      forest.circle(x + 15, GROUND_Y - height + 12, 15).fill({ color: dark });
-      forest.rect(x - 3, GROUND_Y - height + 16, 6, height).fill({ color: trees.trunk });
+      forest.circle(x, ground - height, 18).fill({ color: main });
+      forest.circle(x - 14, ground - height + 12, 15).fill({ color: light });
+      forest.circle(x + 15, ground - height + 12, 15).fill({ color: dark });
+      forest.rect(x - 3, ground - height + 16, 6, height).fill({ color: trees.trunk });
     }
   }
   forest.zIndex = 0;

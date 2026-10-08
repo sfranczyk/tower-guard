@@ -25,6 +25,8 @@ import { buffetOffset } from '../systems/vortex';
 import { groundAt } from '../systems/terrain';
 import { enemyArchetype, type FlyingType } from '../data/enemyKinds';
 import type { Bounds, Vec2 } from '../types';
+import { drawHealthBar } from '../rendering/healthBar';
+import { boundsAround } from '../utils/math';
 import type { HitInfo } from './Enemy';
 import { AfflictionLayer, type AfflictionNet } from './AfflictionLayer';
 
@@ -380,13 +382,13 @@ export default class DragonEnemy extends Container {
 
   private zoneBounds(part: DragonHitZone['part']): Bounds {
     const zone = dragonHitZones(this.pose).find((candidate) => candidate.part === part)!;
-    return DragonEnemy.boundsAround(zone.points.map((point) => this.toWorld(point)), zone.padding * DRAGON_SCALE);
+    return boundsAround(zone.points.map((point) => this.toWorld(point)), zone.padding * DRAGON_SCALE);
   }
 
   /** Every hit zone in world space (see dragonHitZones): rider and dragon head are headshots. */
   public getHitBoxes(): HitBox[] {
     return dragonHitZones(this.pose).map(({ points, padding, headshot }) => ({
-      bounds: DragonEnemy.boundsAround(points.map((point) => this.toWorld(point)), padding * DRAGON_SCALE),
+      bounds: boundsAround(points.map((point) => this.toWorld(point)), padding * DRAGON_SCALE),
       headshot,
     }));
   }
@@ -510,20 +512,8 @@ export default class DragonEnemy extends Container {
   }
 
   private drawHealthBar(): void {
-    const ratio = this.health / this.maxHealth;
-    const color = ratio > 0.6 ? 0x6fd36b : ratio > 0.3 ? 0xf2c94c : 0xe5534b;
     const { width, height, y } = HEALTH_BAR;
     this.healthBar.position.set(0, y);
-    this.healthBar.clear()
-      .rect(-width / 2 - 1, -height / 2 - 1, width + 2, height + 2).fill({ color: 0x1b1a20, alpha: 0.85 })
-      .rect(-width / 2, -height / 2, width * ratio, height).fill({ color });
-  }
-
-  private static boundsAround(points: Vec2[], padding: number): Bounds {
-    const left = Math.min(...points.map((point) => point.x)) - padding;
-    const right = Math.max(...points.map((point) => point.x)) + padding;
-    const top = Math.min(...points.map((point) => point.y)) - padding;
-    const bottom = Math.max(...points.map((point) => point.y)) + padding;
-    return { x: left, y: top, width: right - left, height: bottom - top, left, right, top, bottom };
+    drawHealthBar(this.healthBar, this.health / this.maxHealth, width, height);
   }
 }

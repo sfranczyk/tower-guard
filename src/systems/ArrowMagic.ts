@@ -27,7 +27,12 @@ import type { EffectsSystem } from './EffectsSystem';
 import { groundAt } from './terrain';
 
 type Foe = Enemy | DragonEnemy;
-/** What a vortex can catch, a fire patch set alight: a ground enemy, or (friendly fire) a bowman out in the open. */
+/**
+ * What a vortex can catch, a fire patch set alight: a ground enemy, or (friendly fire) a bowman out in the open. Both
+ * have the same afflictions (AfflictionLayer) and the same hold, throw and pin (`holdInVortex`, `throwInAir`,
+ * `onLanded`, `isPinned`; systems/bodyMotion.ts); only what hurts them differs (an enemy's own health, a bowman's
+ * through the scene).
+ */
 type Walker = Enemy | Bowman;
 
 /** A bowman counts as a fighter (how high he levitates, whether a vortex can catch him). */
@@ -167,7 +172,7 @@ export class ArrowMagic {
     // Fire in the ground sets alight whoever walks through it.
     this.patches = this.patches.filter((patch) => {
       patch.msLeft -= deltaMs;
-      walkers.filter((walker) => Math.abs(walker.x - patch.x) <= FIRE_PATCH_RADIUS && !ArrowMagic.isBurning(walker))
+      walkers.filter((walker) => Math.abs(walker.x - patch.x) <= FIRE_PATCH_RADIUS && !walker.afflictions.isBurning)
         .forEach((walker) => this.ignite(walker));
       return patch.msLeft > 0;
     });
@@ -185,17 +190,13 @@ export class ArrowMagic {
     burning.forEach((enemy) => enemy.takeDamage((ENEMY_BURN_DPS * BURN_TICK_MS) / 1000, { cause: 'burn', fromX: enemy.x }));
     burning.filter((enemy): enemy is Enemy => !(enemy instanceof DragonEnemy)).forEach((source) => {
       walkers
-        .filter((other) => other !== source && !ArrowMagic.isBurning(other) && Math.abs(other.x - source.x) <= FIRE_SPREAD_RADIUS)
+        .filter((other) => other !== source && !other.afflictions.isBurning && Math.abs(other.x - source.x) <= FIRE_SPREAD_RADIUS)
         .forEach((other) => {
           if (Math.random() < FIRE_SPREAD_CHANCE) {
             this.ignite(other);
           }
         });
     });
-  }
-
-  private static isBurning(body: Foe | Bowman): boolean {
-    return body instanceof Bowman ? body.isBurning : body.afflictions.isBurning;
   }
 
   /** Sets an enemy (a corpse too) or a bowman alight. */

@@ -1,31 +1,32 @@
 import { Container, Graphics } from 'pixi.js';
-import { ENEMY_ARCHER_COOLDOWN_MS, ENEMY_ARCHER_DRAW_MS, ENEMY_ATTACK_INTERVAL_MS, KAMIKAZE_GIB_FORCE, PLAYER_TOWER_X, WORLD_WIDTH } from '../config';
+import { ENEMY_ATTACK_INTERVAL_MS, KAMIKAZE_GIB_FORCE, PLAYER_TOWER_X, WORLD_WIDTH } from '../config';
 import { getArcherRig, toArcherLocalAngle } from '../rendering/archer';
 import { attackImpactProgress } from '../rendering/attackSwing';
-import { STICKMAN_HEAD, WALK_STRIDE_PER_RADIAN } from '../rendering/stickman';
+import { WALK_STRIDE_PER_RADIAN } from '../rendering/stickman';
 import { RUN_STRIDE_PER_RADIAN } from '../rendering/runCycle';
 import { FALL_DURATION_MS, getFallPose, type FallKind, type FallPose } from '../rendering/stickmanFall';
 import { CHEER_KINDS, getCheerPose, type CheerKind } from '../rendering/stickmanCheer';
 import { PINNED_FOOT, getPinnedPose } from '../rendering/stickmanPinned';
 import { getFlailPose } from '../rendering/stickmanFlail';
-import { stepFlight, type Flight } from '../systems/flight';
+import { BodyMotion } from '../systems/bodyMotion';
 import { GibSimulation } from '../rendering/stickmanGibs';
 import type { BodyColors } from '../rendering/bodyColors';
 import { drawEnemyBody, drawEnemyGibs, enemyGibColors, type EnemyBodyState } from '../rendering/enemyBody';
-import { fromBodyAnchor, spriteToWorld, toBodyAnchor, worldToSprite, type BodyAnchor, type BodyTransform, type Torso } from '../systems/bodyAnchor';
+import { fromBodyAnchor, spriteToContainer, spriteToWorld, toBodyAnchor, worldToSprite, type BodyAnchor, type BodyTransform, type Torso } from '../systems/bodyAnchor';
 import { ENEMY_LOOKS, blowsApart, knockbackPush, type EnemyLook } from '../data/enemies';
 import { enemyArchetype } from '../data/enemyKinds';
 import { groundAt } from '../systems/terrain';
+import { drawHealthBar } from '../rendering/healthBar';
 import { STANDING_BURN_POINTS, burnPoints } from '../rendering/burning';
 import { FROZEN_TINT } from '../rendering/afflictionArt';
 import type { Bounds, EnemyType, Vec2 } from '../types';
 import { AfflictionLayer, type AfflictionNet } from './AfflictionLayer';
+import { EnemyBow } from './EnemyBow';
+import { bodyBounds, headBounds, torsoOf, type EnemyShape } from './enemyHitShape';
+import { KNOCKDOWN_LIE_MS, deathKind, fallProgress, startFallState, stepFall, type FallState } from './enemyFall';
 
-/** Co-op: a thrown enemy's flight for the guest (its position comes in the snapshot). */
-export interface ThrowNet {
-  vx: number;
-  spin: number;
-}
+export type { ThrowNet } from '../systems/bodyMotion';
+import type { ThrowNet } from '../systems/bodyMotion';
 
 const ATTACK_ANIMATION_DURATION_MS = 1_130;
 
@@ -46,49 +47,18 @@ export interface HitInfo {
   blastDistance?: number;
 }
 
-/** A playing fall animation. Dead enemies stay in their last frame. */
-interface FallState {
-  kind: FallKind;
-  timeMs: number;
-  /** +1: fall-space +x is world +x; −1: mirrored. */
-  facing: number;
-  /** Knockback only: get up after lying down this long, then fight on. */
-  getUpAfterMs?: number;
-  /** Knockback only: extra world px it slides away from the blast over the fall, and how much is done. */
-  push?: { total: number; applied: number };
-}
-
-/** Share (0..1) of a knockback's extra push done at fall progress `p`: mostly in the flight, a little slide. */
-const pushShare = (p: number): number => {
-  const smooth = (value: number): number => value * value * (3 - 2 * value);
-  if (p <= 0.12) {
-    return 0.1 * smooth(p / 0.12);
-  }
-  if (p <= 0.72) {
-    return 0.1 + 0.8 * ((p - 0.12) / 0.6);
-  }
-  return 0.9 + 0.1 * smooth(Math.min(1, (p - 0.72) / 0.28));
-};
 /** Pushed enemies stay this far inside the world and out of the player's keep. */
 const PUSH_MARGIN = 30;
 
-/** Time a knocked-down (surviving) enemy lies on the ground before getting up. */
-const KNOCKDOWN_LIE_MS = 450;
 /** Body sprite scale (x is mirrored by facing). */
 const BODY_SCALE = { x: 0.5, y: 0.52 };
 const BODY_ORIGIN_Y = -25;
 /** drawStickman's hip and shoulder (sprite space) for walking, standing and attacking. */
 /** Health bar size and placement in container space (the container is drawn at 2/3 scale). */
 const HEALTH_BAR = { width: 30, height: 4, standingY: -68, aboveHead: 14 };
-const STANDING_TORSO: Torso = { hip: { x: 0, y: 0 }, shoulder: { x: 0, y: -35 } };
-const BOW_RAISE_MS = 220;
-const BOW_LOWER_MS = 400;
 /** Explosive kills throw the pieces with a random force in this range (the lab uses 1). */
 const GIB_FORCE_MIN = 1;
 const GIB_FORCE_MAX = 1.7;
-/** Torso piece of a gib simulation is hip→neck top (43); anchors use hip→shoulder (35). */
-const TORSO_TO_NECK = 43;
-const TORSO_TO_SHOULDER = 35;
 
 /** Blown apart up in the air: the pieces' frame drops back to the ground this fast (px/s²). */
 const DROP_GRAVITY = 1400;
@@ -121,8 +91,6 @@ export default class Enemy extends Container {
   /** Walk/run cycle phase: advances with the distance covered, so the feet stay planted at any speed. */
   private stridePhase = 0;
   private attackTimerMs = 0;
-  /** Pinned to the ground by a pinning arrow: can't walk until this runs out (it can still swing or shoot). */
-  private pinnedMs = 0;
   /** Clock of the pinned struggle (stickmanPinned), from when the pin went in. */
   private struggleMs = 0;
   private velocity = { x: 0, y: 0 };
@@ -134,23 +102,19 @@ export default class Enemy extends Container {
   private cheer?: { kind: CheerKind; timeMs: number; tempo: number };
   /** Set when blown apart by a direct explosive hit. */
   private gibs?: GibSimulation;
-  /** Archer bow state: raised (0..1), draw tension (0..1), aim angle (world) and time to the next shot. */
-  private bowReady = 0;
-  private bowTension = 0;
-  private aimAngle = Math.PI;
-  private bowCooldownMs = 0;
+  /** Archer: the bow (raised, drawn, aimed, the pause between shots). */
+  private readonly bow = new EnemyBow();
   /** Killed while frozen: its pieces are ice. */
   private shattered = false;
   /** Pieces dropping back to the ground after being blown apart in the air (px/s). */
   private dropSpeed = 0;
   /** A settled corpse has been drawn as it rests (isSettledCorpse): it isn't redrawn again. */
   private settledDrawn = false;
-  /** Thrown through the air (a vortex threw it out, or it was hit up there), flailing until it lands. */
-  private flight?: Flight;
-  /** Co-op guest: the host moves it while it flies (it only lands it here). */
-  private flightFromNet = false;
-  /** Host: told when it lands from a throw, with the speed it hit the ground at (for the fall damage). */
-  public onLanded?: (impactSpeed: number) => void;
+  /**
+   * Thrown through the air (a vortex threw it out, or it was hit up there), flailing until it lands; pinned to the
+   * ground by a pinning arrow (it can't walk until the pin runs out, but can still swing or shoot).
+   */
+  private readonly motion = new BodyMotion();
   public target: EnemyTarget;
   /** Fire, frost and vortex (fire, frost and vortex arrows): drawn over the body. */
   public readonly afflictions: AfflictionLayer;
@@ -187,6 +151,15 @@ export default class Enemy extends Container {
 
   /** Ground enemies walk; only dragons fly (lightning strikes the ground, not the sky). */
   public readonly isFlying = false;
+
+  /** Host: told when it lands from a throw, with the speed it hit the ground at (for the fall damage). */
+  public get onLanded(): ((impactSpeed: number) => void) | undefined {
+    return this.motion.onLanded;
+  }
+
+  public set onLanded(callback: ((impactSpeed: number) => void) | undefined) {
+    this.motion.onLanded = callback;
+  }
 
   /** Body size (1 = a normal stickman; brutes are 1.5). */
   public get size(): number {
@@ -227,37 +200,21 @@ export default class Enemy extends Container {
     if (deltaMs === 0) {
       return false;
     }
-    this.aimAngle = angle;
     this.velocity = { x: 0, y: 0 };
     this.body.scale.x = Math.cos(angle) < 0 ? -BODY_SCALE.x : BODY_SCALE.x;
-    this.bowCooldownMs = Math.max(0, this.bowCooldownMs - deltaMs);
-    this.bowReady = Math.min(1, this.bowReady + deltaMs / BOW_RAISE_MS);
-    if (this.bowReady < 1 || this.bowCooldownMs > 0) {
-      this.bowTension = Math.max(0, this.bowTension - deltaMs / 200);
-      return false;
-    }
-    this.bowTension = Math.min(1, this.bowTension + deltaMs / ENEMY_ARCHER_DRAW_MS);
-    if (this.bowTension < 1) {
-      return false;
-    }
-    this.bowTension = 0;
-    this.bowCooldownMs = ENEMY_ARCHER_COOLDOWN_MS;
-    return true;
+    return this.bow.draw(angle, deltaMs);
   }
 
   /** Archer: lower the bow (walking, knocked down, no target). */
   public relaxBow(realDeltaMs: number): void {
-    const deltaMs = realDeltaMs * this.afflictions.timeScale;
-    this.bowCooldownMs = Math.max(0, this.bowCooldownMs - deltaMs);
-    this.bowTension = Math.max(0, this.bowTension - deltaMs / 200);
-    this.bowReady = Math.max(0, this.bowReady - deltaMs / BOW_LOWER_MS);
+    this.bow.relax(realDeltaMs * this.afflictions.timeScale);
   }
 
   /** Archer: where the arrow is nocked, in world space (matches the drawn bow). */
   public getBowReleasePoint(): Vec2 {
     const facing = Math.sign(this.body.scale.x) || -1;
-    const localAngle = toArcherLocalAngle(this.aimAngle, this.body.rotation, facing);
-    const nock = getArcherRig(localAngle, this.bowTension, this.bowReady).stringNock;
+    const localAngle = toArcherLocalAngle(this.bow.aimAngle, this.body.rotation, facing);
+    const nock = getArcherRig(localAngle, this.bow.tension, this.bow.ready).stringNock;
     return spriteToWorld(nock, this.bodyTransform());
   }
 
@@ -275,7 +232,8 @@ export default class Enemy extends Container {
   /** An archer's bow state (upright sprite, so the aim needs no lean correction); `walkPhase` while walking. */
   private archerState(walkPhase?: number): EnemyBodyState {
     const facing = Math.sign(this.body.scale.x) || -1;
-    return { mode: 'archer', localAngle: toArcherLocalAngle(this.aimAngle, 0, facing), tension: this.bowTension, ready: this.bowReady, walkPhase };
+    const { aimAngle, tension, ready } = this.bow;
+    return { mode: 'archer', localAngle: toArcherLocalAngle(aimAngle, 0, facing), tension, ready, walkPhase };
   }
 
   private drawPlaceholder(): void {
@@ -300,7 +258,7 @@ export default class Enemy extends Container {
     const blastDistance = hit.blastDistance ?? (hit.cause === 'blast' ? 0 : 1);
     const push = hit.cause === 'explosion' || hit.cause === 'blast' ? knockbackPush(blastDistance) : 0;
     // Up in the air (lifted or flying) it falls back down first and lands lying.
-    const aloft = this.flight !== undefined || this.afflictions.inVortex;
+    const aloft = this.motion.isThrown || this.afflictions.inVortex;
     if (this.health === 0) {
       this.alive = false;
       this.velocity = { x: 0, y: 0 };
@@ -321,12 +279,12 @@ export default class Enemy extends Container {
         this.blowApart(hit.fromX, hit.point ?? { x: this.x, y: this.y - 20 });
       } else if (aloft) {
         this.afflictions.thaw();
-        if (!this.flight) {
+        if (!this.motion.isThrown) {
           this.throwInAir(0, 0, 0);
         }
       } else {
         this.afflictions.thaw();
-        this.startFall(Enemy.deathKind(hit.cause), hit.fromX, undefined, push);
+        this.startFall(deathKind(hit.cause), hit.fromX, undefined, push);
       }
     } else if (aloft) {
       // Hit while up in the air: it keeps flying (or stays in the funnel).
@@ -363,11 +321,11 @@ export default class Enemy extends Container {
 
   /** True while a surviving enemy is knocked down or flying through the air (can't move or attack). */
   public get isDown(): boolean {
-    return this.isAlive() && (this.fall !== undefined || this.flight !== undefined);
+    return this.isAlive() && (this.fall !== undefined || this.motion.isThrown);
   }
 
   public get isThrown(): boolean {
-    return this.flight !== undefined;
+    return this.motion.isThrown;
   }
 
   public clearHitTint(): void {
@@ -397,11 +355,8 @@ export default class Enemy extends Container {
 
   /** Pins the enemy to the ground for `durationMs` (a fresh pin restarts the time); not while it's up in the air. */
   public pin(durationMs: number): void {
-    if (this.isAlive() && !this.flight && !this.afflictions.inVortex) {
-      if (this.pinnedMs <= 0) {
-        this.struggleMs = 0;
-      }
-      this.pinnedMs = Math.max(this.pinnedMs, durationMs);
+    if (this.isAlive() && !this.motion.isThrown && !this.afflictions.inVortex && this.motion.pin(durationMs)) {
+      this.struggleMs = 0;
     }
   }
 
@@ -411,7 +366,7 @@ export default class Enemy extends Container {
    * it (it glows). Meanwhile it can't walk or swing.
    */
   public holdInVortex(x: number, lift: number, lean: number, levitating = false): void {
-    if (!this.isAlive() || this.fall || this.flight) {
+    if (!this.isAlive() || this.fall || this.motion.isThrown) {
       return;
     }
     this.x = Math.max(PLAYER_TOWER_X + PUSH_MARGIN, Math.min(WORLD_WIDTH - PUSH_MARGIN, x));
@@ -432,7 +387,7 @@ export default class Enemy extends Container {
     }
     const rotation = this.afflictions.inVortex ? this.afflictions.lean : 0;
     this.afflictions.releaseVortex();
-    this.flight = { x: this.x, y: this.y, vx, vy, rotation, spin, timeMs: 0 };
+    this.motion.throw(this.x, this.y, vx, vy, spin, rotation);
     this.velocity = { x: 0, y: 0 };
     this.attackTimerMs = 0;
     this.hitStaggerMs = 0;
@@ -451,16 +406,16 @@ export default class Enemy extends Container {
   }
 
   public get isPinned(): boolean {
-    return this.isAlive() && this.pinnedMs > 0;
+    return this.isAlive() && this.motion.isPinned;
   }
 
   /** Co-op: what the guest needs besides the position (walking speed; an archer's bow; time left pinned). */
   public getNetState(): { vx: number; aim?: number; tension?: number; ready?: number; pinned?: number; af?: AfflictionNet; th?: ThrowNet } {
-    const pinned = this.pinnedMs > 0 ? this.pinnedMs : undefined;
+    const pinned = this.motion.isPinned ? this.motion.pinnedMs : undefined;
     const af = this.afflictions.getNetState();
-    const th = this.flight ? { vx: Math.round(this.flight.vx), spin: Math.round(this.flight.spin * 10) / 10 } : undefined;
+    const th = this.motion.netThrow;
     return this.isArcher
-      ? { vx: this.velocity.x, aim: this.aimAngle, tension: this.bowTension, ready: this.bowReady, pinned, af, th }
+      ? { vx: this.velocity.x, ...this.bow.net, pinned, af, th }
       : { vx: this.velocity.x, pinned, af, th };
   }
 
@@ -472,25 +427,23 @@ export default class Enemy extends Container {
     if (!this.isAlive()) {
       return;
     }
-    if (state.th && !this.flight && !this.fall) {
+    if (state.th && !this.motion.isThrown && !this.fall) {
       this.throwInAir(state.th.vx, 0, state.th.spin);
-      this.flightFromNet = true;
+      this.motion.fromNet = true;
     }
-    if (this.flight) {
+    if (this.motion.isThrown) {
       // The host flies it; this side tumbles it and lands it.
-      this.flight = { ...this.flight, vy: state.y >= this.y ? 1 : -1, x: state.x, y: state.y };
+      this.motion.placeFlight(state.x, state.y, state.y >= this.y ? 1 : -1);
       this.position.set(state.x, state.y);
       return;
     }
     this.position.set(state.x, state.y);
     this.velocity = { x: state.vx, y: 0 };
-    this.pinnedMs = state.pinned ?? 0;
+    this.motion.setPin(state.pinned ?? 0);
     this.afflictions.applyNetState(state.af);
     if (this.isArcher && state.aim !== undefined) {
-      this.aimAngle = state.aim;
-      this.bowTension = state.tension ?? 0;
-      this.bowReady = state.ready ?? 0;
-      if (this.bowReady > 0 && Math.abs(state.vx) <= 1) {
+      this.bow.apply({ aim: state.aim, tension: state.tension, ready: state.ready });
+      if (this.bow.ready > 0 && Math.abs(state.vx) <= 1) {
         this.body.scale.x = Math.cos(state.aim) < 0 ? -BODY_SCALE.x : BODY_SCALE.x;
       }
     }
@@ -513,7 +466,7 @@ export default class Enemy extends Container {
     }
     // Held up by a vortex arrow, it glows in front of the funnel.
     this.zIndex = this.afflictions.levitating ? LEVITATE_Z : 1;
-    if (this.flight) {
+    if (this.motion.isThrown) {
       this.updateFlight(deltaMs);
       return;
     }
@@ -548,32 +501,30 @@ export default class Enemy extends Container {
    * into the knockback (a living one gets up later); then onLanded.
    */
   private updateFlight(deltaMs: number): void {
-    const flight = this.flight!;
+    const { vx } = this.motion.flight!;
     this.lookTimeMs += deltaMs;
     // A co-op guest's living enemy flies where the host has it (it only tumbles and lands it here).
-    const driven = this.flightFromNet && this.isAlive();
-    const step = stepFlight(flight, deltaMs, groundAt, PLAYER_TOWER_X + PUSH_MARGIN, WORLD_WIDTH - PUSH_MARGIN);
-    const landed = driven ? flight.vy > 0 && this.y >= groundAt(this.x) - 0.5 : step.landed;
-    if (landed) {
-      this.land(flight.vx, step.impactSpeed);
+    const driven = this.motion.fromNet && this.isAlive();
+    const step = this.motion.step(deltaMs, PLAYER_TOWER_X + PUSH_MARGIN, WORLD_WIDTH - PUSH_MARGIN, driven);
+    if (step.landed) {
+      this.land(vx, step.impactSpeed);
       return;
     }
-    this.flight = driven ? { ...step.flight, x: flight.x, y: flight.y, vy: flight.vy } : step.flight;
-    this.position.set(this.flight.x, this.flight.y);
+    const { flight } = step;
+    this.position.set(flight.x, flight.y);
     if (this.afflictions.isFrozen) {
       this.drawBody({ mode: 'stand', phase: 0 });
     } else {
       this.drawBody({ mode: 'joints', pose: getFlailPose(this.lookTimeMs), club: this.carriesClub });
     }
-    this.body.rotation = this.flight.rotation;
+    this.body.rotation = flight.rotation;
     this.body.tint = this.afflictions.tint;
     this.afflictions.draw(this.afflictionPoints(), AFFLICTION_SIZE, this.afflictionPoints(STANDING_BURN_POINTS));
   }
 
   /** Hits the ground on its back, sliding on the way it flew; a living one gets up after a while. */
   private land(vx: number, impactSpeed: number): void {
-    this.flight = undefined;
-    this.flightFromNet = false;
+    const landed = this.motion.endFlight();
     this.y = groundAt(this.x);
     this.body.rotation = 0;
     // Falls backwards away from `fromX`: put that behind where it came from.
@@ -582,8 +533,6 @@ export default class Enemy extends Container {
       this.fall.timeMs = FALL_DURATION_MS.knockback * LANDING_PROGRESS;
       this.drawFall();
     }
-    const landed = this.onLanded;
-    this.onLanded = undefined;
     landed?.(impactSpeed);
   }
 
@@ -600,16 +549,8 @@ export default class Enemy extends Container {
 
   /** Body points (where flames burn and frost glints) in container space: the fall pose's joints, or `standing`. */
   private afflictionPoints(standing?: readonly Vec2[]): Vec2[] {
-    const { body } = this;
     const pose = this.jointPose();
-    const points = standing ?? (pose ? burnPoints(pose) : STANDING_BURN_POINTS);
-    const cos = Math.cos(body.rotation);
-    const sin = Math.sin(body.rotation);
-    return points.map(({ x, y }) => {
-      const scaledX = x * body.scale.x;
-      const scaledY = y * body.scale.y;
-      return { x: body.x + scaledX * cos - scaledY * sin, y: body.y + scaledX * sin + scaledY * cos };
-    });
+    return spriteToContainer(standing ?? (pose ? burnPoints(pose) : STANDING_BURN_POINTS), this.body);
   }
 
   private animate(deltaMs: number, moving: boolean): void {
@@ -646,7 +587,7 @@ export default class Enemy extends Container {
     }
 
     // Pinned by one foot: lunges, gets yanked back, looks down at it, tries again (an archer still shoots).
-    if (this.pinnedMs > 0 && !(this.isArcher && this.bowReady > 0)) {
+    if (this.motion.isPinned && !(this.isArcher && this.bow.ready > 0)) {
       this.struggleMs += deltaMs;
       this.body.rotation = 0;
       this.drawBody({ mode: 'joints', pose: getPinnedPose(this.struggleMs), club: this.carriesClub });
@@ -689,52 +630,22 @@ export default class Enemy extends Container {
   }
 
   public getPhysicsBounds(): Bounds {
-    const falling = this.fallPointsWorld();
-    if (falling) {
-      // Box around the falling/lying body.
-      const { pose, toWorld } = falling;
-      const points = [pose.hip, pose.shoulder, pose.head, pose.frontKnee, pose.rearKnee, pose.frontFoot, pose.rearFoot]
-        .map(toWorld);
-      return Enemy.boundsAround(points, 2);
-    }
-    const width = 14 * this.look.size;
-    // Reach up to (and 1 px into) the head box so there's no gap at the neck for arrows to slip through.
-    const y = Math.min(this.y - 28 * this.look.size, this.getHeadBounds().bottom - 1);
-    const height = this.y - y;
-    const x = this.x - width / 2;
-    return {
-      x,
-      y,
-      width,
-      height,
-      left: x,
-      right: x + width,
-      top: y,
-      bottom: y + height,
-    };
+    return bodyBounds(this.shape());
   }
 
   /** Box around the drawn head (follows bob, lean, scale and falls), in world space. */
   public getHeadBounds(): Bounds {
-    const falling = this.fallPointsWorld();
-    if (falling) {
-      const center = falling.toWorld(falling.pose.head);
-      return Enemy.boundsAround([center], STICKMAN_HEAD.radius * BODY_SCALE.x * this.scale.x);
-    }
-    const { body } = this;
-    const cos = Math.cos(body.rotation);
-    const sin = Math.sin(body.rotation);
-    const localX = STICKMAN_HEAD.x * body.scale.x;
-    const localY = STICKMAN_HEAD.y * body.scale.y;
-    const centerX = this.x + (body.x + localX * cos - localY * sin) * this.scale.x;
-    const centerY = this.y + (body.y + localX * sin + localY * cos) * this.scale.y;
-    const radius = STICKMAN_HEAD.radius * Math.abs(body.scale.x) * this.scale.x;
-    return Enemy.boundsAround([{ x: centerX, y: centerY }], radius);
+    return headBounds(this.shape());
+  }
+
+  /** How it's drawn now, for its hit shape (objects/enemyHitShape.ts). */
+  private shape(): EnemyShape {
+    return { transform: this.bodyTransform(), size: this.look.size, pose: this.jointPose() };
   }
 
   public update(realDeltaMs: number, target?: Vec2, stopDistance = 0): void {
     // A pin holds for its full time; everything else runs at the afflictions' pace (slowed, or held when frozen).
-    this.pinnedMs = Math.max(0, this.pinnedMs - realDeltaMs);
+    this.motion.tickPin(realDeltaMs);
     const deltaMs = realDeltaMs * this.afflictions.timeScale;
     // The pause between swings runs down all the time, also while the bowman is out of reach.
     this.attackCooldown = Math.max(0, this.attackCooldown - deltaMs);
@@ -742,13 +653,13 @@ export default class Enemy extends Container {
       return;
     }
     // Frozen solid, held by a vortex (which also sets its position) or flying: no walking of its own.
-    if (this.afflictions.isFrozen || this.afflictions.inVortex || this.flight) {
+    if (this.afflictions.isFrozen || this.afflictions.inVortex || this.motion.isThrown) {
       this.velocity.x = 0;
       this.velocity.y = 0;
       return;
     }
     // Pinned: struggles on the spot.
-    if (this.pinnedMs > 0) {
+    if (this.motion.isPinned) {
       this.velocity.x = 0;
       this.velocity.y = 0;
       this.y = groundAt(this.x);
@@ -795,7 +706,7 @@ export default class Enemy extends Container {
 
   /** Ready to start a swing (not down, not mid-swing, pause over); starting one restarts the pause. */
   public canAttack(): boolean {
-    if (this.fall || this.flight || this.attackTimerMs > 0 || this.attackCooldown > 0 || this.afflictions.isFrozen || this.afflictions.inVortex) {
+    if (this.fall || this.motion.isThrown || this.attackTimerMs > 0 || this.attackCooldown > 0 || this.afflictions.isFrozen || this.afflictions.inVortex) {
       return false;
     }
     this.attackCooldown = ENEMY_ATTACK_INTERVAL_MS;
@@ -813,23 +724,10 @@ export default class Enemy extends Container {
     }
   }
 
-  private static deathKind(cause: HitInfo['cause']): FallKind {
-    if (cause === 'headshot' || cause === 'lightning') {
-      return 'deathStiff';
-    }
-    if (cause === 'explosion') {
-      return 'knockback';
-    }
-    if (cause === 'burn') {
-      return 'deathCrumple';
-    }
-    return Math.random() < 0.5 ? 'death' : 'deathCrumple';
-  }
-
   /** Explosive kill: the body bursts into pieces thrown away from the impact point. */
   private blowApart(fromX: number, point: Vec2): void {
     this.pendingImpact = undefined;
-    this.flight = undefined;
+    this.motion.endFlight();
     const facing = fromX >= this.x ? 1 : -1;
     this.fall = undefined;
     this.attackTimerMs = 0;
@@ -847,11 +745,10 @@ export default class Enemy extends Container {
   /** Turns to face the hit (so backwards falls go away from it) and starts a fall animation. */
   private startFall(kind: FallKind, fromX: number, getUpAfterMs?: number, push = 0): void {
     this.pendingImpact = undefined;
-    const facing = fromX >= this.x ? 1 : -1;
-    this.fall = { kind, timeMs: 0, facing, getUpAfterMs, push: kind === 'knockback' && push > 0 ? { total: push, applied: 0 } : undefined };
+    this.fall = startFallState(kind, fromX, this.x, getUpAfterMs, push);
     this.attackTimerMs = 0;
     this.hitStaggerMs = 0;
-    this.body.scale.set(BODY_SCALE.x * facing, BODY_SCALE.y);
+    this.body.scale.set(BODY_SCALE.x * this.fall.facing, BODY_SCALE.y);
     this.drawFall();
   }
 
@@ -861,7 +758,7 @@ export default class Enemy extends Container {
    */
   private get isSettledCorpse(): boolean {
     const { afflictions } = this;
-    if (this.isAlive() || this.flight || afflictions.isBurning || afflictions.isFrozen || afflictions.isChilled || afflictions.inVortex) {
+    if (this.isAlive() || this.motion.isThrown || afflictions.isBurning || afflictions.isFrozen || afflictions.isChilled || afflictions.inVortex) {
       return false;
     }
     if (this.gibs) {
@@ -871,7 +768,7 @@ export default class Enemy extends Container {
   }
 
   private get fallProgress(): number {
-    return this.fall ? Math.min(1, this.fall.timeMs / FALL_DURATION_MS[this.fall.kind]) : 0;
+    return this.fall ? fallProgress(this.fall) : 0;
   }
 
   private drawFall(): void {
@@ -881,29 +778,23 @@ export default class Enemy extends Container {
     }
   }
 
-  /** Advances the fall; a knocked-down survivor gets up and is moved to where it ended up. */
+  /** Advances the fall (sliding away from a blast, along the ground); a knocked-down survivor gets up and is moved to where it ended up. */
   private updateFall(deltaMs: number): void {
     const fall = this.fall;
     if (!fall) {
       return;
     }
-    fall.timeMs += deltaMs;
-    const duration = FALL_DURATION_MS[fall.kind];
+    const step = stepFall(fall, deltaMs);
+    this.fall = step.fall;
     if (fall.push) {
-      // Slide away from the blast (it faced the blast, so away is −facing), following the ground.
-      const target = fall.push.total * pushShare(Math.min(1, fall.timeMs / duration));
-      const step = target - fall.push.applied;
-      fall.push.applied = target;
-      this.x = Math.max(PLAYER_TOWER_X + PUSH_MARGIN, Math.min(WORLD_WIDTH - PUSH_MARGIN, this.x - fall.facing * step));
+      // It faced the blast, so away is −facing.
+      this.x = Math.max(PLAYER_TOWER_X + PUSH_MARGIN, Math.min(WORLD_WIDTH - PUSH_MARGIN, this.x - fall.facing * step.slide));
       this.y = groundAt(this.x);
     }
-    if (fall.kind === 'knockback' && fall.getUpAfterMs !== undefined && fall.timeMs >= duration + fall.getUpAfterMs) {
-      this.fall = { kind: 'getUp', timeMs: 0, facing: fall.facing };
-    } else if (fall.kind === 'getUp' && fall.timeMs >= duration) {
+    if (step.stoodUp) {
       // The get-up ends standing away from where the knockback started; move there for real.
       const endHipX = getFallPose('getUp', 1).hip.x;
       this.x += endHipX * BODY_SCALE.x * fall.facing * this.scale.x;
-      this.fall = undefined;
       this.drawStanding();
       return;
     }
@@ -915,27 +806,8 @@ export default class Enemy extends Container {
     if (this.fall) {
       return getFallPose(this.fall.kind, this.fallProgress);
     }
-    const flailing = this.flight || (this.afflictions.inVortex && this.afflictions.lift > FLAIL_LIFT);
+    const flailing = this.motion.isThrown || (this.afflictions.inVortex && this.afflictions.lift > FLAIL_LIFT);
     return flailing && !this.afflictions.isFrozen ? getFlailPose(this.lookTimeMs) : undefined;
-  }
-
-  /** The current joint pose (falling, flying) and a mapping from its sprite space to world space. */
-  private fallPointsWorld(): { pose: FallPose; toWorld: (point: Vec2) => Vec2 } | undefined {
-    const pose = this.jointPose();
-    if (!pose) {
-      return undefined;
-    }
-    const { body } = this;
-    const cos = Math.cos(body.rotation);
-    const sin = Math.sin(body.rotation);
-    return {
-      pose,
-      toWorld: (point) => {
-        const x = point.x * body.scale.x;
-        const y = point.y * body.scale.y;
-        return { x: this.x + (body.x + x * cos - y * sin) * this.scale.x, y: this.y + (body.y + x * sin + y * cos) * this.scale.y };
-      },
-    };
   }
 
   /** Pins a world point/angle (e.g. an arrow hit) to this enemy's torso. */
@@ -964,33 +836,12 @@ export default class Enemy extends Container {
 
   /** Hip and shoulder of the pose currently drawn, in body-sprite space. */
   private torso(): Torso {
-    if (this.gibs) {
-      // Follow the flying torso piece.
-      const piece = this.gibs.pieces[0];
-      const dir = { x: Math.cos(piece.angle), y: Math.sin(piece.angle) };
-      const hip = { x: piece.x - dir.x * TORSO_TO_NECK / 2, y: piece.y - dir.y * TORSO_TO_NECK / 2 };
-      return { hip, shoulder: { x: hip.x + dir.x * TORSO_TO_SHOULDER, y: hip.y + dir.y * TORSO_TO_SHOULDER } };
-    }
-    const pose = this.jointPose();
-    return pose ? { hip: pose.hip, shoulder: pose.shoulder } : STANDING_TORSO;
-  }
-
-  private static boundsAround(points: Vec2[], padding: number): Bounds {
-    const left = Math.min(...points.map((point) => point.x)) - padding;
-    const right = Math.max(...points.map((point) => point.x)) + padding;
-    const top = Math.min(...points.map((point) => point.y)) - padding;
-    const bottom = Math.max(...points.map((point) => point.y)) + padding;
-    return { x: left, y: top, width: right - left, height: bottom - top, left, right, top, bottom };
+    return torsoOf(this.jointPose(), this.gibs?.pieces[0]);
   }
 
   /** Bar above the head: dark track, fill from green (full) through yellow to red (low). */
   private drawHealthBar(): void {
-    const ratio = Math.max(0, Math.min(1, this.getHealthRatio()));
-    const color = ratio > 0.6 ? 0x6fd36b : ratio > 0.3 ? 0xf2c94c : 0xe5534b;
-    const { width, height } = HEALTH_BAR;
-    this.healthBar.clear()
-      .rect(-width / 2 - 1, -height / 2 - 1, width + 2, height + 2).fill({ color: 0x1b1a20, alpha: 0.85 })
-      .rect(-width / 2, -height / 2, width * ratio, height).fill({ color });
+    drawHealthBar(this.healthBar, this.getHealthRatio(), HEALTH_BAR.width, HEALTH_BAR.height);
   }
 
   /** Keeps the bar above the head, also while knocked down and getting up. */

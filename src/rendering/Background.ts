@@ -40,7 +40,7 @@ export class Background {
     this.right = width + SCENERY_MARGIN;
     const sceneryWidth = this.right - this.left;
     // Everything that touches the ground (drawing, walking, arrows) uses this map's wave height.
-    useTerrain(battleground.terrainAmplitude);
+    useTerrain(battleground.terrainAmplitude, battleground.terrainWaviness);
     container.addChild(new Graphics().rect(this.left, 0, sceneryWidth, GAME_HEIGHT).fill({ color: 0x10233a }));
     container.addChild(this.createSky(battleground));
 

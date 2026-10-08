@@ -47,6 +47,8 @@ export interface Battleground {
   trees: { style: 'round' | 'pine' | 'cactus' | 'snowPine'; colors: readonly [number, number, number]; trunk: number };
   /** Height of the ground waves (default TERRAIN_AMPLITUDE). */
   terrainAmplitude?: number;
+  /** How close together the ground waves come (default 1; more = more, shorter rises and dips). */
+  terrainWaviness?: number;
   /** Strongest wind of this map (px/s² on a normal arrow); each wave rolls one between −wind and +wind. */
   wind?: number;
   ground: { fill: number; edge: number; tufts: number };
@@ -176,7 +178,9 @@ export const BATTLEGROUNDS: Readonly<Record<BattlegroundId, Battleground>> = {
     hillShape: 'mountains',
     trees: { style: 'snowPine', colors: [0x2f4a44, 0x3a5a52, 0x263d38], trunk: 0x4a3b30 },
     ground: { fill: 0x8b9479, edge: 0xeef3f5, tufts: 0xdfe7ea },
-    terrainAmplitude: 16,
+    // A rough mountain pass: high, close-set rises and dips (flat only at the keeps).
+    terrainAmplitude: 26,
+    terrainWaviness: 1.5,
     wind: 150,
     // Gold vanishes against snow, grey-blue rock and the pale sky: vivid crimson outlined in dark navy.
     aimColors: {

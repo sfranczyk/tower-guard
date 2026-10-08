@@ -1,4 +1,5 @@
 import { Container, Graphics } from 'pixi.js';
+import { drawHealthBar } from '../rendering/healthBar';
 import { KEEP_BASE, KEEP_FIRE_SPOT, KEEP_SMOKE_SPOT, KEEP_TURRET, drawKeep, keepHitParts } from '../rendering/keep';
 import { segmentHitTime, type AxisBounds } from '../systems/collision';
 import type { Vec2 } from '../types';
@@ -229,12 +230,7 @@ export default class Tower extends Container {
   }
 
   private drawHealthBar(): void {
-    const ratio = Math.max(0, Math.min(1, this.getHealthRatio()));
-    const color = ratio > 0.6 ? 0x6fd36b : ratio > 0.3 ? 0xf2c94c : 0xe5534b;
-    const { width, height } = HEALTH_BAR;
-    this.healthBar.clear()
-      .rect(-width / 2 - 1, -height / 2 - 1, width + 2, height + 2).fill({ color: 0x1b1a20, alpha: 0.85 })
-      .rect(-width / 2, -height / 2, width * ratio, height).fill({ color });
+    drawHealthBar(this.healthBar, this.getHealthRatio(), HEALTH_BAR.width, HEALTH_BAR.height);
   }
 
   private redraw(): void {

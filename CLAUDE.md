@@ -28,10 +28,13 @@ src/
   types/               shared types: Vec2, Rect, Bounds, enemy/projectile types
   audio/               SoundManager (effects), MusicPlayer (looping theme), audio settings, spatial mix
   core/                Scene base class, SceneManager, GameContext/GameSession, sandboxStorage
-  scenes/              MenuScene, SandboxScene (battle setup), GameScene (one wave), AnimationLabScene
-  systems/             gameplay logic: CombatSystem, EffectsSystem, waveDirector, collision (pure)
+  scenes/              MenuScene, SandboxScene (battle setup), GameScene (one wave; with BattleArrows, BattleCamera,
+                       waveEnd, PlayerControl), AnimationLabScene
+  systems/             gameplay logic: CombatSystem (+ EnemyAI, ArrowHits, ArrowMagic), EffectsSystem, waveDirector,
+                       collision, bodyMotion, bowmanMotion (pure)
   rendering/           stickman renderer (pure drawing), Background, AimOverlay
-  objects/             Pixi display objects with their own state: Bowman, Enemy, Arrow, Tower
+  objects/             Pixi display objects with their own state: Bowman, Enemy (+ EnemyBow, enemyFall, enemyHitShape),
+                       DragonEnemy, Arrow, Tower, AfflictionLayer
   managers/            InputManager (keyboard + drag-to-aim)
   data/                game data: enemy stats, projectiles, sandbox settings, battlegrounds (map themes)
   ui/                  DomUi (HTML overlay), Hud, SandboxForm, SoundLabPanel, icons.ts, template.ts
@@ -102,8 +105,8 @@ src/
   the explosion itself is synthesized (`explosion.mp3`, ffmpeg: low thump, brown-noise blast, crackle, long rumble).
   Storms also have light rain (`rendering/Rain.ts`, screen space, shifts with the camera; `RAIN_*`).
 - **Frostpeak Pass** (weather `snow`): snow-capped mountains with mist (`hillShape: 'mountains'`), snowy pines,
-  snowfall (`rendering/Snow.ts`, `SNOW_*`), bigger ground waves (`terrainAmplitude`; `Background` calls
-  `useTerrain`) and wind: each wave rolls one up to the map's `wind` (px/s²). Wind is part of `FlightParams`
+  snowfall (`rendering/Snow.ts`, `SNOW_*`), higher, closer-set ground waves (`terrainAmplitude` 26,
+  `terrainWaviness` 1.5; `Background` calls `useTerrain`) and wind: each wave rolls one up to the map's `wind` (px/s²). Wind is part of `FlightParams`
   (scaled per projectile like drag), so arrows, the trajectory preview and enemy archer aim all use it;
   the status line shows its direction and strength.
 - **Aim overlay** (`rendering/AimOverlay.ts`): while aiming, circles at the drag start and at the bow (the ones at the
@@ -376,6 +379,17 @@ src/
   The co-op keep (`KeepOptions.twin`, `KeepLook.twin`) has a second, lower tower in place of the right wall
   (`KEEP_TURRET`, same footprint and hit box); `Tower.hideSpot(index)` is where each bowman stands when hiding
   (player 1 in the main tower, player 2 in the lower one).
+- **Combat code layout**: `CombatSystem.update` runs a frame on the host: `EnemyAI` (every living enemy: walk, swing,
+  shoot, detonate, dragons), `ArrowMagic` (fire, frost, vortex), `ArrowHits` (each arrow against enemies, keeps and,
+  with friendly fire, bowmen); CombatSystem itself keeps what reaches beyond one target (explode, detonate, shatter,
+  lightning, burns). Shared shapes in `combatGeometry.ts` (`Foe`, `bowmanBox`, `foeHitBoxes`). `GameScene` hands its
+  arrows to `BattleArrows` (launching, shrapnel, enemy arrows, co-op copies, pruning, the aim preview's path), the view
+  to `BattleCamera`, and the end screen's text to `waveEndInfo` (pure, tested).
+- **Shared body state**: enemies and bowmen have the same `AfflictionLayer` (fire, frost, vortex hold; the bowman's own
+  fire too, with his duration and flame size via `AfflictionOptions`) and the same `BodyMotion` (`systems/bodyMotion.ts`,
+  pure, tested: thrown through the air, landing, the co-op guest's driven copy, the pin). Enemy's archer bow is
+  `EnemyBow`, its falls `enemyFall.ts`, its hit boxes and stuck-arrow torso `enemyHitShape.ts` (all pure, tested);
+  the bowman's walking speed and knockdown are `systems/bowmanMotion.ts`. Health bars: `rendering/healthBar.ts`.
 - **Cleanup and redrawing**: `GameScene.pruneArrows` drops arrows that no longer show (`Arrow.isGone`: gone and no
   trail left; stuck ones stay), and CombatSystem forgets what stuck or gone arrows hit. A corpse at rest
   (`Enemy.isSettledCorpse`: fall done or pieces resting, nothing burning, icy or in a vortex; `DragonEnemy.deathSettled`

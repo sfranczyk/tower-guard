@@ -8,6 +8,13 @@ import type { EnemyType, Vec2 } from '../types';
 
 /** A burn fades out over its last this many ms. */
 const BURN_FADE_MS = 600;
+
+/** A bowman's own fire, unlike an enemy's: how long it burns, and how big and slow to fade its flames are. */
+export interface AfflictionOptions {
+  burnMs?: number;
+  flameSize?: number;
+  burnFadeMs?: number;
+}
 /** Held by a vortex while it's pulled this recently (ms). */
 const VORTEX_HOLD_MS = 120;
 
@@ -45,7 +52,7 @@ export class AfflictionLayer {
   private headwindFactor = 1;
   private headwindMs = 0;
 
-  public constructor(private readonly type: EnemyType) {}
+  public constructor(private readonly type: EnemyType, private readonly options: AfflictionOptions = {}) {}
 
   /** How fast the enemy does everything (0 frozen, FROST_SLOW chilled, 1 normal). */
   public get timeScale(): number {
@@ -102,7 +109,7 @@ export class AfflictionLayer {
   /** Set alight; returns true if it just caught fire. */
   public ignite(): boolean {
     const caught = this.state.burnMs <= 0;
-    this.state = ignite(this.state, this.type);
+    this.state = ignite(this.state, this.type, this.options.burnMs);
     return caught && this.state.burnMs > 0;
   }
 
@@ -182,7 +189,8 @@ export class AfflictionLayer {
       drawFrostGlints(g, points, this.clockMs, size);
     }
     if (this.isBurning) {
-      drawBurning(g, points, this.clockMs, Math.min(1, this.state.burnMs / BURN_FADE_MS), size);
+      const { flameSize = size, burnFadeMs = BURN_FADE_MS } = this.options;
+      drawBurning(g, points, this.clockMs, Math.min(1, this.state.burnMs / burnFadeMs), flameSize);
     }
   }
 

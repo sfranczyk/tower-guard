@@ -1,3 +1,5 @@
+import type { Bounds, Vec2 } from '../types';
+
 export const clamp = (value: number, min: number, max: number): number => Math.max(min, Math.min(max, value));
 
 /** Moves `current` towards `target` by at most `maxDelta`. */
@@ -21,4 +23,13 @@ export const createRandom = (seed: number): (() => number) => {
     t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
+};
+
+/** The box around `points`, grown by `padding` on every side. */
+export const boundsAround = (points: readonly Vec2[], padding: number): Bounds => {
+  const left = Math.min(...points.map((point) => point.x)) - padding;
+  const right = Math.max(...points.map((point) => point.x)) + padding;
+  const top = Math.min(...points.map((point) => point.y)) - padding;
+  const bottom = Math.max(...points.map((point) => point.y)) + padding;
+  return { x: left, y: top, width: right - left, height: bottom - top, left, right, top, bottom };
 };

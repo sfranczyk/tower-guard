@@ -49,6 +49,25 @@ export const spriteToWorld = (point: Vec2, t: BodyTransform): Vec2 => {
   };
 };
 
+/** A body sprite's place in its container: position, rotation and scale (scale.x < 0 = mirrored). */
+export interface SpriteFrame {
+  x: number;
+  y: number;
+  rotation: number;
+  scale: { x: number; y: number };
+}
+
+/** Maps body-sprite points to its container's space (where flames and frost are drawn over the body). */
+export const spriteToContainer = (points: readonly Vec2[], body: SpriteFrame): Vec2[] => {
+  const cos = Math.cos(body.rotation);
+  const sin = Math.sin(body.rotation);
+  return points.map(({ x, y }) => {
+    const scaledX = x * body.scale.x;
+    const scaledY = y * body.scale.y;
+    return { x: body.x + scaledX * cos - scaledY * sin, y: body.y + scaledX * sin + scaledY * cos };
+  });
+};
+
 /** Maps a point from world space to body-sprite space. */
 export const worldToSprite = (point: Vec2, t: BodyTransform): Vec2 => {
   const qx = (point.x - t.x) / t.scale - t.bodyX;

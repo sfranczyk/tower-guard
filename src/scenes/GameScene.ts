@@ -14,25 +14,25 @@ import {
 import type { SoundId } from '../audio/SoundManager';
 import { spatialMix } from '../audio/spatial';
 import { Scene, type GameContext } from '../core/Scene';
-import { LOOK_AIM_MS, LOOK_RETURN_MS, aimLookAhead, easeTowards, nextLookShift } from '../core/camera';
-import { centeredCameraX, viewWidth } from '../core/viewport';
+import { viewWidth } from '../core/viewport';
 import { BATTLEGROUNDS, aimColorsOf, type Battleground } from '../data/battlegrounds';
 import { getEnemyStats } from '../data/enemies';
 import { isFlyingType } from '../data/enemyKinds';
-import { launchSpeed, shrapnelBurst } from '../data/projectiles';
 import { waveEnemyTotal, type WaveSetup } from '../data/sandbox';
-import InputManager, { type AimInput } from '../managers/InputManager';
+import InputManager from '../managers/InputManager';
 import { LocalInput, ManualInput, RecordingInput, type PlayerInput } from '../input/PlayerInput';
 import { leaveCoop } from '../net/coopLink';
 import { GuestSync } from '../net/GuestSync';
-import { HostSync, type ArrowLaunch } from '../net/HostSync';
+import { HostSync } from '../net/HostSync';
 import type { EndInfo, NetMessage } from '../net/protocol';
-import Arrow from '../objects/Arrow';
 import Bowman from '../objects/Bowman';
 import DragonEnemy from '../objects/DragonEnemy';
 import Enemy from '../objects/Enemy';
 import Tower from '../objects/Tower';
 import { secondPlayerArmor } from '../rendering/armor';
+import { BattleArrows } from './BattleArrows';
+import { BattleCamera } from './BattleCamera';
+import { waveEndInfo } from './waveEnd';
 import { PlayerControl, playerStartX, type Player } from './PlayerControl';
 import { AimOverlay } from '../rendering/AimOverlay';
 import { Background } from '../rendering/Background';
@@ -44,16 +44,10 @@ import { groundAt } from '../systems/terrain';
 import { livingBowmen } from '../systems/targeting';
 import { WaveDirector } from '../systems/waveDirector';
 import { firstArrow } from '../data/loadout';
-import { isMagicArrow } from '../systems/ArrowMagic';
-import { simulateTrajectory } from '../systems/ballistics';
 import type { EnemyType, ProjectileType, Vec2 } from '../types';
-import { clamp } from '../utils/math';
 
 const MIN_SHOT_POWER = 0.05;
-/** The camera eases after its target with this time constant (ms). */
-const CAMERA_FOLLOW_MS = 160;
 const DEFAULT_STATUS = 'Drag from the bowman and release to fire';
-const ENEMY_ARROW_TINT = 0xff8f80;
 /** Enemies walk in from just in front of the enemy keep. */
 const ENEMY_SPAWN_X = WORLD_WIDTH - 50;
 
@@ -79,8 +73,6 @@ const windLabel = (wind: number, strongest: number): string => {
   return `wind ${arrows} ${['light', 'moderate', 'strong'][strength - 1]}`;
 };
 
-/** Fragments from a shrapnel burst are drawn at this scale (normal arrows: 0.5). */
-const FRAGMENT_SCALE = 0.32;
 
 /**
  * One wave of a sandbox run: the bowman defends the left keep on the wave's battleground. Clearing
@@ -92,7 +84,8 @@ export class GameScene extends Scene {
   private readonly totalEnemies: number;
   private readonly world = new Container();
   private readonly enemies: Foe[] = [];
-  private readonly arrows: Arrow[] = [];
+  /** Every arrow of the wave. */
+  private readonly shots: BattleArrows;
   private readonly debugGraphics = new Graphics();
   private readonly aimOverlay = new AimOverlay();
   /** Releases the wave's enemies in groups (set up in enter). */
@@ -117,13 +110,7 @@ export class GameScene extends Scene {
   private hostSync?: HostSync;
   private guestSync?: GuestSync;
 
-  private cameraX = 0;
-  /** The camera starts on its target, then follows it smoothly. */
-  private cameraPlaced = false;
-  /** How far (px) the view is slid towards where the local player is aiming (eased towards `lookGoal`). */
-  private lookShift = 0;
-  /** Where aiming has slid the view to: only further out, unless he aims the other way; 0 again once he moves. */
-  private lookGoal = 0;
+  private readonly camera = new BattleCamera();
   /** Where the local player's drawn shot would land (x), while aiming. */
   private aimLandingX?: number;
   private spawnedEnemies = 0;
@@ -145,6 +132,17 @@ export class GameScene extends Scene {
     const strongest = this.battleground.wind ?? 0;
     this.wind = this.role === 'guest' ? ctx.session.net!.wind : Math.round((Math.random() * 2 - 1) * strongest);
     this.totalEnemies = waveEnemyTotal(this.wave.enemies);
+    this.shots = new BattleArrows({
+      world: this.world,
+      textures: ctx.textures,
+      battleground: this.battleground,
+      wind: this.wind,
+      arrowTrails: () => ctx.session.arrowTrails,
+      effects: () => this.effects,
+      playSound: (id, at) => this.playSound(id, at),
+      hostSync: () => this.hostSync,
+      guestSync: () => this.guestSync,
+    });
   }
 
   /** This browser's player. */
@@ -188,7 +186,7 @@ export class GameScene extends Scene {
         playerTower: this.playerTower,
         enemyTower: this.enemyTower,
         enemies: this.enemies,
-        arrows: this.arrows,
+        arrows: this.shots.list,
         effects: this.effects,
         debug: this.debugGraphics,
         wind: this.wind,
@@ -202,7 +200,7 @@ export class GameScene extends Scene {
         },
         headshot: () => this.ctx.ui.setStatus(`Headshot! ×${HEADSHOT_DAMAGE_MULTIPLIER} damage`),
         bowmanIgnited: (bowman) => this.localStatus(this.playerOf(bowman), 'You are on fire! Get out of the flames'),
-        enemyShot: (from, angle, speed, shooter) => this.fireEnemyArrow(from, angle, speed, shooter),
+        enemyShot: (from, angle, speed, shooter) => this.shots.fireEnemy(from, angle, speed, shooter),
         sound: (id, at) => this.playSound(id, at),
       },
     );
@@ -228,7 +226,7 @@ export class GameScene extends Scene {
         // A co-op guest's own bolts are only for show (the host's strikes arrive as effects).
         groundStrike: (point) => (this.gameEnded || this.role === 'guest' ? this.effects.lightningStrike(point) : this.combat.lightningStrike(point)),
         thunder: (at, close) => {
-          const mix = spatialMix(at.x, this.cameraX, viewWidth());
+          const mix = spatialMix(at.x, this.camera.x, viewWidth());
           this.ctx.sound.play('thunder', { ...mix, gain: mix.gain * (close ? 1 : 0.45) });
         },
       });
@@ -247,8 +245,8 @@ export class GameScene extends Scene {
       this.director.update(deltaMs, alive).forEach((type) => this.spawnEnemy(type));
     }
     this.background.update(deltaMs);
-    this.weather?.update(deltaMs, this.cameraX);
-    this.snow?.update(deltaMs, this.cameraX);
+    this.weather?.update(deltaMs, this.camera.x);
+    this.snow?.update(deltaMs, this.camera.x);
     // A co-op guest moves only its own bowman; the host's comes from the host.
     this.players.filter((player) => this.role !== 'guest' || player.local).forEach((player) => this.updatePlayer(player, deltaMs));
     this.playerTower.update(deltaMs);
@@ -256,10 +254,7 @@ export class GameScene extends Scene {
 
     this.debugGraphics.clear();
     this.effects.update(deltaMs);
-    // Fire, frost and vortex arrows leave flames, glints or motes behind them as they fly.
-    this.arrows
-      .filter((arrow) => arrow.isActive && !arrow.isStuck && isMagicArrow(arrow.type))
-      .forEach((arrow) => this.effects.arrowTrail(arrow.type, { x: arrow.x, y: arrow.y }, deltaMs));
+    this.shots.updateTrails(deltaMs);
     this.enemies.forEach((enemy) => {
       enemy.visible = this.enemiesVisible;
     });
@@ -269,7 +264,7 @@ export class GameScene extends Scene {
       this.combat.update(deltaMs, this.enemiesVisible);
     }
 
-    this.pruneArrows();
+    this.shots.prune();
     this.updateAim();
     this.updateHud();
     this.updateCamera(deltaMs);
@@ -309,29 +304,18 @@ export class GameScene extends Scene {
       players: this.players,
       localIndex: this.localIndex,
       enemies: this.enemies,
-      arrows: this.arrows,
+      arrows: this.shots.list,
       effects: this.effects,
       playerTower: this.playerTower,
       enemyTower: this.enemyTower,
       spawnEnemy: (type) => this.spawnEnemy(type),
-      launchArrow: (launch) => this.launchReplicaArrow(launch),
+      launchArrow: (launch) => this.shots.launchReplica(launch),
       playSound: (id, at) => this.playSound(id, at),
       setStatus: (text) => this.ctx.ui.setStatus(text),
       showEnd: (info) => this.showGuestEnd(info),
       restart: (message) => this.restartAsGuest(message),
       backToLobby: () => this.ctx.goTo('coop'),
     }, this.localPlayer.input as RecordingInput);
-  }
-
-  /** Guest: an arrow the host launched (its sound comes as its own event). */
-  private launchReplicaArrow(launch: ArrowLaunch): Arrow {
-    if (launch.hostile) {
-      return this.fireEnemyArrow(launch.from, launch.angle, launch.speed, launch.shooter ?? 'archer', true);
-    }
-    if (launch.type !== 'fragment') {
-      this.arrows.filter((arrow) => arrow.owner === launch.owner).forEach((arrow) => arrow.ageTrail(this.ctx.session.arrowTrails));
-    }
-    return this.launchPlayerArrow(launch.owner, launch.type, launch.from, launch.angle, launch.speed);
   }
 
   /** Guest: the host decides what comes after the wave. */
@@ -397,7 +381,7 @@ export class GameScene extends Scene {
     const { ui } = this.ctx;
     this.localInput = new LocalInput(new InputManager({
       eventTarget: this.ctx.app.canvas,
-      worldPointFromScreen: (point) => ({ x: point.x + this.cameraX, y: point.y }),
+      worldPointFromScreen: (point) => ({ x: point.x + this.camera.x, y: point.y }),
       maxDragDistance: 200,
       screenSize: () => ({ x: viewWidth(), y: GAME_HEIGHT }),
     }));
@@ -474,7 +458,7 @@ export class GameScene extends Scene {
         if (this.guestSync) {
           this.guestSync.queueShot(aim);
         } else {
-          this.fireArrow(player, aim, aim.power);
+          this.shots.fire(player, aim, aim.power);
         }
       }
       bowman.setAim(aim.direction, 0);
@@ -483,7 +467,7 @@ export class GameScene extends Scene {
       if (this.guestSync) {
         this.guestSync.queueBurst();
       } else {
-        this.burstShrapnel(player);
+        this.shots.burstShrapnel(player);
       }
     }
     this.control.update(player, deltaMs);
@@ -502,91 +486,9 @@ export class GameScene extends Scene {
     return enemy;
   }
 
-  private fireArrow(player: Player, aim: AimInput, power: number): void {
-    // Only this player's earlier shots lose their trails.
-    this.arrows.filter((arrow) => arrow.owner === player.index).forEach((arrow) => arrow.ageTrail(this.ctx.session.arrowTrails));
-    const releasePoint = player.bowman.getBowReleasePoint();
-    this.launchPlayerArrow(player.index, player.projectile, releasePoint, Math.atan2(aim.direction.y, aim.direction.x), launchSpeed(player.projectile, power));
-    this.playSound('bowShot', releasePoint);
-  }
-
-  /** A player arrow (with a trail in the battleground's colours) flying from `from`. */
-  private launchPlayerArrow(owner: number, type: ProjectileType, from: Vec2, angle: number, speed: number): Arrow {
-    const trail = new Graphics();
-    trail.zIndex = 1;
-    this.world.addChild(trail);
-    const { trailGlow, trailCore } = aimColorsOf(this.battleground);
-    const arrow = new Arrow(from.x, from.y, this.ctx.textures.arrows[type], trail, { glow: trailGlow, core: trailCore });
-    if (type === 'fragment') {
-      arrow.scale.set(FRAGMENT_SCALE);
-    }
-    arrow.owner = owner;
-    arrow.wind = this.wind;
-    arrow.fire(angle, speed, type);
-    if (this.ctx.session.arrowTrails === 0) {
-      arrow.hideTrail();
-    }
-    this.arrows.push(arrow);
-    this.world.addChild(arrow);
-    this.hostSync?.trackArrow(arrow, { owner, type, from, angle, speed, hostile: false });
-    return arrow;
-  }
-
-  /** Space: every shrapnel arrow of this player still in flight bursts into small arrows fanned around its heading. */
-  private burstShrapnel(player: Player): void {
-    this.arrows
-      .filter((arrow) => arrow.isActive && !arrow.isStuck && !arrow.hostile && arrow.type === 'shrapnel' && arrow.owner === player.index)
-      .forEach((arrow) => {
-        const point = { x: arrow.x, y: arrow.y };
-        const fragments = shrapnelBurst(arrow.velocityVector);
-        arrow.deactivate();
-        fragments.forEach((velocity) => {
-          this.launchPlayerArrow(player.index, 'fragment', point, Math.atan2(velocity.y, velocity.x), Math.hypot(velocity.x, velocity.y));
-        });
-        this.effects.impact(point);
-        this.playSound('shrapnelBurst', point);
-      });
-  }
-
-  /**
-   * Drops the arrows that no longer show (gone, with no trail left): out of the list and the world, destroyed. Arrows
-   * stuck in the ground, the stone or an enemy stay, and so does a gone arrow while its trail still fades.
-   */
-  private pruneArrows(): void {
-    for (let index = this.arrows.length - 1; index >= 0; index -= 1) {
-      const arrow = this.arrows[index];
-      if (arrow.isGone) {
-        this.arrows.splice(index, 1);
-        this.guestSync?.forgetArrow(arrow);
-        arrow.dispose();
-      }
-    }
-  }
-
-  /** An enemy archer's arrow: reddish, hurts the bowman (or the keep while he hides); `silent` for a co-op guest's copy. */
-  private fireEnemyArrow(from: Vec2, angle: number, speed: number, shooter: EnemyType, silent = false): Arrow {
-    const trail = new Graphics();
-    trail.zIndex = 1;
-    this.world.addChild(trail);
-    const arrow = new Arrow(from.x, from.y, this.ctx.textures.arrows.normal, trail);
-    arrow.tint = ENEMY_ARROW_TINT;
-    arrow.wind = this.wind;
-    arrow.fire(angle, speed, 'normal', true);
-    // Enemy arrows fly clean: no trail to keep, so a gone one can be dropped at once.
-    arrow.hideTrail();
-    arrow.shooter = shooter;
-    this.arrows.push(arrow);
-    this.world.addChild(arrow);
-    this.hostSync?.trackArrow(arrow, { owner: -1, type: 'normal', from, angle, speed, hostile: true, shooter });
-    if (!silent) {
-      this.playSound('bowShot', from);
-    }
-    return arrow;
-  }
-
   /** Panned and faded by where it happens relative to the camera (co-op host: the guest hears it too). */
   private playSound(id: SoundId, at: Vec2): void {
-    this.ctx.sound.play(id, spatialMix(at.x, this.cameraX, viewWidth()));
+    this.ctx.sound.play(id, spatialMix(at.x, this.camera.x, viewWidth()));
     this.hostSync?.sound(id, at);
   }
 
@@ -614,22 +516,9 @@ export class GameScene extends Scene {
     const aim = input.getAim();
     const hasAim = aim !== undefined && !bowman.isStunned && !bowman.isDead;
     const releasePoint = bowman.getBowReleasePoint();
-    const path = hasAim && aim.power > MIN_SHOT_POWER ? this.simulateShot(aim, releasePoint, projectile) : [];
+    const path = hasAim && aim.power > MIN_SHOT_POWER ? this.shots.simulate(aim, releasePoint, projectile) : [];
     this.aimLandingX = path.length > 0 ? path[path.length - 1].x : undefined;
     this.aimOverlay.draw(releasePoint, hasAim ? aim : undefined, this.ctx.session.showTrajectory ? path : [], this.ctx.session.showCursorCircle);
-  }
-
-  /** Path the arrow would take if released now (same integrator, gravity and drag as real arrows). */
-  private simulateShot(aim: AimInput, releasePoint: Vec2, projectile: ProjectileType): Vec2[] {
-    const power = aim.power;
-    const speed = launchSpeed(projectile, power);
-    const velocity = { x: aim.direction.x * speed, y: aim.direction.y * speed };
-    return simulateTrajectory(releasePoint, velocity, Arrow.getFlightParams(projectile, this.wind), {
-      // Same surface (and offset) at which flying arrows stick into the ground.
-      groundY: (x) => groundAt(x) - 3,
-      minX: 0,
-      maxX: WORLD_WIDTH,
-    });
   }
 
   private updateHud(): void {
@@ -647,33 +536,17 @@ export class GameScene extends Scene {
     });
   }
 
-  /**
-   * Keeps the local bowman in the middle, but while he aims slides the view towards where the shot would land:
-   * not for a short shot, up to the bowman near the edge for a long one (core/camera.ts). A shorter shot doesn't
-   * bring it back in (aiming the other way does). After the shot the view stays put while he stands and shoots,
-   * and drifts back to him once he moves.
-   * A view wider than the world shows all of it, centred.
-   */
+  /** The camera follows the local bowman and slides towards where he's aiming (BattleCamera). */
   private updateCamera(deltaMs: number): void {
-    const width = viewWidth();
     const { bowman, input } = this.localPlayer;
-    const moving = input.getMovementDirection() !== 0 || Math.abs(bowman.velocityX) > 1;
     const aim = input.getAim();
-    if (this.aimLandingX !== undefined && aim) {
-      // Out for a longer shot, but not back in for a shorter one (unless he turns the other way).
-      this.lookGoal = nextLookShift(this.lookGoal, aimLookAhead(this.aimLandingX - bowman.x, width), aim.direction.x);
-      this.lookShift = easeTowards(this.lookShift, this.lookGoal, deltaMs, LOOK_AIM_MS);
-    } else if (moving) {
-      this.lookGoal = 0;
-      this.lookShift = easeTowards(this.lookShift, 0, deltaMs, LOOK_RETURN_MS);
-    }
-    const target = width >= WORLD_WIDTH
-      ? centeredCameraX(width, WORLD_WIDTH)
-      : clamp(bowman.x + this.lookShift - width / 2, 0, WORLD_WIDTH - width);
-    this.cameraX = this.cameraPlaced ? easeTowards(this.cameraX, target, deltaMs, CAMERA_FOLLOW_MS) : target;
-    this.cameraPlaced = true;
-    const shake = this.effects.cameraShake;
-    this.world.position.set(-this.cameraX + shake.x, shake.y);
+    const position = this.camera.follow(deltaMs, {
+      bowmanX: bowman.x,
+      moving: input.getMovementDirection() !== 0 || Math.abs(bowman.velocityX) > 1,
+      aimDirectionX: aim?.direction.x,
+      aimLandingX: aim ? this.aimLandingX : undefined,
+    }, this.effects.cameraShake);
+    this.world.position.set(position.x, position.y);
   }
 
   private checkEndConditions(): void {
@@ -724,22 +597,18 @@ export class GameScene extends Scene {
 
     const { session, ui } = this.ctx;
     const { run, sandbox } = session;
-    const hasNextWave = won && waveCleared && run.waveIndex + 1 < sandbox.waveCount;
-    const stats = [
-      { label: 'enemies defeated', value: `${this.defeatedEnemies()} / ${this.totalEnemies}` },
-      { label: 'keep', value: `${Math.ceil(this.playerTower.getHealth())} / ${this.playerTower.maxHealth}` },
-      ...this.players.map((player) => ({
-        label: this.coop ? `player ${player.index + 1}` : 'bowman',
-        value: `${Math.ceil(player.health)} / ${sandbox.bowmanHealth}`,
-      })),
-    ];
-    if (hasNextWave) {
-      const info: EndInfo = {
-        title: `Level ${run.waveIndex + 1} cleared!`,
-        outcome: 'win',
-        stats,
-        copy: `Next: level ${run.waveIndex + 2} of ${sandbox.waveCount} at ${BATTLEGROUNDS[sandbox.waves[run.waveIndex + 1].battleground].name}.`,
-      };
+    const { info, next } = waveEndInfo({
+      won,
+      waveCleared,
+      waveIndex: run.waveIndex,
+      defeated: this.defeatedEnemies(),
+      totalEnemies: this.totalEnemies,
+      keep: { health: this.playerTower.getHealth(), max: this.playerTower.maxHealth },
+      enemyKeepDestroyed: this.enemyTower.isDestroyed(),
+      playerKeepDestroyed: this.playerTower.isDestroyed(),
+      playerHealths: this.players.map((player) => player.health),
+    }, sandbox);
+    if (next) {
       this.hostSync?.sendEnd(info);
       ui.showEndScreen({
         ...info,
@@ -756,14 +625,6 @@ export class GameScene extends Scene {
       });
       return;
     }
-    const info: EndInfo = {
-      title: won ? 'Victory!' : 'Defeat',
-      outcome: won ? 'win' : 'loss',
-      stats,
-      copy: won
-        ? (this.enemyTower.isDestroyed() ? 'The enemy keep has fallen.' : sandbox.waveCount === 1 ? 'The level is held off.' : `All ${sandbox.waveCount} levels held off.`)
-        : `${this.playerTower.isDestroyed() ? 'The keep has fallen' : this.coop ? 'Both bowmen have fallen' : 'The bowman has fallen'}. Adjust the sandbox and try again.`,
-    };
     this.hostSync?.sendEnd(info);
     ui.showEndScreen({
       ...info,

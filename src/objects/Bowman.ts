@@ -2,29 +2,21 @@ import { Container, Graphics } from 'pixi.js';
 import type { IPushStrength, Rect, Vec2 } from '../types';
 import { AfflictionLayer, type AfflictionNet } from './AfflictionLayer';
 import { getFlailPose } from '../rendering/stickmanFlail';
-import { stepFlight, type Flight } from '../systems/flight';
+import { BodyMotion } from '../systems/bodyMotion';
+import { knockdownProgress, landedKnockdown, startKnockdown, stepKnockdown, walkSpeed, type Knockdown } from '../systems/bowmanMotion';
+import { spriteToContainer } from '../systems/bodyAnchor';
 import type { JointPose } from '../rendering/stickmanPose';
 import { groundAt } from '../systems/terrain';
 import { approach, clamp } from '../utils/math';
 import { getArcherRig, toArcherLocalAngle } from '../rendering/archer';
 import type { ArmorPalette } from '../rendering/armor';
 import { armoredFallPose } from '../rendering/armoredPose';
-import { STANDING_BURN_POINTS, burnPoints, drawBurning } from '../rendering/burning';
+import { STANDING_BURN_POINTS, burnPoints } from '../rendering/burning';
 import { relight } from '../systems/burning';
 import { drawBowmanBody, drawBowmanFall, type BowmanLook } from '../rendering/bowmanBody';
 import { FALL_DURATION_MS, getFallPose, type FallKind } from '../rendering/stickmanFall';
 import { deathFallFor, type BowmanHit } from '../systems/bowmanDeath';
-import {
-  BOWMAN_KNOCKBACK,
-  GRAVITY,
-  JUMP_BUFFER_MS,
-  JUMP_SPEED,
-  SPRINT_ACCELERATION,
-  SPRINT_DECELERATION,
-  SPRINT_MAX_MULTIPLIER,
-  WALK_ACCELERATION,
-  WALK_DECELERATION,
-} from '../config';
+import { GRAVITY, JUMP_BUFFER_MS, JUMP_SPEED } from '../config';
 
 /** Body sprite baseline (hip height) relative to the bowman's feet, in unscaled units. */
 const BODY_ORIGIN_Y = -55;
@@ -56,14 +48,6 @@ export interface BowmanNet {
   pin?: number;
 }
 
-/** Knocked down by a blast: thrown onto his back (stickmanFall's knockback), lies a moment, gets up. */
-interface Knockdown {
-  kind: 'knockback' | 'getUp';
-  timeMs: number;
-  /** Extra slide away from the blast (px) over the fall, on top of the pose's own throw. */
-  push: number;
-  pushed: number;
-}
 
 export interface BowmanAim {
   direction: Vec2;
@@ -100,24 +84,21 @@ export class Bowman extends Container {
   private readonly boardBounds: Rect;
   private readonly bodyWidth: number;
   private readonly bodySprite: Graphics;
-  /** Flames while burning (container space, over the body). */
-  private readonly flameArt = new Graphics();
-  private burnMs = 0;
-  private burnClockMs = 0;
   private inTower = false;
   private verticalVelocity = 0;
   private horizontalSpeed = 0;
   private jumpBuffer = 0;
   private knockdown?: Knockdown;
-  /** Frost (chilled, frozen) and vortex state from the player's arrows (friendly fire); his burn is burnMs. */
-  public readonly afflictions = new AfflictionLayer('basic');
-  /** Thrown through the air by a vortex, flailing until he lands; then `onLanded` (the host deals the fall). */
-  private flight?: Flight;
-  /** Co-op guest: the flight's position comes from the host (only the tumble is played here). */
-  private flightFromNet = false;
-  public onLanded?: (impactSpeed: number) => void;
-  /** Pinned by the foot to the ground (a pinning arrow): can't walk, jump or hide, still shoots (ms left). */
-  private pinnedMs = 0;
+  /**
+   * His fire (the fire dragon's flames, and with friendly fire the fire arrows: BURN_DURATION_MS, his own flame
+   * size), frost and vortex state, drawn over him.
+   */
+  public readonly afflictions = new AfflictionLayer('basic', { burnMs: relight(), flameSize: BURN_FLAME_SIZE, burnFadeMs: BURN_FADE_MS });
+  /**
+   * Thrown through the air by a vortex, flailing until he lands (then `onLanded`: the host deals the fall); pinned by
+   * the foot to the ground by a pinning arrow (can't walk, jump or hide, still shoots).
+   */
+  private readonly motion = new BodyMotion();
   /** Co-op host: told when he's knocked down or catches fire, to replay it on the guest's screen. */
   public netHooks?: { knockedBack(fromX: number, strength: number): void; ignited(): void };
   private animationTime = 0;
@@ -151,7 +132,7 @@ export class Bowman extends Container {
     this.health = this.maxHealth;
 
     this.bodySprite = new Graphics();
-    this.addChild(this.bodySprite, this.flameArt, this.afflictions.art);
+    this.addChild(this.bodySprite, this.afflictions.art);
 
     this.scale.set(1 / 3);
     this.zIndex = 2;
@@ -180,21 +161,29 @@ export class Bowman extends Container {
 
   /** On fire: takes steady damage until the burn runs out (CombatSystem applies it). */
   public get isBurning(): boolean {
-    return this.burnMs > 0;
+    return this.afflictions.isBurning;
   }
 
   public get burnRemainingMs(): number {
-    return this.burnMs;
+    return this.afflictions.burnMs;
   }
 
-  /** Touched by fire: catches (or keeps) burning for the full BURN_DURATION_MS. Returns true if he just caught fire. */
+  /**
+   * Touched by fire: catches (or keeps) burning for the full BURN_DURATION_MS; it thaws the ice and drives the chill
+   * out. Returns true if he just caught fire.
+   */
   public ignite(): boolean {
     this.netHooks?.ignited();
-    const caught = this.burnMs <= 0;
-    this.burnMs = relight();
-    // Fire thaws the ice and drives the chill out.
-    this.afflictions.warm();
-    return caught;
+    return this.afflictions.ignite();
+  }
+
+  /** Host: told when he lands from a throw, with the speed he hit the ground at (for the fall damage). */
+  public get onLanded(): ((impactSpeed: number) => void) | undefined {
+    return this.motion.onLanded;
+  }
+
+  public set onLanded(callback: ((impactSpeed: number) => void) | undefined) {
+    this.motion.onLanded = callback;
   }
 
   /** Hit by a frost arrow (friendly fire): puts his fire out and chills him; returns true if he just froze solid. */
@@ -202,7 +191,7 @@ export class Bowman extends Container {
     if (this.isDead) {
       return false;
     }
-    this.burnMs = 0;
+    // Frost puts his fire out.
     const froze = this.afflictions.chill(headshot);
     if (froze) {
       this.dropDraw();
@@ -217,16 +206,16 @@ export class Bowman extends Container {
 
   /** Held by a vortex or thrown through the air by one. */
   public get isAloft(): boolean {
-    return this.flight !== undefined || this.afflictions.inVortex;
+    return this.motion.isThrown || this.afflictions.inVortex;
   }
 
   /** Knocked down or thrown through the air (alive); a vortex lets go of him then. */
   public get isDown(): boolean {
-    return !this.isDead && (this.knockdown !== undefined || this.flight !== undefined);
+    return !this.isDead && (this.knockdown !== undefined || this.motion.isThrown);
   }
 
   public get isPinned(): boolean {
-    return !this.isDead && this.pinnedMs > 0;
+    return !this.isDead && this.motion.isPinned;
   }
 
   public isAlive(): boolean {
@@ -236,7 +225,7 @@ export class Bowman extends Container {
   /** Pinned by the foot for `durationMs` (a fresh pin restarts the time); not while up in the air or knocked down. */
   public pin(durationMs: number): void {
     if (!this.isDead && !this.isAloft && !this.knockdown && !this.inTower) {
-      this.pinnedMs = Math.max(this.pinnedMs, durationMs);
+      this.motion.pin(durationMs);
       this.horizontalSpeed = 0;
     }
   }
@@ -252,7 +241,7 @@ export class Bowman extends Container {
    * `levitating` when the vortex arrow hit him (he glows). Meanwhile he can't move, aim or shoot.
    */
   public holdInVortex(x: number, lift: number, lean: number, levitating = false): void {
-    if (this.isDead || this.knockdown || this.flight || this.inTower) {
+    if (this.isDead || this.knockdown || this.motion.isThrown || this.inTower) {
       return;
     }
     this.x = x;
@@ -262,21 +251,21 @@ export class Bowman extends Container {
     this.dropDraw();
     this.horizontalSpeed = 0;
     this.verticalVelocity = 0;
-    this.pinnedMs = 0;
+    this.motion.setPin(0);
   }
 
   /** Thrown through the air at (`vx`, `vy`) px/s, tumbling at `spin` radians/s: he flails and lands on his back. */
   public throwInAir(vx: number, vy: number, spin: number): void {
-    if (this.knockdown || this.flight) {
+    if (this.knockdown || this.motion.isThrown) {
       return;
     }
     const rotation = this.afflictions.inVortex ? this.afflictions.lean : 0;
     this.afflictions.releaseVortex();
-    this.flight = { x: this.x, y: this.y, vx, vy, rotation, spin, timeMs: 0 };
+    this.motion.throw(this.x, this.y, vx, vy, spin, rotation);
     this.dropDraw();
     this.horizontalSpeed = 0;
     this.verticalVelocity = 0;
-    this.pinnedMs = 0;
+    this.motion.setPin(0);
     // Faces against the way he flies, so he falls backwards along it.
     this.facingDirection = vx > 0 ? -1 : 1;
   }
@@ -291,27 +280,24 @@ export class Bowman extends Container {
   /** Co-op host: his frost, vortex, throw and pin for the guest. */
   public getNetState(): BowmanNet {
     const af = this.afflictions.getNetState();
-    const th = this.flight ? { vx: Math.round(this.flight.vx), spin: Math.round(this.flight.spin * 10) / 10 } : undefined;
-    const pin = this.pinnedMs > 0 ? Math.round(this.pinnedMs) : undefined;
+    const th = this.motion.netThrow;
+    const pin = this.motion.isPinned ? Math.round(this.motion.pinnedMs) : undefined;
     return { af, th, pin };
   }
 
   /** Co-op guest: the host's frost, vortex, throw and pin (his position comes with applyRemote / correctTo). */
   public applyNetState(net: BowmanNet): void {
-    if (net.af?.chill || net.af?.frozen) {
-      this.burnMs = 0;
-    }
     const wasFrozen = this.isFrozen;
     this.afflictions.applyNetState(net.af);
     if (net.af?.lift !== undefined || (!wasFrozen && this.isFrozen)) {
       this.dropDraw();
     }
-    this.pinnedMs = net.pin ?? 0;
-    if (net.th && !this.flight && !this.knockdown) {
+    this.motion.setPin(net.pin ?? 0);
+    if (net.th && !this.motion.isThrown && !this.knockdown) {
       this.throwInAir(net.th.vx, 0, net.th.spin);
-      this.flightFromNet = true;
-    } else if (!net.th && this.flight && this.flightFromNet) {
-      this.land(this.flight.vx, 0);
+      this.motion.fromNet = true;
+    } else if (!net.th && this.motion.flight && this.motion.fromNet) {
+      this.land(this.motion.flight.vx, 0);
     }
   }
 
@@ -333,9 +319,7 @@ export class Bowman extends Container {
       }
     }
     this.position.set(state.x, state.y);
-    if (this.flight) {
-      this.flight = { ...this.flight, x: state.x, y: state.y };
-    }
+    this.motion.placeFlight(state.x, state.y);
     this.horizontalSpeed = this.knockdown || this.isAloft ? 0 : state.vx;
     this.verticalVelocity = 0;
     this.setAim({ x: state.ax, y: state.ay }, state.power);
@@ -344,9 +328,7 @@ export class Bowman extends Container {
   /** Co-op guest: the host has this player somewhere else; put him there (prediction went wrong). */
   public correctTo(x: number, y: number): void {
     this.position.set(x, y);
-    if (this.flight) {
-      this.flight = { ...this.flight, x, y };
-    }
+    this.motion.placeFlight(x, y);
     this.verticalVelocity = 0;
   }
 
@@ -369,13 +351,13 @@ export class Bowman extends Container {
     this.netHooks?.knockedBack(fromX, strength);
     // The blast breaks the ice and tears the pin out.
     this.afflictions.warm();
-    this.pinnedMs = 0;
+    this.motion.setPin(0);
     this.facingDirection = fromX >= this.x ? 1 : -1;
     this.aim = { ...this.aim, direction: { x: this.facingDirection, y: 0 }, power: 0 };
     this.bowReady = 0;
     this.horizontalSpeed = 0;
     this.jumpBuffer = 0;
-    this.knockdown = { kind: 'knockback', timeMs: 0, push: BOWMAN_KNOCKBACK.pushMax * clamp(strength, 0, 1), pushed: 0 };
+    this.knockdown = startKnockdown(strength);
     this.redraw();
   }
 
@@ -391,19 +373,8 @@ export class Bowman extends Container {
       return;
     }
 
-    if (clampedDirection !== 0 && deltaSeconds > 0) {
-      // Chilled, he walks at the frost's pace.
-      const targetSpeed = clampedDirection * this.movementSpeed * (sprinting ? SPRINT_MAX_MULTIPLIER : 1) * this.afflictions.timeScale;
-      const acceleration = sprinting ? SPRINT_ACCELERATION : WALK_ACCELERATION;
-      const isReversing = Math.sign(targetSpeed) !== Math.sign(this.horizontalSpeed) && Math.abs(this.horizontalSpeed) > 0;
-      const step = (isReversing ? WALK_DECELERATION : acceleration) * deltaSeconds;
-      this.horizontalSpeed = approach(this.horizontalSpeed, targetSpeed, step);
-    } else if (deltaSeconds > 0) {
-      const deceleration = Math.abs(this.horizontalSpeed) > this.movementSpeed
-        ? SPRINT_DECELERATION
-        : WALK_DECELERATION;
-      this.horizontalSpeed = approach(this.horizontalSpeed, 0, deceleration * deltaSeconds);
-    }
+    // Chilled, he walks at the frost's pace.
+    this.horizontalSpeed = walkSpeed(this.horizontalSpeed, clampedDirection, sprinting, deltaSeconds, this.movementSpeed, this.afflictions.timeScale);
 
     this.x += this.horizontalSpeed * deltaSeconds;
     this.constrainToBoard();
@@ -505,7 +476,7 @@ export class Bowman extends Container {
     this.aim.power = 0;
     this.bowReady = 0;
     this.horizontalSpeed = 0;
-    this.pinnedMs = 0;
+    this.motion.setPin(0);
     // Frozen solid, he topples stiffly (the scene shatters the ice).
     const frozen = this.isFrozen;
     this.afflictions.warm();
@@ -513,7 +484,7 @@ export class Bowman extends Container {
       // Killed in a vortex: he drops out of it and lands lying.
       this.throwInAir(0, 0, 0);
     }
-    if (this.flight) {
+    if (this.motion.isThrown) {
       // Up in the air: he falls, lands on his back and stays there (land).
       return 'knockback';
     }
@@ -546,58 +517,49 @@ export class Bowman extends Container {
   public updateAnimation(deltaMs: number, moving: boolean, sprinting = false): void {
     this.lookTimeMs += deltaMs;
     this.afflictions.tick(deltaMs);
-    this.pinnedMs = Math.max(0, this.pinnedMs - deltaMs);
+    this.motion.tickPin(deltaMs);
     this.zIndex = this.afflictions.levitating ? LEVITATE_Z : this.inTower ? 0 : 2;
-    if (this.flight) {
+    if (this.motion.isThrown) {
       this.updateFlight(deltaMs);
     } else {
       this.updateBody(deltaMs * this.afflictions.timeScale, moving && !this.isPinned, sprinting);
     }
     this.bodySprite.tint = this.afflictions.tint;
-    this.updateBurn(deltaMs);
-    const points = this.bodyBurnPoints();
-    this.afflictions.draw(this.isFlailing ? points : this.toContainer(STANDING_BURN_POINTS), AFFLICTION_SIZE, this.toContainer(STANDING_BURN_POINTS));
+    // On the body as it is now (standing, falling, lying or flailing); the ice block round the standing figure.
+    this.afflictions.draw(this.bodyBurnPoints(), AFFLICTION_SIZE, this.toContainer(STANDING_BURN_POINTS));
   }
 
   /** Thrown by a vortex: falls, tumbles and flails (frozen, as a block of ice) and lands on his back. */
   private updateFlight(deltaMs: number): void {
-    const flight = this.flight!;
+    const { vx } = this.motion.flight!;
     const { x, width } = this.boardBounds;
     const halfWidth = this.bodyWidth / 2;
-    const step = stepFlight(flight, deltaMs, groundAt, x + halfWidth, x + width - halfWidth);
-    if (this.flightFromNet) {
-      // Co-op guest: the host moves him and says when he's down (applyNetState); only the tumble is played here.
-      this.flight = { ...step.flight, x: flight.x, y: flight.y, vy: flight.vy };
-      this.redraw();
-      return;
-    }
-    if (step.landed) {
+    // Co-op guest: the host moves him and says when he's down (applyNetState); only the tumble is played here.
+    const driven = this.motion.fromNet;
+    const step = this.motion.step(deltaMs, x + halfWidth, x + width - halfWidth, driven);
+    if (step.landed && !driven) {
       this.position.set(step.flight.x, step.flight.y);
-      this.land(flight.vx, step.impactSpeed);
+      this.land(vx, step.impactSpeed);
       return;
     }
-    this.flight = step.flight;
-    this.position.set(this.flight.x, this.flight.y);
+    if (!driven) {
+      this.position.set(step.flight.x, step.flight.y);
+    }
     this.redraw();
   }
 
   /** Hits the ground on his back (into the knockback's lying pose); alive, he gets up after a while. Then onLanded. */
   private land(vx: number, impactSpeed: number): void {
-    this.flight = undefined;
-    this.flightFromNet = false;
+    const landed = this.motion.endFlight();
     this.y = groundAt(this.x);
     this.verticalVelocity = 0;
     this.facingDirection = vx > 0 ? -1 : 1;
     if (this.isDead) {
       this.deathFall = { kind: 'knockback', timeMs: FALL_DURATION_MS.knockback * LANDING_PROGRESS };
     } else {
-      this.knockdown = {
-        kind: 'knockback', timeMs: (FALL_DURATION_MS.knockback * LANDING_PROGRESS) / BOWMAN_KNOCKBACK.animationSpeed, push: 0, pushed: 0,
-      };
+      this.knockdown = landedKnockdown(LANDING_PROGRESS);
     }
     this.redraw();
-    const landed = this.onLanded;
-    this.onLanded = undefined;
     landed?.(impactSpeed);
   }
 
@@ -606,7 +568,7 @@ export class Bowman extends Container {
     if (this.isFrozen || this.knockdown || this.deathFall) {
       return false;
     }
-    return this.flight !== undefined || (this.afflictions.inVortex && this.afflictions.lift > FLAIL_LIFT);
+    return this.motion.isThrown || (this.afflictions.inVortex && this.afflictions.lift > FLAIL_LIFT);
   }
 
   private updateBody(deltaMs: number, moving: boolean, sprinting: boolean): void {
@@ -673,17 +635,6 @@ export class Bowman extends Container {
     return Math.atan2(this.aim.direction.y, this.aim.direction.x);
   }
 
-  /** Counts the burn down and draws the flames on the body as it is now (standing, falling or lying). */
-  private updateBurn(deltaMs: number): void {
-    this.flameArt.clear();
-    if (this.burnMs <= 0) {
-      return;
-    }
-    this.burnMs = Math.max(0, this.burnMs - deltaMs);
-    this.burnClockMs += deltaMs;
-    drawBurning(this.flameArt, this.bodyBurnPoints(), this.burnClockMs, Math.min(1, this.burnMs / BURN_FADE_MS), BURN_FLAME_SIZE);
-  }
-
   /** Where the fire burns from, in container space: the fall pose's joints, or the standing figure's (leaning, toppling). */
   private bodyBurnPoints(): Vec2[] {
     const fall = this.currentFallPose();
@@ -692,14 +643,7 @@ export class Bowman extends Container {
 
   /** Body-sprite points in container space (as the body is turned now). */
   private toContainer(points: readonly Vec2[]): Vec2[] {
-    const body = this.bodySprite;
-    const cos = Math.cos(body.rotation);
-    const sin = Math.sin(body.rotation);
-    return points.map(({ x, y }) => {
-      const scaledX = x * body.scale.x;
-      const scaledY = y * body.scale.y;
-      return { x: body.x + scaledX * cos - scaledY * sin, y: body.y + scaledX * sin + scaledY * cos };
-    });
+    return spriteToContainer(points, this.bodySprite);
   }
 
   /** The joint pose he's in: knocked down (and getting up), dying, or flailing in (or out of) a vortex. */
@@ -718,8 +662,7 @@ export class Bowman extends Container {
   }
 
   private get knockdownProgress(): number {
-    const knockdown = this.knockdown;
-    return knockdown ? Math.min(1, (knockdown.timeMs * BOWMAN_KNOCKBACK.animationSpeed) / FALL_DURATION_MS[knockdown.kind]) : 0;
+    return this.knockdown ? knockdownProgress(this.knockdown) : 0;
   }
 
   /**
@@ -727,24 +670,16 @@ export class Bowman extends Container {
    * to where the get-up pose ends. Killed meanwhile, he stays lying on his back.
    */
   private updateKnockdown(deltaMs: number): void {
-    const knockdown = this.knockdown!;
-    knockdown.timeMs += deltaMs;
-    const progress = this.knockdownProgress;
-    if (knockdown.kind === 'knockback') {
-      // Away from the blast is −facing; most of the slide while flying, easing out on landing.
-      const target = knockdown.push * progress * progress * (3 - 2 * progress);
-      this.x -= this.facingDirection * (target - knockdown.pushed);
-      knockdown.pushed = target;
+    const step = stepKnockdown(this.knockdown!, deltaMs, this.deathMs === undefined);
+    this.knockdown = step.knockdown;
+    if (step.slide !== 0) {
+      // Away from the blast is −facing.
+      this.x -= this.facingDirection * step.slide;
       this.constrainToBoard();
-      const lyingMs = knockdown.timeMs - FALL_DURATION_MS.knockback / BOWMAN_KNOCKBACK.animationSpeed;
-      if (lyingMs >= BOWMAN_KNOCKBACK.lieMs && this.deathMs === undefined) {
-        this.knockdown = { ...knockdown, kind: 'getUp', timeMs: 0 };
-      }
-    } else if (progress >= 1) {
+    } else if (step.stoodUp) {
       // The get-up ends standing behind where the fall started; move there for real.
       this.x += getFallPose('getUp', 1).hip.x * this.facingDirection * this.scale.x;
       this.constrainToBoard();
-      this.knockdown = undefined;
       this.animationIdleBlend = 1;
       this.animationRunningBlend = 0;
     }
@@ -776,8 +711,9 @@ export class Bowman extends Container {
   /** Thrown, he tumbles; in a vortex he leans into the pull (and rocks round the funnel), flailing a little. */
   private turnAloft(): void {
     const body = this.bodySprite;
-    if (this.flight) {
-      body.rotation = this.flight.rotation;
+    const { flight } = this.motion;
+    if (flight) {
+      body.rotation = flight.rotation;
     } else if (this.afflictions.inVortex && !this.knockdown && !this.deathFall) {
       body.rotation += this.afflictions.lean + (this.isFlailing ? 0 : Math.sin(this.lookTimeMs / 90) * 0.06);
     }

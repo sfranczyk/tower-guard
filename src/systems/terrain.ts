@@ -25,13 +25,18 @@ const flatness = (x: number): number => {
   return smoothstep((nearestKeep - FLAT_RADIUS) / (BLEND_RADIUS - FLAT_RADIUS));
 };
 
-/** Wave height of the current battleground (set when its Background is built). */
+/** Wave height and how close together the waves come (1 = normal) of the current battleground (set when its Background is built). */
 let amplitude = TERRAIN_AMPLITUDE;
+let waviness = 1;
 
-/** Selects the current battleground's wave height (Background calls this; scenes share one terrain). */
-export const useTerrain = (waveHeight: number = TERRAIN_AMPLITUDE): void => {
+/**
+ * Selects the current battleground's terrain (Background calls this; scenes share one terrain): its wave height, and
+ * its `wavesPer` (more than 1: more, shorter waves on the same stretch).
+ */
+export const useTerrain = (waveHeight: number = TERRAIN_AMPLITUDE, wavesPer = 1): void => {
   amplitude = waveHeight;
+  waviness = wavesPer;
 };
 
 /** Ground surface height (y) at world x. */
-export const groundAt = (x: number): number => GROUND_Y + amplitude * wave(x) * flatness(x);
+export const groundAt = (x: number): number => GROUND_Y + amplitude * wave(x * waviness) * flatness(x);
