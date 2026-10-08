@@ -24,7 +24,7 @@ export interface BattleArrowsDeps {
   readonly world: Container;
   readonly textures: GameTextures;
   readonly battleground: Battleground;
-  /** This wave's wind (px/s² on a normal arrow). */
+  /** This level's wind (px/s² on a normal arrow). */
   readonly wind: number;
   /** How many of the latest shots keep their trail (settings drawer). */
   arrowTrails(): number;
@@ -35,7 +35,7 @@ export interface BattleArrowsDeps {
 }
 
 /**
- * Every arrow of a wave (`list`, which CombatSystem flies and resolves): the players' shots with their trails, the
+ * Every arrow of a level (`list`, which CombatSystem flies and resolves): the players' shots with their trails, the
  * shrapnel bursts, the enemies' arrows, a co-op guest's copies of the host's, and dropping the ones no longer seen.
  */
 export class BattleArrows {

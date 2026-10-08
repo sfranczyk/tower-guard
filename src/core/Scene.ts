@@ -13,7 +13,7 @@ export interface NetLink {
   role: 'host' | 'guest';
   code: string;
   transport: Transport;
-  /** Guest: the wind of the wave the host started (the host rolls it). */
+  /** Guest: the wind of the level the host started (the host rolls it). */
   wind: number;
   /**
    * Each player's quiver, by player index (0 the host, 1 the guest): each picks their own (the host on the battle
@@ -27,18 +27,18 @@ export interface GameTextures {
   arrows: Record<ProjectileType, Texture>;
 }
 
-/** A sandbox run in progress: which wave is next and the health carried between waves. */
+/** A sandbox run in progress: which level is next and the health carried between levels. */
 export interface RunState {
-  waveIndex: number;
+  levelIndex: number;
   /** One per player; a bowman at 0 stays fallen for the rest of the run. */
   bowmanHealths: number[];
   keepHealth: number;
   enemyKeepHealth: number;
 }
 
-/** A fresh run: wave 1, every bowman and both keeps at full health. */
+/** A fresh run: level 1, every bowman and both keeps at full health. */
 export const newRun = (sandbox: SandboxSettings, playerCount: number, enemyKeepHealth: number): RunState => ({
-  waveIndex: 0,
+  levelIndex: 0,
   bowmanHealths: Array.from({ length: playerCount }, () => sandbox.bowmanHealth),
   keepHealth: sandbox.keepHealth,
   enemyKeepHealth,

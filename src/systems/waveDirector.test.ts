@@ -1,38 +1,38 @@
 import { describe, expect, it } from 'vitest';
-import { FIRST_GROUP_SIZE, GROUP_MAX_GAP_MS, GROUP_MIN_GAP_MS, MAX_GROUP_SIZE, WAVE_SPAWN_INTERVAL_MS, WAVE_START_DELAY_MS } from '../config';
-import { WaveDirector, planWaveGroups } from './waveDirector';
+import { FIRST_WAVE_SIZE, WAVE_MAX_GAP_MS, WAVE_MIN_GAP_MS, MAX_WAVE_SIZE, WAVE_SPAWN_INTERVAL_MS, LEVEL_START_DELAY_MS } from '../config';
+import { WaveDirector, planWaves } from './waveDirector';
 
 const last = <T>(items: readonly T[]): T => items[items.length - 1];
 
-const wave = { basic: 6, fast: 4, tank: 3, archer: 3, dragon: 1, fireDragon: 1, kamikaze: 2, zombie: 2 };
+const level = { basic: 6, fast: 4, tank: 3, archer: 3, dragon: 1, fireDragon: 1, kamikaze: 2, zombie: 2 };
 const total = 22;
 
-describe('wave groups', () => {
-  it('splits the wave into growing groups containing every enemy', () => {
-    const groups = planWaveGroups(wave);
-    expect(groups.flat()).toHaveLength(total);
-    expect(groups[0]).toHaveLength(FIRST_GROUP_SIZE);
-    groups.forEach((group) => expect(group.length).toBeLessThanOrEqual(MAX_GROUP_SIZE + 1));
+describe('wave waves', () => {
+  it('splits the wave into growing waves containing every enemy', () => {
+    const waves = planWaves(level);
+    expect(waves.flat()).toHaveLength(total);
+    expect(waves[0]).toHaveLength(FIRST_WAVE_SIZE);
+    waves.forEach((wave) => expect(wave.length).toBeLessThanOrEqual(MAX_WAVE_SIZE + 1));
     (['basic', 'fast', 'tank', 'archer', 'dragon', 'fireDragon', 'kamikaze', 'zombie'] as const).forEach((type) =>
-      expect(groups.flat().filter((t) => t === type)).toHaveLength(wave[type]));
+      expect(waves.flat().filter((t) => t === type)).toHaveLength(level[type]));
   });
 
-  it('opens light: no brutes or dragons in the first group, and they are spread out', () => {
-    const groups = planWaveGroups(wave);
-    expect(groups[0].some((type) => type === 'tank' || type === 'dragon' || type === 'fireDragon')).toBe(false);
-    const tankGroups = new Set(groups.flatMap((group, index) => (group.includes('tank') ? [index] : [])));
-    expect(tankGroups.size).toBeGreaterThan(1);
+  it('opens light: no brutes or dragons in the first wave, and they are spread out', () => {
+    const waves = planWaves(level);
+    expect(waves[0].some((type) => type === 'tank' || type === 'dragon' || type === 'fireDragon')).toBe(false);
+    const tankWaves = new Set(waves.flatMap((wave, index) => (wave.includes('tank') ? [index] : [])));
+    expect(tankWaves.size).toBeGreaterThan(1);
   });
 
-  it('never leaves a lone enemy as the last group', () => {
-    expect(last(planWaveGroups({ basic: 6, fast: 0, tank: 0, archer: 0, dragon: 0, fireDragon: 0, kamikaze: 0, zombie: 0 })).length).toBeGreaterThan(1);
-    expect(planWaveGroups({ basic: 1, fast: 0, tank: 0, archer: 0, dragon: 0, fireDragon: 0, kamikaze: 0, zombie: 0 })).toEqual([['basic']]);
+  it('never leaves a lone enemy as the last wave', () => {
+    expect(last(planWaves({ basic: 6, fast: 0, tank: 0, archer: 0, dragon: 0, fireDragon: 0, kamikaze: 0, zombie: 0 })).length).toBeGreaterThan(1);
+    expect(planWaves({ basic: 1, fast: 0, tank: 0, archer: 0, dragon: 0, fireDragon: 0, kamikaze: 0, zombie: 0 })).toEqual([['basic']]);
   });
 });
 
 describe('wave director', () => {
   const run = (alive: () => number, stepMs = 100, untilMs = 120000) => {
-    const director = new WaveDirector(wave);
+    const director = new WaveDirector(level);
     const spawns: number[] = [];
     for (let time = stepMs; time <= untilMs && !director.finished; time += stepMs) {
       director.update(stepMs, alive()).forEach(() => spawns.push(time));
@@ -40,21 +40,21 @@ describe('wave director', () => {
     return { director, spawns };
   };
 
-  it('starts after the delay and spawns a group with gaps between its enemies', () => {
+  it('starts after the delay and spawns a wave with gaps between its enemies', () => {
     const { spawns } = run(() => 99);
-    expect(spawns[0]).toBe(WAVE_START_DELAY_MS);
+    expect(spawns[0]).toBe(LEVEL_START_DELAY_MS);
     expect(spawns[1] - spawns[0]).toBe(WAVE_SPAWN_INTERVAL_MS);
   });
 
-  it('waits for the field to clear before the next group, but not forever', () => {
-    // Nobody ever dies: groups come every GROUP_MAX_GAP_MS.
+  it('waits for the field to clear before the next wave, but not forever', () => {
+    // Nobody ever dies: waves come every WAVE_MAX_GAP_MS.
     const stubborn = run(() => 99);
     expect(stubborn.director.finished).toBe(true);
     expect(stubborn.spawns).toHaveLength(total);
-    expect(stubborn.spawns[FIRST_GROUP_SIZE] - stubborn.spawns[FIRST_GROUP_SIZE - 1]).toBe(GROUP_MAX_GAP_MS);
-    // Everyone dies at once: groups come after the minimum gap.
+    expect(stubborn.spawns[FIRST_WAVE_SIZE] - stubborn.spawns[FIRST_WAVE_SIZE - 1]).toBe(WAVE_MAX_GAP_MS);
+    // Everyone dies at once: waves come after the minimum gap.
     const quick = run(() => 0);
-    expect(quick.spawns[FIRST_GROUP_SIZE] - quick.spawns[FIRST_GROUP_SIZE - 1]).toBe(GROUP_MIN_GAP_MS);
+    expect(quick.spawns[FIRST_WAVE_SIZE] - quick.spawns[FIRST_WAVE_SIZE - 1]).toBe(WAVE_MIN_GAP_MS);
     expect(last(quick.spawns)).toBeLessThan(last(stubborn.spawns));
   });
 });

@@ -9,7 +9,7 @@ import { partnerLoadout, setPartnerLoadoutListener, shareLoadout } from '../net/
 import { Background } from '../rendering/Background';
 
 /**
- * Sandbox setup: the levels (waves in the code), each with its enemies and battleground, and bowman and keep
+ * Sandbox setup: the levels of a run, each with its enemies and battleground, and bowman and keep
  * health. The form is HTML (DomUi); the canvas behind it shows the battleground of the level being edited.
  */
 export class SandboxScene extends Scene {
@@ -65,7 +65,7 @@ export class SandboxScene extends Scene {
 
   /** Draws the battleground of the level being edited behind the form. */
   private showPreview(settings: SandboxSettings, level = 0): void {
-    const id = settings.waves[Math.min(level, settings.waveCount - 1)].battleground;
+    const id = settings.levels[Math.min(level, settings.levelCount - 1)].battleground;
     if (id === this.previewId) {
       return;
     }

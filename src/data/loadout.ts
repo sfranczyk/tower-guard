@@ -63,6 +63,6 @@ export const clearSlot = (loadout: readonly (ArrowType | null)[], slot: number):
 
 export const arrowCount = (loadout: readonly (ArrowType | null)[]): number => loadout.filter((type) => type !== null).length;
 
-/** The arrow nocked at the start of a wave: the first filled slot. */
+/** The arrow nocked at the start of a level: the first filled slot. */
 export const firstArrow = (loadout: readonly (ArrowType | null)[]): ArrowType =>
   loadout.find((type): type is ArrowType => type !== null) ?? DEFAULT_LOADOUT[0];

@@ -10,13 +10,13 @@ export const ICON_BOWMAN = `<svg class="icon" viewBox="0 0 28 28" aria-hidden="t
   <path d="M8.5 10a5.5 5.5 0 0 1 11 0z" fill="#4a5568"/>
   <path d="M21 4c4 5 4 13 0 18" fill="none" stroke="#8a6238" stroke-width="2" stroke-linecap="round"/></svg>`;
 
-export const ICON_WAVE = `<svg class="icon" viewBox="0 0 28 28" aria-hidden="true">
+export const ICON_LEVEL = `<svg class="icon" viewBox="0 0 28 28" aria-hidden="true">
   <rect x="7" y="4" width="2.5" height="21" rx="1.2" fill="#5a3c23"/><path d="M9.5 5h12l-3 4 3 4h-12z" fill="#d8614f"/></svg>`;
 
 export const ICON_GEAR = `<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path fill="currentColor"
   d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Zm8.4 4.6.1-1.1-.1-1.1 2-1.6-2-3.4-2.4 1a8 8 0 0 0-1.9-1.1L15.7 3h-4l-.4 2.7a8 8 0 0 0-1.9 1.1l-2.4-1-2 3.4 2 1.6L7 12l.1 1.1-2 1.6 2 3.4 2.4-1c.6.5 1.2.8 1.9 1.1l.4 2.8h4l.4-2.8c.7-.3 1.3-.6 1.9-1.1l2.4 1 2-3.4z"/></svg>`;
 
-/** An enemy pip in the wave progress: dark while alive, faded once defeated (via CSS). */
+/** An enemy pip in the level progress: dark while alive, faded once defeated (via CSS). */
 export const ICON_ENEMY_PIP = `<svg viewBox="0 0 14 14" aria-hidden="true"><circle cx="7" cy="6" r="5"/>
   <circle cx="5" cy="6" r="1.2" class="pip-eye"/><circle cx="9" cy="6" r="1.2" class="pip-eye"/><rect x="5" y="10" width="4" height="3" rx="1"/></svg>`;
 

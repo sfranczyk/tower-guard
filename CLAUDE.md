@@ -1,7 +1,7 @@
 # Tower Guard
 
 2D side-view tower defense in the browser. The player is a stickman archer guarding the left keep;
-enemy waves walk in from the enemy keep on the right. PixiJS 8 + TypeScript (strict), bundled with webpack.
+enemy waves walk in from beyond the enemy keep on the right. PixiJS 8 + TypeScript (strict), bundled with webpack.
 
 ## Commands
 
@@ -28,8 +28,8 @@ src/
   types/               shared types: Vec2, Rect, Bounds, enemy/projectile types
   audio/               SoundManager (effects), MusicPlayer (looping theme), audio settings, spatial mix
   core/                Scene base class, SceneManager, GameContext/GameSession, sandboxStorage
-  scenes/              MenuScene, SandboxScene (battle setup), GameScene (one wave; with BattleArrows, BattleCamera,
-                       waveEnd, PlayerControl), AnimationLabScene
+  scenes/              MenuScene, SandboxScene (battle setup), GameScene (one level; with BattleArrows, BattleCamera,
+                       levelEnd, PlayerControl), AnimationLabScene
   systems/             gameplay logic: CombatSystem (+ EnemyAI, ArrowHits, ArrowMagic), EffectsSystem, waveDirector,
                        collision, bodyMotion, bowmanMotion (pure)
   rendering/           stickman renderer (pure drawing), Background, AimOverlay
@@ -43,26 +43,30 @@ src/
 - **Scenes**: extend `Scene` from `core/Scene.ts`. Register window listeners with `listenWindow()`
   and teardown with `onExit()` so cleanup runs automatically. `ctx.goTo('menu' | 'game' | 'animationLab')`
   switches scenes, and `SceneManager` destroys everything under `ctx.root` on each switch.
-- **Sandbox**: Start game opens `SandboxScene`, a form (`ui/SandboxForm.ts`). The UI calls waves *levels* (the
-  code still says wave): level tabs (map thumbnail, enemy count, add/remove, 1–5), the selected level's
+- **Run → Level → Wave** (the names, in the UI and the code alike): a *run* is one game from the battle setup to
+  victory or defeat (`RunState`); it is a row of 1–5 *levels*, each with its own map and enemies (`LevelSetup`); a
+  level's enemies come in *waves*, groups released one after another on the same field (`WaveDirector`). Setups
+  stored before this naming (`waves`, `waveCount`) are still read (`normalizeSandbox`).
+- **Sandbox**: Start game opens `SandboxScene`, a form (`ui/SandboxForm.ts`): level tabs (map thumbnail, enemy count, add/remove, 1–5), the selected level's
   battleground (map cards) and enemies (a card per type with − / +), bowman/keep health in the header; the
   canvas behind shows the selected level's map. A second page, Quiver (`ui/quiverPage.ts`), fills the five weapon
   slots (keys 1–5) with any arrows (click a slot then an arrow, or drag them: `ui/quiverDrag.ts`), each at most once, slots may stay empty (`data/loadout.ts`, pure, tested;
   `SandboxSettings.loadout`); the HUD's slots are built from it (`DomUi.setLoadout`). Settings are pure data
   in `data/sandbox.ts` (`normalizeSandbox` clamps everything) and persist in localStorage via
   `core/sandboxStorage.ts`. `ctx.session.sandbox` holds them, and `ctx.session.run` (`RunState`) the
-  current wave index and health carried between waves. Each `GameScene` plays one wave. A cleared wave
-  offers "Next wave" (health carries over) until the last one, and then Victory. Defeat goes back to setup.
-  The world keeps running after a wave ends (the end screen only overlays it): on defeat the enemies cheer,
+  current level index and health carried between levels. Each `GameScene` plays one level. A cleared level
+  offers "Next level" (health carries over) until the last one, and then Victory. Defeat goes back to setup.
+  The world keeps running after a level ends (the end screen only overlays it): on defeat the enemies cheer,
   and a killed bowman falls like the enemies (`Bowman.die()`): CombatSystem tells what hurt him (`BowmanHit`,
   `bowman.noteHit`) and `deathFallFor` (`systems/bowmanDeath.ts`, pure, tested) picks the fall: clubbed → collapse or
   crumple, shot → stiff fall or crumple, burnt → crumple, lightning → stiff, a blast leaves him lying from the
   knockback; he falls as if hit from where it came (co-op: the `die` event carries the fall). Lab row: `archer-deaths`.
-  Within a wave enemies arrive in groups (`systems/waveDirector.ts`, pure, tested; no visible "waves" in the
-  UI): `planWaveGroups` spreads each type through the wave (tougher types later, so the first group of
-  `FIRST_GROUP_SIZE` is light) in groups growing to `MAX_GROUP_SIZE`; `WaveDirector.update` (called every frame,
-  so it pauses with the game) releases the next group once at most `GROUP_RELEASE_ALIVE` enemies stand and
-  `GROUP_MIN_GAP_MS` passed, or after `GROUP_MAX_GAP_MS` regardless.
+  Within a level enemies arrive in waves (`systems/waveDirector.ts`, pure, tested; not shown in the UI yet):
+  `planWaves` spreads each type through the level (tougher types later, by their `arrival`, so the first wave of
+  `FIRST_WAVE_SIZE` is light) in waves growing to `MAX_WAVE_SIZE`; `WaveDirector.update` (called every frame, so it
+  pauses with the game) releases the first after `LEVEL_START_DELAY_MS`, a wave's enemies `WAVE_SPAWN_INTERVAL_MS`
+  apart, and the next wave once at most `WAVE_RELEASE_ALIVE` enemies stand and `WAVE_MIN_GAP_MS` passed, or after
+  `WAVE_MAX_GAP_MS` regardless.
 - **Co-op online** (branch `coop`): two bowmen, host-authoritative over PeerJS (`peerjs`, its free public broker
   only to find each other; `?net=local` links two tabs with a BroadcastChannel instead). Menu → "Co-op online" →
   `CoopScene` (lobby, `ui/CoopPanel.ts`): host a room (5-character code, `net/roomCode.ts`) or join one. The host
@@ -72,7 +76,7 @@ src/
   change; `net/coopLink.ts` takes these messages out of the transport so they arrive in any scene) and sees the other's
   (`partnerQuiver`: the host in the lobby and on the Quiver page, the guest under their own); `NetLink.loadouts` holds both
   by player and `loadoutOf(session, index)` is what each fights with (HUD slots, keys, the host checks the guest's picks). `ctx.session.net`
-  (`NetLink`: role, code, `Transport`, the wave's wind, both quivers) and `playerCount` 2; `net/coopLink.ts` links up and handles
+  (`NetLink`: role, code, `Transport`, the level's wind, both quivers) and `playerCount` 2; `net/coopLink.ts` links up and handles
   a dropped link (guest back to the lobby with a notice; host plays on, player 2 stands still); Esc in a co-op
   battle leaves the room.
   - Players: `GameScene.players`, one `Player` per bowman (`scenes/PlayerControl.ts`: bowman, `PlayerInput`,
@@ -84,14 +88,14 @@ src/
   - Host (`net/HostSync.ts`): ids for enemies and arrows, `netHooks` on Enemy/DragonEnemy (hits, swings), Arrow
     (stuck, gone), Bowman (knockdown, fire) and `EffectsSystem.onEffect`; sounds, deaths, cheers and per-player
     status lines as events; a `frame` (snapshot + events, `net/protocol.ts`) every 50 ms; `start` / `end` /
-    `lobby` messages around waves. The guest's `input` drives player 2.
-  - Guest (`net/GuestSync.ts`): no wave, AI or CombatSystem; applies events in order with the same objects (same
+    `lobby` messages around levels. The guest's `input` drives player 2.
+  - Guest (`net/GuestSync.ts`): no WaveDirector, AI or CombatSystem; applies events in order with the same objects (same
     takeDamage, so the same reactions), shows snapshots 100 ms in the past, interpolated (`applyNetState`,
     `applyRemote`), flies arrows locally (same ballistics, sticks into the ground itself), predicts its own bowman
     and corrects him when the host disagrees, and sends its controls every 33 ms (shots are loosed by the host).
   - Gameplay: enemies go for the nearest bowman out in the open, else the keep (`systems/targeting.ts`, pure);
     `CombatWorld.bowmen`, damage events name the bowman. Health is per player (`RunState.bowmanHealths`), a
-    fallen bowman stays down for the run (`Bowman.die({}, true)`), the wave is lost when all have fallen or the keep
+    fallen bowman stays down for the run (`Bowman.die({}, true)`), the level is lost when all have fallen or the keep
     falls. Player 2 wears `secondPlayerArmor` (bronze, silver trim) and hides in the keep's lower second tower.
   - Not yet: a local preview of the guest's own arrows (they appear after a round trip), the guest's lightning
     bolts are its own (only the host's strikes hurt; their sparks arrive as effects), no reconnecting, and a
@@ -111,7 +115,7 @@ src/
   Storms also have light rain (`rendering/Rain.ts`, screen space, shifts with the camera; `RAIN_*`).
 - **Frostpeak Pass** (weather `snow`): snow-capped mountains with mist (`hillShape: 'mountains'`), snowy pines,
   snowfall (`rendering/Snow.ts`, `SNOW_*`), higher, closer-set ground waves (`terrainAmplitude` 26,
-  `terrainWaviness` 1.5; `Background` calls `useTerrain`) and wind: each wave rolls one up to the map's `wind` (px/s²). Wind is part of `FlightParams`
+  `terrainWaviness` 1.5; `Background` calls `useTerrain`) and wind: each level rolls one up to the map's `wind` (px/s²). Wind is part of `FlightParams`
   (scaled per projectile like drag), so arrows, the trajectory preview and enemy archer aim all use it;
   the status line shows its direction and strength.
 - **Aim overlay** (`rendering/AimOverlay.ts`): while aiming, circles at the drag start and at the bow (the ones at the
@@ -131,7 +135,7 @@ src/
   chunky gold/cream buttons (`primary-button`, `secondary-button`), the Fredoka display font, flat SVG icons
   (`ui/icons.ts`) and health bars in the HUD (`ui/Hud.ts`). Weapons are square slots (`LOADOUT_SLOTS` = 5, from the quiver,
   `weaponSlots` in `ui/template.ts`): icon only (name in the tooltip), key in the corner, ammo count underneath (∞ for now). The sandbox form shows enemy type icons in its columns and picks
-  each wave's map from thumbnails (`ui/mapThumbnail.ts`, a tiny SVG landscape built from the palette). The page backdrop and accent follow the map:
+  each level's map from thumbnails (`ui/mapThumbnail.ts`, a tiny SVG landscape built from the palette). The page backdrop and accent follow the map:
   each battleground has `ui: { accent, backdrop }` and scenes call `DomUi.setTheme`. The menu is drawn over
   a live battlefield (`MenuScene`), with the labs under "Dev tools"; the settings drawer works in the menu
   and in game (its handlers live in `SceneManager`). Trajectory preview (off by default) and arrow trails (how
@@ -174,7 +178,7 @@ src/
   `kamikaze`, `grabber`, `skyArcher`, `fireBreather`; `ARCHETYPES` says whether it carries a club, runs, shoots,
   detonates, flies, breathes fire), a **race** (`human`, `goblin`, `ogre`, `undead`, `dragon`; `RACES` give the
   traits: heavy = no vortex catches it, freeze and pin durations, burn factor), **magical** (dragons), plus its stats,
-  damage, keep damage, build (size, strike reach) and wave `arrival`. Gameplay code asks `enemyArchetype(type)` and
+  damage, keep damage, build (size, strike reach) and `arrival` (where in a level it starts to come). Gameplay code asks `enemyArchetype(type)` and
   `enemyTraits(type)` (race traits with the variant's overrides), never the id; looks stay per variant
   (`rendering/enemyBody.ts`, `ICON_ENEMIES`). A new variant (an orc kamikaze) is one entry here plus its look and icon.
   Now: fighter, archer, kamikaze = human; runner = goblin; brute = ogre; zombie = undead; both dragons = dragon.
@@ -395,7 +399,7 @@ src/
   with friendly fire, bowmen); CombatSystem itself keeps what reaches beyond one target (explode, detonate, shatter,
   lightning, burns). Shared shapes in `combatGeometry.ts` (`Foe`, `bowmanBox`, `foeHitBoxes`). `GameScene` hands its
   arrows to `BattleArrows` (launching, shrapnel, enemy arrows, co-op copies, pruning, the aim preview's path), the view
-  to `BattleCamera`, and the end screen's text to `waveEndInfo` (pure, tested).
+  to `BattleCamera`, and the end screen's text to `levelEndInfo` (pure, tested).
 - **Shared body state**: enemies and bowmen have the same `AfflictionLayer` (fire, frost, vortex hold; the bowman's own
   fire too, with his duration and flame size via `AfflictionOptions`) and the same `BodyMotion` (`systems/bodyMotion.ts`,
   pure, tested: thrown through the air, landing, the co-op guest's driven copy, the pin). Enemy's archer bow is

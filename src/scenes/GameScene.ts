@@ -18,7 +18,7 @@ import { viewWidth } from '../core/viewport';
 import { BATTLEGROUNDS, aimColorsOf, type Battleground } from '../data/battlegrounds';
 import { getEnemyStats } from '../data/enemies';
 import { isFlyingType } from '../data/enemyKinds';
-import { waveEnemyTotal, type WaveSetup } from '../data/sandbox';
+import { levelEnemyTotal, type LevelSetup } from '../data/sandbox';
 import InputManager from '../managers/InputManager';
 import { LocalInput, ManualInput, RecordingInput, type PlayerInput } from '../input/PlayerInput';
 import { leaveCoop, loadoutOf } from '../net/coopLink';
@@ -32,7 +32,7 @@ import Tower from '../objects/Tower';
 import { secondPlayerArmor } from '../rendering/armor';
 import { BattleArrows } from './BattleArrows';
 import { BattleCamera } from './BattleCamera';
-import { waveEndInfo } from './waveEnd';
+import { levelEndInfo } from './levelEnd';
 import { PlayerControl, playerStartX, type Player } from './PlayerControl';
 import { AimOverlay } from '../rendering/AimOverlay';
 import { Background } from '../rendering/Background';
@@ -75,20 +75,20 @@ const windLabel = (wind: number, strongest: number): string => {
 
 
 /**
- * One wave of a sandbox run: the bowman defends the left keep on the wave's battleground. Clearing
- * the wave moves on to the next one (health carries over); destroying the enemy keep wins the run.
+ * One level of a sandbox run: the bowman defends the left keep on the level's battleground. Clearing
+ * the level moves on to the next one (health carries over); destroying the enemy keep wins the run.
  */
 export class GameScene extends Scene {
-  private readonly wave: WaveSetup;
+  private readonly level: LevelSetup;
   private readonly battleground: Battleground;
   private readonly totalEnemies: number;
   private readonly world = new Container();
   private readonly enemies: Foe[] = [];
-  /** Every arrow of the wave. */
+  /** Every arrow of the level. */
   private readonly shots: BattleArrows;
   private readonly debugGraphics = new Graphics();
   private readonly aimOverlay = new AimOverlay();
-  /** Releases the wave's enemies in groups (set up in enter). */
+  /** Releases the level's enemies in waves (set up in enter). */
   private director?: WaveDirector;
   private background!: Background;
   private effects!: EffectsSystem;
@@ -96,7 +96,7 @@ export class GameScene extends Scene {
   /** Storm battlegrounds only: lightning. */
   private weather?: WeatherSystem;
   private snow?: Snow;
-  /** This wave's wind (px/s² on a normal arrow), rolled from the battleground's strongest wind. */
+  /** This level's wind (px/s² on a normal arrow), rolled from the battleground's strongest wind. */
   private readonly wind: number;
   private playerTower!: Tower;
   private enemyTower!: Tower;
@@ -124,14 +124,14 @@ export class GameScene extends Scene {
   public constructor(ctx: GameContext) {
     super(ctx);
     const { sandbox, run } = ctx.session;
-    this.wave = sandbox.waves[run.waveIndex];
-    this.battleground = BATTLEGROUNDS[this.wave.battleground];
+    this.level = sandbox.levels[run.levelIndex];
+    this.battleground = BATTLEGROUNDS[this.level.battleground];
     this.role = ctx.session.net?.role ?? 'solo';
     this.localIndex = this.role === 'guest' ? 1 : 0;
-    // Windy maps roll a fresh wind for every wave (direction and strength); a co-op guest takes the host's.
+    // Windy maps roll a fresh wind for every level (direction and strength); a co-op guest takes the host's.
     const strongest = this.battleground.wind ?? 0;
     this.wind = this.role === 'guest' ? ctx.session.net!.wind : Math.round((Math.random() * 2 - 1) * strongest);
-    this.totalEnemies = waveEnemyTotal(this.wave.enemies);
+    this.totalEnemies = levelEnemyTotal(this.level.enemies);
     this.shots = new BattleArrows({
       world: this.world,
       textures: ctx.textures,
@@ -214,13 +214,13 @@ export class GameScene extends Scene {
     ui.setStatus(DEFAULT_STATUS);
     ui.setTheme(this.battleground.ui);
     this.bindInput();
-    // A co-op guest runs no wave of its own: the host's enemies arrive as events.
+    // A co-op guest runs no level of its own: the host's enemies arrive as events.
     if (this.role !== 'guest') {
-      this.director = new WaveDirector(this.wave.enemies);
+      this.director = new WaveDirector(this.level.enemies);
     }
     this.startSync();
     if (SHOW_HITBOX_DEBUG) {
-      // Debug console hook (?debug): window.__towerGuard.scene gives access to the running wave.
+      // Debug console hook (?debug): window.__towerGuard.scene gives access to the running level.
       (window as unknown as { __towerGuard?: unknown }).__towerGuard = { scene: this };
       this.onExit(() => {
         delete (window as unknown as { __towerGuard?: unknown }).__towerGuard;
@@ -228,7 +228,7 @@ export class GameScene extends Scene {
     }
     if (this.battleground.weather === 'storm') {
       this.weather = new WeatherSystem(this.world, this.ctx.root, this.background, {
-        // After the wave is decided lightning still flashes but no longer hurts anyone.
+        // After the level is decided lightning still flashes but no longer hurts anyone.
         // A co-op guest's own bolts are only for show (the host's strikes arrive as effects).
         groundStrike: (point) => (this.gameEnded || this.role === 'guest' ? this.effects.lightningStrike(point) : this.combat.lightningStrike(point)),
         thunder: (at, close) => {
@@ -241,10 +241,10 @@ export class GameScene extends Scene {
       this.snow = new Snow(this.ctx.root, this.wind * SNOW_WIND_DRIFT);
     }
     const hint = this.battleground.weather === 'storm' ? 'beware of lightning' : this.wind !== 0 ? windLabel(this.wind, this.battleground.wind ?? 0) : 'defend your keep';
-    ui.setStatus(`Level ${run.waveIndex + 1} of ${sandbox.waveCount} · ${this.battleground.name} · ${hint}`);
+    ui.setStatus(`Level ${run.levelIndex + 1} of ${sandbox.levelCount} · ${this.battleground.name} · ${hint}`);
   }
 
-  /** The world keeps running after the wave ends; the end screen just overlays it. */
+  /** The world keeps running after the level ends; the end screen just overlays it. */
   public update(deltaMs: number): void {
     if (!this.gameEnded && this.director) {
       const alive = this.enemies.filter((enemy) => enemy.isAlive()).length;
@@ -278,7 +278,7 @@ export class GameScene extends Scene {
       this.checkEndConditions();
     }
     this.hostSync?.update(deltaMs);
-    // The guest left mid-wave: player 2 stands still from now on.
+    // The guest left mid-level: player 2 stands still from now on.
     if (this.hostSync && !this.ctx.session.net) {
       this.hostSync = undefined;
       (this.players[1]?.input as ManualInput | undefined)?.set({ direction: 0, sprint: false, aim: undefined });
@@ -286,7 +286,7 @@ export class GameScene extends Scene {
   }
 
   /**
-   * Co-op online. The host tells the guest the wave's setup and then streams it (HostSync), with the guest's
+   * Co-op online. The host tells the guest the level's setup and then streams it (HostSync), with the guest's
    * controls driving player 2. The guest builds the same battlefield and replays the host's (GuestSync).
    */
   private startSync(): void {
@@ -324,14 +324,14 @@ export class GameScene extends Scene {
     }, this.localPlayer.input as RecordingInput);
   }
 
-  /** Guest: the host decides what comes after the wave. */
+  /** Guest: the host decides what comes after the level. */
   private showGuestEnd(info: EndInfo): void {
     this.gameEnded = true;
     this.destroyInput();
     this.ctx.ui.showEndScreen({ ...info, buttonLabel: 'Waiting for the host…', onButton: () => {} });
   }
 
-  /** Guest: the host started the next wave (or a new battle). */
+  /** Guest: the host started the next level (or a new battle). */
   private restartAsGuest(message: Extract<NetMessage, { t: 'start' }>): void {
     const { session } = this.ctx;
     session.sandbox = message.sandbox;
@@ -349,7 +349,7 @@ export class GameScene extends Scene {
 
   /**
    * The bowmen: this browser's player first (keyboard and mouse), in co-op a second one in bronze armor whose
-   * controls are set from outside (ManualInput; the console for now). A bowman who fell in an earlier wave
+   * controls are set from outside (ManualInput; the console for now). A bowman who fell in an earlier level
    * starts lying where he fell.
    */
   private createPlayers(): void {
@@ -430,7 +430,7 @@ export class GameScene extends Scene {
     });
   }
 
-  /** Stops reading this browser's keyboard and mouse (the wave ended); the local player stands still. */
+  /** Stops reading this browser's keyboard and mouse (the level ended); the local player stands still. */
   private destroyInput(): void {
     this.localInput?.destroy();
     this.localInput = undefined;
@@ -539,8 +539,8 @@ export class GameScene extends Scene {
       partnerHealth: this.coop ? this.players[1].health : undefined,
       defeatedEnemies: this.defeatedEnemies(),
       totalEnemies: this.totalEnemies,
-      wave: this.ctx.session.run.waveIndex + 1,
-      waveCount: this.ctx.session.sandbox.waveCount,
+      level: this.ctx.session.run.levelIndex + 1,
+      levelCount: this.ctx.session.sandbox.levelCount,
     });
   }
 
@@ -558,7 +558,7 @@ export class GameScene extends Scene {
   }
 
   private checkEndConditions(): void {
-    // A bowman at 0 falls (for the rest of the run); the wave is lost once all of them have, or the keep.
+    // A bowman at 0 falls (for the rest of the run); the level is lost once all of them have, or the keep.
     this.players.filter((player) => player.health <= 0 && !player.bowman.isDead).forEach((fallen) => {
       // He falls the way what killed him decides; the guest plays the same fall. Frozen, his ice shatters.
       if (fallen.bowman.isFrozen) {
@@ -591,10 +591,10 @@ export class GameScene extends Scene {
   }
 
   /**
-   * Ends this wave. A cleared wave with waves left offers the next one (health carries over);
-   * otherwise it's the end of the run: victory (all waves or the enemy keep) or defeat.
+   * Ends this level. A cleared level with levels left offers the next one (health carries over);
+   * otherwise it's the end of the run: victory (all levels or the enemy keep) or defeat.
    */
-  private endGame(won: boolean, waveCleared = false): void {
+  private endGame(won: boolean, levelCleared = false): void {
     this.gameEnded = true;
     this.destroyInput();
     this.director = undefined;
@@ -605,10 +605,10 @@ export class GameScene extends Scene {
 
     const { session, ui } = this.ctx;
     const { run, sandbox } = session;
-    const { info, next } = waveEndInfo({
+    const { info, next } = levelEndInfo({
       won,
-      waveCleared,
-      waveIndex: run.waveIndex,
+      levelCleared,
+      levelIndex: run.levelIndex,
       defeated: this.defeatedEnemies(),
       totalEnemies: this.totalEnemies,
       keep: { health: this.playerTower.getHealth(), max: this.playerTower.maxHealth },
@@ -623,7 +623,7 @@ export class GameScene extends Scene {
         buttonLabel: 'Next level',
         onButton: this.endAction = () => {
           session.run = {
-            waveIndex: run.waveIndex + 1,
+            levelIndex: run.levelIndex + 1,
             bowmanHealths: this.players.map((player) => player.health),
             keepHealth: this.playerTower.getHealth(),
             enemyKeepHealth: this.enemyTower.getHealth(),

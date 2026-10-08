@@ -4,11 +4,11 @@ import {
   ENEMY_TYPE_LABELS,
   HEALTH_LIMITS,
   MAX_ENEMIES_PER_TYPE,
-  MAX_WAVES,
-  MIN_WAVES,
-  waveEnemyTotal,
+  MAX_LEVELS,
+  MIN_LEVELS,
+  levelEnemyTotal,
   type SandboxSettings,
-  type WaveSetup,
+  type LevelSetup,
 } from '../data/sandbox';
 import type { EnemyType } from '../types';
 import { ICON_BOWMAN, ICON_ENEMIES, ICON_KEEP } from './icons';
@@ -34,7 +34,7 @@ export interface SandboxFormCallbacks {
  * The sandbox setup form, in two pages. Levels: the run is a row of levels (tabs, each with its map and enemy
  * count, plus add and remove); below, the selected level's battleground (map cards) and enemies (a card per type
  * with − / +). Quiver: which arrow goes in each weapon slot (`quiverPage`). Bowman and keep health sit in the
- * header. In the code a level is still a "wave" (SandboxSettings.waves).
+ * header (SandboxSettings.levels; a level's enemies then come in waves, systems/waveDirector).
  */
 export class SandboxForm {
   private settings?: SandboxSettings;
@@ -77,7 +77,7 @@ export class SandboxForm {
 
   public render(settings: SandboxSettings): void {
     this.settings = settings;
-    this.selected = Math.min(this.selected, settings.waveCount - 1);
+    this.selected = Math.min(this.selected, settings.levelCount - 1);
     const numberInput = (attribute: string, value: number, limits: { min: number; max: number; step: number }): string =>
       `<input type="number" ${attribute} value="${value}" min="${limits.min}" max="${limits.max}" step="${limits.step}">`;
 
@@ -100,33 +100,33 @@ export class SandboxForm {
   }
 
   private levelsPage(settings: SandboxSettings): string {
-    const level = settings.waves[this.selected];
+    const level = settings.levels[this.selected];
     return `
       <div class="level-tabs" role="tablist" aria-label="Levels">
-        ${settings.waves.slice(0, settings.waveCount).map((wave, index) => this.levelTab(wave, index)).join('')}
-        ${settings.waveCount < MAX_WAVES ? '<button type="button" class="level-add" data-level-add>+ Add level</button>' : ''}
+        ${settings.levels.slice(0, settings.levelCount).map((level, index) => this.levelTab(level, index)).join('')}
+        ${settings.levelCount < MAX_LEVELS ? '<button type="button" class="level-add" data-level-add>+ Add level</button>' : ''}
       </div>
       <div class="level-editor">
         <div class="level-editor-head">
           <div class="sandbox-section-label">Level ${this.selected + 1} · Battleground</div>
-          ${settings.waveCount > MIN_WAVES ? '<button type="button" class="level-remove" data-level-remove>Remove level</button>' : ''}
+          ${settings.levelCount > MIN_LEVELS ? '<button type="button" class="level-remove" data-level-remove>Remove level</button>' : ''}
         </div>
         <div class="map-cards">
           ${BATTLEGROUND_IDS.map((id) => `<button type="button" class="map-card${id === level.battleground ? ' active' : ''}" data-map="${id}" aria-pressed="${id === level.battleground}">
             ${mapThumbnail(BATTLEGROUNDS[id])}<span>${BATTLEGROUNDS[id].name}</span></button>`).join('')}
         </div>
-        <div class="sandbox-section-label">Enemies <span data-level-total>${waveEnemyTotal(level.enemies)}</span></div>
+        <div class="sandbox-section-label">Enemies <span data-level-total>${levelEnemyTotal(level.enemies)}</span></div>
         <div class="enemy-cards">
           ${ENEMY_TYPES.map((type) => this.enemyCard(type, level.enemies[type])).join('')}
         </div>
       </div>`;
   }
 
-  private levelTab(wave: WaveSetup, index: number): string {
+  private levelTab(level: LevelSetup, index: number): string {
     const active = index === this.selected;
-    const total = waveEnemyTotal(wave.enemies);
-    return `<button type="button" class="level-tab${active ? ' active' : ''}" role="tab" aria-selected="${active}" data-level="${index}" title="${BATTLEGROUNDS[wave.battleground].name}">
-      ${mapThumbnail(BATTLEGROUNDS[wave.battleground])}
+    const total = levelEnemyTotal(level.enemies);
+    return `<button type="button" class="level-tab${active ? ' active' : ''}" role="tab" aria-selected="${active}" data-level="${index}" title="${BATTLEGROUNDS[level.battleground].name}">
+      ${mapThumbnail(BATTLEGROUNDS[level.battleground])}
       <span class="level-tab-text"><strong>Level ${index + 1}</strong><small data-tab-total="${index}">${total} ${total === 1 ? 'enemy' : 'enemies'}</small></span>
     </button>`;
   }
@@ -160,20 +160,20 @@ export class SandboxForm {
       this.selected = Number(tab.dataset.level);
       this.render(settings);
       this.emit();
-    } else if (target.closest('[data-level-add]') && settings.waveCount < MAX_WAVES) {
+    } else if (target.closest('[data-level-add]') && settings.levelCount < MAX_LEVELS) {
       // The new level is the next stored one (it keeps whatever it was last set up with).
-      this.update({ ...settings, waveCount: settings.waveCount + 1 }, settings.waveCount);
-    } else if (target.closest('[data-level-remove]') && settings.waveCount > MIN_WAVES) {
+      this.update({ ...settings, levelCount: settings.levelCount + 1 }, settings.levelCount);
+    } else if (target.closest('[data-level-remove]') && settings.levelCount > MIN_LEVELS) {
       // Later levels move up; the removed one goes to the end, out of the run.
-      const waves = [...settings.waves];
-      const [removed] = waves.splice(this.selected, 1);
-      waves.push(removed);
-      this.update({ ...settings, waves, waveCount: settings.waveCount - 1 }, Math.max(0, this.selected - 1));
+      const levels = [...settings.levels];
+      const [removed] = levels.splice(this.selected, 1);
+      levels.push(removed);
+      this.update({ ...settings, levels, levelCount: settings.levelCount - 1 }, Math.max(0, this.selected - 1));
     } else if (map) {
       this.update(this.withLevel(settings, { battleground: map.dataset.map as BattlegroundId }), this.selected);
     } else if (step) {
       const type = step.dataset.step as EnemyType;
-      const level = settings.waves[this.selected];
+      const level = settings.levels[this.selected];
       const count = Math.max(0, Math.min(MAX_ENEMIES_PER_TYPE, level.enemies[type] + Number(step.dataset.delta)));
       this.settings = this.withLevel(settings, { enemies: { ...level.enemies, [type]: count } });
       // Update in place, so held clicks and the scroll position aren't disturbed.
@@ -186,8 +186,8 @@ export class SandboxForm {
     }
   }
 
-  private withLevel(settings: SandboxSettings, change: Partial<WaveSetup>): SandboxSettings {
-    return { ...settings, waves: settings.waves.map((wave, index) => (index === this.selected ? { ...wave, ...change } : wave)) };
+  private withLevel(settings: SandboxSettings, change: Partial<LevelSetup>): SandboxSettings {
+    return { ...settings, levels: settings.levels.map((level, index) => (index === this.selected ? { ...level, ...change } : level)) };
   }
 
   private update(settings: SandboxSettings, selected: number): void {
@@ -207,7 +207,7 @@ export class SandboxForm {
     this.root.querySelectorAll<HTMLButtonElement>(`[data-step="${type}"]`).forEach((button) => {
       button.disabled = Number(button.dataset.delta) < 0 ? count <= 0 : count >= MAX_ENEMIES_PER_TYPE;
     });
-    const total = waveEnemyTotal(settings.waves[this.selected].enemies);
+    const total = levelEnemyTotal(settings.levels[this.selected].enemies);
     const levelTotal = this.root.querySelector('[data-level-total]');
     if (levelTotal) {
       levelTotal.textContent = `${total}`;

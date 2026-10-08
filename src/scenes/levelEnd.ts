@@ -2,12 +2,12 @@ import { BATTLEGROUNDS } from '../data/battlegrounds';
 import type { SandboxSettings } from '../data/sandbox';
 import type { EndInfo } from '../net/protocol';
 
-/** How a wave ended and what's left standing, for the end screen. */
-export interface WaveOutcome {
+/** How a level ended and what's left standing, for the end screen. */
+export interface LevelOutcome {
   won: boolean;
-  /** Won by clearing the wave (not by bringing the enemy keep down). */
-  waveCleared: boolean;
-  waveIndex: number;
+  /** Won by clearing the level (not by bringing the enemy keep down). */
+  levelCleared: boolean;
+  levelIndex: number;
   defeated: number;
   totalEnemies: number;
   keep: { health: number; max: number };
@@ -18,11 +18,11 @@ export interface WaveOutcome {
 }
 
 /**
- * The end screen of a wave (pure, tested): a cleared wave with waves left offers the next one (`next`), otherwise
- * it's the end of the run: victory (all waves or the enemy keep) or defeat, with what fell.
+ * The end screen of a level (pure, tested): a cleared level with levels left offers the next one (`next`), otherwise
+ * it's the end of the run: victory (all levels or the enemy keep) or defeat, with what fell.
  */
-export const waveEndInfo = (outcome: WaveOutcome, sandbox: SandboxSettings): { info: EndInfo; next: boolean } => {
-  const { won, waveIndex } = outcome;
+export const levelEndInfo = (outcome: LevelOutcome, sandbox: SandboxSettings): { info: EndInfo; next: boolean } => {
+  const { won, levelIndex } = outcome;
   const coop = outcome.playerHealths.length > 1;
   const stats = [
     { label: 'enemies defeated', value: `${outcome.defeated} / ${outcome.totalEnemies}` },
@@ -32,14 +32,14 @@ export const waveEndInfo = (outcome: WaveOutcome, sandbox: SandboxSettings): { i
       value: `${Math.ceil(health)} / ${sandbox.bowmanHealth}`,
     })),
   ];
-  if (won && outcome.waveCleared && waveIndex + 1 < sandbox.waveCount) {
+  if (won && outcome.levelCleared && levelIndex + 1 < sandbox.levelCount) {
     return {
       next: true,
       info: {
-        title: `Level ${waveIndex + 1} cleared!`,
+        title: `Level ${levelIndex + 1} cleared!`,
         outcome: 'win',
         stats,
-        copy: `Next: level ${waveIndex + 2} of ${sandbox.waveCount} at ${BATTLEGROUNDS[sandbox.waves[waveIndex + 1].battleground].name}.`,
+        copy: `Next: level ${levelIndex + 2} of ${sandbox.levelCount} at ${BATTLEGROUNDS[sandbox.levels[levelIndex + 1].battleground].name}.`,
       },
     };
   }
@@ -50,7 +50,7 @@ export const waveEndInfo = (outcome: WaveOutcome, sandbox: SandboxSettings): { i
       outcome: won ? 'win' : 'loss',
       stats,
       copy: won
-        ? (outcome.enemyKeepDestroyed ? 'The enemy keep has fallen.' : sandbox.waveCount === 1 ? 'The level is held off.' : `All ${sandbox.waveCount} levels held off.`)
+        ? (outcome.enemyKeepDestroyed ? 'The enemy keep has fallen.' : sandbox.levelCount === 1 ? 'The level is held off.' : `All ${sandbox.levelCount} levels held off.`)
         : `${outcome.playerKeepDestroyed ? 'The keep has fallen' : coop ? 'Both bowmen have fallen' : 'The bowman has fallen'}. Adjust the sandbox and try again.`,
     },
   };

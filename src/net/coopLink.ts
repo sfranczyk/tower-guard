@@ -56,7 +56,7 @@ const withLoadouts = (transport: Transport, take: (message: NetMessage) => boole
 /**
  * Both browsers are linked: two bowmen from now on, each with their own quiver (`ownLoadout` is this player's).
  * If the link drops, the guest goes back to the lobby with a notice, and the host plays on alone (player 2 stands
- * still for the rest of the wave).
+ * still for the rest of the level).
  */
 export const linkUp = (ctx: GameContext, role: 'host' | 'guest', code: string, raw: Transport, ownLoadout: Loadout): void => {
   const { session } = ctx;

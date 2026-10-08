@@ -73,7 +73,7 @@ export default class Tower extends Container {
   private drawn = false;
   private timeMs = 0;
 
-  /** `currentHealth` lets a keep start a wave already damaged (health carries over between waves). */
+  /** `currentHealth` lets a keep start a level already damaged (health carries over between levels). */
   public constructor(x: number, y: number, options: KeepOptions, health = 100, currentHealth = health) {
     super();
     this.options = options;

@@ -467,7 +467,7 @@ export class Bowman extends Container {
   /**
    * Killed: drops the aim and falls like an enemy would to what hit him last (deathFallFor), turned as if hit from
    * there; `kind` and `fromX` set it instead (a co-op guest plays the host's). Thrown down by a blast already, he
-   * just stays down. `alreadyFallen` (fell in an earlier wave) starts him lying on his back. Returns the fall.
+   * just stays down. `alreadyFallen` (fell in an earlier level) starts him lying on his back. Returns the fall.
    */
   public die(death: { kind?: FallKind; fromX?: number } = {}, alreadyFallen = false): FallKind {
     if (this.deathMs !== undefined) {

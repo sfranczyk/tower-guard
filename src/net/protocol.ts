@@ -149,7 +149,7 @@ export type NetMessage =
   | { t: 'hello' }
   /** Host → guest: connected, waiting in the lobby. */
   | { t: 'welcome' }
-  /** Host → guest: a wave starts with this setup (the guest builds the same battlefield). */
+  /** Host → guest: a level starts with this setup (the guest builds the same battlefield). */
   | { t: 'start'; sandbox: SandboxSettings; run: RunState; wind: number }
   | { t: 'frame'; snap: Snapshot; events: GameEvent[] }
   | { t: 'end'; info: EndInfo }

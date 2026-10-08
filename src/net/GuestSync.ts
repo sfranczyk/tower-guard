@@ -40,7 +40,7 @@ export interface GuestWorld {
   playSound(id: SoundId, at: Vec2): void;
   setStatus(text: string): void;
   showEnd(info: EndInfo): void;
-  /** The host started the next wave (or a new battle). */
+  /** The host started the next level (or a new battle). */
   restart(message: Extract<NetMessage, { t: 'start' }>): void;
   /** The host went back to the battle setup. */
   backToLobby(): void;

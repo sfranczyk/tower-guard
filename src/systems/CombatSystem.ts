@@ -38,7 +38,7 @@ export interface CombatWorld {
   readonly arrows: readonly Arrow[];
   readonly effects: EffectsSystem;
   readonly debug: Graphics;
-  /** The wave's wind (px/s² on a normal arrow); enemy archers aim with it. */
+  /** The level's wind (px/s² on a normal arrow); enemy archers aim with it. */
   readonly wind: number;
   /** Friendly fire (settings drawer): the players' arrows and their effects hit the bowmen too. */
   readonly friendlyFire: () => boolean;

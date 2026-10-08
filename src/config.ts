@@ -226,20 +226,20 @@ export const JUMP_BUFFER_MS = 110;
 
 /** The enemy keep's health in every sandbox run (destroying it wins immediately). */
 export const ENEMY_KEEP_HEALTH = 650;
-/** Time between enemies of a wave appearing, and the pause before the first one. */
 /**
- * A wave arrives in groups (systems/waveDirector.ts): the first one after WAVE_START_DELAY_MS, its enemies
- * WAVE_SPAWN_INTERVAL_MS apart. The next group comes once at most GROUP_RELEASE_ALIVE enemies are left
- * standing and GROUP_MIN_GAP_MS have passed since the last spawn, or after GROUP_MAX_GAP_MS regardless.
+ * A run is a row of levels (each its own map and enemies); a level's enemies come in waves
+ * (systems/waveDirector.ts): the first after LEVEL_START_DELAY_MS, the enemies of a wave WAVE_SPAWN_INTERVAL_MS
+ * apart. The next wave comes once at most WAVE_RELEASE_ALIVE enemies are left standing and WAVE_MIN_GAP_MS have
+ * passed since the last spawn, or after WAVE_MAX_GAP_MS regardless.
  */
 export const WAVE_SPAWN_INTERVAL_MS = 1100;
-export const WAVE_START_DELAY_MS = 1500;
-export const GROUP_RELEASE_ALIVE = 1;
-export const GROUP_MIN_GAP_MS = 2500;
-export const GROUP_MAX_GAP_MS = 15000;
-/** Group sizes: the first FIRST_GROUP_SIZE, each next one bigger by one, up to MAX_GROUP_SIZE. */
-export const FIRST_GROUP_SIZE = 2;
-export const MAX_GROUP_SIZE = 5;
+export const LEVEL_START_DELAY_MS = 1500;
+export const WAVE_RELEASE_ALIVE = 1;
+export const WAVE_MIN_GAP_MS = 2500;
+export const WAVE_MAX_GAP_MS = 15000;
+/** Wave sizes: the first FIRST_WAVE_SIZE, each next one bigger by one, up to MAX_WAVE_SIZE. */
+export const FIRST_WAVE_SIZE = 2;
+export const MAX_WAVE_SIZE = 5;
 
 /** Sound effects: default effects volume (0..1) and the base volume of each sound. */
 export const SOUND_DEFAULT_VOLUME = 0.7;

@@ -59,7 +59,7 @@ describe('ENEMY_KINDS', () => {
     expect(burnDurationMs('zombie')).toBeGreaterThan(burnDurationMs('basic'));
   });
 
-  it('brings tougher enemies later in a wave', () => {
+  it('brings tougher enemies later in a level', () => {
     expect(ENEMY_KINDS.basic.arrival).toBe(0);
     expect(ENEMY_KINDS.tank.arrival).toBeGreaterThan(ENEMY_KINDS.basic.arrival);
     expect(ENEMY_KINDS.fireDragon.arrival).toBeGreaterThan(ENEMY_KINDS.tank.arrival);

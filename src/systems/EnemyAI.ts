@@ -41,7 +41,7 @@ export interface EnemyAIWorld {
   readonly playerTower: Tower;
   readonly effects: EffectsSystem;
   readonly debug: Graphics;
-  /** The wave's wind (px/s² on a normal arrow); archers aim with it. */
+  /** The level's wind (px/s² on a normal arrow); archers aim with it. */
   readonly wind: number;
 }
 

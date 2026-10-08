@@ -134,7 +134,7 @@ export class HostSync {
     }
   }
 
-  /** The wave is over: the last frame, then what the guest's end screen shows. */
+  /** The level is over: the last frame, then what the guest's end screen shows. */
   public sendEnd(info: EndInfo): void {
     this.flush();
     this.transport.send({ t: 'end', info });

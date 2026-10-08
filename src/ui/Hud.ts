@@ -9,11 +9,11 @@ export interface HudValues {
   partnerHealth?: number;
   defeatedEnemies: number;
   totalEnemies: number;
-  wave: number;
-  waveCount: number;
+  level: number;
+  levelCount: number;
 }
 
-/** Up to this many enemies the wave shows one pip each; bigger waves get a progress bar. */
+/** Up to this many enemies the level shows one pip each; bigger levels get a progress bar. */
 const MAX_PIPS = 14;
 
 /** Health bar colour by share left: green, then amber, then red. */
@@ -24,7 +24,7 @@ export const healthColor = (ratio: number): string => {
   return ratio > 0.3 ? 'var(--warn)' : 'var(--bad)';
 };
 
-/** The in-game HUD bar above the canvas: keep and bowman health bars and the wave's progress. */
+/** The in-game HUD bar above the canvas: keep and bowman health bars and the level's progress. */
 export class Hud {
   private readonly towerBar: HTMLElement;
   private readonly towerValue: HTMLElement;
@@ -34,9 +34,9 @@ export class Hud {
   private readonly partnerChip: HTMLElement;
   private readonly partnerBar: HTMLElement;
   private readonly partnerValue: HTMLElement;
-  private readonly wave: HTMLElement;
+  private readonly level: HTMLElement;
   private readonly pips: HTMLElement;
-  private readonly waveBar: HTMLElement;
+  private readonly levelBar: HTMLElement;
   private readonly enemyCount: HTMLElement;
   private pipCount = -1;
 
@@ -56,9 +56,9 @@ export class Hud {
     this.partnerChip = query('[data-bowman2-chip]');
     this.partnerBar = query('[data-bowman2-bar]');
     this.partnerValue = query('[data-bowman2-health]');
-    this.wave = query('[data-wave]');
+    this.level = query('[data-level-number]');
     this.pips = query('[data-enemy-pips]');
-    this.waveBar = query('[data-wave-bar]');
+    this.levelBar = query('[data-level-bar]');
     this.enemyCount = query('[data-enemy-count]');
   }
 
@@ -74,12 +74,12 @@ export class Hud {
       Hud.setBar(this.partnerBar, values.partnerHealth! / values.bowmanMaxHealth);
       this.partnerValue.textContent = `${Math.ceil(values.partnerHealth!)} / ${values.bowmanMaxHealth}`;
     }
-    this.wave.textContent = `${values.wave} / ${values.waveCount}`;
+    this.level.textContent = `${values.level} / ${values.levelCount}`;
     this.enemyCount.textContent = `${values.defeatedEnemies} of ${values.totalEnemies} defeated`;
 
     const usePips = values.totalEnemies <= MAX_PIPS;
     this.pips.hidden = !usePips;
-    this.waveBar.parentElement!.hidden = usePips;
+    this.levelBar.parentElement!.hidden = usePips;
     if (usePips) {
       if (this.pipCount !== values.totalEnemies) {
         this.pipCount = values.totalEnemies;
@@ -87,7 +87,7 @@ export class Hud {
       }
       Array.from(this.pips.children).forEach((pip, index) => pip.classList.toggle('defeated', index < values.defeatedEnemies));
     } else {
-      this.waveBar.style.width = `${(values.defeatedEnemies / Math.max(1, values.totalEnemies)) * 100}%`;
+      this.levelBar.style.width = `${(values.defeatedEnemies / Math.max(1, values.totalEnemies)) * 100}%`;
     }
   }
 

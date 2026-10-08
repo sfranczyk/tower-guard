@@ -1,7 +1,7 @@
 import type { ArmorPalette } from '../rendering/armor';
 
 /**
- * Battlegrounds: the look of the field a wave is fought on (sky, sun, hills, trees, ground) and its
+ * Battlegrounds: the look of the field a level is fought on (sky, sun, hills, trees, ground) and its
  * weather. Pure data; rendering/Background.ts draws them and systems/WeatherSystem.ts adds lightning.
  */
 
@@ -49,7 +49,7 @@ export interface Battleground {
   terrainAmplitude?: number;
   /** How close together the ground waves come (default 1; more = more, shorter rises and dips). */
   terrainWaviness?: number;
-  /** Strongest wind of this map (px/s² on a normal arrow); each wave rolls one between −wind and +wind. */
+  /** Strongest wind of this map (px/s² on a normal arrow); each level rolls one between −wind and +wind. */
   wind?: number;
   ground: { fill: number; edge: number; tufts: number };
   /** Overrides DEFAULT_AIM_COLORS where the default gold and light blue don't stand out. */

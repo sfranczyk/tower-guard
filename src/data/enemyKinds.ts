@@ -134,7 +134,7 @@ export interface EnemyKind {
   /** How much harder an attack hits the keep than the bowman (1 unless listed). */
   keepDamage?: Partial<Record<keyof EnemyDamage, number>>;
   build: EnemyBuild;
-  /** Where in a wave it starts showing up (0..1 of the wave, systems/waveDirector): the tougher, the later. */
+  /** Where in a level it starts showing up (0..1 of the level's enemies, systems/waveDirector): the tougher, the later. */
   arrival: number;
   /** Overrides of its race's traits. */
   traits?: Partial<EnemyTraits>;
