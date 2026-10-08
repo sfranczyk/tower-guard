@@ -11,8 +11,8 @@
     "test:watch": "vitest"
   },
   "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "author": "Stanisław Franczyk",
+  "license": "MIT",
   "type": "commonjs",
   "dependencies": {
     "eventemitter3": "^5.0.1",
