@@ -39,6 +39,33 @@
         .stage { position: relative; line-height: 0; }
         canvas { display: block; border-radius: 14px; box-shadow: 0 18px 40px rgba(0, 0, 0, .35); }
         #ui-root { position: absolute; inset: 0; z-index: 10; line-height: 1.4; pointer-events: none; border-radius: 14px; overflow: hidden; }
+        /* Dev tuning panel (?tune, ui/TuningPanel.ts): a side panel over the canvas's right edge, collapsible to a tab. */
+        .tuning-panel { position: absolute; top: 8px; right: 8px; bottom: 8px; z-index: 20; width: 300px; display: flex; flex-direction: column; gap: 8px; padding: 12px 12px 10px; border-radius: 16px; background: var(--panel); color: var(--ink); line-height: 1.3; font-size: 13px; box-shadow: 0 5px 0 var(--panel-edge), 0 18px 40px rgba(0, 0, 0, .3); }
+        .tuning-panel[hidden] { display: none; }
+        .tuning-panel.collapsed { bottom: auto; width: auto; padding: 0; background: none; box-shadow: none; }
+        .tuning-panel.collapsed > :not(.tuning-tab), .tuning-panel:not(.collapsed) > .tuning-tab { display: none; }
+        .tuning-tab { padding: 8px 12px; border-radius: 12px; background: var(--panel); color: var(--ink); font-family: var(--display); font-weight: 600; font-size: 15px; box-shadow: 0 4px 0 var(--panel-edge), 0 8px 14px rgba(0, 0, 0, .2); }
+        .tuning-header { display: flex; align-items: center; justify-content: space-between; }
+        .tuning-header h2 { font-family: var(--display); font-weight: 600; font-size: 20px; }
+        .tuning-header .round-button { width: 32px; height: 32px; font-size: 20px; background: var(--panel-sunk); box-shadow: 0 3px 0 var(--panel-edge); }
+        .tuning-note { color: var(--ink-soft); font-size: 12px; }
+        .tuning-actions { display: flex; gap: 8px; }
+        .tuning-actions .secondary-button { padding: 6px 10px; font-size: 13px; background: var(--panel-sunk); }
+        .tuning-output { width: 100%; min-height: 90px; max-height: 160px; padding: 6px; border: 1px solid var(--panel-edge); border-radius: 8px; background: #fffdf6; color: var(--ink); font: 11px/1.35 ui-monospace, Menlo, monospace; resize: vertical; }
+        .tuning-body { flex: 1; min-height: 0; overflow-y: auto; margin: 0 -4px; padding: 0 4px; }
+        .tuning-group { border-top: 1px solid var(--panel-edge); padding: 4px 0; }
+        .tuning-group summary { display: flex; align-items: center; gap: 6px; cursor: pointer; padding: 4px 0; font-family: var(--display); font-weight: 600; font-size: 15px; }
+        .tuning-group summary > span:first-child { flex: 1; }
+        .tuning-count { color: var(--gold-edge); font-family: var(--body); font-weight: 600; font-size: 11px; }
+        .tuning-row { display: grid; grid-template-columns: 8px minmax(0, 1fr) 72px 22px; grid-template-areas: "dot label number reset" ". slider slider ."; align-items: center; column-gap: 6px; padding: 3px 0; }
+        .tuning-dot { grid-area: dot; width: 8px; height: 8px; border-radius: 50%; }
+        .tuning-row.changed .tuning-dot { background: var(--gold); box-shadow: 0 0 0 1px var(--gold-edge); }
+        .tuning-label { grid-area: label; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .tuning-row.changed .tuning-label { font-weight: 700; }
+        .tuning-row input[type=range] { grid-area: slider; width: 100%; accent-color: var(--accent); }
+        .tuning-row input[type=number] { grid-area: number; width: 100%; padding: 2px 4px; border: 1px solid var(--panel-edge); border-radius: 6px; background: #fffdf6; color: var(--ink); font-size: 12px; }
+        .tuning-reset { grid-area: reset; width: 22px; height: 22px; border-radius: 6px; background: var(--panel-sunk); color: var(--ink); font-size: 13px; visibility: hidden; }
+        .tuning-row.changed .tuning-reset { visibility: visible; }
         button, input, select { font: inherit; }
         button { border: 0; cursor: pointer; }
         [hidden] { display: none !important; }

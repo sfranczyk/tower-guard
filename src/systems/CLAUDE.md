@@ -9,12 +9,12 @@ stuck or gone arrows hit. Targeting: nearest bowman out in the open, else the ke
 
 ## Waves (`waveDirector.ts`, pure, tested; not shown in the UI yet)
 `planWaves` spreads each type through the level (tougher types later, by `arrival`, so the first wave of
-`FIRST_WAVE_SIZE` is light) in waves growing by `WAVE_SIZE_STEP` to `MAX_WAVE_SIZE`; `WaveDirector.update` (every frame,
-so it pauses with the game) releases the first after `LEVEL_START_DELAY_MS`, a wave's enemies `WAVE_SPAWN_INTERVAL_MS`
-apart, and the next once at most `WAVE_RELEASE_ALIVE` stand and `WAVE_MIN_GAP_MS` passed, or after `WAVE_MAX_GAP_MS`.
+`WAVES.firstSize` is light) in waves growing by `WAVES.sizeStep` to `WAVES.maxSize`; `WaveDirector.update` (every frame,
+so it pauses with the game) releases the first after `WAVES.startDelayMs`, a wave's enemies `WAVES.spawnIntervalMs`
+apart, and the next once at most `WAVES.releaseAlive` stand and `WAVES.minGapMs` passed, or after `WAVES.maxGapMs`.
 
 ## Arrow flight (`ballistics.ts`)
-Gravity + quadratic drag `ARROW_DRAG`, wind in `FlightParams`. The trajectory preview, the aim camera and enemy archer
+Gravity + quadratic drag `ARROWS.drag`, wind in `FlightParams`. The trajectory preview, the aim camera and enemy archer
 aim (`solveLaunchAngle`, cached ~250 ms) simulate with the same functions: any flight change goes here. Enemy archers
 shoot at the plain `bowSpeed`. Per-type mass/drag/speed in `data/projectiles.ts`.
 - Shrapnel (Space in flight): `SHRAPNEL_FRAGMENTS` `'fragment'` arrows (`shrapnelBurst`, pure),
@@ -31,11 +31,11 @@ blast shatters it, cause `'shatter'`). Fire thaws, frost puts fire out; the fire
 chilled. A fire arrow in the ground leaves a fire patch.
 Vortex (`vortex.ts`, pure): pulls ground enemies in, lifts them (`Enemy.holdInVortex`, flailing) and throws them
 (`Enemy.throwInAir`, `flight.ts`); landing = knockback + `onLanded` fall damage (cause `'fall'`; kamikaze goes off,
-frozen shatters). A direct hit levitates (`levitateHeight`, drops with `VORTEX_LEVITATE_FALL`, `VORTEX_LEVITATE_BOOST`
+frozen shatters). A direct hit levitates (`levitateHeight`, drops with `VORTEX.levitateFall`, `VORTEX.levitateBoost`
 per further arrow). It all goes by **mass** (`enemyMass`; goblin 0.8, zombie 1, fighter/archer/priest 1.2 =
 `VORTEX_MASS.reference`, bowman `BOWMAN_MASS` 1.3, kamikaze 1.4, black knight 1.9, hammer knight 2.5, ogre 4.2): pace
 `massPace` (at most `lightest`×), thrown √(reference/mass); above `fullLift` (2.1) only up to `funnelCeiling`, circling;
-from `anchor` (3.6, `resistsVortex`) not caught, walks at `VORTEX_HEAVY_WALK` (`slowByWind`). Levitation by mass:
+from `anchor` (3.6, `resistsVortex`) not caught, walks at `VORTEX.heavyWalk` (`slowByWind`). Levitation by mass:
 `levitateFull` 1.4, `levitateShare`, `VORTEX_LEVITATE_HEAVY` at `levitateHeavy` 4.2. Nothing is pinned in the air.
 Dragons get a ring of wind (`drawAirVortex`) and turbulence (`DRAGON_TURBULENCE_MS`, `AfflictionLayer.stir`,
 `buffetOffset`: no fire breath, archer `DRAGON_TURBULENCE_SPREAD`× wider). Visuals: `magicVisuals.ts` via EffectsSystem.
@@ -46,7 +46,7 @@ fire (`Bowman.ignite`), frost (`Bowman.chill`; frozen = stunned, blast or landin
 Enemy | Bowman), pins (`Bowman.pin`). Own shooter spared for `FRIENDLY_FIRE_GRACE_MS`.
 
 ## Enemy archers
-`CombatSystem.updateArcher` walks them into `ENEMY_ARCHER_RANGE`, fires hostile arrows via `enemyShot`. Hostile arrows
+`CombatSystem.updateArcher` walks them into `ENEMY_ATTACK.archerRange`, fires hostile arrows via `enemyShot`. Hostile arrows
 hit the bowman (not dead), or the keep while he hides, never enemies. `ENEMY_ARCHER_*`, `ENEMY_ARROW_*`.
 
 ## Burning bowman (`burning.ts`)

@@ -18,3 +18,9 @@
   (persisted), trajectory preview (off by default), arrow trails (0–3, `DEFAULT_ARROW_TRAILS` = 1), cursor circle,
   friendly fire; these live in `ctx.session` for the browser session.
 - `CoopPanel.ts`: the co-op lobby (net/CLAUDE.md). `SoundLabPanel.ts`: the sound test panel.
+- **Tuning panel** (`TuningPanel.ts`, `?tune` or menu → Dev tools → "Tuning panel"; a collapsible side panel over the
+  canvas's right edge): every `tunable` group from `core/tuning.ts` (registry, pure, tested) as sliders + numbers,
+  reset per value/group, changed marks, saved in localStorage, "Copy changes" gives paste-ready source. Local only.
+  To make a constant tunable: move it into a group (`export const WAVES = tunable('WAVES', 'Waves', { ... })` in
+  config.ts), read `WAVES.key` at use time, never copy it into a module-level const. Enemy health/speed per type:
+  `data/enemyTuning.ts` (read at spawn).

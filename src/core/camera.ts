@@ -4,13 +4,19 @@
  * smoothly until, for a long shot, the bowman sits near one edge and the landing spot near the other.
  */
 
-/** Shots landing within this share of the view width from the bowman don't move the camera. */
-export const LOOK_DEAD_ZONE = 0.22;
-/** How close to the view's edge the bowman (and, at full slide, the landing spot) may come (px). */
-export const LOOK_EDGE_MARGIN = 70;
-/** Easing time constants: sliding out while aiming, and drifting back to the bowman once he moves again. */
-export const LOOK_AIM_MS = 300;
-export const LOOK_RETURN_MS = 1500;
+import { tunable } from './tuning';
+
+/**
+ * Shots landing within deadZone (share of the view width) from the bowman don't move the camera; edgeMargin: how
+ * close to the view's edge the bowman (and, at full slide, the landing spot) may come (px); aimMs / returnMs: easing
+ * time constants, sliding out while aiming and drifting back to the bowman once he moves again.
+ */
+export const CAMERA_LOOK = tunable('CAMERA_LOOK', 'Aim camera', {
+  deadZone: 0.22,
+  edgeMargin: 70,
+  aimMs: 300,
+  returnMs: 1500,
+}, { meta: { deadZone: { max: 0.5 } }, file: 'src/core/camera.ts' });
 
 /**
  * How far (px, signed) to shift the view's centre from the bowman for a shot landing `landingOffset` px from him
@@ -18,10 +24,10 @@ export const LOOK_RETURN_MS = 1500;
  */
 export const aimLookAhead = (landingOffset: number, viewWidth: number): number => {
   const distance = Math.abs(landingOffset);
-  const deadZone = viewWidth * LOOK_DEAD_ZONE;
-  // At this distance the bowman and the landing spot both sit LOOK_EDGE_MARGIN inside opposite edges.
-  const span = viewWidth - 2 * LOOK_EDGE_MARGIN;
-  const maxShift = viewWidth / 2 - LOOK_EDGE_MARGIN;
+  const deadZone = viewWidth * CAMERA_LOOK.deadZone;
+  // At this distance the bowman and the landing spot both sit CAMERA_LOOK.edgeMargin inside opposite edges.
+  const span = viewWidth - 2 * CAMERA_LOOK.edgeMargin;
+  const maxShift = viewWidth / 2 - CAMERA_LOOK.edgeMargin;
   if (distance <= deadZone || span <= deadZone) {
     return 0;
   }

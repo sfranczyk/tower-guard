@@ -3,6 +3,7 @@ import type { AttackStyle } from '../rendering/attackSwing';
 import type { HorseDeathKind } from '../rendering/horseDeath';
 import type { WalkStyle } from '../rendering/walkCycle';
 import type { EnemyType, ProjectileType } from '../types';
+import { ENEMY_HEALTH, ENEMY_SPEED_BY_TYPE } from './enemyTuning';
 import { ENEMY_KINDS, ENEMY_TYPES, enemyArchetype, enemyTraits, type DamageRange, type EnemyDamage, type EnemyStats } from './enemyKinds';
 
 export type { DamageRange, EnemyDamage, EnemyStats } from './enemyKinds';
@@ -27,14 +28,11 @@ export const pinDurationMs = (type: EnemyType): number => enemyTraits(type).pinM
 /** A random hit within `range` (`roll` 0..1, passed in so tests can pin it). */
 export const rollDamage = ([min, max]: DamageRange, roll = Math.random()): number => Math.round(min + (max - min) * roll);
 
-/** Stats for an enemy type scaled by the level's difficulty multiplier. */
-export const getEnemyStats = (type: EnemyType, difficulty: number): EnemyStats => {
-  const base = ENEMY_KINDS[type].stats;
-  return {
-    health: Math.round(base.health * difficulty),
-    speed: base.speed * difficulty,
-  };
-};
+/** Stats for an enemy type (as tuned, data/enemyTuning.ts) scaled by the level's difficulty multiplier. */
+export const getEnemyStats = (type: EnemyType, difficulty: number): EnemyStats => ({
+  health: Math.round(ENEMY_HEALTH[type] * difficulty),
+  speed: ENEMY_SPEED_BY_TYPE[type] * difficulty,
+});
 
 const smoothstep = (from: number, to: number, value: number): number => {
   const t = Math.max(0, Math.min(1, (value - from) / (to - from)));

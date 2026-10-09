@@ -1,17 +1,15 @@
 import type { Graphics } from 'pixi.js';
 import {
+  ARROWS,
   ENEMY_TOWER_DAMAGE,
   FIRE_ARROW_DAMAGE,
   FIRE_DRAGON_BLAST_POWER,
   FRIENDLY_FIRE_GRACE_MS,
   FROST_ARROW_DAMAGE,
-  HEADSHOT_DAMAGE_MULTIPLIER,
   HORSE_LEG,
   KAMIKAZE_BLAST_POWER,
-  PIERCING_DAMAGE_MULTIPLIER,
   PIN_DAMAGE,
   PIN_DURATION_MS,
-  PROJECTILE_DAMAGE,
   SHOW_HITBOX_DEBUG,
   SHRAPNEL_FRAGMENT_DAMAGE,
 } from '../config';
@@ -31,7 +29,7 @@ import { segmentHitTime } from './collision';
 import { bowmanBox, foeHitBoxes, pointAlong, type Foe } from './combatGeometry';
 import type { EffectsSystem } from './EffectsSystem';
 
-/** Damage of the fire and frost arrows' hit, × PROJECTILE_DAMAGE (their effect does the rest; a vortex arrow does none). */
+/** Damage of the fire and frost arrows' hit, × ARROWS.damage (their effect does the rest; a vortex arrow does none). */
 const MAGIC_HIT_DAMAGE: Partial<Record<ProjectileType, number>> = { fire: FIRE_ARROW_DAMAGE, frost: FROST_ARROW_DAMAGE };
 const PIERCING_MAX_IMPACTS = 5;
 /** A pinning arrow's centre sits this far back from where its tip goes into the ground (the sprite is ~36 px long). */
@@ -227,9 +225,9 @@ export class ArrowHits {
       return rollDamage(PIN_DAMAGE);
     }
     const baseDamage = arrow.type === 'piercing'
-      ? PROJECTILE_DAMAGE * Math.pow(PIERCING_DAMAGE_MULTIPLIER, arrow.impacts)
-      : arrow.type === 'fragment' ? PROJECTILE_DAMAGE * SHRAPNEL_FRAGMENT_DAMAGE : PROJECTILE_DAMAGE * (MAGIC_HIT_DAMAGE[arrow.type] ?? 1);
-    return headshot ? baseDamage * HEADSHOT_DAMAGE_MULTIPLIER : baseDamage;
+      ? ARROWS.damage * Math.pow(ARROWS.piercingMultiplier, arrow.impacts)
+      : arrow.type === 'fragment' ? ARROWS.damage * SHRAPNEL_FRAGMENT_DAMAGE : ARROWS.damage * (MAGIC_HIT_DAMAGE[arrow.type] ?? 1);
+    return headshot ? baseDamage * ARROWS.headshotMultiplier : baseDamage;
   }
 
   /**

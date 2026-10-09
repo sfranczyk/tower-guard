@@ -1,5 +1,5 @@
 import { Container } from 'pixi.js';
-import { ENEMY_ATTACK_INTERVAL_MS, HORSE_LEG } from '../../config';
+import { ENEMY_ATTACK, HORSE_LEG } from '../../config';
 import { getArcherRig, toArcherLocalAngle } from '../../rendering/archer';
 import type { AttackStyle } from '../../rendering/attackSwing';
 import { BodyMotion } from '../../systems/bodyMotion';
@@ -8,7 +8,8 @@ import type { BodyColors } from '../../rendering/bodyColors';
 import { enemyGibColors } from '../../rendering/enemyBody';
 import { fromBodyAnchor, spriteToWorld, toBodyAnchor, type BodyAnchor } from '../../systems/bodyAnchor';
 import { ENEMY_LOOKS, type EnemyLook } from '../../data/enemies';
-import { ENEMY_KINDS, enemyArchetype } from '../../data/enemyKinds';
+import { enemyArchetype } from '../../data/enemyKinds';
+import { mountHealth } from '../../data/enemyTuning';
 import { groundAt } from '../../systems/terrain';
 import { boundsAround } from '../../utils/math';
 import type { HitBox } from '../DragonEnemy';
@@ -90,7 +91,7 @@ export default class Enemy extends Container {
     this.actions = new EnemyActions(this.look.attackStyles, this.look.attackStyle);
     this.figure = new EnemyFigure(this);
     if (enemyArchetype(kind).rides) {
-      this.rider = new MountedRider(this, ENEMY_KINDS[kind].mount?.health ?? health);
+      this.rider = new MountedRider(this, mountHealth(kind, health));
     }
     this.figure.drawPlaceholder();
     this.afflictions = new AfflictionLayer(kind);
@@ -407,7 +408,7 @@ export default class Enemy extends Container {
     if (this.figure.fall || this.motion.isThrown || this.afflictions.isFrozen || this.afflictions.inVortex) {
       return false;
     }
-    return this.actions.tryStartCooldown(ENEMY_ATTACK_INTERVAL_MS);
+    return this.actions.tryStartCooldown(ENEMY_ATTACK.intervalMs);
   }
 
   public isMoving(): boolean {

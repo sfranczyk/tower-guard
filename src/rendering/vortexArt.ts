@@ -1,5 +1,5 @@
 import type { Graphics } from 'pixi.js';
-import { VORTEX_MS } from '../config';
+import { VORTEX } from '../config';
 import { vortexStrength } from '../systems/vortex';
 import type { Vec2 } from '../types';
 
@@ -16,7 +16,7 @@ const ARM_POINTS = 22;
 const COLORS = { glow: 0x7a4fc0, arm: [0x4b2a86, 0x8a5cd8, 0xc9a8ff, 0xf1e6ff], mote: [0x6b4a2e, 0x8a7a5a, 0xc9a8ff] } as const;
 
 /** How much of the vortex is left at `ageMs`: 1 until it starts to die away, then down to 0 at the end. */
-export const vortexFade = (ageMs: number): number => Math.max(0, Math.min(1, (VORTEX_MS - ageMs) / FADE_MS));
+export const vortexFade = (ageMs: number): number => Math.max(0, Math.min(1, (VORTEX.ms - ageMs) / FADE_MS));
 
 /** Size of the whole vortex at `ageMs`: grows as it winds up and spreads out a little as it dies away. */
 export const vortexScale = (ageMs: number): number =>

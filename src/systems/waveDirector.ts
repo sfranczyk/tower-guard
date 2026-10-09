@@ -1,20 +1,11 @@
-import {
-  FIRST_WAVE_SIZE,
-  LEVEL_START_DELAY_MS,
-  MAX_WAVE_SIZE,
-  WAVE_MAX_GAP_MS,
-  WAVE_MIN_GAP_MS,
-  WAVE_RELEASE_ALIVE,
-  WAVE_SIZE_STEP,
-  WAVE_SPAWN_INTERVAL_MS,
-} from '../config';
+import { WAVES } from '../config';
 import { ENEMY_KINDS, ENEMY_TYPES } from '../data/enemyKinds';
 import type { LevelEnemyCounts } from '../data/sandbox';
 import type { EnemyType } from '../types';
 
 /**
  * Splits a level's enemies into waves and releases them at sensible moments (pure; GameScene calls `update`
- * every frame and spawns what it returns). Waves grow from FIRST_WAVE_SIZE by WAVE_SIZE_STEP up to MAX_WAVE_SIZE; each
+ * every frame and spawns what it returns). Waves grow from WAVES.firstSize by WAVES.sizeStep up to WAVES.maxSize; each
  * type is spread through the level, tougher types starting later, so early waves are light.
  */
 
@@ -32,7 +23,7 @@ export const planWaves = (enemies: LevelEnemyCounts): EnemyType[][] => {
     .sort((a, b) => a.at - b.at || TYPES.indexOf(a.type) - TYPES.indexOf(b.type))
     .map(({ type }) => type);
   const waves: EnemyType[][] = [];
-  for (let start = 0, size = FIRST_WAVE_SIZE; start < order.length; start += size, size = Math.min(MAX_WAVE_SIZE, size + WAVE_SIZE_STEP)) {
+  for (let start = 0, size = WAVES.firstSize; start < order.length; start += size, size = Math.min(WAVES.maxSize, size + WAVES.sizeStep)) {
     waves.push(order.slice(start, start + size));
   }
   // A lone straggler at the end joins the wave before it.
@@ -53,7 +44,7 @@ export class WaveDirector {
 
   public constructor(enemies: LevelEnemyCounts) {
     this.waves = planWaves(enemies);
-    this.timerMs = LEVEL_START_DELAY_MS;
+    this.timerMs = WAVES.startDelayMs;
   }
 
   public get finished(): boolean {
@@ -68,8 +59,8 @@ export class WaveDirector {
     }
     if (this.waitingForWave) {
       this.timerMs += deltaMs;
-      const cleared = alive <= WAVE_RELEASE_ALIVE && this.timerMs >= WAVE_MIN_GAP_MS;
-      if (!cleared && this.timerMs < WAVE_MAX_GAP_MS) {
+      const cleared = alive <= WAVES.releaseAlive && this.timerMs >= WAVES.minGapMs;
+      if (!cleared && this.timerMs < WAVES.maxGapMs) {
         return spawned;
       }
       this.waitingForWave = false;
@@ -81,7 +72,7 @@ export class WaveDirector {
     while (this.timerMs <= 0 && this.spawnIndex < wave.length) {
       spawned.push(wave[this.spawnIndex]);
       this.spawnIndex += 1;
-      this.timerMs += WAVE_SPAWN_INTERVAL_MS;
+      this.timerMs += WAVES.spawnIntervalMs;
     }
     if (this.spawnIndex >= wave.length) {
       this.waveIndex += 1;

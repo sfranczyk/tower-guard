@@ -1,4 +1,4 @@
-import { ENEMY_ARCHER_COOLDOWN_MS, ENEMY_ARCHER_DRAW_MS } from '../../config';
+import { ENEMY_ATTACK } from '../../config';
 
 const BOW_RAISE_MS = 220;
 const BOW_LOWER_MS = 400;
@@ -31,12 +31,12 @@ export class EnemyBow {
       this.tension = Math.max(0, this.tension - deltaMs / EASE_OFF_MS);
       return false;
     }
-    this.tension = Math.min(1, this.tension + deltaMs / ENEMY_ARCHER_DRAW_MS);
+    this.tension = Math.min(1, this.tension + deltaMs / ENEMY_ATTACK.archerDrawMs);
     if (this.tension < 1) {
       return false;
     }
     this.tension = 0;
-    this.cooldownMs = ENEMY_ARCHER_COOLDOWN_MS;
+    this.cooldownMs = ENEMY_ATTACK.archerCooldownMs;
     return true;
   }
 

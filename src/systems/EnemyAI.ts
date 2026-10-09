@@ -3,12 +3,11 @@ import {
   BOWMAN_Y,
   DRAGON_RANGE,
   DRAGON_TURBULENCE_SPREAD,
-  ENEMY_ARCHER_RANGE,
-  ENEMY_ARCHER_SPREAD,
   ENEMY_ARROW_POWER,
+  ENEMY_ATTACK,
+  ENEMY_TOWER_X,
   FIRE_DRAGON_RANGE,
   GROUND_Y,
-  ENEMY_TOWER_X,
   PRIEST_POST_SLACK,
   SHOW_HITBOX_DEBUG,
 } from '../config';
@@ -220,7 +219,7 @@ export class EnemyAI {
    */
   private updateArcher(enemy: Enemy, deltaMs: number): void {
     const aimPoint = this.aimPointFrom(enemy.x);
-    const inRange = Math.abs(aimPoint.x - enemy.x) <= ENEMY_ARCHER_RANGE;
+    const inRange = Math.abs(aimPoint.x - enemy.x) <= ENEMY_ATTACK.archerRange;
 
     if (enemy.isDown || !inRange) {
       enemy.update(deltaMs, { x: aimPoint.x, y: GROUND_Y }, 0);
@@ -237,7 +236,7 @@ export class EnemyAI {
         cached.ageMs += deltaMs;
       }
       if (enemy.aimBow(angle ?? Math.PI, deltaMs)) {
-        const spread = (Math.random() * 2 - 1) * ENEMY_ARCHER_SPREAD;
+        const spread = (Math.random() * 2 - 1) * ENEMY_ATTACK.archerSpread;
         this.events.enemyShot(enemy.getBowReleasePoint(), (angle ?? Math.PI) + spread, speed * (0.97 + Math.random() * 0.06), enemy.kind);
       }
     }
@@ -275,7 +274,7 @@ export class EnemyAI {
       }
       if (dragon.aim(angle ?? Math.PI, deltaMs)) {
         // Buffeted by turbulence the rider can't aim well.
-        const spread = (Math.random() * 2 - 1) * ENEMY_ARCHER_SPREAD * (dragon.afflictions.isTurbulent ? DRAGON_TURBULENCE_SPREAD : 1);
+        const spread = (Math.random() * 2 - 1) * ENEMY_ATTACK.archerSpread * (dragon.afflictions.isTurbulent ? DRAGON_TURBULENCE_SPREAD : 1);
         this.events.enemyShot(dragon.getBowReleasePoint(), (angle ?? Math.PI) + spread, speed * (0.97 + Math.random() * 0.06), 'dragon');
       }
     }

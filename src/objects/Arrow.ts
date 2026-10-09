@@ -1,5 +1,5 @@
 import { Graphics, Sprite, Texture } from 'pixi.js';
-import { ARROW_GRAVITY, GAME_HEIGHT, SCENERY_MARGIN, WORLD_WIDTH } from '../config';
+import { ARROWS, GAME_HEIGHT, SCENERY_MARGIN, WORLD_WIDTH } from '../config';
 import { DEFAULT_AIM_COLORS } from '../data/battlegrounds';
 import { flightParams } from '../data/projectiles';
 import { advanceProjectile, type FlightParams } from '../systems/ballistics';
@@ -175,7 +175,7 @@ export default class Arrow extends Sprite {
 
   /** Gravity, per-type air drag and wind shared by arrows, the trajectory preview and enemy aim. */
   public static getFlightParams(type: ProjectileType, wind = 0): FlightParams {
-    return flightParams(type, ARROW_GRAVITY, wind);
+    return flightParams(type, ARROWS.gravity, wind);
   }
 
   public getTravelSegment(): { start: Vec2; end: Vec2 } {

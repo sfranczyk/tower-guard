@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ENEMY_SPEED, EXPLOSION_DAMAGE, HEADSHOT_DAMAGE_MULTIPLIER, PIN_DAMAGE, PIN_DURATION_MS, PIN_DURATION_ZOMBIE_MS, PROJECTILE_DAMAGE } from '../config';
+import { ARROWS, ENEMY_SPEED, EXPLOSION_DAMAGE, PIN_DAMAGE, PIN_DURATION_MS, PIN_DURATION_ZOMBIE_MS } from '../config';
 import { ENEMY_DAMAGE, ENEMY_LOOKS, enemyDamage, blowsApart, explosionDamage, getEnemyStats, knockbackPush, pinDurationMs, rollDamage, splashGibChance } from './enemies';
 
 describe('getEnemyStats', () => {
@@ -27,15 +27,15 @@ describe('getEnemyStats', () => {
 describe('enemy toughness and damage', () => {
   const arrowsToKill = (type: Parameters<typeof getEnemyStats>[0], damage: number): number =>
     Math.ceil(getEnemyStats(type, 1).health / damage);
-  const headshot = PROJECTILE_DAMAGE * HEADSHOT_DAMAGE_MULTIPLIER;
+  const headshot = ARROWS.damage * ARROWS.headshotMultiplier;
 
   it('takes a sensible number of arrows per type', () => {
-    expect(arrowsToKill('basic', PROJECTILE_DAMAGE)).toBe(2);
+    expect(arrowsToKill('basic', ARROWS.damage)).toBe(2);
     expect(arrowsToKill('fast', headshot)).toBe(1);
     expect(arrowsToKill('archer', headshot)).toBe(1);
-    expect(arrowsToKill('fast', PROJECTILE_DAMAGE)).toBe(2);
-    expect(arrowsToKill('tank', PROJECTILE_DAMAGE)).toBeGreaterThanOrEqual(5);
-    expect(arrowsToKill('dragon', PROJECTILE_DAMAGE)).toBeGreaterThan(arrowsToKill('tank', PROJECTILE_DAMAGE));
+    expect(arrowsToKill('fast', ARROWS.damage)).toBe(2);
+    expect(arrowsToKill('tank', ARROWS.damage)).toBeGreaterThanOrEqual(5);
+    expect(arrowsToKill('dragon', ARROWS.damage)).toBeGreaterThan(arrowsToKill('tank', ARROWS.damage));
   });
 
   it('hits differently per type: runners least, brutes most', () => {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ENEMY_ARCHER_COOLDOWN_MS, ENEMY_ARCHER_DRAW_MS } from '../../config';
+import { ENEMY_ATTACK } from '../../config';
 import { EnemyBow } from './EnemyBow';
 
 /** Frames until the bow shoots (or `limit`). */
@@ -16,10 +16,10 @@ describe('EnemyBow', () => {
   it('raises the bow, draws and shoots, then waits before the next shot', () => {
     const bow = new EnemyBow();
     const first = framesToShot(bow) * 16;
-    expect(first).toBeGreaterThanOrEqual(ENEMY_ARCHER_DRAW_MS);
-    expect(first).toBeLessThan(ENEMY_ARCHER_DRAW_MS + 300);
+    expect(first).toBeGreaterThanOrEqual(ENEMY_ATTACK.archerDrawMs);
+    expect(first).toBeLessThan(ENEMY_ATTACK.archerDrawMs + 300);
     expect(bow.tension).toBe(0);
-    expect(framesToShot(bow) * 16).toBeGreaterThanOrEqual(ENEMY_ARCHER_COOLDOWN_MS + ENEMY_ARCHER_DRAW_MS);
+    expect(framesToShot(bow) * 16).toBeGreaterThanOrEqual(ENEMY_ATTACK.archerCooldownMs + ENEMY_ATTACK.archerDrawMs);
   });
 
   it('lowers the bow when relaxed', () => {

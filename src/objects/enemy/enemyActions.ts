@@ -1,9 +1,6 @@
-import { PRIEST_CAST_MS } from '../../config';
+import { ENEMY_ATTACK, PRIEST_CAST_MS } from '../../config';
 import { attackImpactProgress, type AttackStyle } from '../../rendering/attackSwing';
 import { CHEER_KINDS, type CheerKind } from '../../rendering/stickmanCheer';
-
-/** A swing takes this long (the club's wind-up, strike and recovery). */
-export const ATTACK_ANIMATION_DURATION_MS = 1_130;
 
 /** A looping victory cheer, played at a slightly random tempo. */
 export interface Cheer {
@@ -55,7 +52,7 @@ export class EnemyActions {
   /** Starts a swing (`style`, or one of its swings at random); `onImpact` runs when it lands. Returns the style. */
   public swing(onImpact?: () => void, style?: AttackStyle): AttackStyle {
     this.swingStyle = style ?? this.attackStyles[Math.floor(this.random() * this.attackStyles.length)];
-    this.attackTimerMs = ATTACK_ANIMATION_DURATION_MS;
+    this.attackTimerMs = ENEMY_ATTACK.animationMs;
     this.pendingImpact = onImpact;
     return this.swingStyle;
   }
@@ -63,7 +60,7 @@ export class EnemyActions {
   /** Runs the swing's clock on and lands the hit at its strike key; returns how far through it is. */
   public advanceSwing(deltaMs: number): number {
     this.attackTimerMs = Math.max(0, this.attackTimerMs - deltaMs);
-    const progress = 1 - this.attackTimerMs / ATTACK_ANIMATION_DURATION_MS;
+    const progress = 1 - this.attackTimerMs / ENEMY_ATTACK.animationMs;
     if (this.pendingImpact && progress >= attackImpactProgress(this.swingStyle)) {
       const impact = this.pendingImpact;
       this.pendingImpact = undefined;

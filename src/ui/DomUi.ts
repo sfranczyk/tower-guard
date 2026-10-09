@@ -9,6 +9,7 @@ import { Hud, type HudValues } from './Hud';
 import { CoopPanel, type CoopView } from './CoopPanel';
 import { SandboxForm } from './SandboxForm';
 import type { PartnerQuiver } from './quiverPage';
+import { TuningPanel } from './TuningPanel';
 import { SoundLabPanel, type SoundLabMusic, type SoundLabMusicState, type SoundLabRow } from './SoundLabPanel';
 import { HUD_BOTTOM_TEMPLATE, HUD_TOP_TEMPLATE, OVERLAY_TEMPLATE, weaponSlots } from './template';
 
@@ -49,6 +50,7 @@ export interface UiHandlers {
   openAnimationLab?: () => void;
   openSoundLab?: () => void;
   openDesignLab?: () => void;
+  toggleTuning?: () => void;
   /** Animation and design lab: back to the main menu. */
   labMenu?: () => void;
   /** Animation lab: leave the zoomed view and return to the list. */
@@ -109,6 +111,7 @@ export class DomUi {
   private readonly coopPanel: CoopPanel;
   private readonly soundLabScreen: HTMLElement;
   private readonly soundLabPanel: SoundLabPanel;
+  private readonly tuningPanel = new TuningPanel();
   private readonly weaponsRoot: HTMLElement;
   private readonly trajectoryInput: HTMLInputElement;
   private readonly cursorCircleInput: HTMLInputElement;
@@ -129,6 +132,7 @@ export class DomUi {
     const overlay = DomUi.createElement('', OVERLAY_TEMPLATE);
     overlay.id = 'ui-root';
     stage.append(canvas, overlay);
+    stage.append(this.tuningPanel.element);
     host.append(this.hudTop, stage, this.hudBottom);
 
     this.menuScreen = this.query('[data-menu]');
@@ -182,6 +186,7 @@ export class DomUi {
     this.onClick('[data-open-test]', () => this.handlers.openAnimationLab?.());
     this.onClick('[data-open-sound-lab]', () => this.handlers.openSoundLab?.());
     this.onClick('[data-open-design-lab]', () => this.handlers.openDesignLab?.());
+    this.onClick('[data-open-tuning]', () => this.handlers.toggleTuning?.());
     this.onClick('[data-lab-menu]', () => this.handlers.labMenu?.());
     this.onClick('[data-lab-back]', () => this.handlers.labBack?.());
     this.onClick('[data-options]', () => this.handlers.toggleOptions?.());
@@ -323,6 +328,15 @@ export class DomUi {
     this.endButton.textContent = options.buttonLabel;
     this.onEndButton = options.onButton;
     this.endScreen.hidden = false;
+  }
+
+  /** The dev tuning panel (`?tune`), over the canvas's right edge. */
+  public get isTuningOpen(): boolean {
+    return this.tuningPanel.isOpen;
+  }
+
+  public setTuningOpen(open: boolean): void {
+    this.tuningPanel.setOpen(open);
   }
 
   private toggleDevTools(): void {

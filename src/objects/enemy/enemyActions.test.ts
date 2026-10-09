@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { PRIEST_CAST_MS } from '../../config';
+import { ENEMY_ATTACK, PRIEST_CAST_MS } from '../../config';
 import { attackImpactProgress } from '../../rendering/attackSwing';
-import { ATTACK_ANIMATION_DURATION_MS, EnemyActions } from './enemyActions';
+import { EnemyActions } from './enemyActions';
 
 const actions = (): EnemyActions => new EnemyActions(['overhead', 'thrust'], 'overhead', () => 0.75);
 
@@ -10,13 +10,13 @@ describe('EnemyActions', () => {
     const a = actions();
     let hits = 0;
     expect(a.swing(() => hits++)).toBe('thrust');
-    const strikeMs = attackImpactProgress('thrust') * ATTACK_ANIMATION_DURATION_MS;
+    const strikeMs = attackImpactProgress('thrust') * ENEMY_ATTACK.animationMs;
     a.advanceSwing(strikeMs - 10);
     expect(hits).toBe(0);
     a.advanceSwing(20);
     a.advanceSwing(20);
     expect(hits).toBe(1);
-    expect(a.advanceSwing(ATTACK_ANIMATION_DURATION_MS)).toBe(1);
+    expect(a.advanceSwing(ENEMY_ATTACK.animationMs)).toBe(1);
     expect(a.swinging).toBe(false);
   });
 
@@ -25,7 +25,7 @@ describe('EnemyActions', () => {
     let hits = 0;
     a.swing(() => hits++, 'overhead');
     a.interrupt();
-    a.advanceSwing(ATTACK_ANIMATION_DURATION_MS);
+    a.advanceSwing(ENEMY_ATTACK.animationMs);
     expect(hits).toBe(0);
   });
 
