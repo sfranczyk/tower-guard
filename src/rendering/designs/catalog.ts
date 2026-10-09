@@ -174,9 +174,9 @@ const BRUTE_SPEED = (ENEMY_SPEED * 0.6) / 1000;
 const ARCHER_SPEED = (ENEMY_SPEED * 0.9) / 1000;
 const KAMIKAZE_SPEED = (ENEMY_SPEED * 2) / 1000;
 const ZOMBIE_SPEED = (ENEMY_SPEED * 0.45) / 1000;
-const KNIGHT_SPEED = (ENEMY_SPEED * 0.85) / 1000;
-const HAMMER_KNIGHT_SPEED = (ENEMY_SPEED * 0.65) / 1000;
-const PRIEST_SPEED = (ENEMY_SPEED * 0.8) / 1000;
+const KNIGHT_SPEED = (ENEMY_SPEED * 0.9) / 1000;
+const HAMMER_KNIGHT_SPEED = (ENEMY_SPEED * 0.7) / 1000;
+const PRIEST_SPEED = ENEMY_SPEED / 1000;
 /** The priest's heal: the scepter raised, held, lowered, then a pause. */
 const CAST_LOOP_MS = 1500;
 const CAST_MS = 900;

@@ -36,7 +36,9 @@ open the one you need:
   `isAlive`, counts as defeated. Heals (`EnemyAI.castHeal`, pure `planHeals` / `ManaPool` in `systems/healing.ts`): every
   `PRIEST_HEAL_INTERVAL_MS`, each ground enemy within `PRIEST_HEAL_RADIUS` (not itself, not `healable: false`) up to
   `PRIEST_HEAL_PER_TARGET`, nearest first, a mana a point; refills at `PRIEST_MANA_REGEN_PER_S` (bar under its health).
-  Cast pose `castBody`, `Enemy.castHeal`, state `'cast'`; `EffectsSystem.healPulse` and `healCrosses`.
+  Mana goes at the cast's start, heals land at its end (`EnemyActions.cast(onDone)`); down/thrown/frozen/vortex cuts it
+  (`actions.interrupt`). Below `PRIEST_MIN_CAST_MANA` it is drained (`ManaPool.exhausted`, grey bar) until
+  `PRIEST_MANA_RECOVER_SHARE` of full. Cast pose `castBody`, `Enemy.castHeal`, state `'cast'`; `EffectsSystem.healPulse` and `healCrosses`.
 - **Kamikaze**: runs in unarmed with a bomb (`pose.bomb`), dies to one arrow. Reaching the bowman (jumping doesn't save
   him) or the keep, `CombatSystem.detonate` (cause `'blast'`) runs `explode` and hurts the bowman (not in the keep) and
   keep within `KAMIKAZE_REACH` × radius, knocking him down (`Bowman.knockBack`, `BOWMAN_KNOCKBACK`). Killed by a direct

@@ -5,6 +5,7 @@ import {
   PRIEST_HEAL_PER_TARGET,
   PRIEST_HEAL_RADIUS,
   PRIEST_MANA_MAX,
+  PRIEST_MANA_RECOVER_SHARE,
   PRIEST_MANA_REGEN_PER_S,
   PRIEST_MIN_CAST_MANA,
   PRIEST_STANDOFF,
@@ -73,9 +74,31 @@ describe('ManaPool', () => {
     expect(pool.canCast).toBe(false);
     pool.update(PRIEST_HEAL_INTERVAL_MS);
     expect(pool.mana).toBeCloseTo((PRIEST_MANA_REGEN_PER_S * PRIEST_HEAL_INTERVAL_MS) / 1000);
-    expect(pool.canCast).toBe(pool.mana >= PRIEST_MIN_CAST_MANA);
+    // Spent dry: drained until it is back to its recover share.
+    expect(pool.canCast).toBe(false);
     pool.update(60_000);
     expect(pool.mana).toBe(PRIEST_MANA_MAX);
+  });
+
+  it('once drained, casts no more until the mana is back to its recover share', () => {
+    const pool = new ManaPool();
+    pool.spend(PRIEST_MANA_MAX - PRIEST_MIN_CAST_MANA + 1);
+    expect(pool.exhausted).toBe(true);
+    const recoverMs = ((PRIEST_MANA_MAX * PRIEST_MANA_RECOVER_SHARE - pool.mana) / PRIEST_MANA_REGEN_PER_S) * 1000;
+    pool.update(recoverMs - 100);
+    expect(pool.mana).toBeGreaterThan(PRIEST_MIN_CAST_MANA);
+    expect(pool.canCast).toBe(false);
+    pool.update(200);
+    expect(pool.exhausted).toBe(false);
+    expect(pool.canCast).toBe(true);
+  });
+
+  it('stays ready while the mana is above the minimum', () => {
+    const pool = new ManaPool();
+    pool.spend(PRIEST_MANA_MAX - PRIEST_MIN_CAST_MANA);
+    expect(pool.exhausted).toBe(false);
+    pool.update(PRIEST_HEAL_INTERVAL_MS);
+    expect(pool.canCast).toBe(true);
   });
 
   it('takes the host mana within its limits', () => {

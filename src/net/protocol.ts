@@ -92,6 +92,8 @@ export interface EnemySnap {
   th?: ThrowNet;
   /** The priest's mana. */
   mana?: number;
+  /** The priest ran dry (no casting until it refills; its bar greys). */
+  drained?: true;
 }
 
 /** A dragon: position, the archer rider's bow, and the fire dragon's breath (ms into it) and aim. */

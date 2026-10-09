@@ -4,6 +4,7 @@ import {
   PRIEST_HEAL_PER_TARGET,
   PRIEST_HEAL_RADIUS,
   PRIEST_MANA_MAX,
+  PRIEST_MANA_RECOVER_SHARE,
   PRIEST_MANA_REGEN_PER_S,
   PRIEST_MIN_CAST_MANA,
   PRIEST_STANDOFF,
@@ -65,10 +66,14 @@ export const planHeals = (from: Vec2, candidates: readonly HealCandidate[], mana
     });
 };
 
-/** The priest's mana and the pause between casts. */
+/**
+ * The priest's mana and the pause between casts: it casts with at least PRIEST_MIN_CAST_MANA; dropping below that it is
+ * drained and casts no more until the mana is back to PRIEST_MANA_RECOVER_SHARE of full.
+ */
 export class ManaPool {
   private manaLeft = PRIEST_MANA_MAX;
   private cooldownMs = 0;
+  private drained = false;
 
   public get mana(): number {
     return this.manaLeft;
@@ -78,25 +83,37 @@ export class ManaPool {
     return this.manaLeft / PRIEST_MANA_MAX;
   }
 
+  /** Ran dry: no casting until the mana is back to PRIEST_MANA_RECOVER_SHARE (its bar dims meanwhile). */
+  public get exhausted(): boolean {
+    return this.drained;
+  }
+
   /** Refills and runs the pause down. */
   public update(deltaMs: number): void {
     this.manaLeft = Math.min(PRIEST_MANA_MAX, this.manaLeft + (PRIEST_MANA_REGEN_PER_S * deltaMs) / 1000);
     this.cooldownMs = Math.max(0, this.cooldownMs - deltaMs);
+    if (this.drained && this.manaLeft >= PRIEST_MANA_MAX * PRIEST_MANA_RECOVER_SHARE) {
+      this.drained = false;
+    }
   }
 
-  /** The pause is over and there's enough mana to be worth a cast. */
+  /** The pause is over, not drained, and there's enough mana to be worth a cast. */
   public get canCast(): boolean {
-    return this.cooldownMs === 0 && this.manaLeft >= PRIEST_MIN_CAST_MANA;
+    return this.cooldownMs === 0 && !this.drained && this.manaLeft >= PRIEST_MIN_CAST_MANA;
   }
 
   /** A cast spending `amount` mana; the next one waits PRIEST_HEAL_INTERVAL_MS. */
   public spend(amount: number): void {
     this.manaLeft = Math.max(0, this.manaLeft - amount);
     this.cooldownMs = PRIEST_HEAL_INTERVAL_MS;
+    if (this.manaLeft < PRIEST_MIN_CAST_MANA) {
+      this.drained = true;
+    }
   }
 
-  /** Co-op guest: the host's mana. */
-  public set(mana: number): void {
+  /** Co-op guest: the host's mana, and whether it is drained. */
+  public set(mana: number, drained = false): void {
     this.manaLeft = Math.max(0, Math.min(PRIEST_MANA_MAX, mana));
+    this.drained = drained;
   }
 }

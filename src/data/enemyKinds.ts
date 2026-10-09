@@ -236,13 +236,13 @@ export const ENEMY_KINDS: Readonly<Record<EnemyType, EnemyKind>> = {
   knight: {
     label: 'Black knight', archetype: 'fighter', race: 'human', magical: false, arrival: 0.2, armor: KNIGHT_ARMOR,
     attackStyles: ['overhead', 'swordRise', 'thrust'],
-    stats: { health: 50, speed: ENEMY_SPEED * 0.85 }, damage: { melee: [9, 14] }, build: { size: 1, strikeReach: 60, walkStyle: 'march' },
+    stats: { health: 50, speed: ENEMY_SPEED * 0.9 }, damage: { melee: [9, 14] }, build: { size: 1, strikeReach: 60, walkStyle: 'march' },
     traits: { mass: 1.9 },
   },
   // A head taller, in the same black plate, with a war hammer in both hands.
   hammerKnight: {
     label: 'Hammer knight', archetype: 'heavy', race: 'human', magical: false, arrival: 0.35, armor: KNIGHT_ARMOR,
-    stats: { health: 80, speed: ENEMY_SPEED * 0.65 }, damage: { melee: [16, 24] }, keepDamage: { melee: 2 }, build: { size: 1.1, strikeReach: 75, walkStyle: 'march' },
+    stats: { health: 80, speed: ENEMY_SPEED * 0.7 }, damage: { melee: [16, 24] }, keepDamage: { melee: 2 }, build: { size: 1.1, strikeReach: 75, walkStyle: 'march' },
     traits: { mass: 2.5 },
   },
   // The black knight on a black warhorse (drawn 1.15× so the horse stands tall): gallops in and strikes with a lance from beyond a sword's reach. Rider
@@ -251,7 +251,7 @@ export const ENEMY_KINDS: Readonly<Record<EnemyType, EnemyKind>> = {
   horseKnight: {
     label: 'Mounted knight', archetype: 'cavalry', race: 'human', magical: false, arrival: 0.45, unhorsed: 'knight', armor: KNIGHT_ARMOR,
     mount: { health: 70 },
-    stats: { health: 50, speed: ENEMY_SPEED * 1.8 }, damage: { melee: [14, 20] }, keepDamage: { melee: 1.5 },
+    stats: { health: 50, speed: ENEMY_SPEED * 2 }, damage: { melee: [14, 20] }, keepDamage: { melee: 1.5 },
     build: { size: 1.15, strikeReach: 64, reach: { bowman: 42, keep: 82 } },
     // Horse and rider: no vortex lifts them off the ground, no pin holds a horse, the ice holds them briefly.
     traits: { mass: 6, freezeMs: FROST_FREEZE_BRUTE_MS, pinMs: 0 },
@@ -259,7 +259,7 @@ export const ENEMY_KINDS: Readonly<Record<EnemyType, EnemyKind>> = {
   // Frail and never attacks, but it keeps the others standing: kill it first.
   priest: {
     label: 'Dark priest', archetype: 'healer', race: 'human', magical: true, arrival: 0.15,
-    stats: { health: 30, speed: ENEMY_SPEED * 0.8 }, damage: { melee: [0, 0] }, build: { size: 1, strikeReach: 0 },
+    stats: { health: 30, speed: ENEMY_SPEED }, damage: { melee: [0, 0] }, build: { size: 1, strikeReach: 0 },
   },
 };
 

@@ -297,9 +297,12 @@ export default class Enemy extends Container {
     return this.vitals.missing + (this.rider?.mount.missingHealth ?? 0);
   }
 
-  /** The priest raises its scepter and casts (planted meanwhile); the heals themselves come from EnemyAI. */
-  public castHeal(): void {
-    this.actions.cast();
+  /**
+   * The priest raises its scepter and casts (planted meanwhile); `onDone` (EnemyAI's heals, host only) runs when the cast
+   * ends, and is lost if the cast is cut short (knocked down, thrown, frozen, a vortex).
+   */
+  public castHeal(onDone?: () => void): void {
+    this.actions.cast(onDone);
     this.halt();
     this.netHooks?.cast?.();
   }
@@ -317,7 +320,7 @@ export default class Enemy extends Container {
   public updateMana(deltaMs: number): void {
     if (this.mana && this.isAlive()) {
       this.mana.update(deltaMs);
-      this.bars.drawMana(this.mana.ratio);
+      this.bars.drawMana(this.mana.ratio, this.mana.exhausted);
     }
   }
 

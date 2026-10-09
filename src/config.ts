@@ -90,20 +90,23 @@ export const HORSE_LEG_LAME_CHANCE: Partial<Record<ProjectileType, number>> = { 
  * and once only priests are left (no more to come) it walks off the field: PRIEST_ESCAPE_BEYOND past its right edge it
  * has escaped and counts as defeated. Every PRIEST_HEAL_INTERVAL_MS it
  * heals each wounded enemy within PRIEST_HEAL_RADIUS by up to PRIEST_HEAL_PER_TARGET (nearest first, never itself, not the undead),
- * one mana a point. Mana refills fast (PRIEST_MANA_REGEN_PER_S up to PRIEST_MANA_MAX), so a living priest keeps a
- * crowd standing; it casts only with at least PRIEST_MIN_CAST_MANA. The cast (scepter raised) takes PRIEST_CAST_MS.
+ * one mana a point. Mana refills slowly (PRIEST_MANA_REGEN_PER_S up to PRIEST_MANA_MAX): it casts only with at least
+ * PRIEST_MIN_CAST_MANA, and once below that it is drained until the mana is back to PRIEST_MANA_RECOVER_SHARE of full.
+ * The mana goes when the cast (scepter raised, PRIEST_CAST_MS) starts and the heals land when it ends; knocked down,
+ * thrown, frozen or caught in a vortex meanwhile, the cast is lost. Casts start at least PRIEST_HEAL_INTERVAL_MS apart.
  */
 export const PRIEST_STANDOFF = 160;
 export const PRIEST_FOLLOW_GAP = 55;
 export const PRIEST_ESCAPE_BEYOND = 60;
 export const PRIEST_POST_SLACK = 15;
 export const PRIEST_HEAL_RADIUS = 170;
-export const PRIEST_HEAL_INTERVAL_MS = 900;
+export const PRIEST_HEAL_INTERVAL_MS = 3000;
 export const PRIEST_HEAL_PER_TARGET = 10;
 export const PRIEST_MANA_MAX = 40;
-export const PRIEST_MANA_REGEN_PER_S = 14;
+export const PRIEST_MANA_REGEN_PER_S = 3;
+export const PRIEST_MANA_RECOVER_SHARE = 0.8;
 export const PRIEST_MIN_CAST_MANA = 4;
-export const PRIEST_CAST_MS = 650;
+export const PRIEST_CAST_MS = 1000;
 /**
  * Explosion damage by distance from the blast: `centre` at the middle (and for the enemy an explosive arrow hits
  * directly), falling off linearly to `edge` at EXPLOSION_RADIUS. The arrow itself does no damage.
@@ -260,8 +263,10 @@ export const WALK_ACCELERATION = 600;
 export const SPRINT_ACCELERATION = 185;
 export const WALK_DECELERATION = 1100;
 export const SPRINT_DECELERATION = 480;
-/** Sprint top speed as a multiple of walking speed (120 px/s → 270 px/s). */
-export const SPRINT_MAX_MULTIPLIER = 2.25;
+/** The bowman's walking speed (px/s). */
+export const BOWMAN_WALK_SPEED = 90;
+/** Sprint top speed as a multiple of walking speed (90 px/s → 180 px/s). */
+export const SPRINT_MAX_MULTIPLIER = 2;
 export const JUMP_SPEED = 594;
 /** Bowman gravity: with JUMP_SPEED this gives a ~80 px jump lasting ~0.54 s. */
 export const GRAVITY = 2200;

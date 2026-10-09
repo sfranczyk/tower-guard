@@ -23,6 +23,8 @@ export class EnemyActions {
   private cooldownMs = 0;
   /** Time left of a spell being cast (the priest's heal). */
   private castTimerMs = 0;
+  /** What the spell does when the cast ends (lost if it is cut short). */
+  private pendingSpell?: () => void;
   private staggerMs = 0;
   /** Set when the enemies win. */
   public cheer?: Cheer;
@@ -83,14 +85,20 @@ export class EnemyActions {
     return true;
   }
 
-  /** Raises the scepter for PRIEST_CAST_MS. */
-  public cast(): void {
+  /** Raises the scepter for PRIEST_CAST_MS; `onDone` runs when the cast ends (not if it is cut short). */
+  public cast(onDone?: () => void): void {
     this.castTimerMs = PRIEST_CAST_MS;
+    this.pendingSpell = onDone;
   }
 
-  /** Runs the cast on; returns how far through it is. */
+  /** Runs the cast on (the spell goes off at its end); returns how far through it is. */
   public advanceCast(deltaMs: number): number {
     this.castTimerMs = Math.max(0, this.castTimerMs - deltaMs);
+    if (this.castTimerMs === 0 && this.pendingSpell) {
+      const spell = this.pendingSpell;
+      this.pendingSpell = undefined;
+      spell();
+    }
     return 1 - this.castTimerMs / PRIEST_CAST_MS;
   }
 
@@ -110,6 +118,7 @@ export class EnemyActions {
     this.attackTimerMs = 0;
     this.castTimerMs = 0;
     this.pendingImpact = undefined;
+    this.pendingSpell = undefined;
   }
 
   /** Everything cut short, the stagger too (knocked down, thrown, cheering). */

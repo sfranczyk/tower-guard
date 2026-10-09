@@ -12,7 +12,7 @@ export const enemyNetState = (enemy: Enemy): EnemyNet => {
   const lame = mount?.isLame ? Math.round(mount.lameLeftMs) : undefined;
   return enemy.isArcher
     ? { vx: enemy.velocity.x, ...bow.net, pinned, af, th }
-    : { vx: enemy.velocity.x, pinned, af, th, mana: manaLeft, lame };
+    : { vx: enemy.velocity.x, pinned, af, th, mana: manaLeft, drained: mana?.exhausted || undefined, lame };
 };
 
 /**
@@ -25,8 +25,8 @@ export const applyEnemyNet = (enemy: Enemy, state: EnemyNet & { x: number; y: nu
   }
   const { motion, mana } = enemy;
   if (mana && state.mana !== undefined) {
-    mana.set(state.mana);
-    enemy.bars.drawMana(mana.ratio);
+    mana.set(state.mana, state.drained === true);
+    enemy.bars.drawMana(mana.ratio, mana.exhausted);
   }
   if (state.th && !motion.isThrown && !enemy.figure.fall) {
     enemy.throwInAir(state.th.vx, 0, state.th.spin);

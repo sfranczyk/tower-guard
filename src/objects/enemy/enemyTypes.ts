@@ -58,6 +58,8 @@ export interface EnemyNet {
   th?: ThrowNet;
   /** The priest's mana. */
   mana?: number;
+  /** The priest ran dry (no casting until it refills; its bar greys). */
+  drained?: true;
   /** A mounted knight's lame horse: time left (ms). */
   lame?: number;
 }

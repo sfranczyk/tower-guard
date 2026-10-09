@@ -6,7 +6,7 @@ import { fallProgress, type FallState } from './enemyFall';
 /** Health bar size and placement in container space (the container is drawn at 2/3 scale). */
 const HEALTH_BAR = { width: 30, height: 4, standingY: -68, aboveHead: 14 };
 /** The priest's mana bar, just under its health bar. */
-const MANA_BAR = { height: 2.5, gap: 1.5, color: 0x5b8cff };
+const MANA_BAR = { height: 2.5, gap: 1.5, color: 0x5b8cff, drainedColor: 0x4a5266 };
 /** A mounted knight's health bar sits this much higher (over the rider's head); the horse's is under it, this colour. */
 const MOUNTED_BAR_RISE = 24;
 const HORSE_BAR = { height: 3, gap: 1.5, color: 0xc8935a };
@@ -40,8 +40,8 @@ export class EnemyBars {
     }
   }
 
-  /** The priest's mana under the health bar. */
-  public drawMana(ratio: number): void {
+  /** The priest's mana under the health bar; greyed while drained (it can't cast until it refills). */
+  public drawMana(ratio: number, drained = false): void {
     if (!this.mana) {
       return;
     }
@@ -49,7 +49,7 @@ export class EnemyBars {
     const top = HEALTH_BAR.height / 2 + 1 + MANA_BAR.gap;
     this.mana.clear()
       .rect(-width / 2 - 1, top, width + 2, MANA_BAR.height + 2).fill({ color: 0x1b1a20, alpha: 0.85 })
-      .rect(-width / 2, top + 1, width * ratio, MANA_BAR.height).fill({ color: MANA_BAR.color });
+      .rect(-width / 2, top + 1, width * ratio, MANA_BAR.height).fill({ color: drained ? MANA_BAR.drainedColor : MANA_BAR.color });
   }
 
   /** Keeps the bars above the head (of `body`, the drawn sprite), also while knocked down and getting up. */

@@ -30,7 +30,7 @@ fights with (HUD slots, keys, the host checks the guest's picks). `ctx.session.n
   `CombatWorld.bowmen`, damage events name the bowman. Health is per player (`RunState.bowmanHealths`), a fallen bowman
   stays down for the run (`Bowman.die({}, true)`), the level is lost when all have fallen or the keep falls. Player 2
   wears `secondPlayerArmor` (bronze, silver trim) and hides in the keep's lower second tower.
-- **Feature sync seen so far** (add yours here): knight `attack` style; priest `cast` / `heal` events, `EnemySnap.mana`,
+- **Feature sync seen so far** (add yours here): knight `attack` style; priest `cast` / `heal` events, `EnemySnap.mana` / `drained`,
   fx `heal` / `healPulse`; pinned time `EnemySnap.pinned`; afflictions `af`, thrown `th`; `BowmanSnap.net`
   (`Bowman.getNetState`); horse `EnemyNet.lame`, `spawn` event `place` (`RiderOff`), `unseat` event; dragon hover side;
   bowman `die` event carries the fall; exit-keep press (`PlayerInput.isExitPressed`).

@@ -1,4 +1,5 @@
 import { Container } from 'pixi.js';
+import { BOWMAN_WALK_SPEED } from '../../config';
 import type { Rect, Vec2 } from '../../types';
 import { AfflictionLayer } from '../AfflictionLayer';
 import { BodyMotion } from '../../systems/bodyMotion';
@@ -83,7 +84,7 @@ export class Bowman extends Container {
     super();
 
     this.footing = new BowmanFooting(boardBounds, config.width ?? 32);
-    this.movementSpeed = config.movementSpeed ?? 120;
+    this.movementSpeed = config.movementSpeed ?? BOWMAN_WALK_SPEED;
     this.maxHealth = config.maxHealth ?? 100;
     this.health = this.maxHealth;
     this.figure = new BowmanFigure(this, config.look ?? 'ranger', config.armorColors);

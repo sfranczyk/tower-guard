@@ -38,6 +38,8 @@ const TOWER_ATTACK_REACH = 40;
 const FIRE_AIM_ABOVE_FEET = 10;
 /** Enemy archers re-solve their aim this often (the solver simulates many trajectories). */
 const ARCHER_AIM_REFRESH_MS = 250;
+/** Where a priest's heal goes from and to: the chest. */
+const priestChest = (enemy: Enemy): Vec2 => ({ x: enemy.x, y: enemy.y - 25 * enemy.size });
 
 /** What the enemies need of the battle. */
 export interface EnemyAIWorld {
@@ -182,35 +184,49 @@ export class EnemyAI {
       priest.escape();
       return;
     }
-    if (!priest.isDown && !priest.afflictions.isFrozen && !priest.afflictions.inVortex) {
+    if (priest.isDown || priest.afflictions.isFrozen || priest.afflictions.inVortex) {
+      // Knocked down, thrown, frozen or in a vortex: a cast under way is lost (its mana too).
+      priest.actions.interrupt();
+    } else {
       this.castHeal(priest);
     }
     priest.clearHitTint();
   }
 
   /**
-   * Priest: when the pause is over and it has the mana, raises its scepter and heals the wounded around it (nearest
-   * first, never itself or the undead; systems/healing.ts): red crosses rise from each one.
+   * Priest: when the pause is over and it has the mana, raises its scepter for a cast. The mana goes now, the heals land
+   * when the cast ends (systems/healing.ts): the wounded around it then, nearest first, never itself or the undead, up to
+   * the mana spent; red crosses rise from each one. Cut short, the cast is lost.
    */
   private castHeal(priest: Enemy): void {
     const { mana } = priest;
     if (!mana?.canCast || priest.isCasting || priest.isAttacking) {
       return;
     }
-    const wounded = this.world.enemies.filter((other): other is Enemy =>
-      other !== priest && !(other instanceof DragonEnemy) && other.isAlive() && other.missingHealth > 0 && enemyTraits(other.kind).healable);
-    const chest = (enemy: Enemy): Vec2 => ({ x: enemy.x, y: enemy.y - 25 * enemy.size });
-    const heals = planHeals(chest(priest), wounded.map((enemy) => ({ at: chest(enemy), missing: enemy.missingHealth })), mana.mana);
-    if (heals.length === 0) {
+    const spent = this.planPriestHeals(priest, mana.mana).reduce((sum, { amount }) => sum + amount, 0);
+    if (spent === 0) {
       return;
     }
-    priest.castHeal();
-    mana.spend(heals.reduce((sum, { amount }) => sum + amount, 0));
-    this.world.effects.healPulse({ x: priest.x, y: priest.y });
-    heals.forEach(({ index, amount }) => {
-      wounded[index].heal(amount);
-      this.world.effects.healCrosses(chest(wounded[index]));
+    mana.spend(spent);
+    priest.castHeal(() => {
+      const heals = this.planPriestHeals(priest, spent);
+      if (heals.length === 0) {
+        return;
+      }
+      this.world.effects.healPulse({ x: priest.x, y: priest.y });
+      heals.forEach(({ enemy, amount }) => {
+        enemy.heal(amount);
+        this.world.effects.healCrosses(priestChest(enemy));
+      });
     });
+  }
+
+  /** Who a cast of the priest's with `mana` heals now, and by how much (planHeals). */
+  private planPriestHeals(priest: Enemy, mana: number): { enemy: Enemy; amount: number }[] {
+    const wounded = this.world.enemies.filter((other): other is Enemy =>
+      other !== priest && !(other instanceof DragonEnemy) && other.isAlive() && other.missingHealth > 0 && enemyTraits(other.kind).healable);
+    return planHeals(priestChest(priest), wounded.map((enemy) => ({ at: priestChest(enemy), missing: enemy.missingHealth })), mana)
+      .map(({ index, amount }) => ({ enemy: wounded[index], amount }));
   }
 
   private drawDebugHitboxes(enemy: Foe): void {

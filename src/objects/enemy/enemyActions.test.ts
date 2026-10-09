@@ -50,6 +50,21 @@ describe('EnemyActions', () => {
     expect(a.tickStagger(0)).toBe(false);
   });
 
+  it('casts its spell when the cast ends, and loses it when cut short', () => {
+    const a = actions();
+    let spells = 0;
+    a.cast(() => { spells += 1; });
+    a.advanceCast(PRIEST_CAST_MS - 1);
+    expect(spells).toBe(0);
+    a.advanceCast(1);
+    expect(spells).toBe(1);
+    a.cast(() => { spells += 1; });
+    a.advanceCast(PRIEST_CAST_MS / 2);
+    a.interrupt();
+    a.advanceCast(PRIEST_CAST_MS);
+    expect(spells).toBe(1);
+  });
+
   it('cheers at its tempo', () => {
     const a = actions();
     a.swing(undefined, 'overhead');
