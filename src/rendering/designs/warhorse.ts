@@ -1,6 +1,6 @@
 import type { Graphics } from 'pixi.js';
 import type { Vec2 } from '../../types';
-import type { HorseLeg, HorsePose } from '../horseRider';
+import { HORSE_GROUND_Y, type HorseLeg, type HorsePose } from '../horseRider';
 import type { BodyPose } from './bodyPoses';
 import { ellipsePoints, limb, mix, shape } from './designShapes';
 import { blackKnightLook } from './knightSkins';
@@ -94,19 +94,21 @@ const chamfron = (g: Graphics, pose: HorsePose, timeMs: number): void => {
 /** The caparison: a dark red cloth over the barrel to below the belly, scalloped and swaying, and the saddle on it. */
 const caparison = (g: Graphics, pose: HorsePose, timeMs: number, empty: boolean): void => {
   const sway = (k: number): number => Math.sin(timeMs / 170 - k) * 1.6;
+  // The cloth hangs down to its hem; on a horse lying on the ground it lies flat there (rendering/horseDeath).
+  const hanging = (point: Vec2): Vec2 => ({ x: point.x, y: Math.min(point.y, HORSE_GROUND_Y - 1) });
   const hem = Array.from({ length: 9 }, (_, i) => {
     const x = 36 - i * 10;
-    return onBarrel(pose, x + sway(i) * 0.6, 24 + (i % 2) * 3 + sway(i));
+    return hanging(onBarrel(pose, x + sway(i) * 0.6, 24 + (i % 2) * 3 + sway(i)));
   });
   const cloth = [onBarrel(pose, 30, -16), onBarrel(pose, 36, 6), ...hem, onBarrel(pose, -46, 4), onBarrel(pose, -42, -14), onBarrel(pose, -8, -21)];
   shape(g, cloth, CLOTH);
   // A dark border along the hem and a stripe down from the saddle.
   hem.slice(0, -1).forEach((point, i) => limb(g, point, hem[i + 1], 3, 3, CLOTH_TRIM));
-  shape(g, [onBarrel(pose, 6, -20), onBarrel(pose, 13, -19), onBarrel(pose, 11, 26 + sway(3)), onBarrel(pose, 3, 26 + sway(3))], CLOTH_DARK);
+  shape(g, [onBarrel(pose, 6, -20), onBarrel(pose, 13, -19), hanging(onBarrel(pose, 11, 26 + sway(3))), hanging(onBarrel(pose, 3, 26 + sway(3)))], CLOTH_DARK);
   // The saddle and its cantle; a stirrup leather (the rider's foot is in it).
   shape(g, [onBarrel(pose, -20, -21), onBarrel(pose, -22, -30), onBarrel(pose, -14, -24), onBarrel(pose, 14, -24), onBarrel(pose, 20, -30), onBarrel(pose, 18, -18), onBarrel(pose, -16, -16)], LEATHER);
   if (empty) {
-    const stirrup = onBarrel(pose, 14 + sway(1), 14);
+    const stirrup = hanging(onBarrel(pose, 14 + sway(1), 14));
     limb(g, onBarrel(pose, 8, -18), stirrup, 1.6, 1.6, LEATHER);
     g.roundRect(stirrup.x - 3.5, stirrup.y, 7, 4, 1.5).fill({ color: STEEL_EDGE });
   }

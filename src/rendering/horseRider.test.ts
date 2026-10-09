@@ -83,14 +83,34 @@ describe('horse and rider', () => {
     expect(distance(getHorsePose(0, 'stand', { thrust: 1 }).lance!.tip, carried.lance!.tip)).toBeLessThan(1e-6);
   });
 
-  it('can be hit on the rider\'s head (a headshot), his torso and the horse, not between its legs', () => {
+  it('can be hit on the rider\'s head (a headshot), his torso and the horse, legs included, not between them', () => {
     const pose = getHorsePose(200, 'gallop', { thrust: 0 });
     const zones = mountedHitZones(pose);
-    expect(zones.filter((zone) => zone.headshot).map((zone) => zone.points)).toEqual([[pose.rider.head]]);
+    // The rider's head and the horse's head.
+    expect(zones.filter((zone) => zone.headshot).map((zone) => zone.points[0])).toEqual([pose.rider.head, pose.poll]);
+    expect(zones.filter((zone) => zone.part === 'rider').map((zone) => zone.points[0])).toEqual([pose.rider.head, pose.rider.hip]);
     const inside = (point: { x: number; y: number }): boolean => zones.some(({ points, padding }) =>
       point.x >= Math.min(...points.map((p) => p.x)) - padding && point.x <= Math.max(...points.map((p) => p.x)) + padding
       && point.y >= Math.min(...points.map((p) => p.y)) - padding && point.y <= Math.max(...points.map((p) => p.y)) + padding);
     [pose.rider.shoulder, pose.barrel.centre, pose.croup, pose.chest, pose.forehead].forEach((point) => expect(inside(point)).toBe(true));
     expect(inside({ x: pose.barrel.centre.x, y: HORSE_GROUND_Y - 8 })).toBe(false);
+  });
+
+  it.each(GAITS)('%s: every leg can be hit from the body down to just above the hoof (a zone each)', (gait) => {
+    frames(gait).forEach((timeMs) => {
+      const pose = getHorsePose(timeMs, gait);
+      const legZones = mountedHitZones(pose).filter((zone) => zone.leg);
+      expect(legZones).toHaveLength(4);
+      const covered = (point: { x: number; y: number }): boolean => legZones.some(({ points, padding }) =>
+        point.x >= Math.min(...points.map((p) => p.x)) - padding && point.x <= Math.max(...points.map((p) => p.x)) + padding
+        && point.y >= Math.min(...points.map((p) => p.y)) - padding && point.y <= Math.max(...points.map((p) => p.y)) + padding);
+      legs(pose).forEach(({ root, joint, hoof }) => {
+        expect(covered(joint)).toBe(true);
+        expect(covered({ x: (root.x + joint.x) / 2, y: (root.y + joint.y) / 2 })).toBe(true);
+        expect(covered({ x: (joint.x + hoof.x) / 2, y: (joint.y + hoof.y) / 2 })).toBe(true);
+      });
+      // The zones end above the hooves.
+      legZones.forEach(({ points, padding }) => expect(Math.max(...points.map((p) => p.y)) + padding).toBeLessThan(HORSE_GROUND_Y - 1));
+    });
   });
 });

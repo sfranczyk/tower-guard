@@ -4,7 +4,7 @@ import { drawBow, getArcherRig, toArcherLocalAngle, type FreeArm } from './arche
 import { HUMAN_BODY, type BodyColors } from './bodyColors';
 import { ATTACK_REST, CLUBS, ZOMBIE_REST, getAttackPose, type AttackStyle } from './attackSwing';
 import { RUN_GROUND_Y, runArmSwing, runBounce, runFoot } from './runCycle';
-import { walkKneeBend } from './walkCycle';
+import { marchKneeBend, walkFrame, type WalkStyle } from './walkCycle';
 import { ARMOR_COLORS, type ArmorPalette, drawArmor, drawArmoredBow, drawHood, drawPauldron, drawQuiver } from './armor';
 
 /** skeleton = thin white bones (enemies, previews); armored = the player's armored archer look. */
@@ -49,6 +49,8 @@ export interface StickmanPose {
   zombie?: boolean;
   /** Kamikaze: a bomb strapped to the chest with a lit, sparking fuse. */
   bomb?: boolean;
+  /** How it walks (rendering/walkCycle.ts): the natural 'walk' (default) or the old 'march'; zombies always march (dragging). */
+  walkStyle?: WalkStyle;
 }
 
 /** Bomb strapped to a kamikaze's chest, with the fuse sparking (flickers with `phase`). */
@@ -90,10 +92,11 @@ export const IDLE_KNEE_BEND = -0.35;
 /** Head circle in stickman sprite space (shared with hitboxes). */
 export const STICKMAN_HEAD = { x: 0, y: -52, radius: 10 } as const;
 
-/** Walking feet swing between ±WALK_HALF_STRIDE; each step (π of phase) the planted foot moves a full stride back. */
-export const WALK_HALF_STRIDE = 22;
-/** How far the body moves (sprite units) per radian of walk phase with the planted foot not sliding. */
-export const WALK_STRIDE_PER_RADIAN = (WALK_HALF_STRIDE * 2) / Math.PI;
+/** Marching feet swing between ±MARCH_HALF_STRIDE; each step (π of phase) the planted foot moves a full stride back. */
+export const MARCH_HALF_STRIDE = 22;
+/** How far the body moves (sprite units) per radian of march phase with the planted foot not sliding. */
+export const MARCH_STRIDE_PER_RADIAN = (MARCH_HALF_STRIDE * 2) / Math.PI;
+export { WALK_STRIDE_PER_RADIAN } from './walkCycle';
 
 export type StickmanRenderer = (sprite: Graphics, phase: number, pose?: StickmanPose) => void;
 
@@ -118,7 +121,9 @@ export const drawStickman: StickmanRenderer = (sprite, phase, pose = {}) => {
     bodyColors = HUMAN_BODY,
     zombie = false,
     bomb = false,
+    walkStyle = 'walk',
   } = pose;
+  const marching = zombie || walkStyle === 'march';
   const armored = skin === 'armored';
   sprite.clear();
   const motionBlend = running ? 1 : runningBlend;
@@ -131,8 +136,10 @@ export const drawStickman: StickmanRenderer = (sprite, phase, pose = {}) => {
   const club = CLUBS[attackStyle];
   // Lean forward in the facing direction (a mirrored sprite needs the rotation flipped too).
   sprite.rotation = (0.06 + 0.04 * motionBlend) * (1 - idleBlend) * leanDirection;
-  const walkingBounce = (0.5 + Math.cos(phase * 2) * 0.5) * 1.4 * (1 - motionBlend) * (1 - idleBlend);
   const cycle = ((phase % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+  // The natural walk (its feet, hips and arms); the march bobs the whole body instead, its feet sinking a little.
+  const walk = marching ? undefined : walkFrame(cycle / (Math.PI * 2));
+  const walkingBounce = (walk ? walk.hipY : (0.5 + Math.cos(phase * 2) * 0.5) * 1.4) * (1 - motionBlend) * (1 - idleBlend);
   // Run cycle progress for the front (right) leg, shifted so its swing lines up with the walk's swing
   // and walk↔run blends don't pull the legs in opposite directions.
   const runProgress = cycle / (Math.PI * 2) + 0.4;
@@ -155,7 +162,7 @@ export const drawStickman: StickmanRenderer = (sprite, phase, pose = {}) => {
   const legSwing = (rightLegIsSwinging ? 1 : -1) * Math.sin(progress * Math.PI);
   const footLift = 20;
   // Arm swing angle for the rear arm (it moves with the front leg); the front arm mirrors it.
-  const walkArmSwing = legSwing * 0.58;
+  const walkArmSwing = walk ? walk.rearArm : legSwing * 0.58;
   const runArm = runArmSwing(runProgress) * 0.9;
   const armSwingAngle = walkArmSwing + (runArm - walkArmSwing) * motionBlend;
   const attackForearmBend = attack?.forearmBend ?? ATTACK_REST.forearmBend;
@@ -184,7 +191,8 @@ export const drawStickman: StickmanRenderer = (sprite, phase, pose = {}) => {
     sprite.circle(point.x, point.y, armored ? 4.5 : 2.5).fill({ color: isRear ? rearColor : frontColor });
   };
 
-  const drawLeg = (foot: Point, kneeBend: number, isRear: boolean): void => {
+  /** `pitch`: the walking foot's own angle (heel to toe), blended away into the run's and the standing foot. */
+  const drawLeg = (foot: Point, kneeBend: number, isRear: boolean, pitch?: number): void => {
     const upperLength = 30;
     const lowerLength = 30;
     const dx = foot.x - hip.x;
@@ -209,6 +217,10 @@ export const drawStickman: StickmanRenderer = (sprite, phase, pose = {}) => {
     };
     // Feet follow the shin while moving and lie flat on the ground when standing.
     const shinFoot = { x: shinDirection.y, y: -shinDirection.x };
+    if (pitch !== undefined) {
+      shinFoot.x += (Math.cos(pitch) - shinFoot.x) * (1 - motionBlend);
+      shinFoot.y += (-Math.sin(pitch) - shinFoot.y) * (1 - motionBlend);
+    }
     const flatX = shinFoot.x + (1 - shinFoot.x) * idleBlend;
     const flatY = shinFoot.y * (1 - idleBlend);
     const flatLength = Math.hypot(flatX, flatY) || 1;
@@ -227,7 +239,8 @@ export const drawStickman: StickmanRenderer = (sprite, phase, pose = {}) => {
       x: shoulder.x + Math.sin(angle) * 21,
       y: shoulder.y + Math.cos(angle) * 21,
     };
-    const forearmAngle = angle + (armed ? attackForearmBend : 0.2 + (Math.PI / 2 - 0.2) * motionBlend);
+    const walkBend = walk ? walk.elbowBend(angle) : 0.2;
+    const forearmAngle = angle + (armed ? attackForearmBend : walkBend + (Math.PI / 2 - walkBend) * motionBlend);
     const hand = {
       x: elbow.x + Math.sin(forearmAngle) * 21,
       y: elbow.y + Math.cos(forearmAngle) * 21,
@@ -250,14 +263,18 @@ export const drawStickman: StickmanRenderer = (sprite, phase, pose = {}) => {
     return hand;
   };
 
-  const walkSwingFoot = {
-    x: -WALK_HALF_STRIDE + easedProgress * WALK_HALF_STRIDE * 2,
+  const marchSwingFoot = {
+    x: -MARCH_HALF_STRIDE + easedProgress * MARCH_HALF_STRIDE * 2,
     y: 55 - Math.sin(progress * Math.PI) * footLift,
   };
-  const walkStanceFoot = {
-    x: WALK_HALF_STRIDE - easedProgress * WALK_HALF_STRIDE * 2,
+  const marchStanceFoot = {
+    x: MARCH_HALF_STRIDE - easedProgress * MARCH_HALF_STRIDE * 2,
     y: 55,
   };
+  // The walk's feet stay on the ground as the hips bob (the sprite moves by walk.hipY).
+  const walkFoot = (foot: { x: number; lift: number }): Point => ({ x: foot.x, y: 55 - foot.lift - (walk?.hipY ?? 0) });
+  const walkFront = walk ? walkFoot(walk.front) : rightLegIsSwinging ? marchSwingFoot : marchStanceFoot;
+  const walkRear = walk ? walkFoot(walk.rear) : rightLegIsSwinging ? marchStanceFoot : marchSwingFoot;
   const runnerFootAt = (progressOfLeg: number): Point => {
     const foot = runFoot(progressOfLeg);
     return { x: foot.x, y: RUN_GROUND_Y - runBounce(runProgress) - foot.lift };
@@ -266,8 +283,8 @@ export const drawStickman: StickmanRenderer = (sprite, phase, pose = {}) => {
     x: walking.x + (runningPoint.x - walking.x) * motionBlend,
     y: walking.y + (runningPoint.y - walking.y) * motionBlend,
   });
-  const rightFoot = blendMotionPoint(rightLegIsSwinging ? walkSwingFoot : walkStanceFoot, runnerFootAt(runProgress));
-  const leftFoot = blendMotionPoint(rightLegIsSwinging ? walkStanceFoot : walkSwingFoot, runnerFootAt(runProgress + 0.5));
+  const rightFoot = blendMotionPoint(walkFront, runnerFootAt(runProgress));
+  const leftFoot = blendMotionPoint(walkRear, runnerFootAt(runProgress + 0.5));
   // Running legs use the exact two-bone solution with the knee in front (bend −1).
   const runnerKneeBend = -1;
   // Feet stay on the ground when the swing dips the hips; the front foot steps into the strike.
@@ -277,8 +294,9 @@ export const drawStickman: StickmanRenderer = (sprite, phase, pose = {}) => {
     x: walking.x + (standing.x - walking.x) * idleBlend,
     y: walking.y + (standing.y - walking.y) * idleBlend,
   });
-  const walkingLeftKneeBend = walkKneeBend(progress, !rightLegIsSwinging);
-  const walkingRightKneeBend = walkKneeBend(progress, rightLegIsSwinging);
+  // The walk's knees are solved exactly (in front, like the run's); the march has its own bends.
+  const walkingLeftKneeBend = walk ? runnerKneeBend : marchKneeBend(progress, !rightLegIsSwinging);
+  const walkingRightKneeBend = walk ? runnerKneeBend : marchKneeBend(progress, rightLegIsSwinging);
   const movingLeftKneeBend = walkingLeftKneeBend + (runnerKneeBend - walkingLeftKneeBend) * motionBlend;
   const movingRightKneeBend = walkingRightKneeBend + (runnerKneeBend - walkingRightKneeBend) * motionBlend;
   // Standing uses its own symmetric, slightly forward knee bend instead of whatever walk phase the
@@ -286,7 +304,7 @@ export const drawStickman: StickmanRenderer = (sprite, phase, pose = {}) => {
   const leftKneeBend = movingLeftKneeBend + (IDLE_KNEE_BEND - movingLeftKneeBend) * idleBlend;
   const rightKneeBend = movingRightKneeBend + (IDLE_KNEE_BEND - movingRightKneeBend) * idleBlend;
 
-  drawLeg(blendPoint(leftFoot, idleLeftFoot), leftKneeBend, true);
+  drawLeg(blendPoint(leftFoot, idleLeftFoot), leftKneeBend, true, walk?.rear.pitch);
   // Rear gray arm follows the front white leg; the front white arm follows the rear gray leg.
   const frontArmAngle = attack?.armAngle ?? -armSwingAngle * (1 - idleBlend) + 0.1 * idleBlend;
   // While the bow is lowered the string arm swings like a normal front arm.
@@ -322,7 +340,7 @@ export const drawStickman: StickmanRenderer = (sprite, phase, pose = {}) => {
     // Back to front: quiver, torso, front leg, armor over the legs, hood, drawing arm, shoulder plate.
     drawQuiver(sprite, armorColors);
     line(hip, shoulder);
-    drawLeg(blendPoint(rightFoot, idleRightFoot), rightKneeBend, false);
+    drawLeg(blendPoint(rightFoot, idleRightFoot), rightKneeBend, false, walk?.front.pitch);
     drawArmor(sprite, armorColors);
     drawHood(sprite, STICKMAN_HEAD, armorColors);
     if (archerRig) {
@@ -335,7 +353,7 @@ export const drawStickman: StickmanRenderer = (sprite, phase, pose = {}) => {
     line(shoulder, along(43));
     const head = along(-STICKMAN_HEAD.y);
     sprite.circle(head.x, head.y, STICKMAN_HEAD.radius).stroke({ width: 2, color: skeleton });
-    drawLeg(blendPoint(rightFoot, idleRightFoot), rightKneeBend, false);
+    drawLeg(blendPoint(rightFoot, idleRightFoot), rightKneeBend, false, walk?.front.pitch);
     if (bomb) {
       // On the chest, just in front of the spine.
       const chest = along(19);

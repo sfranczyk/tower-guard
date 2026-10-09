@@ -122,6 +122,13 @@ export class GuestSync {
       case 'spawn':
         this.enemyById.set(event.id, this.world.spawnEnemy(event.type, event.place));
         break;
+      case 'unseat': {
+        const enemy = this.enemyById.get(event.id);
+        if (enemy && !(enemy instanceof DragonEnemy)) {
+          enemy.unseat();
+        }
+        break;
+      }
       case 'hit': {
         const enemy = this.enemyById.get(event.id);
         enemy?.applyHitReaction(0);

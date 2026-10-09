@@ -1,8 +1,8 @@
 import { Container, Graphics } from 'pixi.js';
-import { ENEMY_ATTACK_INTERVAL_MS, KAMIKAZE_GIB_FORCE, PLAYER_TOWER_X, PRIEST_CAST_MS, WORLD_WIDTH } from '../config';
+import { ENEMY_ATTACK_INTERVAL_MS, HORSE_LEG, KAMIKAZE_GIB_FORCE, PLAYER_TOWER_X, PRIEST_CAST_MS, WORLD_WIDTH } from '../config';
 import { getArcherRig, toArcherLocalAngle } from '../rendering/archer';
 import { attackImpactProgress, type AttackStyle } from '../rendering/attackSwing';
-import { WALK_STRIDE_PER_RADIAN } from '../rendering/stickman';
+import { MARCH_STRIDE_PER_RADIAN, WALK_STRIDE_PER_RADIAN } from '../rendering/stickman';
 import { RUN_STRIDE_PER_RADIAN } from '../rendering/runCycle';
 import { FALL_DURATION_MS, getFallPose, type FallKind, type FallPose } from '../rendering/stickmanFall';
 import { CHEER_KINDS, getCheerPose, type CheerKind } from '../rendering/stickmanCheer';
@@ -14,12 +14,13 @@ import { GibSimulation } from '../rendering/stickmanGibs';
 import type { BodyColors } from '../rendering/bodyColors';
 import { drawEnemyBody, drawEnemyGibs, enemyGibColors, type EnemyBodyState } from '../rendering/enemyBody';
 import { fromBodyAnchor, spriteToContainer, spriteToWorld, toBodyAnchor, worldToSprite, type BodyAnchor, type BodyTransform, type Torso } from '../systems/bodyAnchor';
-import { ENEMY_LOOKS, blowsApart, knockbackPush, type EnemyLook } from '../data/enemies';
-import { enemyArchetype } from '../data/enemyKinds';
+import { ENEMY_LOOKS, blowsApart, horseDeathKind, knockbackPush, mountedDamage, type EnemyLook, type MountPart } from '../data/enemies';
+import { ENEMY_KINDS, enemyArchetype } from '../data/enemyKinds';
 import { groundAt } from '../systems/terrain';
 import { drawHealthBar } from '../rendering/healthBar';
 import { STANDING_BURN_POINTS, burnPoints } from '../rendering/burning';
 import { FROZEN_TINT } from '../rendering/afflictionArt';
+import { horseDeathThrow } from '../rendering/horseDeath';
 import { gaitGroundSpeed, getHorsePose, mountedBodyPoints, mountedHitZones, mountedIcePoints, type HorseGait, type HorsePose, type LanceHold } from '../rendering/horseRider';
 import { boundsAround } from '../utils/math';
 import type { HitBox } from './DragonEnemy';
@@ -27,6 +28,7 @@ import type { Bounds, EnemyType, Vec2 } from '../types';
 import { AfflictionLayer, type AfflictionNet } from './AfflictionLayer';
 import { EnemyBow } from './EnemyBow';
 import { bodyBounds, headBounds, torsoOf, type EnemyShape } from './enemyHitShape';
+import { HORSE_BOLT, Mount } from './Mount';
 import { KNOCKDOWN_LIE_MS, deathKind, fallProgress, startFallState, stepFall, type FallState } from './enemyFall';
 
 export type { ThrowNet } from '../systems/bodyMotion';
@@ -49,6 +51,20 @@ export interface HitInfo {
   point?: Vec2;
   /** Splash explosions: distance from the blast as a fraction of its radius (0 centre .. 1 edge). */
   blastDistance?: number;
+  /** A mounted knight: whether the arrow hit the rider or the horse (mountedDamage; none = by the cause). */
+  part?: MountPart;
+}
+
+/**
+ * How a mounted knight's rider leaves the saddle (the host puts him on the ground as an enemy of his own): with the health
+ * he has left (0: dead), thrown away from `thrownFrom` `force` times as hard as THROWN_RIDER, or (`lift`) pulled up
+ * out of it by a vortex.
+ */
+export interface RiderOff {
+  health: number;
+  thrownFrom: number;
+  force?: number;
+  lift?: boolean;
 }
 
 /** What a co-op guest needs of a ground enemy besides its position (Enemy.getNetState). */
@@ -62,6 +78,8 @@ export interface EnemyNet {
   th?: ThrowNet;
   /** The priest's mana. */
   mana?: number;
+  /** A mounted knight's lame horse: time left (ms). */
+  lame?: number;
 }
 
 /** Pushed enemies stay this far inside the world and out of the player's keep. */
@@ -91,14 +109,15 @@ const LEVITATE_Z = 4;
 /** Flames and frost glints in container units (the bowman's at his scale, to match). */
 const AFFLICTION_SIZE = 0.5;
 
-/** A mounted knight's health bar sits this much higher (over the rider's head). */
+/** A mounted knight's health bar sits this much higher (over the rider's head); the horse's is under it, this colour. */
 const MOUNTED_BAR_RISE = 24;
+const HORSE_BAR = { height: 3, gap: 1.5, color: 0xc8935a };
 /** A blast that doesn't kill a mounted knight makes the horse shy (it stands a moment) instead of knocking it down. */
 const HORSE_SHY_MS = 450;
-/** Its rider thrown, the horse stands this long, then bolts off the far edge this much faster than it came. */
-const HORSE_BOLT = { delayMs: 350, speedFactor: 1.5, beyondEdge: 160 } as const;
-/** A thrown-off rider flies off backwards from the saddle (px up, px/s, radians/s). */
-const THROWN_RIDER = { saddle: 22, vx: 70, vy: -170, spin: 3 } as const;
+/** A rider leaving the saddle tumbles off it, not far (px up, px/s, radians/s); he lands on his back and gets up. */
+const THROWN_RIDER = { saddle: 22, vx: 28, vy: -70, spin: 1.6 } as const;
+/** A dying horse lets its rider slide off backwards (lying down) or tips him forwards over its neck (dropping): this hard. */
+const RIDER_OFF_FORCE = { back: 1, forward: 1.5 } as const;
 
 /** Container scale of a normal-sized enemy (bigger types multiply it by their size). */
 const ENEMY_SCALE = 2 / 3;
@@ -146,8 +165,10 @@ export default class Enemy extends Container {
   private horseMs = Math.random() * 1000;
   /** The horse and rider as last drawn (hit zones, flames). */
   private horsePose?: HorsePose;
-  /** Killed on horseback: the riderless horse stands a moment, then bolts off the far edge (`gone` once past it). */
-  private bolting?: { delayMs: number; gone: boolean };
+  /** On horseback: the horse (its own health, a lame leg; bolting or dying once the fight is over for it). */
+  private readonly mount?: Mount;
+  /** The horse's health bar, under the rider's. */
+  private readonly horseBar?: Graphics;
   /**
    * Thrown through the air (a vortex threw it out, or it was hit up there), flailing until it lands; pinned to the
    * ground by a pinning arrow (it can't walk until the pin runs out, but can still swing or shoot).
@@ -160,12 +181,18 @@ export default class Enemy extends Container {
   public readonly mana?: ManaPool;
   private readonly manaBar?: Graphics;
   /** Co-op host: hears about every hit, swing, heal and spell, to replay them on the guest's screen. */
-  public netHooks?: { damaged(amount: number, hit: HitInfo): void; attacked(style: AttackStyle): void; healed?(amount: number): void; cast?(): void };
+  public netHooks?: {
+    damaged(amount: number, hit: HitInfo): void;
+    attacked(style: AttackStyle): void;
+    healed?(amount: number): void;
+    cast?(): void;
+    unseated?(): void;
+  };
   /**
-   * Host: a mounted knight was killed by `hit` at `x`; the scene puts its rider on the ground (EnemyKind `unhorsed`:
-   * thrown off, or killed with the horse).
+   * Host: a mounted knight's rider leaves the saddle at `x` (his horse killed by `hit`, or he by it, or a vortex pulled
+   * him out); the scene puts him on the ground as its `unhorsed` kind (dead if `off.health` is 0) and returns him.
    */
-  public onUnhorsed?: (x: number, hit: HitInfo) => void;
+  public onUnhorsed?: (x: number, hit: HitInfo, off: RiderOff) => Enemy | undefined;
 
   public constructor(
     x: number,
@@ -183,6 +210,12 @@ export default class Enemy extends Container {
     this.addChild(this.body, this.afflictions.art);
     this.healthBar = new Graphics();
     this.addChild(this.healthBar);
+    if (enemyArchetype(kind).rides) {
+      this.mount = new Mount(ENEMY_KINDS[kind].mount?.health ?? health);
+      this.horseBar = new Graphics();
+      this.horseBar.y = HEALTH_BAR.height / 2 + 1 + HORSE_BAR.gap + HORSE_BAR.height / 2 + 1;
+      this.healthBar.addChild(this.horseBar);
+    }
     if (enemyArchetype(kind).heals) {
       this.mana = new ManaPool();
       this.manaBar = new Graphics();
@@ -318,6 +351,10 @@ export default class Enemy extends Container {
       return this.health;
     }
     this.netHooks?.damaged(amount, hit);
+    if (this.mount) {
+      this.takeMountedDamage(this.mount, amount, hit);
+      return this.health;
+    }
 
     this.health = Math.max(0, this.health - Math.max(0, amount));
     this.drawHealthBar();
@@ -326,12 +363,7 @@ export default class Enemy extends Container {
     const push = hit.cause === 'explosion' || hit.cause === 'blast' ? knockbackPush(blastDistance) : 0;
     // Up in the air (lifted or flying) it falls back down first and lands lying.
     const aloft = this.motion.isThrown || this.afflictions.inVortex;
-    if (this.health === 0 && this.rides) {
-      this.alive = false;
-      this.velocity = { x: 0, y: 0 };
-      this.healthBar.visible = false;
-      this.unhorse(hit);
-    } else if (this.health === 0) {
+    if (this.health === 0) {
       this.alive = false;
       this.velocity = { x: 0, y: 0 };
       this.healthBar.visible = false;
@@ -360,11 +392,6 @@ export default class Enemy extends Container {
       }
     } else if (aloft) {
       // Hit while up in the air: it keeps flying (or stays in the funnel).
-    } else if (this.rides) {
-      // No blast knocks a horse down: it shies and stands a moment.
-      if (hit.cause === 'explosion' || hit.cause === 'blast' || hit.cause === 'lightning') {
-        this.hitStaggerMs = Math.max(this.hitStaggerMs, HORSE_SHY_MS);
-      }
     } else if (hit.cause === 'explosion' || hit.cause === 'blast' || hit.cause === 'lightning') {
       this.afflictions.thaw();
       this.startFall('knockback', hit.fromX, KNOCKDOWN_LIE_MS, push);
@@ -374,10 +401,49 @@ export default class Enemy extends Container {
   }
 
   /**
-   * Killed on horseback: whatever held it lets go, the horse stands a moment and bolts (updateBolt) and the host puts
-   * the rider on the ground (onUnhorsed).
+   * On horseback: the hit is shared between rider and horse (mountedDamage). While both live, a blast only makes the
+   * horse shy (it is never knocked down). The rider killed, the horse bolts; the horse killed, it falls (lying down, or
+   * dropping when killed outright) and throws its rider off part of the way through (updateHorseDeath).
    */
-  private unhorse(hit: HitInfo): void {
+  private takeMountedDamage(mount: Mount, amount: number, hit: HitInfo): void {
+    const share = mountedDamage(Math.max(0, amount), hit.cause, hit.part);
+    this.health = Math.max(0, this.health - share.rider);
+    mount.hurt(share.horse);
+    this.drawHealthBar();
+    if (this.health > 0 && mount.isAlive) {
+      if (hit.cause === 'explosion' || hit.cause === 'blast' || hit.cause === 'lightning') {
+        this.hitStaggerMs = Math.max(this.hitStaggerMs, HORSE_SHY_MS);
+      }
+      return;
+    }
+    this.leaveFight();
+    if (mount.isAlive) {
+      mount.bolt();
+      this.onUnhorsed?.(this.x, hit, { health: 0, thrownFrom: hit.fromX });
+    } else {
+      mount.die(horseDeathKind(hit.cause, hit.part), hit);
+    }
+  }
+
+  /**
+   * A vortex arrow hit the rider: he's pulled up out of the saddle (the host returns him, to lift him in its vortex) and
+   * the riderless horse bolts.
+   */
+  public unseat(): Enemy | undefined {
+    if (!this.mount || !this.isAlive()) {
+      return undefined;
+    }
+    this.netHooks?.unseated?.();
+    this.leaveFight();
+    this.mount.bolt();
+    return this.onUnhorsed?.(this.x, { cause: 'arrow', fromX: this.x }, { health: this.health, thrownFrom: this.x, lift: true });
+  }
+
+  /** The mounted knight is out of the fight (its rider off or dead): whatever held it lets go, it stands on the ground. */
+  private leaveFight(): void {
+    this.alive = false;
+    this.velocity = { x: 0, y: 0 };
+    this.healthBar.visible = false;
     this.afflictions.thaw();
     this.afflictions.warm();
     this.afflictions.extinguish();
@@ -385,18 +451,41 @@ export default class Enemy extends Container {
     this.y = groundAt(this.x);
     this.attackTimerMs = 0;
     this.pendingImpact = undefined;
-    this.bolting = { delayMs: HORSE_BOLT.delayMs, gone: false };
-    this.onUnhorsed?.(this.x, hit);
+  }
+
+  /** A mounted knight's horse hit in the leg: it stumbles and goes lame for `durationMs` (a fresh one restarts it). */
+  public lame(durationMs: number): void {
+    if (!this.isAlive() || !this.mount) {
+      return;
+    }
+    this.mount.lame(durationMs);
+    this.hitStaggerMs = Math.max(this.hitStaggerMs, HORSE_LEG.stumbleMs);
+  }
+
+  /** Its horse dead, its rider still in the saddle for a moment: the level isn't over until he's on the ground. */
+  public get riderPending(): boolean {
+    return this.mount?.riderPending ?? false;
+  }
+
+  /** A rider put on the ground with `health` left of his full health (thrown off a horse). */
+  public startWounded(health: number): void {
+    this.health = Math.max(0, Math.min(this.maxHealth, health));
+    this.drawHealthBar();
+  }
+
+  /** A rider pulled out of the saddle by a vortex: he starts at saddle height (the vortex lifts him from there). */
+  public liftFromSaddle(): void {
+    this.y = groundAt(this.x) - THROWN_RIDER.saddle;
   }
 
   /**
    * Thrown off its horse (a mounted knight's rider, just put where the horse stood): flies off backwards from the
    * saddle, away from `fromX`, lands on its back and gets up later; `fromNet` on a co-op guest (the host flies it).
    */
-  public throwOff(fromX: number, fromNet = false): void {
+  public throwOff(fromX: number, fromNet = false, force = 1): void {
     const away = this.x >= fromX ? 1 : -1;
     this.y -= THROWN_RIDER.saddle;
-    this.throwInAir(away * THROWN_RIDER.vx, THROWN_RIDER.vy, away * THROWN_RIDER.spin);
+    this.throwInAir(away * THROWN_RIDER.vx * force, THROWN_RIDER.vy * Math.sqrt(force), away * THROWN_RIDER.spin);
     this.motion.fromNet = fromNet;
   }
 
@@ -466,13 +555,22 @@ export default class Enemy extends Container {
       return;
     }
     this.netHooks?.healed?.(amount);
-    this.health = Math.min(this.maxHealth, this.health + amount);
+    let left = amount;
+    // On horseback the more wounded of the two (by share) is healed first.
+    if (this.mount && this.mount.ratio < this.getHealthRatio()) {
+      const toHorse = Math.min(left, this.mount.missingHealth);
+      this.mount.heal(toHorse);
+      left -= toHorse;
+    }
+    const toRider = Math.min(left, this.maxHealth - this.health);
+    this.health += toRider;
+    this.mount?.heal(left - toRider);
     this.drawHealthBar();
   }
 
-  /** Healed this much short of its full health. */
+  /** Healed this much short of its full health (on horseback, the rider's and the horse's). */
   public get missingHealth(): number {
-    return this.maxHealth - this.health;
+    return this.maxHealth - this.health + (this.mount?.missingHealth ?? 0);
   }
 
   /** The priest raises its scepter and casts (planted meanwhile); the heals themselves come from EnemyAI. */
@@ -566,9 +664,10 @@ export default class Enemy extends Container {
     const af = this.afflictions.getNetState();
     const th = this.motion.netThrow;
     const mana = this.mana ? Math.round(this.mana.mana) : undefined;
+    const lame = this.mount?.isLame ? Math.round(this.mount.lameLeftMs) : undefined;
     return this.isArcher
       ? { vx: this.velocity.x, ...this.bow.net, pinned, af, th }
-      : { vx: this.velocity.x, pinned, af, th, mana };
+      : { vx: this.velocity.x, pinned, af, th, mana, lame };
   }
 
   /**
@@ -596,6 +695,7 @@ export default class Enemy extends Container {
     this.position.set(state.x, state.y);
     this.velocity = { x: state.vx, y: 0 };
     this.motion.setPin(state.pinned ?? 0);
+    this.mount?.setLame(state.lame ?? 0);
     this.afflictions.applyNetState(state.af);
     if (this.isArcher && state.aim !== undefined) {
       this.bow.apply({ aim: state.aim, tension: state.tension, ready: state.ready });
@@ -772,7 +872,8 @@ export default class Enemy extends Container {
     this.body.scale.x = this.velocity.x < 0 ? -BODY_SCALE.x : BODY_SCALE.x;
     const { runs } = this.look;
     // Stride in world px per radian of phase (bigger bodies take longer strides).
-    const stride = (runs ? RUN_STRIDE_PER_RADIAN : WALK_STRIDE_PER_RADIAN) * BODY_SCALE.x * this.scale.x;
+    const walkStride = this.look.walkStyle === 'march' ? MARCH_STRIDE_PER_RADIAN : WALK_STRIDE_PER_RADIAN;
+    const stride = (runs ? RUN_STRIDE_PER_RADIAN : walkStride) * BODY_SCALE.x * this.scale.x;
     this.stridePhase += (Math.hypot(this.velocity.x, this.velocity.y) * deltaMs) / 1000 / stride;
     if (this.isArcher) {
       // Archers walk upright so the bow rig matches the aim (getBowReleasePoint).
@@ -803,8 +904,13 @@ export default class Enemy extends Container {
    */
   private animateMounted(deltaMs: number, moving: boolean): void {
     this.body.rotation = 0;
-    if (this.bolting) {
-      this.updateBolt(deltaMs);
+    const mount = this.mount!;
+    if (mount.death) {
+      this.updateHorseDeath(mount, deltaMs);
+      return;
+    }
+    if (mount.bolting) {
+      this.updateBolt(mount.bolting, deltaMs);
       return;
     }
     if (!this.isAlive()) {
@@ -827,13 +933,15 @@ export default class Enemy extends Container {
       return;
     }
     this.body.scale.x = this.velocity.x < 0 ? -BODY_SCALE.x : BODY_SCALE.x;
-    this.gallop(Math.hypot(this.velocity.x, this.velocity.y) * deltaMs / 1000);
-    this.drawMounted('gallop', { thrust: 0 });
+    // A lame horse walks.
+    const gait = mount.isLame ? 'walk' : 'gallop';
+    this.stride(gait, Math.hypot(this.velocity.x, this.velocity.y) * deltaMs / 1000);
+    this.drawMounted(gait, { thrust: 0 });
   }
 
-  /** The gallop's clock for `distance` world px covered, so the planted hooves stay put. */
-  private gallop(distance: number): void {
-    this.horseMs += distance / (gaitGroundSpeed('gallop') * BODY_SCALE.x * this.scale.x);
+  /** The gait's clock for `distance` world px covered, so the planted hooves stay put. */
+  private stride(gait: 'walk' | 'gallop', distance: number): void {
+    this.horseMs += distance / (gaitGroundSpeed(gait) * BODY_SCALE.x * this.scale.x);
   }
 
   private drawMounted(gait: HorseGait, lance: LanceHold, riderless = false): void {
@@ -841,9 +949,34 @@ export default class Enemy extends Container {
     this.drawBody({ mode: 'mounted', pose: this.horsePose, riderless });
   }
 
-  /** The riderless horse: stands a moment, turns away and gallops off the far edge, then is drawn no more. */
-  private updateBolt(deltaMs: number): void {
-    const bolt = this.bolting!;
+  /**
+   * The horse dying (rendering/horseDeath), its rider in the saddle until he's thrown off (backwards as it lies down,
+   * forwards over its neck as it drops): then the host puts him on the ground with the health he has left.
+   */
+  private updateHorseDeath(mount: Mount, deltaMs: number): void {
+    const riderOff = mount.advanceDeath(deltaMs);
+    const fall = mount.deathPose!;
+    this.horsePose = fall.horse;
+    this.drawBody({ mode: 'mounted', pose: fall.horse, riderless: fall.riderThrown });
+    if (!riderOff) {
+      return;
+    }
+    const { kind, hit } = mount.death!;
+    // The sprite faces +x along the way it was going: forwards is that way, backwards the other.
+    const facing = Math.sign(this.body.scale.x) || -1;
+    const { forward } = horseDeathThrow(kind);
+    this.onUnhorsed?.(this.x, hit, {
+      health: this.health,
+      thrownFrom: forward ? this.x - facing : this.x + facing,
+      force: forward ? RIDER_OFF_FORCE.forward : RIDER_OFF_FORCE.back,
+    });
+  }
+
+  /**
+   * The riderless horse: stands a moment, turns away and gallops off the far edge, then is drawn no more; in a vortex's
+   * reach it struggles on against the wind.
+   */
+  private updateBolt(bolt: { delayMs: number; gone: boolean }, deltaMs: number): void {
     if (bolt.gone) {
       return;
     }
@@ -853,11 +986,11 @@ export default class Enemy extends Container {
       this.drawMounted('stand', { thrust: 0 }, true);
       return;
     }
-    const step = (this.speed * HORSE_BOLT.speedFactor * deltaMs) / 1000;
+    const step = (this.speed * HORSE_BOLT.speedFactor * this.afflictions.headwind * deltaMs) / 1000;
     this.x += step;
     this.y = groundAt(Math.min(this.x, WORLD_WIDTH));
     this.body.scale.x = BODY_SCALE.x;
-    this.gallop(step);
+    this.stride('gallop', step);
     if (this.x > WORLD_WIDTH + HORSE_BOLT.beyondEdge) {
       bolt.gone = true;
       this.body.clear();
@@ -906,9 +1039,11 @@ export default class Enemy extends Container {
   private mountedZones(): HitBox[] {
     const transform = this.bodyTransform();
     const unit = Math.abs(transform.scaleX) * transform.scale;
-    return mountedHitZones(this.horsePose!).map(({ points, padding, headshot }) => ({
+    return mountedHitZones(this.horsePose!).map(({ points, padding, headshot, part, leg }) => ({
       bounds: boundsAround(points.map((point) => spriteToWorld(point, transform)), padding * unit),
       headshot,
+      part,
+      leg,
     }));
   }
 
@@ -920,6 +1055,7 @@ export default class Enemy extends Container {
   public update(realDeltaMs: number, target?: Vec2, stopDistance = 0): void {
     // A pin holds for its full time; everything else runs at the afflictions' pace (slowed, or held when frozen).
     this.motion.tickPin(realDeltaMs);
+    this.mount?.tick(realDeltaMs);
     const deltaMs = realDeltaMs * this.afflictions.timeScale;
     // The pause between swings runs down all the time, also while the bowman is out of reach.
     this.attackCooldown = Math.max(0, this.attackCooldown - deltaMs);
@@ -964,11 +1100,11 @@ export default class Enemy extends Container {
         const dx = target.x - this.x;
         const dy = target.y - this.y;
         const length = Math.hypot(dx, dy) || 1;
-        this.velocity.x = (dx / length) * this.speed;
-        this.velocity.y = (dy / length) * this.speed;
+        this.velocity.x = (dx / length) * this.currentSpeed;
+        this.velocity.y = (dy / length) * this.currentSpeed;
       }
     } else {
-      this.velocity.x = -this.speed;
+      this.velocity.x = -this.currentSpeed;
       this.velocity.y = 0;
     }
 
@@ -976,6 +1112,11 @@ export default class Enemy extends Container {
     const deltaSeconds = (deltaMs * this.afflictions.headwind) / 1000;
     this.x += this.velocity.x * deltaSeconds;
     this.y = groundAt(this.x);
+  }
+
+  /** Its walking speed now: a lame horse goes at HORSE_LEG.lameSpeed of it. */
+  private get currentSpeed(): number {
+    return this.speed * (this.mount?.speedFactor ?? 1);
   }
 
   /** Ready to start a swing (not down, not mid-swing, pause over); starting one restarts the pause. */
@@ -1036,8 +1177,11 @@ export default class Enemy extends Container {
     if (this.isAlive() || this.motion.isThrown || afflictions.isBurning || afflictions.isFrozen || afflictions.isChilled || afflictions.inVortex) {
       return false;
     }
-    if (this.bolting) {
-      return this.bolting.gone;
+    if (this.mount?.bolting) {
+      return this.mount.bolting.gone;
+    }
+    if (this.mount?.death) {
+      return this.mount.deathSettled;
     }
     if (this.gibs) {
       return this.gibs.settled && this.y >= groundAt(this.x);
@@ -1112,14 +1256,20 @@ export default class Enemy extends Container {
     };
   }
 
-  /** Hip and shoulder of the pose currently drawn, in body-sprite space. */
+  /** Hip and shoulder of the pose currently drawn, in body-sprite space; on horseback the horse's back (croup to withers). */
   private torso(): Torso {
+    if (this.rides && this.horsePose) {
+      return { hip: this.horsePose.croup, shoulder: this.horsePose.withers };
+    }
     return torsoOf(this.jointPose(), this.gibs?.pieces[0]);
   }
 
   /** Bar above the head: dark track, fill from green (full) through yellow to red (low). */
   private drawHealthBar(): void {
     drawHealthBar(this.healthBar, this.getHealthRatio(), HEALTH_BAR.width, HEALTH_BAR.height);
+    if (this.horseBar && this.mount) {
+      drawHealthBar(this.horseBar, this.mount.ratio, HEALTH_BAR.width, HORSE_BAR.height, HORSE_BAR.color);
+    }
   }
 
   /** The priest's mana under the health bar. */

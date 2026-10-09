@@ -1,5 +1,5 @@
 import type { Graphics } from 'pixi.js';
-import { enemyArchetype } from '../data/enemyKinds';
+import { ENEMY_KINDS, enemyArchetype } from '../data/enemyKinds';
 import type { EnemyType } from '../types';
 import type { BodyColors } from './bodyColors';
 import { HUMAN_BODY, ZOMBIE_BODY } from './bodyColors';
@@ -85,7 +85,7 @@ const poseFor = (kind: EnemyType, state: HumanState): BodyPose => {
       // drawStickman's run cycle runs 0.4 ahead of its walk phase (see runProgress there).
       return state.running
         ? runBody(state.phase / TWO_PI + 0.4, club, 0)
-        : walkBody(state.phase / TWO_PI, { club, zombie, lean: 0 });
+        : walkBody(state.phase / TWO_PI, { club, zombie, lean: 0, style: ENEMY_KINDS[kind].build.walkStyle });
     case 'stand':
       return zombie ? attackBody(0, 'grab') : standBody(club);
     case 'attack':

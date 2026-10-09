@@ -26,6 +26,9 @@ const SOIL = 0x8b6b45;
 const TUFT_SPACING = 26;
 /** Ground this far above a tile's bottom edge. */
 const GROUND_MARGIN = 16;
+/** The grid scrolls (mouse wheel) inside this band; above it the title and tabs stay put. */
+const VIEWPORT = { top: CONTENT.top - 10, bottom: CONTENT.bottom };
+const SCROLLBAR = { x: PANEL.x + PANEL.width - 12, width: 5 };
 
 interface Figure {
   view: DesignView;
@@ -50,6 +53,10 @@ export class DesignLabScene extends Scene {
   private section: DesignSection = DESIGN_SECTIONS[0];
   private zoomed?: DesignEntry;
   private time = 0;
+  private scrollY = 0;
+  private readonly pageMask = new Graphics()
+    .rect(PANEL.x, VIEWPORT.top, PANEL.width, VIEWPORT.bottom - VIEWPORT.top).fill({ color: 0xffffff });
+  private readonly scrollbar = new Graphics();
 
   public enter(): void {
     this.ctx.ui.showScreen('animationLab');
@@ -62,7 +69,13 @@ export class DesignLabScene extends Scene {
     this.content.addChild(new Graphics()
       .roundRect(PANEL.x, PANEL.y + 5, PANEL.width, PANEL.height, PANEL.radius).fill({ color: COLORS.panelEdge })
       .roundRect(PANEL.x, PANEL.y, PANEL.width, PANEL.height, PANEL.radius).fill({ color: COLORS.panel, alpha: 0.97 }));
-    this.content.addChild(text('Design lab', 26, COLORS.ink, true, 36, 20), this.intro, this.tabs, this.page);
+    this.page.mask = this.pageMask;
+    this.content.addChild(text('Design lab', 26, COLORS.ink, true, 36, 20), this.intro, this.tabs, this.pageMask, this.page, this.scrollbar);
+    this.listenWindow('wheel', (event) => {
+      if (!this.zoomed) {
+        this.scrollTo(this.scrollY + event.deltaY * 0.5);
+      }
+    });
 
     this.listenWindow('keydown', (event) => {
       if (event.code === 'Escape') {
@@ -102,6 +115,34 @@ export class DesignLabScene extends Scene {
     } else {
       section.entries.forEach((item, index) => this.createCard(item, index));
     }
+    this.scrollTo(0);
+  }
+
+  /** How far the grid scrolls: its rows below the visible band (none while zoomed in). */
+  private get maxScroll(): number {
+    if (this.zoomed) {
+      return 0;
+    }
+    const rows = Math.ceil(this.section.entries.length / GRID.columns);
+    const height = rows * GRID.cardHeight + (rows - 1) * GRID.gap;
+    return Math.max(0, CONTENT.top + height - VIEWPORT.bottom);
+  }
+
+  private scrollTo(y: number): void {
+    const max = this.maxScroll;
+    this.scrollY = Math.max(0, Math.min(max, y));
+    this.page.y = -this.scrollY;
+    this.scrollbar.clear();
+    this.scrollbar.visible = max > 0;
+    if (max === 0) {
+      return;
+    }
+    const track = VIEWPORT.bottom - VIEWPORT.top;
+    const thumb = track * (track / (track + max));
+    const thumbY = VIEWPORT.top + (this.scrollY / max) * (track - thumb);
+    this.scrollbar
+      .roundRect(SCROLLBAR.x, VIEWPORT.top, SCROLLBAR.width, track, SCROLLBAR.width / 2).fill({ color: COLORS.panelSunk })
+      .roundRect(SCROLLBAR.x, thumbY, SCROLLBAR.width, thumb, SCROLLBAR.width / 2).fill({ color: COLORS.accent });
   }
 
   private drawTabs(): void {
@@ -131,7 +172,13 @@ export class DesignLabScene extends Scene {
     card.eventMode = 'static';
     card.cursor = 'pointer';
     card.hitArea = new Rectangle(0, 0, CARD_WIDTH, GRID.cardHeight);
-    card.on('pointertap', () => this.show(this.section, entry));
+    // Only where it shows: a card scrolled out under the title doesn't take the click.
+    card.on('pointertap', (event) => {
+      const { y: at } = event.getLocalPosition(this.content);
+      if (at >= VIEWPORT.top && at <= VIEWPORT.bottom) {
+        this.show(this.section, entry);
+      }
+    });
     const edge = new Graphics().roundRect(0, 0, CARD_WIDTH, GRID.cardHeight, 14).stroke({ width: 2, color: COLORS.accent });
     edge.alpha = 0;
     card.on('pointerover', () => { edge.alpha = 1; });

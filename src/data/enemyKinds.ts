@@ -8,6 +8,7 @@ import {
   PIN_DURATION_ZOMBIE_MS,
 } from '../config';
 import type { AttackStyle } from '../rendering/attackSwing';
+import type { WalkStyle } from '../rendering/walkCycle';
 import type { EnemyType } from '../types';
 
 /**
@@ -146,6 +147,8 @@ export interface EnemyBuild {
    * TOWER_ATTACK_REACH): a mounted knight stops with its horse's head short of him.
    */
   reach?: { bowman: number; keep: number };
+  /** How it walks (rendering/walkCycle.ts): the natural walk (default) or the old high-stepping march. */
+  walkStyle?: WalkStyle;
 }
 
 export interface EnemyKind {
@@ -171,8 +174,10 @@ export interface EnemyKind {
    * ArrowHits). None = 1.
    */
   armor?: number;
-  /** A rider: what it fights on as, thrown off its horse (EnemyArchetype `rides`). */
+  /** A rider: what it fights on as, thrown off its horse (EnemyArchetype `rides`); `stats.health` is then the rider's. */
   unhorsed?: EnemyType;
+  /** A rider's horse: its own health (data/enemies `mountedDamage` says which of them a hit hurts). */
+  mount?: { health: number };
 }
 
 /**
@@ -221,30 +226,32 @@ export const ENEMY_KINDS: Readonly<Record<EnemyType, EnemyKind>> = {
     stats: { health: 18, speed: ENEMY_SPEED * 2 }, damage: { melee: [24, 32] }, keepDamage: { melee: 8 }, build: { size: 1, strikeReach: 0 },
     traits: { mass: 1.4 },
   },
-  // Slow, arms out, hard to put down.
+  // Slow, arms out, hard to put down. Its shuffle is the march with the feet dragged.
   zombie: {
     label: 'Zombie', archetype: 'grabber', race: 'undead', magical: false, arrival: 0.1,
-    stats: { health: 60, speed: ENEMY_SPEED * 0.45 }, damage: { melee: [8, 12] }, build: { size: 1, strikeReach: 50, stepMs: 240 },
+    stats: { health: 60, speed: ENEMY_SPEED * 0.45 }, damage: { melee: [8, 12] }, build: { size: 1, strikeReach: 50, stepMs: 240, walkStyle: 'march' },
   },
-  // Black plate: body hits barely dent it (KNIGHT_ARMOR), so aim for the visor or use piercing arrows. A sword: it cuts
+  // Black plate (the knights march, rendering/walkCycle): body hits barely dent it (KNIGHT_ARMOR), so aim for the visor or use piercing arrows. A sword: it cuts
   // down, cuts up from below or thrusts.
   knight: {
     label: 'Black knight', archetype: 'fighter', race: 'human', magical: false, arrival: 0.2, armor: KNIGHT_ARMOR,
     attackStyles: ['overhead', 'swordRise', 'thrust'],
-    stats: { health: 50, speed: ENEMY_SPEED * 0.85 }, damage: { melee: [9, 14] }, build: { size: 1, strikeReach: 60 },
+    stats: { health: 50, speed: ENEMY_SPEED * 0.85 }, damage: { melee: [9, 14] }, build: { size: 1, strikeReach: 60, walkStyle: 'march' },
     traits: { mass: 1.9 },
   },
   // A head taller, in the same black plate, with a war hammer in both hands.
   hammerKnight: {
     label: 'Hammer knight', archetype: 'heavy', race: 'human', magical: false, arrival: 0.35, armor: KNIGHT_ARMOR,
-    stats: { health: 80, speed: ENEMY_SPEED * 0.65 }, damage: { melee: [16, 24] }, keepDamage: { melee: 2 }, build: { size: 1.1, strikeReach: 75 },
+    stats: { health: 80, speed: ENEMY_SPEED * 0.65 }, damage: { melee: [16, 24] }, keepDamage: { melee: 2 }, build: { size: 1.1, strikeReach: 75, walkStyle: 'march' },
     traits: { mass: 2.5 },
   },
-  // The black knight on a black warhorse (drawn 1.15× so the horse stands tall): gallops in and strikes with a lance from beyond a sword's reach. The horse
-  // takes the body hits (no plate on it); killed, the knight is thrown off and fights on foot (unhorsedRiderDies).
+  // The black knight on a black warhorse (drawn 1.15× so the horse stands tall): gallops in and strikes with a lance from beyond a sword's reach. Rider
+  // and horse have their own health: the rider's plate (`armor`, on his torso only) turns body hits, the horse has none. The horse killed, the knight is
+  // thrown off and fights on foot with the health he has left; the rider killed (or pulled out of the saddle by a vortex), the horse bolts.
   horseKnight: {
-    label: 'Mounted knight', archetype: 'cavalry', race: 'human', magical: false, arrival: 0.45, unhorsed: 'knight',
-    stats: { health: 90, speed: ENEMY_SPEED * 1.8 }, damage: { melee: [14, 20] }, keepDamage: { melee: 1.5 },
+    label: 'Mounted knight', archetype: 'cavalry', race: 'human', magical: false, arrival: 0.45, unhorsed: 'knight', armor: KNIGHT_ARMOR,
+    mount: { health: 70 },
+    stats: { health: 50, speed: ENEMY_SPEED * 1.8 }, damage: { melee: [14, 20] }, keepDamage: { melee: 1.5 },
     build: { size: 1.15, strikeReach: 64, reach: { bowman: 42, keep: 82 } },
     // Horse and rider: no vortex lifts them off the ground, no pin holds a horse, the ice holds them briefly.
     traits: { mass: 6, freezeMs: FROST_FREEZE_BRUTE_MS, pinMs: 0 },

@@ -10,6 +10,7 @@ import {
   FIRE_DRAGON_BREATH_INTERVAL_MS,
   FIRE_DRAGON_HOVER_OFFSET,
 } from '../config';
+import type { MountPart } from '../data/enemies';
 import { DRAGON_PALETTES, dragonHitZones, type DragonHitZone, type DragonPalette, type DragonPose } from '../rendering/dragon';
 import { drawDragon } from '../rendering/dragonArt';
 import { dragonArcherLook, dragonKnightLook, drawDragonWithRider } from '../rendering/designs/heavySkins';
@@ -49,6 +50,10 @@ const HEALTH_BAR = { width: 70, height: 8, y: -112 };
 export interface HitBox {
   bounds: Bounds;
   headshot: boolean;
+  /** A mounted knight's horse's leg (less damage, may lame it: ArrowHits). */
+  leg?: boolean;
+  /** A mounted knight: whether it's the rider or the horse that's hit. */
+  part?: MountPart;
 }
 
 /** Fire dragon: local aim limits of the fire (radians, + = down) and how fast the head turns to follow. */

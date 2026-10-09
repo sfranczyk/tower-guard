@@ -16,7 +16,7 @@ import { spatialMix } from '../audio/spatial';
 import { Scene, type GameContext } from '../core/Scene';
 import { viewWidth } from '../core/viewport';
 import { BATTLEGROUNDS, aimColorsOf, type Battleground } from '../data/battlegrounds';
-import { getEnemyStats, unhorsedRiderDies } from '../data/enemies';
+import { getEnemyStats } from '../data/enemies';
 import { ENEMY_KINDS, isFlyingType } from '../data/enemyKinds';
 import { levelEnemyTotal, type LevelSetup } from '../data/sandbox';
 import InputManager from '../managers/InputManager';
@@ -27,7 +27,7 @@ import { HostSync } from '../net/HostSync';
 import type { EndInfo, NetMessage, SpawnPlace } from '../net/protocol';
 import Bowman from '../objects/Bowman';
 import DragonEnemy from '../objects/DragonEnemy';
-import Enemy, { type HitInfo } from '../objects/Enemy';
+import Enemy, { type HitInfo, type RiderOff } from '../objects/Enemy';
 import Tower from '../objects/Tower';
 import { secondPlayerArmor } from '../rendering/armor';
 import { BattleArrows } from './BattleArrows';
@@ -498,30 +498,42 @@ export class GameScene extends Scene {
     this.hostSync?.trackEnemy(enemy, type, place);
     if (enemy instanceof Enemy) {
       if (place) {
-        // A co-op guest's copy flies where the host has it.
-        enemy.throwOff(place.thrownFrom, this.role === 'guest');
+        // A rider keeps the health he had in the saddle (one with none left is killed by the blow: unhorse).
+        if (place.health > 0) {
+          enemy.startWounded(place.health);
+        }
+        if (place.lift) {
+          enemy.liftFromSaddle();
+        } else {
+          // A co-op guest's copy flies where the host has it.
+          enemy.throwOff(place.thrownFrom, this.role === 'guest', place.force);
+        }
       }
       // The host decides what becomes of a rider (the guest gets his spawn and hits as events).
       if (enemy.rides && this.role !== 'guest') {
-        enemy.onUnhorsed = (x, hit) => this.unhorse(type, x, hit);
+        enemy.onUnhorsed = (x, hit, off) => this.unhorse(type, x, hit, off);
       }
     }
     return enemy;
   }
 
   /**
-   * A mounted knight was killed at `x`: its rider is thrown off and fights on foot, unless the blow killed him too
-   * (a headshot, a direct explosive hit, shattered ice: unhorsedRiderDies). The horse bolts by itself (Enemy).
+   * A mounted knight's rider leaves the saddle at `x` (his horse killed, he killed, or a vortex pulled him out): he is put
+   * on the ground with the health he has left and fights on foot, or (none left) dies of `hit`. Returns him.
    */
-  private unhorse(type: EnemyType, x: number, hit: HitInfo): void {
+  private unhorse(type: EnemyType, x: number, hit: HitInfo, off: RiderOff): Enemy | undefined {
     const riderType = ENEMY_KINDS[type].unhorsed;
     if (!riderType) {
-      return;
+      return undefined;
     }
-    const rider = this.spawnEnemy(riderType, { x: Math.round(x), thrownFrom: Math.round(hit.fromX) });
-    if (rider instanceof Enemy && unhorsedRiderDies(hit.cause)) {
-      rider.takeDamage(rider.currentHealth, hit);
+    const rider = this.spawnEnemy(riderType, { ...off, x: Math.round(x), thrownFrom: Math.round(off.thrownFrom) });
+    if (!(rider instanceof Enemy)) {
+      return undefined;
     }
+    if (off.health <= 0) {
+      rider.takeDamage(Number.MAX_SAFE_INTEGER, hit);
+    }
+    return rider;
   }
 
   /** Panned and faded by where it happens relative to the camera (co-op host: the guest hears it too). */
@@ -615,9 +627,12 @@ export class GameScene extends Scene {
     }
   }
 
-  /** Fallen enemies stay in the list (corpses), so every non-living one counts as defeated. */
+  /**
+   * Fallen enemies stay in the list (corpses), so every non-living one counts as defeated, but a dead horse whose rider
+   * hasn't come off it yet (he comes as an enemy of his own).
+   */
   private defeatedEnemies(): number {
-    return this.enemies.filter((enemy) => !enemy.isAlive()).length;
+    return this.enemies.filter((enemy) => !enemy.isAlive() && !(enemy instanceof Enemy && enemy.riderPending)).length;
   }
 
   /**

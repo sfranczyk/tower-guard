@@ -104,6 +104,7 @@ export class HostSync {
         attacked: (style) => this.push({ e: 'attack', id, style }),
         healed: (amount) => this.push({ e: 'heal', id, amount }),
         cast: () => this.push({ e: 'cast', id }),
+        unseated: () => this.push({ e: 'unseat', id }),
       };
     }
   }

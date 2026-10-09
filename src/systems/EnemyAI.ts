@@ -208,9 +208,9 @@ export class EnemyAI {
       return;
     }
     const { debug } = this.world;
-    // Yellow: headshot zones, red: normal hits.
-    foeHitBoxes(enemy).forEach(({ bounds, headshot }) => {
-      debug.rect(bounds.x, bounds.y, bounds.width, bounds.height).stroke({ width: 1, color: headshot ? 0xffd23f : 0xff5555, alpha: 0.9 });
+    // Yellow: headshot zones, red: normal hits, orange: a horse's legs.
+    foeHitBoxes(enemy).forEach(({ bounds, headshot, leg }) => {
+      debug.rect(bounds.x, bounds.y, bounds.width, bounds.height).stroke({ width: 1, color: headshot ? 0xffd23f : leg ? 0xff9a3c : 0xff5555, alpha: 0.9 });
     });
   }
 

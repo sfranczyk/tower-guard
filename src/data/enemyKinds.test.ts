@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { FROST_FREEZE_BRUTE_MS, FROST_FREEZE_MS, KNIGHT_ARMOR, PIN_DURATION_MS, PIN_DURATION_ZOMBIE_MS } from '../config';
+import { FROST_FREEZE_BRUTE_MS, FROST_FREEZE_MS, HORSE_LEG, KNIGHT_ARMOR, PIN_DURATION_MS, PIN_DURATION_ZOMBIE_MS } from '../config';
 import { burnDurationMs, freezeDurationMs } from '../systems/afflictions';
 import { resistsVortex } from '../systems/vortex';
-import { unhorsedRiderDies } from './enemies';
+import { horseDeathKind, legHitLames, legLameChance, mountedDamage } from './enemies';
 import { ARCHETYPES, ENEMY_KINDS, ENEMY_TYPES, RACES, enemyArchetype, enemyArmor, enemyMass, enemyTraits, isFlyingType } from './enemyKinds';
 
 describe('ENEMY_KINDS', () => {
@@ -32,8 +32,8 @@ describe('ENEMY_KINDS', () => {
     });
   });
 
-  it('armours only the knights', () => {
-    expect(ENEMY_TYPES.filter((type) => enemyArmor(type) < 1)).toEqual(['knight', 'hammerKnight']);
+  it('armours only the knights (the mounted one\'s rider; ArrowHits spares his horse)', () => {
+    expect(ENEMY_TYPES.filter((type) => enemyArmor(type) < 1)).toEqual(['knight', 'hammerKnight', 'horseKnight']);
     expect(enemyArmor('knight')).toBe(KNIGHT_ARMOR);
     expect(enemyArmor('basic')).toBe(1);
   });
@@ -95,9 +95,35 @@ describe('ENEMY_KINDS', () => {
   });
 });
 
-describe('unhorsedRiderDies', () => {
-  it('kills the rider with the horse on a headshot, a direct blast or shattered ice; otherwise he fights on', () => {
-    expect(['headshot', 'blast', 'shatter'].every(unhorsedRiderDies)).toBe(true);
-    expect(['arrow', 'explosion', 'lightning', 'burn', 'fall'].some(unhorsedRiderDies)).toBe(false);
+describe('legHitLames', () => {
+  it('lames the horse by chance, likelier for a heavy pinning arrow, never for an explosive or vortex arrow', () => {
+    expect(legLameChance('normal')).toBe(HORSE_LEG.lameChance);
+    expect(legLameChance('pinning')).toBeGreaterThan(legLameChance('normal'));
+    expect(legLameChance('fragment')).toBeLessThan(legLameChance('normal'));
+    expect(legHitLames('normal', 0)).toBe(true);
+    expect(legHitLames('normal', HORSE_LEG.lameChance)).toBe(false);
+    expect(legHitLames('explosive', 0)).toBe(false);
+    expect(legHitLames('vortex', 0)).toBe(false);
+  });
+});
+
+describe('mounted knight damage', () => {
+  it('hurts the one an arrow hit, both with a blast, lightning or shattering ice, the horse with fire or a fall', () => {
+    expect(mountedDamage(20, 'arrow', 'rider')).toEqual({ rider: 20, horse: 0 });
+    expect(mountedDamage(25, 'headshot', 'horse')).toEqual({ rider: 0, horse: 25 });
+    ['explosion', 'blast', 'lightning', 'shatter'].forEach((cause) => expect(mountedDamage(30, cause)).toEqual({ rider: 30, horse: 30 }));
+    ['burn', 'fall', 'arrow'].forEach((cause) => expect(mountedDamage(5, cause)).toEqual({ rider: 0, horse: 5 }));
+    expect(mountedDamage(25, 'headshot')).toEqual({ rider: 25, horse: 0 });
+  });
+
+  it('has the rider and the horse each with their own health, the rider as much as a black knight', () => {
+    expect(ENEMY_KINDS.horseKnight.stats.health).toBe(ENEMY_KINDS.knight.stats.health);
+    expect(ENEMY_KINDS.horseKnight.mount?.health).toBeGreaterThan(0);
+  });
+
+  it('drops a horse killed outright and lets one worn down lie down', () => {
+    expect(horseDeathKind('headshot', 'horse')).toBe('drop');
+    ['blast', 'explosion', 'lightning', 'shatter'].forEach((cause) => expect(horseDeathKind(cause)).toBe('drop'));
+    ['arrow', 'burn', 'fall'].forEach((cause) => expect(horseDeathKind(cause, 'horse')).toBe('lieDown'));
   });
 });

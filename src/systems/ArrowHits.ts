@@ -6,6 +6,7 @@ import {
   FRIENDLY_FIRE_GRACE_MS,
   FROST_ARROW_DAMAGE,
   HEADSHOT_DAMAGE_MULTIPLIER,
+  HORSE_LEG,
   KAMIKAZE_BLAST_POWER,
   PIERCING_DAMAGE_MULTIPLIER,
   PIN_DAMAGE,
@@ -15,7 +16,7 @@ import {
   SHRAPNEL_FRAGMENT_DAMAGE,
 } from '../config';
 import type { SoundId } from '../audio/SoundManager';
-import { enemyDamage, explosionDamage, pinDurationMs, rollDamage, type DamageTarget } from '../data/enemies';
+import { enemyDamage, explosionDamage, legHitLames, pinDurationMs, rollDamage, type DamageTarget, type MountPart } from '../data/enemies';
 import { enemyArchetype, enemyArmor } from '../data/enemyKinds';
 import type Arrow from '../objects/Arrow';
 import type Bowman from '../objects/Bowman';
@@ -44,6 +45,10 @@ interface EnemyHit {
   enemy: Foe;
   time: number;
   headshot: boolean;
+  /** A mounted knight's horse hit in the leg. */
+  leg?: boolean;
+  /** A mounted knight: the rider or the horse. */
+  part?: MountPart;
 }
 
 interface BowmanArrowHit {
@@ -184,10 +189,10 @@ export class ArrowHits {
   /** Earliest hit of the segment on any of the enemy's hit zones; a headshot zone wins ties. */
   private static hitTest(start: Vec2, travel: Vec2, enemy: Foe): EnemyHit | undefined {
     let best: EnemyHit | undefined;
-    foeHitBoxes(enemy).forEach(({ bounds, headshot }) => {
+    foeHitBoxes(enemy).forEach(({ bounds, headshot, leg, part }) => {
       const time = segmentHitTime(start, travel, bounds);
       if (time !== undefined && (!best || time < best.time || (time === best.time && headshot))) {
-        best = { enemy, time, headshot };
+        best = { enemy, time, headshot, leg, part };
       }
     });
     return best;
@@ -292,23 +297,30 @@ export class ArrowHits {
 
   private hitEnemy(
     arrow: Arrow,
-    { enemy, headshot }: EnemyHit,
+    { enemy, headshot, leg = false, part }: EnemyHit,
     impactPoint: Vec2,
     hitEnemies: Set<Foe | Bowman>,
     activeEnemies: readonly Foe[],
   ): void {
     const { effects, debug } = this.world;
     if (arrow.type === 'vortex') {
-      // No damage: the one it hits glows and levitates while its vortex lasts (ArrowMagic); the arrow rides along.
+      // No damage: the one it hits glows and levitates while its vortex lasts (ArrowMagic; a mounted knight's rider is
+      // pulled out of the saddle); the arrow rides along.
       hitEnemies.add(enemy);
       arrow.registerImpact();
-      this.magic.hitEnemy(arrow.type, enemy, headshot, impactPoint);
-      arrow.stickToEnemy(enemy, impactPoint);
+      this.magic.hitEnemy(arrow.type, enemy, headshot, impactPoint, part);
+      if (leg || part === 'rider') {
+        arrow.deactivate();
+      } else {
+        arrow.stickToEnemy(enemy, impactPoint);
+      }
       return;
     }
     const frozen = !(enemy instanceof DragonEnemy) && enemy.afflictions.isFrozen;
     // Plate armour turns most of a body hit: sparks fly instead of blood (headshots, piercing arrows and blasts go through).
-    const armor = headshot || arrow.type === 'piercing' || arrow.type === 'explosive' ? 1 : enemyArmor(enemy.kind);
+    // On horseback only the rider wears it.
+    const plated = part === undefined || part === 'rider';
+    const armor = headshot || !plated || arrow.type === 'piercing' || arrow.type === 'explosive' ? 1 : enemyArmor(enemy.kind);
     if (frozen) {
       // Ice chips instead of blood.
       effects.frostBurst(impactPoint);
@@ -332,7 +344,8 @@ export class ArrowHits {
     // An explosive arrow deals only its blast (no impact damage, so no headshot either); a kill blows the body apart.
     const explosive = arrow.type === 'explosive';
     const pinning = arrow.type === 'pinning';
-    const damage = ArrowHits.arrowHitDamage(arrow, headshot) * armor;
+    // A horse's leg takes HORSE_LEG.damage of the arrow's hit (an explosive arrow's blast is the blast).
+    const damage = ArrowHits.arrowHitDamage(arrow, headshot) * armor * (leg && !explosive ? HORSE_LEG.damage : 1);
     if (headshot && !explosive && !pinning) {
       this.events.headshot();
     }
@@ -344,10 +357,14 @@ export class ArrowHits {
       this.actions.shatter(enemy, fromX);
     } else {
       const cause = explosive ? 'blast' : headshot && !pinning ? 'headshot' : 'arrow';
-      enemy.takeDamage(damage, { cause, fromX, point: impactPoint });
+      enemy.takeDamage(damage, { cause, fromX, point: impactPoint, part });
     }
     if (isMagicArrow(arrow.type)) {
-      this.magic.hitEnemy(arrow.type, enemy, headshot, impactPoint);
+      this.magic.hitEnemy(arrow.type, enemy, headshot, impactPoint, part);
+    }
+    // Hit in the leg, the horse may go lame: it stumbles and walks for a while.
+    if (leg && !(enemy instanceof DragonEnemy) && legHitLames(arrow.type)) {
+      enemy.lame(HORSE_LEG.lameMs);
     }
     // Every arrow hit makes the enemy cry out (kills and headshots too); an explosive kill is just the blast.
     if (!explosive || enemy.isAlive()) {
@@ -384,6 +401,9 @@ export class ArrowHits {
       arrow.position.set(foot.x - Math.cos(heading) * PIN_SINK, foot.y - Math.sin(heading) * PIN_SINK);
       arrow.stickToGround(arrow.y);
       effects.impact({ x: foot.x, y: foot.y - 2 });
+    } else if (leg) {
+      // A leg swings under the body: the arrow glances off rather than riding a torso it isn't in.
+      arrow.deactivate();
     } else {
       // Pinned to the body: it rides along with walking, falls and the corpse.
       arrow.stickToEnemy(enemy, impactPoint);

@@ -5,6 +5,7 @@ import { DRAGON_PALETTES } from '../rendering/dragon';
 import { drawDragonRider } from '../rendering/dragonArt';
 import { DRAGON_DEATH_MS, drawDragonDeath, type DragonDeathKind } from '../rendering/dragonDeath';
 import { FIRE_BREATH_MS, breathControl, drawFireStream } from '../rendering/dragonFire';
+import { HORSE_DEATH_MS, drawHorseDeath } from '../rendering/horseDeath';
 import { drawHorseRider } from '../rendering/horseRider';
 import { drawStickman } from '../rendering/stickman';
 import { drawStickmanCheer } from '../rendering/stickmanCheer';
@@ -76,6 +77,11 @@ const DRAGON_DEATH = { sky: true, previewScale: 0.12, zoomScale: 1, offsetX: 85 
 const DRAGON_DEATH_PAUSE_MS = 1200;
 /** The horse and rider stand twice as tall as a stickman: drawn smaller, centred on the horse. */
 const HORSE = { previewScale: 0.25, zoomScale: 1.45, offsetX: -12 } as const;
+/** The dead horse lies stretched out, its rider slid off behind it. */
+const HORSE_DEATH = { previewScale: 0.2, zoomScale: 1.4, offsetX: 6 } as const;
+/** The dropping horse tips its rider forward over its neck. */
+const HORSE_DROP = { previewScale: 0.19, zoomScale: 1.3, offsetX: -32 } as const;
+const HORSE_DEATH_PAUSE_MS = 1400;
 
 /** Fire breath: a moment of plain flight before each breath, aimed this far (radians) below level. */
 const FIRE_BREATH_PAUSE_MS = 1200;
@@ -124,8 +130,14 @@ export const LAB_CATEGORIES: readonly LabCategory[] = [
       {
         id: 'walk',
         title: 'Walk',
-        description: 'The walk cycle, with a bounce on each step. Fighters, brutes and zombies walk at their own speeds.',
+        description: 'A natural walk: the heel strikes, the foot rolls flat and pushes off from the toes, the swinging foot stays low, both feet are down for a moment after each step, the hips ride highest over the planted foot and the arms swing loosely with bent elbows. The bowman and every enemy but the knights walk like this.',
         render: (sprite, clock) => drawStickman(sprite, clock.walkPhase, { originY: 0 }),
+      },
+      {
+        id: 'march',
+        title: 'March',
+        description: 'The old walk, now a march: the foot lifted high on every step, straight arms swinging wide, the body bobbing. The black knights march; the zombie\'s shuffle is this with the feet dragged.',
+        render: (sprite, clock) => drawStickman(sprite, clock.walkPhase, { originY: 0, walkStyle: 'march' }),
       },
       {
         id: 'run',
@@ -327,6 +339,20 @@ export const LAB_CATEGORIES: readonly LabCategory[] = [
         previewScale: 0.3,
         zoomScale: 1,
         render: (sprite, clock) => clock.gibs.render(sprite),
+      },
+      {
+        id: 'horse-death',
+        title: 'Horse lies down, rider thrown off',
+        description: 'The horse flinches, its hindquarters sink and the forelegs buckle: down onto its chest, then over onto its side, legs stretched out and the head on the ground. The rider slides off backwards over its croup and lands on his back.',
+        ...HORSE_DEATH,
+        render: (sprite, clock) => drawHorseDeath(sprite, 'lieDown', clock.timeMs % (HORSE_DEATH_MS.lieDown + HORSE_DEATH_PAUSE_MS)),
+      },
+      {
+        id: 'horse-drop',
+        title: 'Horse drops, rider pitched forward',
+        description: 'Killed outright: a jolt, then every leg gives way at once and the horse drops onto its side, bounces a little and lies still. The rider tips forward over its neck and lands on his back by its head.',
+        ...HORSE_DROP,
+        render: (sprite, clock) => drawHorseDeath(sprite, 'drop', clock.timeMs % (HORSE_DEATH_MS.drop + HORSE_DEATH_PAUSE_MS)),
       },
       {
         id: 'dragon-fall',

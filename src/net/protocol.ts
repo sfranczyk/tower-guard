@@ -3,7 +3,7 @@ import type { RunState } from '../core/Scene';
 import type { Loadout } from '../data/loadout';
 import type { SandboxSettings } from '../data/sandbox';
 import type { AimInput } from '../managers/InputManager';
-import type { HitInfo, ThrowNet } from '../objects/Enemy';
+import type { HitInfo, RiderOff, ThrowNet } from '../objects/Enemy';
 import type { FallKind } from '../rendering/stickmanFall';
 import type { AttackStyle } from '../rendering/attackSwing';
 import type { EnemyType, ProjectileType } from '../types';
@@ -118,16 +118,20 @@ export interface Snapshot {
 
 export type { EffectKind };
 
-/** Where an enemy appears when it doesn't walk in: thrown off a horse at `x` by a blow from `thrownFrom`. */
-export interface SpawnPlace {
+/**
+ * Where an enemy appears when it doesn't walk in: a mounted knight's rider leaving the saddle at `x` (thrown away from
+ * `thrownFrom`, or lifted out by a vortex), with the health he has left (Enemy's RiderOff).
+ */
+export interface SpawnPlace extends RiderOff {
   x: number;
-  thrownFrom: number;
 }
 
 /** Things that happen once, in order. */
 export type GameEvent =
   /** A new enemy; `place` when it doesn't walk in (a mounted knight's rider, thrown off where his horse stood). */
   | { e: 'spawn'; id: number; type: EnemyType; place?: SpawnPlace }
+  /** A vortex pulled a mounted knight's rider out of the saddle: his horse bolts (the rider comes as a `spawn`). */
+  | { e: 'unseat'; id: number }
   /** An enemy takes damage (the guest runs the same takeDamage, so the same reaction plays). */
   | { e: 'hit'; id: number; amount: number; hit: HitInfo; push?: number }
   /** A swing (`style`: which of its swings). */

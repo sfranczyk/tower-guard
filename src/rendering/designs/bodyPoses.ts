@@ -2,7 +2,8 @@ import type { Vec2 } from '../../types';
 import { getArcherRig, type ArcherRig } from '../archer';
 import { ATTACK_REST, CLUBS, ZOMBIE_REST, getAttackPose, type AttackPose, type AttackStyle } from '../attackSwing';
 import { RUN_GROUND_Y, runArmSwing, runBounce, runFoot } from '../runCycle';
-import { TWO_HAND_GRIP, WALK_HALF_STRIDE, reachArm } from '../stickman';
+import { MARCH_HALF_STRIDE, TWO_HAND_GRIP, reachArm } from '../stickman';
+import { walkFrame, type WalkStyle } from '../walkCycle';
 import type { JointPose } from '../stickmanPose';
 import { along, solveJoint } from './designSkeleton';
 
@@ -25,7 +26,7 @@ export interface BodyPose extends JointPose {
 const THIGH = 30;
 const SHIN = 30;
 const ARM = 21;
-const WALK_LIFT = 20;
+const MARCH_LIFT = 20;
 /** Standing feet, like drawStickman's idle stance. */
 const STANCE_HALF_WIDTH = 16;
 
@@ -84,17 +85,47 @@ export interface WalkOptions {
   zombie?: boolean;
   /** Torso lean (radians forward); the game leans the whole sprite instead and passes 0. */
   lean?: number;
+  /** 'walk' (default) or the old high-stepping 'march' (black knights); a zombie always shuffles (the march, dragged). */
+  style?: WalkStyle;
 }
 
-/** Walk at progress p (cycles; one cycle is two steps, like 2π of drawStickman's phase). */
-export const walkBody = (p: number, options: WalkOptions = {}): BodyPose => {
+/**
+ * Walk at progress p (cycles; one cycle is two steps, like 2π of drawStickman's phase): the natural walk
+ * (rendering/walkCycle.ts) or the march.
+ */
+export const walkBody = (p: number, options: WalkOptions = {}): BodyPose =>
+  (options.zombie || options.style === 'march' ? marchBody(p, options) : naturalWalkBody(p, options));
+
+/** The natural walk: heel to toe, the swinging foot low, the hips bobbing, loose arms. Feet are turned by their own pitch. */
+const naturalWalkBody = (p: number, options: WalkOptions): BodyPose => {
+  const frame = walkFrame(p);
+  const hip = { x: 0, y: frame.hipY };
+  const body = torso(hip, options.lean ?? 0.06);
+  const foot = ({ x, lift }: { x: number; lift: number }): Vec2 => ({ x, y: BODY_FOOT_Y - lift });
+  const legPose = legs(hip, foot(frame.front), foot(frame.rear));
+  const frontAngle = -frame.rearArm;
+  const front = arm(body.shoulder, frontAngle, options.club ? ATTACK_REST.forearmBend : frame.elbowBend(frontAngle));
+  const rear = arm(body.shoulder, frame.rearArm, frame.elbowBend(frame.rearArm));
+  return {
+    ...body,
+    ...legPose,
+    // The feet roll heel to toe rather than following the shins (footShape turns them by this angle).
+    frontShinAngle: frame.front.pitch,
+    rearShinAngle: frame.rear.pitch,
+    frontElbow: front.elbow, frontHand: front.hand, rearElbow: rear.elbow, rearHand: rear.hand,
+    club: options.club ? clubFrom(front.hand, frontAngle + ATTACK_REST.forearmBend, 0, options.club) : undefined,
+  };
+};
+
+/** The march (and the zombie's shuffle on it): high-lifted feet, straight arms swinging wide. */
+const marchBody = (p: number, options: WalkOptions): BodyPose => {
   const cycle = wrap(p);
   const frontSwinging = cycle < 0.5;
   const progress = frontSwinging ? cycle * 2 : (cycle - 0.5) * 2;
   const eased = smooth(progress);
-  const lift = options.zombie ? WALK_LIFT * 0.35 : WALK_LIFT;
-  const swingFoot = { x: -WALK_HALF_STRIDE + eased * WALK_HALF_STRIDE * 2, y: BODY_FOOT_Y - Math.sin(progress * Math.PI) * lift };
-  const stanceFoot = { x: WALK_HALF_STRIDE - eased * WALK_HALF_STRIDE * 2, y: BODY_FOOT_Y };
+  const lift = options.zombie ? MARCH_LIFT * 0.35 : MARCH_LIFT;
+  const swingFoot = { x: -MARCH_HALF_STRIDE + eased * MARCH_HALF_STRIDE * 2, y: BODY_FOOT_Y - Math.sin(progress * Math.PI) * lift };
+  const stanceFoot = { x: MARCH_HALF_STRIDE - eased * MARCH_HALF_STRIDE * 2, y: BODY_FOOT_Y };
   // Highest over the planted foot, lowest with both feet down (still within reach of both).
   const hip = { x: 0, y: 1.25 - 1.4 * Math.sin(progress * Math.PI) };
   const swing = (frontSwinging ? 1 : -1) * Math.sin(progress * Math.PI) * 0.58;

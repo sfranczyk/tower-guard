@@ -163,6 +163,12 @@ src/
   Never place HUD elements over the play field. Only menus, the settings drawer and the end screen
   overlay the canvas. Scenes never touch the DOM directly. They call `DomUi` methods and assign
   `ui.handlers.*` callbacks.
+- **Walk and march** (`rendering/walkCycle.ts`, pure, tested): `walkFrame` is the natural walk (heel strike, the foot
+  rolling flat, heel rise and toe-off, the swinging foot low, a moment with both feet down, the hips highest over the
+  planted foot, loose arms with bent elbows; `WALK_CYCLE_PX` per cycle); the old walk is the `march` (`marchKneeBend`,
+  `MARCH_HALF_STRIDE`). Everyone walks (the bowman too) but the black and hammer knights, who march (EnemyBuild
+  `walkStyle: 'march'`), and the zombie, whose shuffle is the march dragged. `walkBody(p, { style })` and drawStickman's
+  `walkStyle` pick it; the walk's feet are turned by their own pitch (BodyPose `*ShinAngle`). Lab rows `walk`, `march`.
 - **Stickman drawing** goes through `drawStickman(sprite, phase, pose)` in `rendering/stickman.ts`.
   Bowman, enemies and the animation lab all use it. Preview animation changes in the lab
   (menu → "Open animation test panel").
@@ -203,13 +209,27 @@ src/
   a thrust timed like the sword thrust (`LANCE_IMPACT`), raised to cheer). `Enemy` draws it in the EnemyBodyState
   `'mounted'`: the gallop's clock follows the distance covered (`gaitGroundSpeed`), it stops `reach.bowman` (42) short
   of the bowman (`reach.keep` from the keep) and its lance hits within `strikeReach` 64. Hit zones `mountedHitZones`
-  (rider's head = headshot, his torso, the horse's barrel, neck and head; `Enemy.getHitBoxes`, used by `foeHitBoxes`).
-  No armour (the horse takes the body hits), mass 6 (no vortex lifts it; a direct hit levitates it a little, standing),
-  can't be pinned, never knocked down (a blast makes the horse shy). Killed, it is unhorsed: the horse stands a moment
-  and bolts off the right edge riderless, and the host (`Enemy.onUnhorsed` → `GameScene.unhorse`) spawns its
-  `unhorsed` kind (a black knight) where it stood, thrown off backwards (`Enemy.throwOff`), who gets up and fights on,
-  unless the blow killed him too (`unhorsedRiderDies`: headshot, blast, shatter). He counts as one more enemy of the
-  level. Co-op: the `spawn` event carries the `place` (x, where the blow came from). Lab rows: `horse-lance`; design lab `horse-knight`.
+  (each with its `part`: the rider's head = headshot and torso; the horse's barrel, neck, head = the horse's headshot, and
+  each leg, one zone down to just above the hoof, `leg`; `Enemy.getHitBoxes`, used by `foeHitBoxes`; `?debug` draws the
+  legs orange). A leg hit deals `HORSE_LEG.damage` (0.5) of the arrow's hit (not of a blast), the arrow glances off and,
+  by chance (`legHitLames`: `HORSE_LEG.lameChance`, per arrow `HORSE_LEG_LAME_CHANCE`, e.g. pinning 0.9, never explosive
+  or vortex), the horse stumbles and goes lame: it walks at `lameSpeed` for `lameMs` (co-op: `EnemyNet.lame`).
+  **Two healths**: the rider's (`stats.health`, 50 like a black knight; his plate, `armor`, on his torso only) and the
+  horse's (`mount.health` 70; `objects/Mount.ts`: health, lame leg, bolting, death), two bars (the horse's tan, under).
+  `mountedDamage` (data/enemies, tested) shares a hit: an arrow hurts the `part` it hit (`HitInfo.part`, so the co-op
+  guest's replay splits it the same); blasts, lightning and shattering ice both in full; fire and falls the horse. The
+  priest heals the more wounded of the two first. Mass 6 (no vortex lifts it; a direct hit on the horse levitates it a
+  little), can't be pinned, never knocked down (a blast makes the horse shy). Once either falls the knight is out of
+  the fight (`isAlive` false) and the host (`Enemy.onUnhorsed` → `GameScene.unhorse`, `RiderOff`) puts the rider on the
+  ground as its `unhorsed` kind (a black knight, one more enemy of the level) with the health he has left (none: killed
+  by the blow): the rider killed, the horse stands a moment and bolts off the right edge riderless; the horse killed, it
+  dies (`horseDeathKind`: killed outright, a horse headshot, blast, lightning or ice, it drops, else it lies down;
+  `Mount.die`, `rendering/horseDeath.ts`) and throws the rider off part of the way through (backwards lying down,
+  forwards over its neck dropping, not far: `Enemy.throwOff` with `RIDER_OFF_FORCE`; meanwhile `riderPending` keeps the level
+  going). A vortex arrow in the rider (`Enemy.unseat`, `ArrowMagic.unseat`) pulls him up out of the saddle: he
+  levitates over the vortex from saddle height and the horse bolts, slowed while in a vortex's reach (`slowByWind`).
+  Co-op: the `spawn` event's `place` is the `RiderOff` (health, thrown from, force, or `lift`), the `unseat` event makes
+  the guest's horse bolt. Lab rows: `horse-lance`, `horse-death`, `horse-drop`; design lab `horse-knight`.
 - **Enemy toughness and damage** (`data/enemyKinds.ts` via `data/enemies.ts`, tested): health per type against a 20-damage arrow
   (headshot ×`HEADSHOT_DAMAGE_MULTIPLIER` = 1.25): fighter 35, runner 22, archer 24 (one headshot), brute 110,
   dragon 170. `ENEMY_DAMAGE` gives each type a random range (`rollDamage`) for club swings and, for shooters,
@@ -231,7 +251,7 @@ src/
   `ZOMBIE_BODY`) colour drawStickman, joint poses (falls, cheers), gibs and `EffectsSystem.bloodBurst`
   (`enemy.bodyColors`). Lab rows: `zombie-shuffle`, `zombie-grab`.
 - **Enemy looks** (`ENEMY_LOOKS` in `data/enemies.ts`): size, club swing and gait per type. The walk/run phase
-  advances with the distance covered (`Enemy.stridePhase`, `WALK_STRIDE_PER_RADIAN` / `RUN_STRIDE_PER_RADIAN` × body
+  advances with the distance covered (`Enemy.stridePhase`, `WALK_STRIDE_PER_RADIAN`, `MARCH_STRIDE_PER_RADIAN` / `RUN_STRIDE_PER_RADIAN` × body
   scale), so feet stay planted at any speed and size; `stepMs` only sets the sway of standing poses. Runners run (run
   cycle), are 0.75× tall and stab from below; Brutes are 1.5× tall (container scale, so hitboxes and arrow
   anchors scale too; the health bar keeps its size) and chop two-handed with a long club.
@@ -324,7 +344,7 @@ src/
   they were (`knockbackPush`, applied over the fall in `Enemy.updateFall`). The lab uses force 1, and every lab figure is clipped to its frame.
 - **Bow ready**: `pose.bowReady` blends the archer between the lowered bow (0) and aiming (1). `Bowman`
   raises the bow while the player draws (aim power > 0) and lowers it after the shot.
-- **Design lab** (`scenes/DesignLabScene.ts`, catalogue in `rendering/designs/catalog.ts`): looks in tabs. *Enemies*:
+- **Design lab** (`scenes/DesignLabScene.ts`, catalogue in `rendering/designs/catalog.ts`): looks in tabs (the grid scrolls with the mouse wheel). *Enemies*:
   the enemies' looks (in the game now, see Enemy bodies) over all their animations, each with an "Old" stickman tile.
   *Player*: the ranger and keep warden, next to the old armored archer. *Ideas*: free proposals, each less of a stickman.
   The looks draw over `BodyPose` (`rendering/designs/bodyPoses.ts`, pure, tested): the game's walk, run, club swings,
@@ -335,7 +355,12 @@ src/
 - **Horse and rider** (`rendering/horseRider.ts`, pure `getHorsePose`, tested; the animation lab, and the mounted knight in its look): a stickman astride
   a horse in the skeleton look, `walk` (four beats) and `gallop` (hind, hind, fore, fore, suspension; the body rocks,
   the rider leans in); hooves on the ground at `HORSE_GROUND_Y`, knees and hocks by two-bone IK, the rider's feet in
-  the stirrups and hands on the reins. Lab rows: `horse-walk`, `horse-gallop`.
+  the stirrups and hands on the reins. Lab rows: `horse-walk`, `horse-gallop`; `assembleHorsePose` builds a pose from a `HorseFrame` (rise,
+  pitch, nod, head tilt, hooves). Its deaths (`rendering/horseDeath.ts`, pure, tested; not in the game yet), both ending on
+  its side, legs stretched out, head on the ground, the rider on his back (`thrownRider` with its own throw): `lieDown`
+  (lab `horse-death`: the hindquarters sink, down onto its chest, then over; the rider thrown off backwards) and `drop`
+  (lab `horse-drop`: killed outright, every leg gives way at once, it falls onto its side and bounces; the rider pitched
+  forward over its neck).
 - **Animation lab** (drawn in Pixi on a cream panel over the meadow, matching the HTML UI; "← Menu" goes back to the
   menu, as in the design lab): every animation once, on the bare skeleton (dragons as in the game), in tabs Movement,
   Combat, Hurt, Death, Cheer. The rows are `LAB_CATEGORIES` in `scenes/labRows.ts` (one per move: the player and the

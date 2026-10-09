@@ -34,6 +34,31 @@ describe('body poses for new looks', () => {
     expect(distance(walkBody(0).frontFoot, walkBody(1).frontFoot)).toBeLessThan(1e-9);
   });
 
+  it('marches (the knights), with the foot lifted much higher than in the walk', () => {
+    for (const p of progressSteps) {
+      expectStickmanProportions(walkBody(p, { style: 'march' }));
+      expectStickmanProportions(walkBody(p, { style: 'march', club: 'twoHanded' }), false);
+    }
+    const highest = (style: 'walk' | 'march'): number =>
+      Math.max(...progressSteps.map((p) => BODY_FOOT_Y - Math.min(walkBody(p, { style }).frontFoot.y, walkBody(p, { style }).rearFoot.y)));
+    expect(highest('march')).toBeGreaterThan(15);
+    expect(highest('walk')).toBeLessThan(10);
+  });
+
+  it('walks with the knees never bent backwards and a foot always on the ground', () => {
+    for (const p of progressSteps) {
+      const pose = walkBody(p);
+      for (const [knee, foot] of [[pose.frontKnee, pose.frontFoot], [pose.rearKnee, pose.rearFoot]]) {
+        // The knee is in front of the line from the hip to the foot.
+        const cross = (foot.x - pose.hip.x) * (knee.y - pose.hip.y) - (foot.y - pose.hip.y) * (knee.x - pose.hip.x);
+        expect(cross).toBeLessThanOrEqual(1e-6);
+      }
+      // A foot is always down: flat or on its heel, or up on the ball of the foot (8 px ahead of the ankle, toe down).
+      const lowest = (foot: Vec2, pitch: number): number => foot.y + 8 * Math.max(0, Math.sin(-pitch));
+      expect(Math.max(lowest(pose.frontFoot, pose.frontShinAngle), lowest(pose.rearFoot, pose.rearShinAngle))).toBeCloseTo(BODY_FOOT_Y, 6);
+    }
+  });
+
   it('runs with a flight phase', () => {
     const airborne = progressSteps.filter((p) => {
       const pose = runBody(p);

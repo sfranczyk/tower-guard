@@ -176,15 +176,16 @@ export interface ThrownRider {
 
 /**
  * The rider `sinceMs` after the dragon was hit. `seated` is his pose at the hit, in sprite space: he's
- * thrown backwards and up, flings his limbs out, tumbles onto his back and settles flat.
+ * thrown backwards and up (at `throwVelocity`, sprite units/s; x < 0), flings his limbs out, tumbles onto his back and
+ * settles flat. A falling horse's rider is thrown off the same way, less hard.
  */
-export const thrownRider = (seated: JointPose, sinceMs: number): ThrownRider => {
+export const thrownRider = (seated: JointPose, sinceMs: number, throwVelocity: Vec2 = { x: THROW.vx, y: THROW.vy }): ThrownRider => {
   const t = Math.max(0, sinceMs) / 1000;
-  const land = landingTime(seated.hip.y, THROW.vy, RIDER_LYING_HIP);
+  const land = landingTime(seated.hip.y, throwVelocity.y, RIDER_LYING_HIP);
   const flying = Math.min(t, land);
   const hip = {
-    x: seated.hip.x + THROW.vx * flying,
-    y: seated.hip.y + THROW.vy * flying + (DEATH_GRAVITY * flying * flying) / 2,
+    x: seated.hip.x + throwVelocity.x * flying,
+    y: seated.hip.y + throwVelocity.y * flying + (DEATH_GRAVITY * flying * flying) / 2,
   };
   const sprawl = smooth(sinceMs / SPRAWL_MS);
   const landed = t >= land;

@@ -1,6 +1,8 @@
-import { EXPLOSION_DAMAGE, KNOCKBACK_PUSH_MAX, SPLASH_GIB_CHANCE } from '../config';
+import { EXPLOSION_DAMAGE, HORSE_LEG, HORSE_LEG_LAME_CHANCE, KNOCKBACK_PUSH_MAX, SPLASH_GIB_CHANCE } from '../config';
 import type { AttackStyle } from '../rendering/attackSwing';
-import type { EnemyType } from '../types';
+import type { HorseDeathKind } from '../rendering/horseDeath';
+import type { WalkStyle } from '../rendering/walkCycle';
+import type { EnemyType, ProjectileType } from '../types';
 import { ENEMY_KINDS, ENEMY_TYPES, enemyArchetype, enemyTraits, type DamageRange, type EnemyDamage, type EnemyStats } from './enemyKinds';
 
 export type { DamageRange, EnemyDamage, EnemyStats } from './enemyKinds';
@@ -56,11 +58,38 @@ export const splashGibChance = (distance: number): number => {
 export const blowsApart = (cause: string, distance = 1, roll = Math.random()): boolean =>
   cause === 'blast' || (cause === 'explosion' && roll < splashGibChance(distance));
 
+/** Which of a mounted knight an arrow hit: the rider (head, torso) or his horse (body, neck, head, legs). */
+export type MountPart = 'rider' | 'horse';
+
+/** What reaches horse and rider alike, each taking all of it: blasts, lightning, shattering ice. */
+const STRIKES_BOTH: ReadonlySet<string> = new Set(['explosion', 'blast', 'lightning', 'shatter']);
+
 /**
- * A mounted knight killed: thrown off his horse he fights on, unless the blow that brought him down was a headshot, a
- * direct explosive hit or shattered ice, which kills the rider too.
+ * How a hit of `amount` on a mounted knight is shared between rider and horse: an arrow hurts the one it hit (`part`);
+ * blasts, lightning and shattering ice both in full; a headshot with no part the rider; the rest (fire, a fall) the horse.
  */
-export const unhorsedRiderDies = (cause: string): boolean => cause === 'headshot' || cause === 'blast' || cause === 'shatter';
+export const mountedDamage = (amount: number, cause: string, part?: MountPart): { rider: number; horse: number } => {
+  if (part) {
+    return part === 'rider' ? { rider: amount, horse: 0 } : { rider: 0, horse: amount };
+  }
+  if (STRIKES_BOTH.has(cause)) {
+    return { rider: amount, horse: amount };
+  }
+  return cause === 'headshot' ? { rider: amount, horse: 0 } : { rider: 0, horse: amount };
+};
+
+/**
+ * How a horse dies (rendering/horseDeath): killed outright (a shot in the head, a blast, lightning, shattering ice) it
+ * drops; worn down by wounds, fire or a fall it lies down.
+ */
+export const horseDeathKind = (cause: string, part?: MountPart): HorseDeathKind =>
+  (cause === 'headshot' && part === 'horse') || STRIKES_BOTH.has(cause) ? 'drop' : 'lieDown';
+
+/** The chance (0..1) that an arrow of `type` hitting a horse's leg lames it (HORSE_LEG_LAME_CHANCE, else HORSE_LEG). */
+export const legLameChance = (type: ProjectileType): number => HORSE_LEG_LAME_CHANCE[type] ?? HORSE_LEG.lameChance;
+
+/** Whether this leg hit lames the horse (`roll` 0..1, passed in so tests can pin it). */
+export const legHitLames = (type: ProjectileType, roll = Math.random()): boolean => roll < legLameChance(type);
 
 /** Explosion damage `distance` (fraction of EXPLOSION_RADIUS, 0 = centre or a direct hit) from the blast. */
 export const explosionDamage = (distance: number): number => {
@@ -87,6 +116,8 @@ export interface EnemyLook {
   strikeReach: number;
   /** How close it comes to the bowman and the keep's centre to strike (default EnemyAI's): a mounted knight stops short. */
   reach?: { bowman: number; keep: number };
+  /** The natural walk (default) or the march (the knights; the zombie's shuffle). */
+  walkStyle?: WalkStyle;
   /** Sway speed of standing poses (ms per phase radian, default 150): zombies sway slower. Walking and
    * running follow the actual speed (Enemy.stridePhase), so the feet never slide. */
   stepMs?: number;

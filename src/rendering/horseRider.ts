@@ -188,6 +188,84 @@ const HEAD = {
   mouth: { x: 79, y: -55 },
 } as const;
 
+export type HorseLegName = 'nearFore' | 'farFore' | 'nearHind' | 'farHind';
+
+/** Where each leg hangs from the body (body frame) and which way its joint bends (knees forward, hocks back). */
+const LEG_ROOTS: Readonly<Record<HorseLegName, { root: Vec2; bend: 1 | -1 }>> = {
+  nearFore: { root: BODY.fore, bend: 1 },
+  farFore: { root: { x: BODY.fore.x - 4, y: BODY.fore.y }, bend: 1 },
+  nearHind: { root: BODY.hind, bend: -1 },
+  farHind: { root: { x: BODY.hind.x - 4, y: BODY.hind.y }, bend: -1 },
+};
+
+/** Where each leg's root is in the body frame (before rise and pitch), for poses that place the hooves themselves. */
+export const legRootX = (leg: HorseLegName): number => LEG_ROOTS[leg].root.x;
+
+/**
+ * One frame of the horse: the body raised `rise` px (negative lowers it) and pitched `pitch` radians (+ = nose down)
+ * about the barrel, the neck and head nodded `nod` (+ = down) about the withers, the head tilted `headTilt` (+ = down)
+ * about the poll, the tail swished `swish` px and each hoof where it is (the joints follow by IK).
+ */
+export interface HorseFrame {
+  rise: number;
+  pitch: number;
+  nod: number;
+  headTilt?: number;
+  swish: number;
+  hooves: Readonly<Record<HorseLegName, Vec2>>;
+}
+
+/** The saddle, stirrup and bit in a frame: what the rider is placed by. */
+export interface RiderMounts {
+  saddle: Vec2;
+  stirrup: Vec2;
+  mouth: Vec2;
+}
+
+/** Builds the horse of `frame` and puts on it the rider `seat` places (pure). */
+export const assembleHorsePose = (
+  frame: HorseFrame, seat: (mounts: RiderMounts) => { rider: JointPose; lance?: HorsePose['lance'] },
+): HorsePose => {
+  const { rise, pitch, nod, headTilt = 0, swish, hooves } = frame;
+  const pivot = add(BODY.centre, { x: 0, y: -rise });
+  const body = (point: Vec2): Vec2 => rotate(add(point, { x: 0, y: -rise }), pivot, pitch);
+  const withers = body(BODY.withers);
+  const neck = (point: Vec2): Vec2 => rotate(body(point), withers, nod);
+  const poll = neck(HEAD.poll);
+  const head = (point: Vec2): Vec2 => rotate(neck(point), poll, headTilt);
+  const leg = (name: HorseLegName): HorseLeg => {
+    const { root: rootAt, bend } = LEG_ROOTS[name];
+    const root = body(rootAt);
+    const hoof = hooves[name];
+    return { root, joint: solveJoint(root, hoof, HORSE_LEG.upper, HORSE_LEG.lower, bend), hoof };
+  };
+  const croup = body(BODY.croup);
+  // The tail hangs from the croup (lying, it rests on the ground).
+  const tail = [0, 1, 2].map((strand) => ({
+    x: croup.x - 16 - strand * 3 - swish * 0.5,
+    y: Math.min(HORSE_GROUND_Y - 1, croup.y + 30 + strand * 5 + swish * 0.3),
+  }));
+  return {
+    nearFore: leg('nearFore'),
+    farFore: leg('farFore'),
+    nearHind: leg('nearHind'),
+    farHind: leg('farHind'),
+    barrel: { centre: body(BODY.centre), rx: 40, ry: 17, angle: pitch },
+    withers,
+    chest: body(BODY.chest),
+    croup,
+    poll,
+    throat: head(HEAD.throat),
+    forehead: head(HEAD.forehead),
+    muzzle: head(HEAD.muzzle),
+    nose: head(HEAD.nose),
+    chin: head(HEAD.chin),
+    mouth: head(HEAD.mouth),
+    tail,
+    ...seat({ saddle: body(BODY.saddle), stirrup: body(BODY.stirrup), mouth: head(HEAD.mouth) }),
+  };
+};
+
 /** The horse and its rider `timeMs` into the `gait` (pure), the rider holding the reins or (`lance`) a lance. */
 export const getHorsePose = (timeMs: number, gait: HorseGait, lance?: LanceHold): HorsePose => {
   const spec = GAITS[gait];
@@ -198,48 +276,21 @@ export const getHorsePose = (timeMs: number, gait: HorseGait, lance?: LanceHold)
   const rise = gait === 'walk' ? spec.bob * Math.cos(cycle * 4) : gait === 'gallop' ? spec.bob * Math.cos(cycle - Math.PI * 1.55) : spec.bob * Math.sin(cycle);
   const pitch = spec.pitch * (gait === 'walk' ? Math.sin(cycle * 2) : Math.sin(cycle + 0.6));
   const nod = spec.nod * (gait === 'walk' ? Math.sin(cycle * 2) : gait === 'gallop' ? Math.sin(cycle - 1.2) : Math.sin(cycle) * Math.max(0, Math.sin(cycle * 3)));
-  const pivot = add(BODY.centre, { x: 0, y: -rise });
-  const body = (point: Vec2): Vec2 => rotate(add(point, { x: 0, y: -rise }), pivot, pitch);
-  const withers = body(BODY.withers);
-  const head = (point: Vec2): Vec2 => rotate(body(point), withers, nod);
-
-  const leg = (rootAt: Vec2, landing: number, bend: 1 | -1): HorseLeg => {
-    const root = body(rootAt);
-    const hoof = hoofAt(p - landing, rootAt.x, spec);
-    return { root, joint: solveJoint(root, hoof, HORSE_LEG.upper, HORSE_LEG.lower, bend), hoof };
-  };
   const { landings } = spec;
-  const croup = body(BODY.croup);
-  const swish = Math.sin(cycle + 0.8) * (gait === 'gallop' ? 7 : gait === 'walk' ? 3 : 2);
-  const tail = [0, 1, 2].map((strand) => ({ x: croup.x - 16 - strand * 3 - swish * 0.5, y: croup.y + 30 + strand * 5 + swish * 0.3 }));
-
-  return {
-    // Knees bend forward, hocks back.
-    nearFore: leg(BODY.fore, landings.nearFore, 1),
-    farFore: leg({ x: BODY.fore.x - 4, y: BODY.fore.y }, landings.farFore, 1),
-    nearHind: leg(BODY.hind, landings.nearHind, -1),
-    farHind: leg({ x: BODY.hind.x - 4, y: BODY.hind.y }, landings.farHind, -1),
-    barrel: { centre: body(BODY.centre), rx: 40, ry: 17, angle: pitch },
-    withers,
-    chest: body(BODY.chest),
-    croup,
-    poll: head(HEAD.poll),
-    throat: head(HEAD.throat),
-    forehead: head(HEAD.forehead),
-    muzzle: head(HEAD.muzzle),
-    nose: head(HEAD.nose),
-    chin: head(HEAD.chin),
-    mouth: head(HEAD.mouth),
-    tail,
-    ...riderPose(body(BODY.saddle), body(BODY.stirrup), head(HEAD.mouth), spec.lean, cycle, gait, lance),
+  const hoof = (name: HorseLegName): Vec2 => hoofAt(p - landings[name], LEG_ROOTS[name].root.x, spec);
+  const frame: HorseFrame = {
+    rise, pitch, nod,
+    swish: Math.sin(cycle + 0.8) * (gait === 'gallop' ? 7 : gait === 'walk' ? 3 : 2),
+    hooves: { nearFore: hoof('nearFore'), farFore: hoof('farFore'), nearHind: hoof('nearHind'), farHind: hoof('farHind') },
   };
+  return assembleHorsePose(frame, ({ saddle, stirrup, mouth }) => riderPose(saddle, stirrup, mouth, spec.lean, cycle, gait, lance));
 };
 
 /**
  * The rider astride: hip on the saddle, feet in the stirrups, hands on the reins between the shoulder and the bit; with
  * a lance the near fist holds it instead (and he leans with the thrust).
  */
-const riderPose = (
+export const riderPose = (
   saddle: Vec2, stirrup: Vec2, mouth: Vec2, lean: number, cycle: number, gait: HorseGait, lance?: LanceHold,
 ): { rider: JointPose; lance?: HorsePose['lance'] } => {
   // At the gallop he rises a little out of the saddle with each stride.
@@ -288,7 +339,21 @@ export interface MountedZone {
   points: Vec2[];
   padding: number;
   headshot: boolean;
+  /** Whose it is: the rider's head and torso, the rest the horse's. */
+  part: 'rider' | 'horse';
+  /** One of the horse's legs. */
+  leg?: boolean;
 }
+
+/** The leg zones stop this far (px) above the hoof, so arrows into the ground just in front of it miss. */
+const LEG_ZONE_ABOVE_HOOF = 6;
+
+/** A leg's zone: from where it hangs, through the knee or hock, down to just above the hoof. */
+const legZone = ({ root, joint, hoof }: HorseLeg): MountedZone => {
+  const share = LEG_ZONE_ABOVE_HOOF / HORSE_LEG.lower;
+  const low = { x: hoof.x + (joint.x - hoof.x) * share, y: hoof.y + (joint.y - hoof.y) * share };
+  return { points: [root, joint, low], padding: 2.5, headshot: false, part: 'horse', leg: true };
+};
 
 /** The barrel's four extremes (front, back, top, bottom). */
 const barrelExtremes = ({ barrel }: HorsePose): Vec2[] => {
@@ -299,17 +364,18 @@ const barrelExtremes = ({ barrel }: HorsePose): Vec2[] => {
 
 /**
  * Where horse and rider can be hit (pure, tested): the rider's head (a headshot) and torso, the horse's barrel, neck and
- * head. The legs and the gaps between rider and neck aren't (arrows fly through under the belly).
+ * head (the horse's headshot) and each leg (`leg`). Under the belly between the legs and above the hooves arrows fly through.
  */
 export const mountedHitZones = (pose: HorsePose): MountedZone[] => {
   const { rider } = pose;
   const crest = { x: (pose.withers.x + pose.poll.x) / 2, y: (pose.withers.y + pose.poll.y) / 2 };
   return [
-    { points: [rider.head], padding: 10, headshot: true },
-    { points: [rider.hip, rider.shoulder, rider.neckTop], padding: 8, headshot: false },
-    { points: [...barrelExtremes(pose), pose.croup], padding: 0, headshot: false },
-    { points: [crest, pose.throat, pose.chest, pose.withers], padding: 3, headshot: false },
-    { points: [pose.poll, pose.forehead, pose.muzzle, pose.nose, pose.chin], padding: 2, headshot: false },
+    { points: [rider.head], padding: 10, headshot: true, part: 'rider' },
+    { points: [rider.hip, rider.shoulder, rider.neckTop], padding: 8, headshot: false, part: 'rider' },
+    { points: [...barrelExtremes(pose), pose.croup], padding: 0, headshot: false, part: 'horse' },
+    { points: [crest, pose.throat, pose.chest, pose.withers], padding: 3, headshot: false, part: 'horse' },
+    { points: [pose.poll, pose.forehead, pose.muzzle, pose.nose, pose.chin], padding: 2, headshot: true, part: 'horse' },
+    ...[pose.nearFore, pose.farFore, pose.nearHind, pose.farHind].map(legZone),
   ];
 };
 
@@ -330,6 +396,12 @@ const HORSE_FILL = 0x46666a;
 /** Draws the horse and rider (skeleton look) into `sprite` (cleared first, hip of a standing stickman at the origin). */
 export const drawHorseRider = (sprite: Graphics, timeMs: number, gait: HorseGait, lance?: LanceHold): HorsePose => {
   const pose = getHorsePose(timeMs, gait, lance);
+  drawHorsePose(sprite, pose);
+  return pose;
+};
+
+/** Draws `pose` (skeleton look; cleared first): the horse and, unless `riderless`, its rider with the reins and lance. */
+export const drawHorsePose = (sprite: Graphics, pose: HorsePose, riderless = false): void => {
   sprite.clear();
   sprite.rotation = 0;
   sprite.y = 0;
@@ -356,7 +428,9 @@ export const drawHorseRider = (sprite: Graphics, timeMs: number, gait: HorseGait
       .quadraticCurveTo(pose.croup.x - 14, pose.croup.y + 4 + strand * 2, end.x, end.y)
       .stroke({ width: 2.2 - strand * 0.4, color: REAR, cap: 'round' });
   });
-  drawRearLeg(sprite, pose.rider);
+  if (!riderless) {
+    drawRearLeg(sprite, pose.rider);
+  }
 
   // The body: barrel, neck and head outlined, mane, ear and eye.
   const { centre, rx, ry, angle } = pose.barrel;
@@ -380,11 +454,13 @@ export const drawHorseRider = (sprite: Graphics, timeMs: number, gait: HorseGait
 
   drawLeg(pose.nearHind, BONE);
   drawLeg(pose.nearFore, BONE);
+  if (riderless) {
+    return;
+  }
   // The reins, from the bit to the hands.
-  line(pose.mouth, lance ? pose.rider.rearHand : pose.rider.frontHand, 0xe3ad4f, 1.5);
+  line(pose.mouth, pose.lance ? pose.rider.rearHand : pose.rider.frontHand, 0xe3ad4f, 1.5);
   drawJointPose(sprite, pose.rider, 0, { append: true, hideRearLeg: true });
   if (pose.lance) {
     line(pose.lance.butt, pose.lance.tip, BONE, 2.5);
   }
-  return pose;
 };

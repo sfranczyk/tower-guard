@@ -14,6 +14,7 @@ import {
   VORTEX_TOP,
 } from '../config';
 import type { SoundId } from '../audio/SoundManager';
+import type { MountPart } from '../data/enemies';
 import { enemyArchetype, enemyMass } from '../data/enemyKinds';
 import Bowman from '../objects/Bowman';
 import DragonEnemy from '../objects/DragonEnemy';
@@ -21,7 +22,7 @@ import type Enemy from '../objects/Enemy';
 import type { ProjectileType, Vec2 } from '../types';
 import type { BowmanHit } from './bowmanDeath';
 import {
-  VORTEX_CORE, VORTEX_SPIN, fallDamage, flingVelocity, funnelCeiling, funnelPosition, levitateHeight, massPace, resistsVortex, throwVelocity,
+  VORTEX_CORE, VORTEX_SPIN, fallDamage, flingVelocity, funnelCeiling, funnelPosition, levitateHeight, levitateShare, massPace, resistsVortex, throwVelocity,
   vortexPull, vortexRise, vortexStrength,
 } from './vortex';
 import type { EffectsSystem } from './EffectsSystem';
@@ -72,6 +73,8 @@ const LEVITATE_SWAY = 0.25;
 const LEVITATE_DRIFT = 30;
 /** How quickly a levitating enemy rises to a boost (1/s). */
 const BOOST_RATE = 3;
+/** A rider pulled out of the saddle starts levitating from this high (px; Enemy.liftFromSaddle). */
+const SADDLE_LIFT = 22;
 
 export interface ArrowMagicHooks {
   /** A kamikaze thrown by a vortex goes off where it lands (CombatSystem.detonate). */
@@ -97,6 +100,8 @@ export const isMagicArrow = (type: ProjectileType): type is 'fire' | 'frost' | '
 export class ArrowMagic {
   private patches: Array<{ x: number; msLeft: number }> = [];
   private vortices: Vortex[] = [];
+  /** Horses whose riders a vortex pulled out of the saddle: bolting, slowed by the wind while in a vortex's reach. */
+  private fleeing: Enemy[] = [];
   private burnClockMs = 0;
 
   public constructor(private readonly effects: EffectsSystem, private readonly hooks: ArrowMagicHooks) {}
@@ -104,9 +109,9 @@ export class ArrowMagic {
   /**
    * A fire, frost or vortex arrow hit `enemy` (its damage is already dealt): the fire sets it alight (a corpse
    * burns too), frost chills or freezes the living, a vortex opens on the ground under it. With friendly fire a
-   * bowman it hits gets the same.
+   * bowman it hits gets the same. A vortex arrow in a mounted knight's rider (`part`) pulls him out of the saddle.
    */
-  public hitEnemy(type: ProjectileType, enemy: Foe | Bowman, headshot: boolean, impact: Vec2): void {
+  public hitEnemy(type: ProjectileType, enemy: Foe | Bowman, headshot: boolean, impact: Vec2, part?: MountPart): void {
     if (type === 'fire') {
       this.effects.fireBurst(impact);
       this.ignite(enemy);
@@ -125,6 +130,8 @@ export class ArrowMagic {
         }
       } else if (!enemy.isAlive()) {
         this.openVortex(enemy.x);
+      } else if (!(enemy instanceof Bowman) && enemy.rides && part === 'rider') {
+        this.unseat(enemy);
       } else {
         const held = this.vortices.find((other) => other.levitating?.enemy === enemy)?.levitating;
         if (held) {
@@ -178,6 +185,9 @@ export class ArrowMagic {
       return patch.msLeft > 0;
     });
     this.vortices = this.vortices.filter((vortex) => this.updateVortex(vortex, deltaMs, walkers));
+    if (this.vortices.length === 0) {
+      this.fleeing = [];
+    }
     this.burnClockMs += deltaMs;
     while (this.burnClockMs >= BURN_TICK_MS) {
       this.burnClockMs -= BURN_TICK_MS;
@@ -209,10 +219,23 @@ export class ArrowMagic {
     }
   }
 
-  private openVortex(x: number, levitating?: Walker): void {
+  /**
+   * A vortex arrow hit a mounted knight's rider: he's pulled up out of the saddle and levitates over the vortex it opens,
+   * from saddle height; his horse bolts (slowed while in a vortex's reach).
+   */
+  private unseat(mounted: Enemy): void {
+    const rider = mounted.unseat();
+    this.fleeing.push(mounted);
+    this.openVortex(rider?.x ?? mounted.x, rider, SADDLE_LIFT);
+  }
+
+  /** Opens a vortex at `x`; `levitating` (the one the arrow hit) levitates over it, starting `startHeight` px up. */
+  private openVortex(x: number, levitating?: Walker, startHeight = 0): void {
     this.effects.vortex({ x, y: groundAt(x) });
+    // The levitation's boost is scaled by its share (vortex.levitateHeight): this much starts it at `startHeight`.
+    const boost = levitating ? startHeight / levitateShare(massOf(levitating)) : 0;
     this.vortices.push({
-      x, ageMs: 0, caught: new Map(), levitating: levitating ? { enemy: levitating, x: levitating.x, boost: 0, boostTarget: 0 } : undefined,
+      x, ageMs: 0, caught: new Map(), levitating: levitating ? { enemy: levitating, x: levitating.x, boost, boostTarget: boost } : undefined,
     });
     this.hooks.sound('shrapnelBurst', { x, y: groundAt(x) });
   }
@@ -247,8 +270,10 @@ export class ArrowMagic {
       }
     });
     const inReach = (enemy: Walker): boolean => Math.abs(enemy.x - vortex.x) <= VORTEX_RADIUS;
-    // Brutes are too heavy to be caught: the wind only slows them down.
-    walkers.filter((enemy) => resistsVortex(massOf(enemy)) && inReach(enemy) && strength > 0).forEach((enemy) => enemy.afflictions.slowByWind(VORTEX_HEAVY_WALK));
+    // Brutes are too heavy to be caught: the wind only slows them down (and a horse bolting from it).
+    [...walkers.filter((enemy) => resistsVortex(massOf(enemy))), ...this.fleeing]
+      .filter((enemy) => inReach(enemy) && strength > 0)
+      .forEach((enemy) => enemy.afflictions.slowByWind(VORTEX_HEAVY_WALK));
     walkers
       .filter((enemy) => !resistsVortex(massOf(enemy)) && !caught.has(enemy) && !enemy.isDown && !enemy.isPinned && inReach(enemy))
       .filter((enemy) => !this.vortices.some((other) => other.caught.has(enemy) || other.levitating?.enemy === enemy))

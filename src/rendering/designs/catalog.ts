@@ -5,7 +5,8 @@ import { ZOMBIE_BODY } from '../bodyColors';
 import { DRAGON_PALETTES } from '../dragon';
 import { drawDragonRider } from '../dragonArt';
 import { FIRE_BREATH_MS, breathControl, drawFireStream } from '../dragonFire';
-import { WALK_STRIDE_PER_RADIAN, drawStickman, type StickmanPose } from '../stickman';
+import { MARCH_STRIDE_PER_RADIAN, WALK_STRIDE_PER_RADIAN, drawStickman, type StickmanPose } from '../stickman';
+import type { WalkStyle } from '../walkCycle';
 import { getCheerPose, type CheerKind } from '../stickmanCheer';
 import { FALL_DURATION_MS, getFallPose, type FallKind } from '../stickmanFall';
 import { getPinnedPose } from '../stickmanPinned';
@@ -18,6 +19,7 @@ import { dragonArcherLook, dragonKnightLook, drawDragonWithRider, ogreLook, zomb
 import { ENEMY_DESIGNS } from './ideas';
 import { blackKnightLook, darkPriestLook, hammerKnightLook } from './knightSkins';
 import { drawMountedKnight } from './warhorse';
+import { HORSE_DEATH_MS, getHorseDeath, type HorseDeathKind } from '../horseDeath';
 import { gaitGroundSpeed, getHorsePose, type HorsePose } from '../horseRider';
 import { rangerLook, wardenLook } from './playerSkins';
 import { drawHumanoid, type HumanoidLook } from './skinKit';
@@ -59,8 +61,9 @@ export interface DesignSection {
 
 type LookAt = (timeMs: number) => HumanoidLook;
 
-/** Ground speed per walk cycle (two steps): see walkBody. One run cycle covers 115 px. */
+/** Ground covered per walk and march cycle (two steps): see walkBody. One run cycle covers 115 px. */
 const WALK_CYCLE_PX = WALK_STRIDE_PER_RADIAN * Math.PI * 2;
+const MARCH_CYCLE_PX = MARCH_STRIDE_PER_RADIAN * Math.PI * 2;
 const RUN_CYCLE_PX = RUN_STRIDE_PER_RADIAN * Math.PI * 2;
 const SWING_MS = 1300;
 const SWING_PAUSE_MS = 600;
@@ -75,8 +78,11 @@ const posed = (label: string, look: LookAt, pose: (timeMs: number) => BodyPose, 
   },
 });
 
-const walking = (look: LookAt, speed: number, club?: AttackStyle, zombie = false): DesignView =>
-  posed(zombie ? 'Shuffle' : 'Walk', look, (t) => walkBody((t * speed) / WALK_CYCLE_PX, { club, zombie }), speed);
+/** Walking (the zombie shuffles and the knights march, both on the march's longer stride). */
+const walking = (look: LookAt, speed: number, club?: AttackStyle, zombie = false, style: WalkStyle = 'walk'): DesignView => {
+  const cycle = zombie || style === 'march' ? MARCH_CYCLE_PX : WALK_CYCLE_PX;
+  return posed(zombie ? 'Shuffle' : style === 'march' ? 'March' : 'Walk', look, (t) => walkBody((t * speed) / cycle, { club, zombie, style }), speed);
+};
 const running = (look: LookAt, speed: number, club?: AttackStyle): DesignView =>
   posed('Run', look, (t) => runBody((t * speed) / RUN_CYCLE_PX, club), speed);
 const swinging = (label: string, look: LookAt, style: AttackStyle): DesignView =>
@@ -127,6 +133,19 @@ const mounted = (label: string, pose: (timeMs: number) => HorsePose, speed?: num
   },
 });
 
+/** The horse killed under the knight (rendering/horseDeath), on a loop; once thrown, the rider is an enemy of his own in the game. */
+const HORSE_DEATH_PAUSE_MS = 1400;
+const horseDeath = (label: string, kind: HorseDeathKind): DesignView => ({
+  label,
+  scale: 0.5,
+  offsetX: -10,
+  draw: (g, timeMs) => {
+    const { horse, riderThrown } = getHorseDeath(kind, timeMs % (HORSE_DEATH_MS[kind] + HORSE_DEATH_PAUSE_MS));
+    g.clear();
+    drawMountedKnight(g, horse, timeMs, { riderless: riderThrown });
+  },
+});
+
 /** Enemy archer: raise the bow, draw, loose, lower; on a loop. */
 const SHOT_MS = 2200;
 const shooting = (look: LookAt): DesignView => posed('Draw and shoot', look, (t) => {
@@ -146,7 +165,7 @@ const now = (pose: (timeMs: number) => StickmanPose & { phase: number; tint?: nu
     drawStickman(g, phase, { originY: 2, ...rest });
   },
 });
-const walkPhase = (timeMs: number, speed: number): number => (timeMs * speed) / WALK_STRIDE_PER_RADIAN;
+const walkPhase = (timeMs: number, speed: number, stride = WALK_STRIDE_PER_RADIAN): number => (timeMs * speed) / stride;
 const runPhase = (timeMs: number, speed: number): number => (timeMs * speed) / RUN_STRIDE_PER_RADIAN;
 
 const FIGHTER_SPEED = ENEMY_SPEED / 1000;
@@ -259,7 +278,7 @@ const ENEMIES: DesignEntry[] = [
       cheering(zombieLook, 'cheerWave'),
       pinned(zombieLook),
       blownApart('zombie'),
-      now((t) => ({ phase: walkPhase(t, ZOMBIE_SPEED), zombie: true, bodyColors: ZOMBIE_BODY }), ZOMBIE_SPEED),
+      now((t) => ({ phase: walkPhase(t, ZOMBIE_SPEED, MARCH_STRIDE_PER_RADIAN), zombie: true, bodyColors: ZOMBIE_BODY }), ZOMBIE_SPEED),
     ],
   },
   {
@@ -268,7 +287,7 @@ const ENEMIES: DesignEntry[] = [
     tagline: 'Armoured: aim for the visor',
     description: 'Black plate from helm to sabatons: a closed great helm with two embers glowing through the visor slit and a dark red plume, a spiked pauldron, tassets over the thighs and a torn red cape. A longsword with a crossguard where the fighter holds his club. Body hits glance off the plate (only a third gets through); headshots and piercing arrows go through.',
     views: [
-      walking(blackKnightLook, KNIGHT_SPEED, 'overhead'),
+      walking(blackKnightLook, KNIGHT_SPEED, 'overhead', false, 'march'),
       swinging('Sword cut', blackKnightLook, 'overhead'),
       swinging('Rising cut', blackKnightLook, 'swordRise'),
       swinging('Thrust', blackKnightLook, 'thrust'),
@@ -285,7 +304,7 @@ const ENEMIES: DesignEntry[] = [
     tagline: 'Armoured, a head taller',
     description: 'The black knight\'s bigger brother (drawn at normal size here; the game draws him 1.1 times as tall): heavier plate with rivets, broad spiked pauldrons, a horned helm and a long cape, and a war hammer with a spiked iron head swung in both hands like the brute\'s log.',
     views: [
-      walking(hammerKnightLook, HAMMER_KNIGHT_SPEED, 'twoHanded'),
+      walking(hammerKnightLook, HAMMER_KNIGHT_SPEED, 'twoHanded', false, 'march'),
       swinging('Hammer blow', hammerKnightLook, 'twoHanded'),
       knockdown(hammerKnightLook),
       falling('Death', hammerKnightLook, 'deathCrumple'),
@@ -297,13 +316,15 @@ const ENEMIES: DesignEntry[] = [
     id: 'horse-knight',
     name: 'Mounted knight',
     tagline: 'A lance from beyond a sword\'s reach',
-    description: 'The black knight on a black warhorse: a dark red caparison with a black hem, a steel chamfron with a spike and an ember eye, the mane and tail near black. He carries a lance with a red pennant and a steel vamplate over his fist, and from a standstill drives it at a man\'s chest well past the horse\'s head. Killed, he is thrown off and fights on foot; the horse bolts.',
+    description: 'The black knight on a black warhorse: a dark red caparison with a black hem, a steel chamfron with a spike and an ember eye, the mane and tail near black. He carries a lance with a red pennant and a steel vamplate over his fist, and from a standstill drives it at a man\'s chest well past the horse\'s head. Rider and horse have their own health: the horse killed, it lies down or drops and he is thrown off to fight on foot; he killed, or pulled out of the saddle by a vortex, the horse bolts.',
     views: [
       mounted('Gallop', (t) => getHorsePose(t, 'gallop', { thrust: 0 }), gaitGroundSpeed('gallop')),
       mounted('Lance thrust', (t) => getHorsePose(t, 'stand', { thrust: Math.min(1, (t % (SWING_MS + SWING_PAUSE_MS)) / SWING_MS) })),
       mounted('Standing', (t) => getHorsePose(t, 'stand', { thrust: 0 })),
       mounted('Cheers', (t) => getHorsePose(t, 'stand', { thrust: 0, raised: true })),
       mounted('Riderless, bolting', (t) => getHorsePose(t, 'gallop'), gaitGroundSpeed('gallop'), true),
+      horseDeath('Horse lies down', 'lieDown'),
+      horseDeath('Horse drops', 'drop'),
     ],
   },
   {

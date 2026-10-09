@@ -1,3 +1,4 @@
+import type { ProjectileType } from './types';
 /**
  * The view (screen) in game px: always GAME_HEIGHT tall and at least GAME_WIDTH wide (2.1:1). A wider
  * window, or one big enough to pass MAX_VIEW_SCALE, widens the view (more landscape) instead of scaling
@@ -71,6 +72,13 @@ export const KAMIKAZE_GIB_FORCE = 1.8;
  * arrows and blasts deal their full damage).
  */
 export const KNIGHT_ARMOR = 0.35;
+/**
+ * A mounted knight's horse hit in the leg: the arrow deals `damage` × its hit and doesn't stick; with a chance (by arrow,
+ * HORSE_LEG_LAME_CHANCE, else `lameChance`) the horse stumbles and goes lame for `lameMs`, walking at `lameSpeed`
+ * × its speed (a fresh one restarts the time).
+ */
+export const HORSE_LEG = { damage: 0.5, lameChance: 0.35, lameMs: 4000, lameSpeed: 0.4, stumbleMs: 350 } as const;
+export const HORSE_LEG_LAME_CHANCE: Partial<Record<ProjectileType, number>> = { pinning: 0.9, piercing: 0.5, fragment: 0.15, explosive: 0, vortex: 0 };
 /**
  * The dark priest (systems/healing.ts) never attacks: it walks PRIEST_FOLLOW_GAP behind the nearest soldier (on the side
  * away from its target, never nearer the target than PRIEST_STANDOFF, within PRIEST_POST_SLACK), falls back behind the
