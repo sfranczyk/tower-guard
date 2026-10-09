@@ -52,7 +52,7 @@ open the one you need:
   (`Mount.ts`: health, lame leg, bolting, death), two bars. `mountedDamage` splits a hit by `HitInfo.part`; blasts,
   lightning and shattering ice hit both in full; fire and falls the horse. The priest heals the more wounded first. Mass
   6, can't be pinned, never knocked down (a blast makes the horse shy). Once either falls, `isAlive` is false and
-  `Enemy.onUnhorsed` → `GameScene.unhorse` (`RiderOff`) puts the rider on the ground as its `unhorsed` kind with the
+  `Enemy.onUnhorsed` → `BattleEnemies.unhorse` (`RiderOff`) puts the rider on the ground as its `unhorsed` kind with the
   health left: rider killed → horse stands a moment and bolts off right; horse killed → it dies (`horseDeathKind`:
   outright kill, horse headshot, blast, lightning or ice → drop, else lie down; `Mount.die`) and throws the rider
   (`Enemy.throwOff`, `RIDER_OFF_FORCE`; `riderPending` keeps the level going). A vortex arrow in the rider
