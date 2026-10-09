@@ -99,12 +99,15 @@ export class EnemyAI {
     // The nearest bowman out in the open, or the keep when everyone left is hiding in it.
     const bowman = nearestExposedBowman(this.world.bowmen, enemy.x);
     enemy.target = bowman ? 'bowman' : 'tower';
+    // A mounted knight stops further off: its horse's head is ahead of it and its lance reaches past it.
+    const meleeReach = enemy.reach?.bowman ?? MELEE_REACH;
+    const keepReach = enemy.reach?.keep ?? TOWER_ATTACK_REACH;
     const bowmanBehindEnemy = bowman !== undefined && bowman.x > enemy.x + MELEE_REACH;
     const targetPosition = bowman
       ? { x: bowmanBehindEnemy ? enemy.x + 100 : bowman.x, y: BOWMAN_Y }
       : { x: playerTower.x, y: GROUND_Y };
 
-    enemy.update(deltaMs, targetPosition, enemy.target === 'tower' ? TOWER_ATTACK_REACH : MELEE_REACH);
+    enemy.update(deltaMs, targetPosition, enemy.target === 'tower' ? keepReach : meleeReach);
     enemy.updateAnimation(deltaMs, enemy.isMoving());
     this.drawDebugHitboxes(enemy);
 
@@ -124,7 +127,7 @@ export class EnemyAI {
     }
 
     if (!bowman) {
-      if (enemy.x <= playerTower.x + TOWER_ATTACK_REACH && enemy.canAttack()) {
+      if (enemy.x <= playerTower.x + keepReach && enemy.canAttack()) {
         // The keep takes the hit when the club lands, with a chip of stone flying off the wall.
         enemy.playAttackAnimation(() => {
           // Chips fly off the wall where the club lands.
@@ -135,7 +138,7 @@ export class EnemyAI {
     }
 
     // No swing at a bowman who is in the air; once he lands in reach, the enemy swings again.
-    const overlapsBowman = Math.abs(enemy.x - bowman.x) <= MELEE_REACH;
+    const overlapsBowman = Math.abs(enemy.x - bowman.x) <= meleeReach;
     const bowmanAirborne = bowman.y < groundAt(bowman.x) - 20;
     if (!bowmanAirborne && overlapsBowman && Math.abs(enemy.y - bowman.y) <= 45) {
       if (enemy.canAttack()) {

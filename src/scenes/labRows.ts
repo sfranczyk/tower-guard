@@ -219,6 +219,13 @@ export const LAB_CATEGORIES: readonly LabCategory[] = [
         render: swing('thrust'),
       },
       {
+        id: 'horse-lance',
+        title: 'Riding: lance thrust',
+        description: 'Standing, the rider draws the lance back sitting up, then drives it forward and down at a man\'s chest, well past the horse\'s head, and brings it back to the carry. Mounted knights.',
+        ...HORSE,
+        render: (sprite, clock) => drawHorseRider(sprite, clock.timeMs, 'stand', { thrust: Math.min(1, (clock.timeMs % 1900) / 1300) }),
+      },
+      {
         id: 'zombie-grab',
         title: 'Zombie grab',
         description: 'Lunges in reaching further, then yanks both hands back to the chest; the hit lands on the yank.',

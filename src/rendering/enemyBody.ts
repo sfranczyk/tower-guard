@@ -12,11 +12,14 @@ import { blackKnightLook, darkPriestLook, hammerKnightLook } from './designs/kni
 import { drawHumanoid, type HumanoidLook } from './designs/skinKit';
 import { drawLookGibs } from './designs/lookGibs';
 import type { GibSimulation } from './stickmanGibs';
+import type { HorsePose } from './horseRider';
+import { drawMountedKnight } from './designs/warhorse';
 
 /**
  * Enemies drawn in their looks (rendering/designs) over the same poses drawStickman uses, so movement,
  * swings, falls and hitboxes are unchanged: fighter = raider, runner = goblin, archer = hooded bandit,
- * brute = ogre, kamikaze = sapper, zombie = rotting peasant; the black knight, hammer knight and dark priest as they are.
+ * brute = ogre, kamikaze = sapper, zombie = rotting peasant; the black knight, hammer knight and dark priest as they are;
+ * the mounted knight is the black knight on a warhorse (designs/warhorse.ts) in the 'mounted' state.
  */
 
 type GroundEnemy = Exclude<EnemyType, 'dragon' | 'fireDragon'>;
@@ -41,6 +44,7 @@ const LOOKS: Readonly<Record<GroundEnemy, EnemyBodyLook>> = {
   zombie: { look: zombieLook, gibs: { ...ZOMBIE_BODY, bone: 0x9fb38a, boneRear: 0x5b6b7a } },
   knight: { look: blackKnightLook, club: 'overhead', gibs: { ...HUMAN_BODY, bone: 0x2a2c33, boneRear: 0x18191e } },
   hammerKnight: { look: hammerKnightLook, club: 'twoHanded', gibs: { ...HUMAN_BODY, bone: 0x2a2c33, boneRear: 0x18191e } },
+  horseKnight: { look: blackKnightLook, gibs: { ...HUMAN_BODY, bone: 0x2a2c33, boneRear: 0x18191e } },
   priest: { look: darkPriestLook, club: 'overhead', gibs: { ...HUMAN_BODY, bone: 0x2b1d2e, boneRear: 0xcfc4b0 } },
 };
 
@@ -64,11 +68,15 @@ export type EnemyBodyState =
   /** A spell (the priest's heal), progress 0..1. */
   | { mode: 'cast'; progress: number }
   /** Falls (sprite at originY, like drawJointPose), cheers and the pinned struggle. */
-  | { mode: 'joints'; pose: JointPose; club: boolean };
+  | { mode: 'joints'; pose: JointPose; club: boolean }
+  /** On horseback (sprite at originY: the hooves stand where a fall's feet lie); `riderless` once he's been thrown. */
+  | { mode: 'mounted'; pose: HorsePose; riderless?: boolean };
+
+type HumanState = Exclude<EnemyBodyState, { mode: 'mounted' }>;
 
 const TWO_PI = Math.PI * 2;
 
-const poseFor = (kind: EnemyType, state: EnemyBodyState): BodyPose => {
+const poseFor = (kind: EnemyType, state: HumanState): BodyPose => {
   const { club } = lookOf(kind);
   // Grabbers (zombies) walk and stand with their arms held out.
   const zombie = enemyArchetype(kind).attackStyle === 'grab';
@@ -94,7 +102,11 @@ const poseFor = (kind: EnemyType, state: EnemyBodyState): BodyPose => {
 /** Draws an enemy of `kind` into `sprite` (cleared first); sets the sprite's y like drawStickman would. */
 export const drawEnemyBody = (sprite: Graphics, kind: EnemyType, state: EnemyBodyState, originY: number, timeMs: number): void => {
   sprite.clear();
-  sprite.y = state.mode === 'joints' ? originY : originY - LIVE_POSE_LIFT;
+  sprite.y = state.mode === 'joints' || state.mode === 'mounted' ? originY : originY - LIVE_POSE_LIFT;
+  if (state.mode === 'mounted') {
+    drawMountedKnight(sprite, state.pose, timeMs, { riderless: state.riderless });
+    return;
+  }
   const cast = state.mode === 'cast' ? Math.sin(Math.PI * state.progress) : 0;
   drawHumanoid(sprite, poseFor(kind, state), lookOf(kind).look(timeMs, cast));
 };

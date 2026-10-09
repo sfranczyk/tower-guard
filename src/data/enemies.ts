@@ -56,6 +56,12 @@ export const splashGibChance = (distance: number): number => {
 export const blowsApart = (cause: string, distance = 1, roll = Math.random()): boolean =>
   cause === 'blast' || (cause === 'explosion' && roll < splashGibChance(distance));
 
+/**
+ * A mounted knight killed: thrown off his horse he fights on, unless the blow that brought him down was a headshot, a
+ * direct explosive hit or shattered ice, which kills the rider too.
+ */
+export const unhorsedRiderDies = (cause: string): boolean => cause === 'headshot' || cause === 'blast' || cause === 'shatter';
+
 /** Explosion damage `distance` (fraction of EXPLOSION_RADIUS, 0 = centre or a direct hit) from the blast. */
 export const explosionDamage = (distance: number): number => {
   const t = Math.max(0, Math.min(1, distance));
@@ -79,6 +85,8 @@ export interface EnemyLook {
    * has to get this far away during the swing (jumping on the spot doesn't help).
    */
   strikeReach: number;
+  /** How close it comes to the bowman and the keep's centre to strike (default EnemyAI's): a mounted knight stops short. */
+  reach?: { bowman: number; keep: number };
   /** Sway speed of standing poses (ms per phase radian, default 150): zombies sway slower. Walking and
    * running follow the actual speed (Enemy.stridePhase), so the feet never slide. */
   stepMs?: number;

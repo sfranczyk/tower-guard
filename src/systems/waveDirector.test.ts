@@ -4,8 +4,8 @@ import { WaveDirector, planWaves } from './waveDirector';
 
 const last = <T>(items: readonly T[]): T => items[items.length - 1];
 
-const level = { basic: 6, fast: 4, tank: 3, archer: 3, dragon: 1, fireDragon: 1, kamikaze: 2, zombie: 2, knight: 2, hammerKnight: 1, priest: 1 };
-const total = 26;
+const level = { basic: 6, fast: 4, tank: 3, archer: 3, dragon: 1, fireDragon: 1, kamikaze: 2, zombie: 2, knight: 2, hammerKnight: 1, horseKnight: 1, priest: 1 };
+const total = 27;
 
 describe('wave waves', () => {
   it('splits the wave into growing waves containing every enemy', () => {
@@ -13,7 +13,7 @@ describe('wave waves', () => {
     expect(waves.flat()).toHaveLength(total);
     expect(waves[0]).toHaveLength(FIRST_WAVE_SIZE);
     waves.forEach((wave) => expect(wave.length).toBeLessThanOrEqual(MAX_WAVE_SIZE + 1));
-    (['basic', 'fast', 'tank', 'archer', 'dragon', 'fireDragon', 'kamikaze', 'zombie', 'knight', 'hammerKnight', 'priest'] as const).forEach((type) =>
+    (['basic', 'fast', 'tank', 'archer', 'dragon', 'fireDragon', 'kamikaze', 'zombie', 'knight', 'hammerKnight', 'horseKnight', 'priest'] as const).forEach((type) =>
       expect(waves.flat().filter((t) => t === type)).toHaveLength(level[type]));
   });
 
@@ -26,14 +26,14 @@ describe('wave waves', () => {
 
   it('grows by WAVE_SIZE_STEP up to MAX_WAVE_SIZE, the rest in the last wave', () => {
     const sizes = (basic: number): number[] =>
-      planWaves({ basic, fast: 0, tank: 0, archer: 0, dragon: 0, fireDragon: 0, kamikaze: 0, zombie: 0, knight: 0, hammerKnight: 0, priest: 0 }).map((wave) => wave.length);
+      planWaves({ basic, fast: 0, tank: 0, archer: 0, dragon: 0, fireDragon: 0, kamikaze: 0, zombie: 0, knight: 0, hammerKnight: 0, horseKnight: 0, priest: 0 }).map((wave) => wave.length);
     expect(sizes(30)).toEqual([3, 5, 7, 9, 6]);
     expect(sizes(50)).toEqual([3, 5, 7, 9, 10, 10, 6]);
   });
 
   it('never leaves a lone enemy as the last wave', () => {
-    expect(last(planWaves({ basic: 6, fast: 0, tank: 0, archer: 0, dragon: 0, fireDragon: 0, kamikaze: 0, zombie: 0, knight: 0, hammerKnight: 0, priest: 0 })).length).toBeGreaterThan(1);
-    expect(planWaves({ basic: 1, fast: 0, tank: 0, archer: 0, dragon: 0, fireDragon: 0, kamikaze: 0, zombie: 0, knight: 0, hammerKnight: 0, priest: 0 })).toEqual([['basic']]);
+    expect(last(planWaves({ basic: 6, fast: 0, tank: 0, archer: 0, dragon: 0, fireDragon: 0, kamikaze: 0, zombie: 0, knight: 0, hammerKnight: 0, horseKnight: 0, priest: 0 })).length).toBeGreaterThan(1);
+    expect(planWaves({ basic: 1, fast: 0, tank: 0, archer: 0, dragon: 0, fireDragon: 0, kamikaze: 0, zombie: 0, knight: 0, hammerKnight: 0, horseKnight: 0, priest: 0 })).toEqual([['basic']]);
   });
 });
 

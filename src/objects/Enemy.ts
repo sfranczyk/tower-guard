@@ -20,6 +20,9 @@ import { groundAt } from '../systems/terrain';
 import { drawHealthBar } from '../rendering/healthBar';
 import { STANDING_BURN_POINTS, burnPoints } from '../rendering/burning';
 import { FROZEN_TINT } from '../rendering/afflictionArt';
+import { gaitGroundSpeed, getHorsePose, mountedBodyPoints, mountedHitZones, mountedIcePoints, type HorseGait, type HorsePose, type LanceHold } from '../rendering/horseRider';
+import { boundsAround } from '../utils/math';
+import type { HitBox } from './DragonEnemy';
 import type { Bounds, EnemyType, Vec2 } from '../types';
 import { AfflictionLayer, type AfflictionNet } from './AfflictionLayer';
 import { EnemyBow } from './EnemyBow';
@@ -88,6 +91,15 @@ const LEVITATE_Z = 4;
 /** Flames and frost glints in container units (the bowman's at his scale, to match). */
 const AFFLICTION_SIZE = 0.5;
 
+/** A mounted knight's health bar sits this much higher (over the rider's head). */
+const MOUNTED_BAR_RISE = 24;
+/** A blast that doesn't kill a mounted knight makes the horse shy (it stands a moment) instead of knocking it down. */
+const HORSE_SHY_MS = 450;
+/** Its rider thrown, the horse stands this long, then bolts off the far edge this much faster than it came. */
+const HORSE_BOLT = { delayMs: 350, speedFactor: 1.5, beyondEdge: 160 } as const;
+/** A thrown-off rider flies off backwards from the saddle (px up, px/s, radians/s). */
+const THROWN_RIDER = { saddle: 22, vx: 70, vy: -170, spin: 3 } as const;
+
 /** Container scale of a normal-sized enemy (bigger types multiply it by their size). */
 const ENEMY_SCALE = 2 / 3;
 const RUN_LEAN = 0.14;
@@ -130,6 +142,12 @@ export default class Enemy extends Container {
   private dropSpeed = 0;
   /** A settled corpse has been drawn as it rests (isSettledCorpse): it isn't redrawn again. */
   private settledDrawn = false;
+  /** On horseback (archetype `rides`): the gait's clock (at a gallop it advances with the distance covered). */
+  private horseMs = Math.random() * 1000;
+  /** The horse and rider as last drawn (hit zones, flames). */
+  private horsePose?: HorsePose;
+  /** Killed on horseback: the riderless horse stands a moment, then bolts off the far edge (`gone` once past it). */
+  private bolting?: { delayMs: number; gone: boolean };
   /**
    * Thrown through the air (a vortex threw it out, or it was hit up there), flailing until it lands; pinned to the
    * ground by a pinning arrow (it can't walk until the pin runs out, but can still swing or shoot).
@@ -143,6 +161,11 @@ export default class Enemy extends Container {
   private readonly manaBar?: Graphics;
   /** Co-op host: hears about every hit, swing, heal and spell, to replay them on the guest's screen. */
   public netHooks?: { damaged(amount: number, hit: HitInfo): void; attacked(style: AttackStyle): void; healed?(amount: number): void; cast?(): void };
+  /**
+   * Host: a mounted knight was killed by `hit` at `x`; the scene puts its rider on the ground (EnemyKind `unhorsed`:
+   * thrown off, or killed with the horse).
+   */
+  public onUnhorsed?: (x: number, hit: HitInfo) => void;
 
   public constructor(
     x: number,
@@ -179,6 +202,11 @@ export default class Enemy extends Container {
     this.drawManaBar();
   }
 
+  /** On horseback (a mounted knight): drawn with its horse, never knocked down, unhorsed when killed. */
+  public get rides(): boolean {
+    return enemyArchetype(this.kind).rides;
+  }
+
   /** Ground enemies walk; only dragons fly (lightning strikes the ground, not the sky). */
   public readonly isFlying = false;
 
@@ -199,6 +227,11 @@ export default class Enemy extends Container {
   /** How far the club reaches when it lands (see EnemyLook.strikeReach). */
   public get strikeReach(): number {
     return this.look.strikeReach;
+  }
+
+  /** How close it comes to strike the bowman and the keep (EnemyKind build `reach`; undefined = EnemyAI's defaults). */
+  public get reach(): { bowman: number; keep: number } | undefined {
+    return this.look.reach;
   }
 
   /** Colours of its pieces when blown apart, and its blood (zombies bleed green). */
@@ -267,7 +300,11 @@ export default class Enemy extends Container {
   }
 
   private drawPlaceholder(): void {
-    this.drawStanding();
+    if (this.rides) {
+      this.drawMounted('stand', { thrust: 0 });
+    } else {
+      this.drawStanding();
+    }
     this.body.position.set(0, -29);
     this.body.scale.set(-BODY_SCALE.x, BODY_SCALE.y);
   }
@@ -289,7 +326,12 @@ export default class Enemy extends Container {
     const push = hit.cause === 'explosion' || hit.cause === 'blast' ? knockbackPush(blastDistance) : 0;
     // Up in the air (lifted or flying) it falls back down first and lands lying.
     const aloft = this.motion.isThrown || this.afflictions.inVortex;
-    if (this.health === 0) {
+    if (this.health === 0 && this.rides) {
+      this.alive = false;
+      this.velocity = { x: 0, y: 0 };
+      this.healthBar.visible = false;
+      this.unhorse(hit);
+    } else if (this.health === 0) {
       this.alive = false;
       this.velocity = { x: 0, y: 0 };
       this.healthBar.visible = false;
@@ -318,12 +360,44 @@ export default class Enemy extends Container {
       }
     } else if (aloft) {
       // Hit while up in the air: it keeps flying (or stays in the funnel).
+    } else if (this.rides) {
+      // No blast knocks a horse down: it shies and stands a moment.
+      if (hit.cause === 'explosion' || hit.cause === 'blast' || hit.cause === 'lightning') {
+        this.hitStaggerMs = Math.max(this.hitStaggerMs, HORSE_SHY_MS);
+      }
     } else if (hit.cause === 'explosion' || hit.cause === 'blast' || hit.cause === 'lightning') {
       this.afflictions.thaw();
       this.startFall('knockback', hit.fromX, KNOCKDOWN_LIE_MS, push);
     }
 
     return this.health;
+  }
+
+  /**
+   * Killed on horseback: whatever held it lets go, the horse stands a moment and bolts (updateBolt) and the host puts
+   * the rider on the ground (onUnhorsed).
+   */
+  private unhorse(hit: HitInfo): void {
+    this.afflictions.thaw();
+    this.afflictions.warm();
+    this.afflictions.extinguish();
+    this.motion.endFlight();
+    this.y = groundAt(this.x);
+    this.attackTimerMs = 0;
+    this.pendingImpact = undefined;
+    this.bolting = { delayMs: HORSE_BOLT.delayMs, gone: false };
+    this.onUnhorsed?.(this.x, hit);
+  }
+
+  /**
+   * Thrown off its horse (a mounted knight's rider, just put where the horse stood): flies off backwards from the
+   * saddle, away from `fromX`, lands on its back and gets up later; `fromNet` on a co-op guest (the host flies it).
+   */
+  public throwOff(fromX: number, fromNet = false): void {
+    const away = this.x >= fromX ? 1 : -1;
+    this.y -= THROWN_RIDER.saddle;
+    this.throwInAir(away * THROWN_RIDER.vx, THROWN_RIDER.vy, away * THROWN_RIDER.spin);
+    this.motion.fromNet = fromNet;
   }
 
   /**
@@ -458,16 +532,19 @@ export default class Enemy extends Container {
     if (this.gibs || this.fall) {
       return;
     }
-    const rotation = this.afflictions.inVortex ? this.afflictions.lean : 0;
+    // A horse doesn't tumble: dropped by a vortex it comes down on its hooves.
+    const rotation = this.afflictions.inVortex && !this.rides ? this.afflictions.lean : 0;
     this.afflictions.releaseVortex();
-    this.motion.throw(this.x, this.y, vx, vy, spin, rotation);
+    this.motion.throw(this.x, this.y, this.rides ? vx * 0.3 : vx, vy, this.rides ? 0 : spin, rotation);
     this.velocity = { x: 0, y: 0 };
     this.attackTimerMs = 0;
     this.castTimerMs = 0;
     this.hitStaggerMs = 0;
     this.pendingImpact = undefined;
     // Faces against the way it flies, so it falls backwards along it.
-    this.body.scale.x = (vx > 0 ? -1 : 1) * BODY_SCALE.x;
+    if (!this.rides) {
+      this.body.scale.x = (vx > 0 ? -1 : 1) * BODY_SCALE.x;
+    }
   }
 
   /** Where the stuck foot of a pinned enemy is (world): its rear foot, behind it (it faces the way it walked). */
@@ -558,7 +635,7 @@ export default class Enemy extends Container {
       this.afflictions.art.clear();
       return;
     }
-    const lifted = this.afflictions.inVortex && this.afflictions.lift > FLAIL_LIFT && !this.fall && !this.afflictions.isFrozen;
+    const lifted = !this.rides && this.afflictions.inVortex && this.afflictions.lift > FLAIL_LIFT && !this.fall && !this.afflictions.isFrozen;
     if (lifted) {
       // Off its feet in the funnel: flailing, tumbling round.
       this.lookTimeMs += deltaMs;
@@ -572,6 +649,10 @@ export default class Enemy extends Container {
       }
     }
     this.body.tint = this.afflictions.tint;
+    if (this.rides && this.horsePose) {
+      this.afflictions.draw(this.afflictionPoints(mountedBodyPoints(this.horsePose)), AFFLICTION_SIZE, this.afflictionPoints(mountedIcePoints(this.horsePose)));
+      return;
+    }
     this.afflictions.draw(this.afflictionPoints(this.fall || lifted ? undefined : STANDING_BURN_POINTS), AFFLICTION_SIZE, this.afflictionPoints(STANDING_BURN_POINTS));
   }
 
@@ -591,7 +672,9 @@ export default class Enemy extends Container {
     }
     const { flight } = step;
     this.position.set(flight.x, flight.y);
-    if (this.afflictions.isFrozen) {
+    if (this.rides) {
+      this.drawMounted('stand', { thrust: 0 });
+    } else if (this.afflictions.isFrozen) {
       this.drawBody({ mode: 'stand', phase: 0 });
     } else {
       this.drawBody({ mode: 'joints', pose: getFlailPose(this.lookTimeMs), club: this.carriesClub });
@@ -606,8 +689,10 @@ export default class Enemy extends Container {
     const landed = this.motion.endFlight();
     this.y = groundAt(this.x);
     this.body.rotation = 0;
-    // Falls backwards away from `fromX`: put that behind where it came from.
-    this.startFall('knockback', this.x - Math.sign(vx || 1), this.isAlive() ? KNOCKDOWN_LIE_MS : undefined);
+    // Falls backwards away from `fromX`: put that behind where it came from (a horse lands on its hooves).
+    if (!this.rides) {
+      this.startFall('knockback', this.x - Math.sign(vx || 1), this.isAlive() ? KNOCKDOWN_LIE_MS : undefined);
+    }
     if (this.fall) {
       this.fall.timeMs = FALL_DURATION_MS.knockback * LANDING_PROGRESS;
       this.drawFall();
@@ -640,6 +725,10 @@ export default class Enemy extends Container {
       this.updateFall(deltaMs);
       return;
     }
+    if (this.rides) {
+      this.animateMounted(deltaMs, moving);
+      return;
+    }
     if (!this.isAlive()) {
       return;
     }
@@ -660,13 +749,7 @@ export default class Enemy extends Container {
     }
 
     if (this.attackTimerMs > 0) {
-      this.attackTimerMs = Math.max(0, this.attackTimerMs - deltaMs);
-      const attackProgress = 1 - this.attackTimerMs / ATTACK_ANIMATION_DURATION_MS;
-      if (this.pendingImpact && attackProgress >= attackImpactProgress(this.swingStyle)) {
-        const impact = this.pendingImpact;
-        this.pendingImpact = undefined;
-        impact();
-      }
+      const attackProgress = this.advanceAttack(deltaMs);
       this.body.rotation = 0;
       this.drawBody(this.isArcher ? this.archerState() : { mode: 'attack', progress: attackProgress, style: this.swingStyle });
       return;
@@ -702,6 +785,88 @@ export default class Enemy extends Container {
     }
   }
 
+  /** Runs the swing's clock on and lands the hit at its strike key; returns how far through it is. */
+  private advanceAttack(deltaMs: number): number {
+    this.attackTimerMs = Math.max(0, this.attackTimerMs - deltaMs);
+    const attackProgress = 1 - this.attackTimerMs / ATTACK_ANIMATION_DURATION_MS;
+    if (this.pendingImpact && attackProgress >= attackImpactProgress(this.swingStyle)) {
+      const impact = this.pendingImpact;
+      this.pendingImpact = undefined;
+      impact();
+    }
+    return attackProgress;
+  }
+
+  /**
+   * On horseback: gallops (the gait keeping pace with the ground), stands, thrusts the lance, raises it to cheer; killed,
+   * the riderless horse bolts.
+   */
+  private animateMounted(deltaMs: number, moving: boolean): void {
+    this.body.rotation = 0;
+    if (this.bolting) {
+      this.updateBolt(deltaMs);
+      return;
+    }
+    if (!this.isAlive()) {
+      return;
+    }
+    if (this.cheer) {
+      this.horseMs += deltaMs;
+      this.body.scale.set(-BODY_SCALE.x, BODY_SCALE.y);
+      this.drawMounted('stand', { thrust: 0, raised: true });
+      return;
+    }
+    if (this.attackTimerMs > 0) {
+      this.horseMs += deltaMs;
+      this.drawMounted('stand', { thrust: this.advanceAttack(deltaMs) });
+      return;
+    }
+    if (!moving) {
+      this.horseMs += deltaMs;
+      this.drawMounted('stand', { thrust: 0 });
+      return;
+    }
+    this.body.scale.x = this.velocity.x < 0 ? -BODY_SCALE.x : BODY_SCALE.x;
+    this.gallop(Math.hypot(this.velocity.x, this.velocity.y) * deltaMs / 1000);
+    this.drawMounted('gallop', { thrust: 0 });
+  }
+
+  /** The gallop's clock for `distance` world px covered, so the planted hooves stay put. */
+  private gallop(distance: number): void {
+    this.horseMs += distance / (gaitGroundSpeed('gallop') * BODY_SCALE.x * this.scale.x);
+  }
+
+  private drawMounted(gait: HorseGait, lance: LanceHold, riderless = false): void {
+    this.horsePose = getHorsePose(this.horseMs, gait, riderless ? undefined : lance);
+    this.drawBody({ mode: 'mounted', pose: this.horsePose, riderless });
+  }
+
+  /** The riderless horse: stands a moment, turns away and gallops off the far edge, then is drawn no more. */
+  private updateBolt(deltaMs: number): void {
+    const bolt = this.bolting!;
+    if (bolt.gone) {
+      return;
+    }
+    if (bolt.delayMs > 0) {
+      bolt.delayMs = Math.max(0, bolt.delayMs - deltaMs);
+      this.horseMs += deltaMs;
+      this.drawMounted('stand', { thrust: 0 }, true);
+      return;
+    }
+    const step = (this.speed * HORSE_BOLT.speedFactor * deltaMs) / 1000;
+    this.x += step;
+    this.y = groundAt(Math.min(this.x, WORLD_WIDTH));
+    this.body.scale.x = BODY_SCALE.x;
+    this.gallop(step);
+    if (this.x > WORLD_WIDTH + HORSE_BOLT.beyondEdge) {
+      bolt.gone = true;
+      this.body.clear();
+      this.afflictions.art.clear();
+      return;
+    }
+    this.drawMounted('gallop', { thrust: 0 }, true);
+  }
+
   public isAlive(): boolean {
     return this.alive && this.health > 0;
   }
@@ -716,12 +881,35 @@ export default class Enemy extends Container {
   }
 
   public getPhysicsBounds(): Bounds {
+    if (this.rides && this.horsePose) {
+      return boundsAround(this.mountedZones().flatMap(({ bounds }) => [{ x: bounds.left, y: bounds.top }, { x: bounds.right, y: bounds.bottom }]), 0);
+    }
     return bodyBounds(this.shape());
   }
 
-  /** Box around the drawn head (follows bob, lean, scale and falls), in world space. */
+  /** Box around the drawn head (follows bob, lean, scale and falls), in world space; a rider's head on horseback. */
   public getHeadBounds(): Bounds {
+    if (this.rides && this.horsePose) {
+      return this.mountedZones()[0].bounds;
+    }
     return headBounds(this.shape());
+  }
+
+  /** Where it can be hit: head (a headshot) and body; on horseback the rider's head and torso and the horse's body, neck and head. */
+  public getHitBoxes(): HitBox[] {
+    if (this.rides && this.horsePose) {
+      return this.mountedZones();
+    }
+    return [{ bounds: this.getHeadBounds(), headshot: true }, { bounds: this.getPhysicsBounds(), headshot: false }];
+  }
+
+  private mountedZones(): HitBox[] {
+    const transform = this.bodyTransform();
+    const unit = Math.abs(transform.scaleX) * transform.scale;
+    return mountedHitZones(this.horsePose!).map(({ points, padding, headshot }) => ({
+      bounds: boundsAround(points.map((point) => spriteToWorld(point, transform)), padding * unit),
+      headshot,
+    }));
   }
 
   /** How it's drawn now, for its hit shape (objects/enemyHitShape.ts). */
@@ -848,6 +1036,9 @@ export default class Enemy extends Container {
     if (this.isAlive() || this.motion.isThrown || afflictions.isBurning || afflictions.isFrozen || afflictions.isChilled || afflictions.inVortex) {
       return false;
     }
+    if (this.bolting) {
+      return this.bolting.gone;
+    }
     if (this.gibs) {
       return this.gibs.settled && this.y >= groundAt(this.x);
     }
@@ -946,7 +1137,7 @@ export default class Enemy extends Container {
   /** Keeps the bar above the head, also while knocked down and getting up. */
   private positionHealthBar(): void {
     if (!this.fall) {
-      this.healthBar.position.set(0, HEALTH_BAR.standingY);
+      this.healthBar.position.set(0, HEALTH_BAR.standingY - (this.rides ? MOUNTED_BAR_RISE : 0));
       return;
     }
     const { head } = getFallPose(this.fall.kind, this.fallProgress);

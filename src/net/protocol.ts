@@ -118,9 +118,16 @@ export interface Snapshot {
 
 export type { EffectKind };
 
+/** Where an enemy appears when it doesn't walk in: thrown off a horse at `x` by a blow from `thrownFrom`. */
+export interface SpawnPlace {
+  x: number;
+  thrownFrom: number;
+}
+
 /** Things that happen once, in order. */
 export type GameEvent =
-  | { e: 'spawn'; id: number; type: EnemyType }
+  /** A new enemy; `place` when it doesn't walk in (a mounted knight's rider, thrown off where his horse stood). */
+  | { e: 'spawn'; id: number; type: EnemyType; place?: SpawnPlace }
   /** An enemy takes damage (the guest runs the same takeDamage, so the same reaction plays). */
   | { e: 'hit'; id: number; amount: number; hit: HitInfo; push?: number }
   /** A swing (`style`: which of its swings). */

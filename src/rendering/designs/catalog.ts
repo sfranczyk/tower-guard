@@ -17,6 +17,8 @@ import { banditArcherLook, goblinLook, raiderLook, sapperLook } from './enemySki
 import { dragonArcherLook, dragonKnightLook, drawDragonWithRider, ogreLook, zombieLook } from './heavySkins';
 import { ENEMY_DESIGNS } from './ideas';
 import { blackKnightLook, darkPriestLook, hammerKnightLook } from './knightSkins';
+import { drawMountedKnight } from './warhorse';
+import { gaitGroundSpeed, getHorsePose, type HorsePose } from '../horseRider';
 import { rangerLook, wardenLook } from './playerSkins';
 import { drawHumanoid, type HumanoidLook } from './skinKit';
 import { drawEnemyGibs } from '../enemyBody';
@@ -110,6 +112,18 @@ const blownApart = (kind: EnemyType): DesignView => ({
     const simulation = new GibSimulation({ x: 16, y: -20 }, 1 + Math.floor(t / GIB_LOOP_MS), 1);
     simulation.step(t % GIB_LOOP_MS);
     drawEnemyGibs(g, kind, simulation, 0, t);
+  },
+});
+
+/** The mounted knight (or its riderless horse) in a horse pose; `speed` scrolls the ground at a gallop. */
+const mounted = (label: string, pose: (timeMs: number) => HorsePose, speed?: number, riderless = false): DesignView => ({
+  label,
+  speed,
+  scale: 0.62,
+  offsetX: -22,
+  draw: (g, timeMs) => {
+    g.clear();
+    drawMountedKnight(g, pose(timeMs), timeMs, { riderless });
   },
 });
 
@@ -277,6 +291,19 @@ const ENEMIES: DesignEntry[] = [
       falling('Death', hammerKnightLook, 'deathCrumple'),
       cheering(hammerKnightLook, 'cheerFist', true),
       blownApart('hammerKnight'),
+    ],
+  },
+  {
+    id: 'horse-knight',
+    name: 'Mounted knight',
+    tagline: 'A lance from beyond a sword\'s reach',
+    description: 'The black knight on a black warhorse: a dark red caparison with a black hem, a steel chamfron with a spike and an ember eye, the mane and tail near black. He carries a lance with a red pennant and a steel vamplate over his fist, and from a standstill drives it at a man\'s chest well past the horse\'s head. Killed, he is thrown off and fights on foot; the horse bolts.',
+    views: [
+      mounted('Gallop', (t) => getHorsePose(t, 'gallop', { thrust: 0 }), gaitGroundSpeed('gallop')),
+      mounted('Lance thrust', (t) => getHorsePose(t, 'stand', { thrust: Math.min(1, (t % (SWING_MS + SWING_PAUSE_MS)) / SWING_MS) })),
+      mounted('Standing', (t) => getHorsePose(t, 'stand', { thrust: 0 })),
+      mounted('Cheers', (t) => getHorsePose(t, 'stand', { thrust: 0, raised: true })),
+      mounted('Riderless, bolting', (t) => getHorsePose(t, 'gallop'), gaitGroundSpeed('gallop'), true),
     ],
   },
   {

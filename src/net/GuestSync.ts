@@ -12,7 +12,7 @@ import type { Foe } from '../systems/CombatSystem';
 import { groundAt } from '../systems/terrain';
 import type { EnemyType, ProjectileType, Vec2 } from '../types';
 import type { ArrowLaunch } from './HostSync';
-import { toNetAim, type EndInfo, type GameEvent, type NetMessage, type Snapshot } from './protocol';
+import { toNetAim, type EndInfo, type GameEvent, type NetMessage, type Snapshot, type SpawnPlace } from './protocol';
 import type { Transport } from './Transport';
 
 /** The guest shows the world this far in the past, between two frames, so motion stays smooth. */
@@ -35,7 +35,7 @@ export interface GuestWorld {
   readonly effects: EffectsSystem;
   readonly playerTower: Tower;
   readonly enemyTower: Tower;
-  spawnEnemy(type: EnemyType): Foe;
+  spawnEnemy(type: EnemyType, place?: SpawnPlace): Foe;
   launchArrow(launch: ArrowLaunch): Arrow;
   playSound(id: SoundId, at: Vec2): void;
   setStatus(text: string): void;
@@ -120,7 +120,7 @@ export class GuestSync {
     const { players, effects } = this.world;
     switch (event.e) {
       case 'spawn':
-        this.enemyById.set(event.id, this.world.spawnEnemy(event.type));
+        this.enemyById.set(event.id, this.world.spawnEnemy(event.type, event.place));
         break;
       case 'hit': {
         const enemy = this.enemyById.get(event.id);

@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import type { Vec2 } from '../types';
-import { HORSE_GROUND_Y, HORSE_LEG, RIDER_LIMBS, getHorsePose, type HorseGait, type HorsePose } from './horseRider';
+import { HORSE_GROUND_Y, HORSE_LEG, LANCE, LANCE_IMPACT, RIDER_LIMBS, gaitGroundSpeed, getHorsePose, mountedHitZones, type HorseGait, type HorsePose } from './horseRider';
 
 const distance = (a: Vec2, b: Vec2): number => Math.hypot(a.x - b.x, a.y - b.y);
 const legs = (pose: HorsePose) => [pose.nearFore, pose.farFore, pose.nearHind, pose.farHind];
-const GAITS: HorseGait[] = ['walk', 'gallop'];
-const CYCLE_MS: Record<HorseGait, number> = { walk: 1200, gallop: 620 };
+const GAITS: HorseGait[] = ['stand', 'walk', 'gallop'];
+const CYCLE_MS: Record<HorseGait, number> = { stand: 2600, walk: 1200, gallop: 620 };
 const frames = (gait: HorseGait): number[] => Array.from({ length: 120 }, (_, i) => (i / 120) * CYCLE_MS[gait]);
 
 describe('horse and rider', () => {
@@ -45,5 +45,52 @@ describe('horse and rider', () => {
     const end = getHorsePose(CYCLE_MS[gait], gait);
     legs(start).forEach((leg, index) => expect(distance(leg.hoof, legs(end)[index].hoof)).toBeLessThan(1e-6));
     expect(distance(start.rider.head, end.rider.head)).toBeLessThan(1e-6);
+  });
+
+  it('stands with all four hooves still on the ground', () => {
+    expect(gaitGroundSpeed('stand')).toBe(0);
+    const first = getHorsePose(0, 'stand');
+    frames('stand').forEach((timeMs) => legs(getHorsePose(timeMs, 'stand')).forEach(({ hoof }, index) => {
+      expect(hoof.y).toBeCloseTo(HORSE_GROUND_Y, 6);
+      expect(hoof.x).toBeCloseTo(legs(first)[index].hoof.x, 6);
+    }));
+  });
+
+  it('gallops faster over the ground than it walks', () => {
+    expect(gaitGroundSpeed('gallop')).toBeGreaterThan(gaitGroundSpeed('walk') * 3);
+  });
+
+  it('holds the lance in the near fist through the whole thrust, the arm keeping its length', () => {
+    for (let i = 0; i <= 50; i += 1) {
+      const { rider, lance } = getHorsePose(i * 37, 'stand', { thrust: i / 50 });
+      expect(lance).toBeDefined();
+      expect(distance(lance!.butt, rider.frontHand)).toBeCloseTo(LANCE.butt, 6);
+      expect(distance(lance!.tip, rider.frontHand)).toBeCloseTo(LANCE.ahead, 6);
+      expect(distance(rider.shoulder, rider.frontElbow)).toBeCloseTo(RIDER_LIMBS.upperArm, 3);
+      expect(distance(rider.frontElbow, rider.frontHand)).toBeCloseTo(RIDER_LIMBS.forearm, 3);
+    }
+    expect(getHorsePose(0, 'walk').lance).toBeUndefined();
+  });
+
+  it('drives the point well past the horse\'s head and down to a man\'s chest at the strike, and starts and ends carried', () => {
+    const carried = getHorsePose(0, 'stand', { thrust: 0 });
+    const strike = getHorsePose(0, 'stand', { thrust: LANCE_IMPACT });
+    expect(strike.lance!.tip.x).toBeGreaterThan(strike.muzzle.x + 40);
+    expect(strike.lance!.tip.x).toBeGreaterThan(carried.lance!.tip.x + 10);
+    // A standing man's chest is about 66 px above the ground in this sprite space.
+    expect(strike.lance!.tip.y).toBeGreaterThan(HORSE_GROUND_Y - 80);
+    expect(strike.lance!.tip.y).toBeLessThan(HORSE_GROUND_Y - 45);
+    expect(distance(getHorsePose(0, 'stand', { thrust: 1 }).lance!.tip, carried.lance!.tip)).toBeLessThan(1e-6);
+  });
+
+  it('can be hit on the rider\'s head (a headshot), his torso and the horse, not between its legs', () => {
+    const pose = getHorsePose(200, 'gallop', { thrust: 0 });
+    const zones = mountedHitZones(pose);
+    expect(zones.filter((zone) => zone.headshot).map((zone) => zone.points)).toEqual([[pose.rider.head]]);
+    const inside = (point: { x: number; y: number }): boolean => zones.some(({ points, padding }) =>
+      point.x >= Math.min(...points.map((p) => p.x)) - padding && point.x <= Math.max(...points.map((p) => p.x)) + padding
+      && point.y >= Math.min(...points.map((p) => p.y)) - padding && point.y <= Math.max(...points.map((p) => p.y)) + padding);
+    [pose.rider.shoulder, pose.barrel.centre, pose.croup, pose.chest, pose.forehead].forEach((point) => expect(inside(point)).toBe(true));
+    expect(inside({ x: pose.barrel.centre.x, y: HORSE_GROUND_Y - 8 })).toBe(false);
   });
 });

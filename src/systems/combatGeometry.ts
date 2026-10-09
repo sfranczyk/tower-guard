@@ -1,5 +1,6 @@
 import type Bowman from '../objects/Bowman';
-import DragonEnemy, { type HitBox } from '../objects/DragonEnemy';
+import type DragonEnemy from '../objects/DragonEnemy';
+import type { HitBox } from '../objects/DragonEnemy';
 import type Enemy from '../objects/Enemy';
 import type { Vec2 } from '../types';
 
@@ -20,10 +21,11 @@ export const bowmanBox = (bowman: Bowman): { left: number; right: number; top: n
   left: bowman.x - BOWMAN_HALF_WIDTH, right: bowman.x + BOWMAN_HALF_WIDTH, top: bowman.y - BOWMAN_HEIGHT, bottom: bowman.y,
 });
 
-/** Stickmen: head and body. Dragons: rider and dragon head (headshots), body and tail. */
-export const foeHitBoxes = (enemy: Foe): HitBox[] => (enemy instanceof DragonEnemy
-  ? enemy.getHitBoxes()
-  : [{ bounds: enemy.getHeadBounds(), headshot: true }, { bounds: enemy.getPhysicsBounds(), headshot: false }]);
+/**
+ * Stickmen: head and body; a mounted knight: the rider's head (a headshot) and torso, the horse's body, neck and head.
+ * Dragons: rider and dragon head (headshots), body and tail.
+ */
+export const foeHitBoxes = (enemy: Foe): HitBox[] => enemy.getHitBoxes();
 
 export const pointAlong = (start: Vec2, travel: Vec2, time: number): Vec2 => ({
   x: start.x + travel.x * time,

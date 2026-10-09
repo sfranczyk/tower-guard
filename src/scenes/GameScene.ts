@@ -16,18 +16,18 @@ import { spatialMix } from '../audio/spatial';
 import { Scene, type GameContext } from '../core/Scene';
 import { viewWidth } from '../core/viewport';
 import { BATTLEGROUNDS, aimColorsOf, type Battleground } from '../data/battlegrounds';
-import { getEnemyStats } from '../data/enemies';
-import { isFlyingType } from '../data/enemyKinds';
+import { getEnemyStats, unhorsedRiderDies } from '../data/enemies';
+import { ENEMY_KINDS, isFlyingType } from '../data/enemyKinds';
 import { levelEnemyTotal, type LevelSetup } from '../data/sandbox';
 import InputManager from '../managers/InputManager';
 import { LocalInput, ManualInput, RecordingInput, type PlayerInput } from '../input/PlayerInput';
 import { leaveCoop, loadoutOf } from '../net/coopLink';
 import { GuestSync } from '../net/GuestSync';
 import { HostSync } from '../net/HostSync';
-import type { EndInfo, NetMessage } from '../net/protocol';
+import type { EndInfo, NetMessage, SpawnPlace } from '../net/protocol';
 import Bowman from '../objects/Bowman';
 import DragonEnemy from '../objects/DragonEnemy';
-import Enemy from '../objects/Enemy';
+import Enemy, { type HitInfo } from '../objects/Enemy';
 import Tower from '../objects/Tower';
 import { secondPlayerArmor } from '../rendering/armor';
 import { BattleArrows } from './BattleArrows';
@@ -81,7 +81,8 @@ const windLabel = (wind: number, strongest: number): string => {
 export class GameScene extends Scene {
   private readonly level: LevelSetup;
   private readonly battleground: Battleground;
-  private readonly totalEnemies: number;
+  /** The level's enemies, and each rider thrown off his horse (he fights on as one more). */
+  private totalEnemies: number;
   private readonly world = new Container();
   private readonly enemies: Foe[] = [];
   /** Every arrow of the level. */
@@ -314,7 +315,7 @@ export class GameScene extends Scene {
       effects: this.effects,
       playerTower: this.playerTower,
       enemyTower: this.enemyTower,
-      spawnEnemy: (type) => this.spawnEnemy(type),
+      spawnEnemy: (type, place) => this.spawnEnemy(type, place),
       launchArrow: (launch) => this.shots.launchReplica(launch),
       playSound: (id, at) => this.playSound(id, at),
       setStatus: (text) => this.ctx.ui.setStatus(text),
@@ -481,17 +482,46 @@ export class GameScene extends Scene {
     this.control.update(player, deltaMs);
   }
 
-  private spawnEnemy(type: EnemyType): Foe {
+  /** A new enemy walking (or flying) in, or (`place`) a mounted knight's rider thrown off where his horse stood. */
+  private spawnEnemy(type: EnemyType, place?: SpawnPlace): Foe {
     const stats = getEnemyStats(type, 1);
     const enemy = isFlyingType(type)
       ? new DragonEnemy(ENEMY_SPAWN_X, stats.health, stats.speed, type)
-      : new Enemy(ENEMY_SPAWN_X, stats.health, stats.speed, 'bowman', type);
+      : new Enemy(place?.x ?? ENEMY_SPAWN_X, stats.health, stats.speed, 'bowman', type);
     enemy.visible = this.enemiesVisible;
     this.enemies.push(enemy);
     this.spawnedEnemies += 1;
+    if (place) {
+      this.totalEnemies += 1;
+    }
     this.world.addChild(enemy);
-    this.hostSync?.trackEnemy(enemy, type);
+    this.hostSync?.trackEnemy(enemy, type, place);
+    if (enemy instanceof Enemy) {
+      if (place) {
+        // A co-op guest's copy flies where the host has it.
+        enemy.throwOff(place.thrownFrom, this.role === 'guest');
+      }
+      // The host decides what becomes of a rider (the guest gets his spawn and hits as events).
+      if (enemy.rides && this.role !== 'guest') {
+        enemy.onUnhorsed = (x, hit) => this.unhorse(type, x, hit);
+      }
+    }
     return enemy;
+  }
+
+  /**
+   * A mounted knight was killed at `x`: its rider is thrown off and fights on foot, unless the blow killed him too
+   * (a headshot, a direct explosive hit, shattered ice: unhorsedRiderDies). The horse bolts by itself (Enemy).
+   */
+  private unhorse(type: EnemyType, x: number, hit: HitInfo): void {
+    const riderType = ENEMY_KINDS[type].unhorsed;
+    if (!riderType) {
+      return;
+    }
+    const rider = this.spawnEnemy(riderType, { x: Math.round(x), thrownFrom: Math.round(hit.fromX) });
+    if (rider instanceof Enemy && unhorsedRiderDies(hit.cause)) {
+      rider.takeDamage(rider.currentHealth, hit);
+    }
   }
 
   /** Panned and faded by where it happens relative to the camera (co-op host: the guest hears it too). */

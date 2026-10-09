@@ -2,11 +2,12 @@ import { describe, expect, it } from 'vitest';
 import { FROST_FREEZE_BRUTE_MS, FROST_FREEZE_MS, KNIGHT_ARMOR, PIN_DURATION_MS, PIN_DURATION_ZOMBIE_MS } from '../config';
 import { burnDurationMs, freezeDurationMs } from '../systems/afflictions';
 import { resistsVortex } from '../systems/vortex';
+import { unhorsedRiderDies } from './enemies';
 import { ARCHETYPES, ENEMY_KINDS, ENEMY_TYPES, RACES, enemyArchetype, enemyArmor, enemyMass, enemyTraits, isFlyingType } from './enemyKinds';
 
 describe('ENEMY_KINDS', () => {
   it('lists every enemy once, in the setup order', () => {
-    expect(ENEMY_TYPES).toEqual(['basic', 'fast', 'tank', 'archer', 'dragon', 'fireDragon', 'kamikaze', 'zombie', 'knight', 'hammerKnight', 'priest']);
+    expect(ENEMY_TYPES).toEqual(['basic', 'fast', 'tank', 'archer', 'dragon', 'fireDragon', 'kamikaze', 'zombie', 'knight', 'hammerKnight', 'horseKnight', 'priest']);
   });
 
   it('gives each enemy its archetype and race', () => {
@@ -22,11 +23,12 @@ describe('ENEMY_KINDS', () => {
     expect(of('knight')).toEqual(['fighter', 'human']);
     expect(of('hammerKnight')).toEqual(['heavy', 'human']);
     expect(of('priest')).toEqual(['healer', 'human']);
+    expect(of('horseKnight')).toEqual(['cavalry', 'human']);
   });
 
-  it('weighs each enemy (a fighter 1.2): goblins lightest, then the undead, knights heavier, ogres heaviest on the ground', () => {
+  it('weighs each enemy (a fighter 1.2): goblins lightest, then the undead, knights heavier, ogres, then horse and rider heaviest on the ground', () => {
     expect(Object.fromEntries(ENEMY_TYPES.filter((type) => !isFlyingType(type)).map((type) => [type, enemyMass(type)]))).toEqual({
-      fast: 0.8, zombie: 1, priest: 1.2, archer: 1.2, basic: 1.2, kamikaze: 1.4, knight: 1.9, hammerKnight: 2.5, tank: 4.2,
+      fast: 0.8, zombie: 1, priest: 1.2, archer: 1.2, basic: 1.2, kamikaze: 1.4, knight: 1.9, hammerKnight: 2.5, tank: 4.2, horseKnight: 6,
     });
   });
 
@@ -68,7 +70,7 @@ describe('ENEMY_KINDS', () => {
   });
 
   it('drives the arrows\' effects through the traits', () => {
-    expect(ENEMY_TYPES.filter((type) => resistsVortex(enemyMass(type)))).toEqual(['tank', 'dragon', 'fireDragon']);
+    expect(ENEMY_TYPES.filter((type) => resistsVortex(enemyMass(type)))).toEqual(['tank', 'dragon', 'fireDragon', 'horseKnight']);
     expect(freezeDurationMs('dragon')).toBe(0);
     expect(freezeDurationMs('fireDragon')).toBe(0);
     expect(freezeDurationMs('tank')).toBe(FROST_FREEZE_BRUTE_MS);
@@ -80,5 +82,22 @@ describe('ENEMY_KINDS', () => {
     expect(ENEMY_KINDS.basic.arrival).toBe(0);
     expect(ENEMY_KINDS.tank.arrival).toBeGreaterThan(ENEMY_KINDS.basic.arrival);
     expect(ENEMY_KINDS.fireDragon.arrival).toBeGreaterThan(ENEMY_KINDS.tank.arrival);
+  });
+
+  it('puts only the mounted knight on horseback, thrown off as a black knight, stopping short with a longer reach', () => {
+    expect(ENEMY_TYPES.filter((type) => enemyArchetype(type).rides)).toEqual(['horseKnight']);
+    expect(ENEMY_KINDS.horseKnight.unhorsed).toBe('knight');
+    expect(enemyArchetype('knight').rides).toBe(false);
+    expect(enemyTraits('horseKnight').pinMs).toBe(0);
+    const { reach, strikeReach } = ENEMY_KINDS.horseKnight.build;
+    expect(strikeReach).toBeGreaterThan(reach!.bowman);
+    expect(strikeReach).toBeGreaterThanOrEqual(ENEMY_KINDS.knight.build.strikeReach);
+  });
+});
+
+describe('unhorsedRiderDies', () => {
+  it('kills the rider with the horse on a headshot, a direct blast or shattered ice; otherwise he fights on', () => {
+    expect(['headshot', 'blast', 'shatter'].every(unhorsedRiderDies)).toBe(true);
+    expect(['arrow', 'explosion', 'lightning', 'burn', 'fall'].some(unhorsedRiderDies)).toBe(false);
   });
 });

@@ -175,13 +175,13 @@ src/
   pure; feet and hands are kept on the ground by `groundedAngle`, and tests check every frame.
 - **Enemy catalogue** (`data/enemyKinds.ts`, pure, tested): every enemy (`EnemyType`, the id saved in setups and sent
   in co-op) is an entry in `ENEMY_KINDS`: an **archetype** (how it fights: `fighter`, `runner`, `heavy`, `archer`,
-  `kamikaze`, `grabber`, `skyArcher`, `fireBreather`, `healer`; `ARCHETYPES` says whether it carries a club, runs, shoots,
-  detonates, flies, breathes fire, heals), a **race** (`human`, `goblin`, `ogre`, `undead`, `dragon`; `RACES` give the
+  `kamikaze`, `grabber`, `skyArcher`, `fireBreather`, `healer`, `cavalry`; `ARCHETYPES` says whether it carries a club, runs, shoots,
+  detonates, flies, breathes fire, heals, rides), a **race** (`human`, `goblin`, `ogre`, `undead`, `dragon`; `RACES` give the
   traits: mass (a fighter 1.2; how a vortex takes it, see below), freeze and pin durations, burn factor, healable), **magical** (dragons), plus its stats,
-  damage, keep damage, build (size, strike reach) and `arrival` (where in a level it starts to come). Gameplay code asks `enemyArchetype(type)` and
+  damage, keep damage, build (size, strike reach, optional `reach`: how close it comes to strike) and `arrival` (where in a level it starts to come). Gameplay code asks `enemyArchetype(type)` and
   `enemyTraits(type)` (race traits with the variant's overrides), never the id; looks stay per variant
   (`rendering/enemyBody.ts`, `ICON_ENEMIES`). A new variant (an orc kamikaze) is one entry here plus its look and icon.
-  Now: fighter, archer, kamikaze, both knights, priest = human; runner = goblin; brute = ogre; zombie = undead; both
+  Now: fighter, archer, kamikaze, the three knights, priest = human; runner = goblin; brute = ogre; zombie = undead; both
   dragons = dragon. An entry may have `armor` (`enemyArmor`): the share of an arrow's body hit that gets through.
 - **Black knights** (`knight`: fighter archetype, a longsword, picks one of three swings per attack, `attackStyles`:
   `overhead`, `swordRise` (a cut from below), `thrust`; co-op sends the style with `attack`; `hammerKnight`: heavy
@@ -197,6 +197,19 @@ src/
   the scepter (`castBody` in bodyPoses, `Enemy.castHeal`, EnemyBodyState `'cast'`); `EffectsSystem.healPulse` (a red ring
   over its reach, sparks at the orb) and `healCrosses` (red crosses rising from each one healed). Co-op: `cast` and
   `heal` events, `EnemySnap.mana`, fx `heal` / `healPulse`.
+- **Mounted knight** (`horseKnight`, cavalry archetype, `rides`): the black knight on a black warhorse (1.15×;
+  `rendering/designs/warhorse.ts`: red caparison, steel chamfron with a spike and an ember eye, a lance with a pennant)
+  over the lab's `HorsePose` (`getHorsePose(timeMs, gait, lance)`, gaits `stand` / `walk` / `gallop`; `LanceHold`: carried,
+  a thrust timed like the sword thrust (`LANCE_IMPACT`), raised to cheer). `Enemy` draws it in the EnemyBodyState
+  `'mounted'`: the gallop's clock follows the distance covered (`gaitGroundSpeed`), it stops `reach.bowman` (42) short
+  of the bowman (`reach.keep` from the keep) and its lance hits within `strikeReach` 64. Hit zones `mountedHitZones`
+  (rider's head = headshot, his torso, the horse's barrel, neck and head; `Enemy.getHitBoxes`, used by `foeHitBoxes`).
+  No armour (the horse takes the body hits), mass 6 (no vortex lifts it; a direct hit levitates it a little, standing),
+  can't be pinned, never knocked down (a blast makes the horse shy). Killed, it is unhorsed: the horse stands a moment
+  and bolts off the right edge riderless, and the host (`Enemy.onUnhorsed` → `GameScene.unhorse`) spawns its
+  `unhorsed` kind (a black knight) where it stood, thrown off backwards (`Enemy.throwOff`), who gets up and fights on,
+  unless the blow killed him too (`unhorsedRiderDies`: headshot, blast, shatter). He counts as one more enemy of the
+  level. Co-op: the `spawn` event carries the `place` (x, where the blow came from). Lab rows: `horse-lance`; design lab `horse-knight`.
 - **Enemy toughness and damage** (`data/enemyKinds.ts` via `data/enemies.ts`, tested): health per type against a 20-damage arrow
   (headshot ×`HEADSHOT_DAMAGE_MULTIPLIER` = 1.25): fighter 35, runner 22, archer 24 (one headshot), brute 110,
   dragon 170. `ENEMY_DAMAGE` gives each type a random range (`rollDamage`) for club swings and, for shooters,
@@ -319,7 +332,7 @@ src/
   are, so a look covers every animation and keeps the hitboxes. `skinKit.ts` places parts in the torso/head frames (works
   lying down too) and `drawHumanoid` draws a `HumanoidLook`; looks are in `enemySkins.ts`, `heavySkins.ts`,
   `playerSkins.ts`; the ideas in `ideas.ts` (+ `ideaHumanoids.ts`, `ideaCreatures.ts`, own `designSkeleton.ts`).
-- **Horse and rider** (`rendering/horseRider.ts`, pure `getHorsePose`, tested; animation lab only): a stickman astride
+- **Horse and rider** (`rendering/horseRider.ts`, pure `getHorsePose`, tested; the animation lab, and the mounted knight in its look): a stickman astride
   a horse in the skeleton look, `walk` (four beats) and `gallop` (hind, hind, fore, fore, suspension; the body rocks,
   the rider leans in); hooves on the ground at `HORSE_GROUND_Y`, knees and hocks by two-bone IK, the rider's feet in
   the stirrups and hands on the reins. Lab rows: `horse-walk`, `horse-gallop`.

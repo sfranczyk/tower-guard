@@ -125,6 +125,18 @@ export const ICON_ENEMIES = {
     <rect x="7" y="3" width="9" height="8" rx="2.4" fill="#2a2c33"/><path d="M10 6.8h4.5" stroke="#ff5a3c" stroke-width="1.3"/>
     <path d="M11.5 11v7.5M11.5 18.5l-5 6.5M11.5 18.5l5 6.5M11.5 13l5.5 1M11.5 13l4 4" stroke-width="3.4"/>
     <path d="M14.5 19.5 22 5" stroke="#5a3a20" stroke-width="1.8"/><path d="M18.4 3.4l6.2 3.2-1.8 3.5-6.2-3.2z" fill="#3d4048" stroke="none"/>`, '#2a2c33'),
+  // Mounted knight: a black horse in a red caparison, the knight in the saddle with a lance levelled ahead.
+  horseKnight: `<svg class="icon" viewBox="0 0 28 28" aria-hidden="true" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M7 19 5.5 25.5M10 19.5 9.5 25.5M17.5 19.5 18.5 25.5M20 19 22 25" stroke="#232027" stroke-width="1.9" fill="none"/>
+    <path d="M5.5 15.5Q2.5 16.5 2.2 21" stroke="#0c0b0e" stroke-width="2" fill="none"/>
+    <ellipse cx="12.5" cy="16.5" rx="7.5" ry="4" fill="#232027"/>
+    <path d="M17.5 14 21.5 8.5 25.6 11.4 24.6 12.8 21.2 12 19.8 17z" fill="#232027"/><path d="M21.6 8.6l1.6 2.8" stroke="#50545f" stroke-width="1.2"/>
+    <circle cx="22.6" cy="10.2" r=".7" fill="#ff5a3c"/>
+    <path d="M5.5 14.5h14l-1 6.5H6.5z" fill="#6e1a1f"/><path d="M6.5 21h12" stroke="#1a1a1f" stroke-width="1"/>
+    <path d="M11.5 13.5V8.4" stroke="#2a2c33" stroke-width="2.8"/><rect x="9.6" y="2.4" width="4.6" height="5.2" rx="1.5" fill="#2a2c33"/>
+    <path d="M11.8 4.8h2.4" stroke="#ff5a3c" stroke-width="1"/><path d="M12 13.5l1.5 4.5" stroke="#2a2c33" stroke-width="2.2"/>
+    <path d="M7 10.5 27.5 8" stroke="#4a3426" stroke-width="1.5"/><path d="M25.5 8.2 27.8 8l-2.1 1z" fill="#a9b0ba" stroke="#a9b0ba" stroke-width=".8"/>
+    <path d="M12 11l2.5-.8" stroke="#2a2c33" stroke-width="2"/></svg>`,
   // Dark priest: hooded, red eyes, a long robe, a scepter with a red orb; a red cross for its heals.
   priest: figure(`<path d="M11 2 6.8 6.8V11h8.4V6.8z" fill="#2b1d2e" stroke="none"/><circle cx="12.2" cy="7.6" r="1" fill="#ff2a2a" stroke="none"/>
     <path d="M7.5 11h7.5l3 14H4.5z" fill="#2b1d2e" stroke="none"/><path d="M11.5 11.5l1 13.5" stroke="#9b1f2a" stroke-width="1.4"/>

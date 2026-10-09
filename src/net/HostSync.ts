@@ -7,7 +7,7 @@ import type { Player } from '../scenes/PlayerControl';
 import type { EffectsSystem } from '../systems/EffectsSystem';
 import type { Foe } from '../systems/CombatSystem';
 import type { EnemyType, ProjectileType, Vec2 } from '../types';
-import { fromNetAim, type EndInfo, type GameEvent, type InputMessage, type Snapshot } from './protocol';
+import { fromNetAim, type EndInfo, type GameEvent, type InputMessage, type Snapshot, type SpawnPlace } from './protocol';
 import type { Transport } from './Transport';
 
 /** Frames (snapshot + events) go to the guest this often. */
@@ -91,11 +91,11 @@ export class HostSync {
   }
 
   /** A new enemy: the guest spawns it too, and replays its hits and swings. */
-  public trackEnemy(enemy: Foe, type: EnemyType): void {
+  public trackEnemy(enemy: Foe, type: EnemyType, place?: SpawnPlace): void {
     const id = this.nextEnemyId;
     this.nextEnemyId += 1;
     this.enemyIds.set(enemy, id);
-    this.push({ e: 'spawn', id, type });
+    this.push({ e: 'spawn', id, type, place });
     if (enemy instanceof DragonEnemy) {
       enemy.netHooks = { damaged: (amount, hit) => this.push({ e: 'hit', id, amount, hit: hit ?? { cause: 'arrow', fromX: enemy.x } }) };
     } else {

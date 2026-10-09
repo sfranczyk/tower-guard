@@ -20,7 +20,7 @@ import type { EnemyType } from '../types';
  * variant (an orc kamikaze, an elf archer) is one entry here plus its look and icon.
  */
 
-export type EnemyArchetype = 'fighter' | 'runner' | 'heavy' | 'archer' | 'kamikaze' | 'grabber' | 'skyArcher' | 'fireBreather' | 'healer';
+export type EnemyArchetype = 'fighter' | 'runner' | 'heavy' | 'archer' | 'kamikaze' | 'grabber' | 'skyArcher' | 'fireBreather' | 'healer' | 'cavalry';
 
 export type EnemyRace = 'human' | 'goblin' | 'ogre' | 'undead' | 'dragon';
 
@@ -58,11 +58,16 @@ export interface ArchetypeInfo {
   breathesFire: boolean;
   /** Keeps back from the bowman and heals the wounded around it with its mana (EnemyAI, systems/healing.ts). */
   heals: boolean;
+  /**
+   * Rides a horse (rendering/horseRider.ts, designs/warhorse.ts): gallops in and strikes with a lance from the saddle;
+   * killed, it is thrown off and fights on foot as its kind's `unhorsed` while the horse bolts.
+   */
+  rides: boolean;
 }
 
 /** An unarmed walker that does none of the special things (the archetypes below say what they add). */
 const ON_FOOT: ArchetypeInfo = {
-  attackStyle: 'overhead', runs: false, club: false, shoots: false, detonates: false, flies: false, breathesFire: false, heals: false,
+  attackStyle: 'overhead', runs: false, club: false, shoots: false, detonates: false, flies: false, breathesFire: false, heals: false, rides: false,
 };
 
 export const ARCHETYPES: Readonly<Record<EnemyArchetype, ArchetypeInfo>> = {
@@ -81,6 +86,8 @@ export const ARCHETYPES: Readonly<Record<EnemyArchetype, ArchetypeInfo>> = {
   fireBreather: { ...ON_FOOT, flies: true, breathesFire: true },
   // Follows the soldiers and heals the wounded around it; never attacks (its scepter is drawn as the club).
   healer: { ...ON_FOOT, club: true, heals: true },
+  // On horseback: gallops in and thrusts its lance (timed like the sword thrust) from the saddle.
+  cavalry: { ...ON_FOOT, attackStyle: 'thrust', runs: true, rides: true },
 };
 
 /** How the arrows' effects take to an enemy (races set them; a variant can override any). */
@@ -134,6 +141,11 @@ export interface EnemyBuild {
   strikeReach: number;
   /** Sway speed of standing poses (ms per phase radian, default 150): zombies sway slower. */
   stepMs?: number;
+  /**
+   * How close (px) it comes to the bowman, and to the keep's centre, to strike (default EnemyAI's MELEE_REACH and
+   * TOWER_ATTACK_REACH): a mounted knight stops with its horse's head short of him.
+   */
+  reach?: { bowman: number; keep: number };
 }
 
 export interface EnemyKind {
@@ -159,6 +171,8 @@ export interface EnemyKind {
    * ArrowHits). None = 1.
    */
   armor?: number;
+  /** A rider: what it fights on as, thrown off its horse (EnemyArchetype `rides`). */
+  unhorsed?: EnemyType;
 }
 
 /**
@@ -225,6 +239,15 @@ export const ENEMY_KINDS: Readonly<Record<EnemyType, EnemyKind>> = {
     label: 'Hammer knight', archetype: 'heavy', race: 'human', magical: false, arrival: 0.35, armor: KNIGHT_ARMOR,
     stats: { health: 80, speed: ENEMY_SPEED * 0.65 }, damage: { melee: [16, 24] }, keepDamage: { melee: 2 }, build: { size: 1.1, strikeReach: 75 },
     traits: { mass: 2.5 },
+  },
+  // The black knight on a black warhorse (drawn 1.15× so the horse stands tall): gallops in and strikes with a lance from beyond a sword's reach. The horse
+  // takes the body hits (no plate on it); killed, the knight is thrown off and fights on foot (unhorsedRiderDies).
+  horseKnight: {
+    label: 'Mounted knight', archetype: 'cavalry', race: 'human', magical: false, arrival: 0.45, unhorsed: 'knight',
+    stats: { health: 90, speed: ENEMY_SPEED * 1.8 }, damage: { melee: [14, 20] }, keepDamage: { melee: 1.5 },
+    build: { size: 1.15, strikeReach: 64, reach: { bowman: 42, keep: 82 } },
+    // Horse and rider: no vortex lifts them off the ground, no pin holds a horse, the ice holds them briefly.
+    traits: { mass: 6, freezeMs: FROST_FREEZE_BRUTE_MS, pinMs: 0 },
   },
   // Frail and never attacks, but it keeps the others standing: kill it first.
   priest: {
