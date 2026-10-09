@@ -7,9 +7,12 @@ everything under `ctx.root` on each switch. Scenes never touch the DOM: they cal
   `ctx.session.sandbox` holds the settings, `ctx.session.run` (`RunState`) the level index and health carried between
   levels.
 - **GameScene** plays one level. Hands arrows to `BattleArrows` (launching, shrapnel, enemy arrows, co-op copies,
-  `pruneArrows`, the preview's path), the view to `BattleCamera`, the end screen's text to `levelEndInfo` (pure). A
+  `pruneArrows`, the preview's path), the view to `BattleCamera`, enemies to `BattleEnemies` (waves, spawn, `unhorse`
+  places unhorsed riders, defeated count, O-key hide), bowmen to `BattlePlayers` (creation, per-frame picks/shots/bursts,
+  falls, `status`), co-op setup to `startBattleSync` (`battleSync.ts`), the end screen to `showLevelEnd`
+  (`levelEndScreen.ts`, text from pure `levelEndInfo`), status texts to `battleText.ts` (pure). A
   cleared level offers "Next level" (health carries over) until the last, then Victory; defeat goes back to setup. The
-  world keeps running after a level ends (enemies cheer on defeat). `GameScene.unhorse` places unhorsed riders.
+  world keeps running after a level ends (enemies cheer on defeat).
   `players` / `PlayerControl.ts`: see net/CLAUDE.md. Follows the bowman across `WORLD_WIDTH` (centred,
   `centeredCameraX(width, WORLD_WIDTH)`, in a wider view); scrolls `world` by `cameraX`.
 - **Aim camera** (`core/camera.ts`, pure): while the local player draws, `GameScene.updateAim` simulates the shot every
