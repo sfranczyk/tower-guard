@@ -24,3 +24,6 @@ export const SOUND_LAB_PARAM = 'sounds';
 
 /** Query parameter holding the enemy design lab state: present = lab open, value = zoomed design id. */
 export const DESIGN_LAB_PARAM = 'designs';
+
+/** Query parameter that opens the dev tuning panel (?tune, ui/TuningPanel.ts). */
+export const TUNE_PARAM = 'tune';

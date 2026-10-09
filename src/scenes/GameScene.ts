@@ -1,11 +1,11 @@
 import { Container, Graphics } from 'pixi.js';
 import {
+  ARROWS,
   BOWMAN_Y,
   ENEMY_KEEP_HEALTH,
   ENEMY_TOWER_X,
   GAME_HEIGHT,
   GROUND_Y,
-  HEADSHOT_DAMAGE_MULTIPLIER,
   PLAYER_TOWER_X,
   SHOW_HITBOX_DEBUG,
   SNOW_WIND_DRIFT,
@@ -205,7 +205,7 @@ export class GameScene extends Scene {
           player.health = Math.max(0, player.health - amount);
           bowman.noteHit(hit);
         },
-        headshot: () => this.ctx.ui.setStatus(`Headshot! ×${HEADSHOT_DAMAGE_MULTIPLIER} damage`),
+        headshot: () => this.ctx.ui.setStatus(`Headshot! ×${ARROWS.headshotMultiplier} damage`),
         bowmanIgnited: (bowman) => this.localStatus(this.playerOf(bowman), 'You are on fire! Get out of the flames'),
         enemyShot: (from, angle, speed, shooter) => this.shots.fireEnemy(from, angle, speed, shooter),
         sound: (id, at) => this.playSound(id, at),

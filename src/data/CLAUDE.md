@@ -14,7 +14,7 @@ All pure and tested. Tuning numbers live in `config.ts`, sandbox defaults in `sa
   Now: fighter, archer, kamikaze, the three knights, priest = human; runner = goblin; brute = ogre; zombie = undead; both
   dragons = dragon. An entry may have `armor` (`enemyArmor`): the share of an arrow's body hit that gets through.
 - **Toughness and damage** (`enemies.ts`): health per type against a 20-damage arrow (headshot
-  ×`HEADSHOT_DAMAGE_MULTIPLIER` = 1.25): fighter 35, runner 22, archer 24 (one headshot), brute 110, dragon 170.
+  ×`ARROWS.headshotMultiplier` = 1.25): fighter 35, runner 22, archer 24 (one headshot), brute 110, dragon 170.
   `ENEMY_DAMAGE` gives each type a random range (`rollDamage`) for club swings and, for shooters, their arrows
   (`Arrow.shooter` tells CombatSystem whose arrow hit). The keep (2000 by default) takes the same
   × `KEEP_DAMAGE_MULTIPLIER` per attack (1, except archer arrows 0.5, brute 2, kamikaze 8); read ranges with

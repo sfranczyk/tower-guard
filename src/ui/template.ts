@@ -20,6 +20,7 @@ export const OVERLAY_TEMPLATE = `
               <button class="secondary-button small-button" data-open-test>Animation lab</button>
               <button class="secondary-button small-button" data-open-sound-lab>Sound lab</button>
               <button class="secondary-button small-button" data-open-design-lab>Design lab</button>
+              <button class="secondary-button small-button" data-open-tuning>Tuning panel</button>
             </div>
           </div>
         </div>

@@ -1,4 +1,4 @@
-import { ARROW_BASE_SPEED, ARROW_DRAG, ARROW_FORCE_SPEED, ARROW_SPEED_FACTOR, SHRAPNEL_FRAGMENTS, SHRAPNEL_SPEED_FACTOR, SHRAPNEL_SPREAD } from '../config';
+import { ARROWS, SHRAPNEL_FRAGMENTS, SHRAPNEL_SPEED_FACTOR, SHRAPNEL_SPREAD } from '../config';
 import type { FlightParams } from '../systems/ballistics';
 import type { ProjectileType, Vec2 } from '../types';
 
@@ -49,7 +49,7 @@ export const shrapnelBurst = (velocity: Vec2): Vec2[] => {
 };
 
 /** Speed (px/s) the bow gives a mass-1 arrow at a draw power of 0..1 (enemy archers shoot with this). */
-export const bowSpeed = (power: number): number => (ARROW_BASE_SPEED + power * ARROW_FORCE_SPEED) * ARROW_SPEED_FACTOR;
+export const bowSpeed = (power: number): number => (ARROWS.baseSpeed + power * ARROWS.forceSpeed) * ARROWS.speedFactor;
 
 /** Launch speed (px/s) of the player's projectile at a draw power of 0..1. */
 export const launchSpeed = (type: ProjectileType, power: number): number => {
@@ -63,5 +63,5 @@ export const launchSpeed = (type: ProjectileType, power: number): number => {
  */
 export const flightParams = (type: ProjectileType, gravity: number, wind = 0): FlightParams => {
   const { mass, dragMultiplier } = PROJECTILE_PHYSICS[type];
-  return { gravity, drag: (ARROW_DRAG * dragMultiplier) / mass, wind: (wind * dragMultiplier) / mass };
+  return { gravity, drag: (ARROWS.drag * dragMultiplier) / mass, wind: (wind * dragMultiplier) / mass };
 };

@@ -2,18 +2,11 @@ import {
   DRAGON_BUFFET,
   DRAGON_TURBULENCE_MS,
   FALL_DAMAGE,
+  VORTEX,
   VORTEX_FLING,
   VORTEX_LEVITATE_HEAVY,
-  VORTEX_LEVITATE_HEIGHT,
-  VORTEX_LEVITATE_MAX,
-  VORTEX_LEVITATE_SPEED,
   VORTEX_MASS,
-  VORTEX_MS,
-  VORTEX_PULL_SPEED,
-  VORTEX_RADIUS,
-  VORTEX_RISE_SPEED,
   VORTEX_THROW,
-  VORTEX_TOP,
 } from '../config';
 import type { Vec2 } from '../types';
 
@@ -35,11 +28,11 @@ export const VORTEX_SPIN = 7;
 
 /** How strongly the vortex pulls `ageMs` into its life: winds up, then holds until it's gone. */
 export const vortexStrength = (ageMs: number): number => {
-  const t = ageMs / VORTEX_MS;
+  const t = ageMs / VORTEX.ms;
   return t <= 0 || t >= 1 ? 0 : Math.min(1, t / RAMP_UP);
 };
 
-/** From VORTEX_MASS.anchor (ogres) too heavy for a vortex to catch: it only slows them (see VORTEX_HEAVY_WALK). */
+/** From VORTEX_MASS.anchor (ogres) too heavy for a vortex to catch: it only slows them (see VORTEX.heavyWalk). */
 export const resistsVortex = (mass: number): boolean => mass >= VORTEX_MASS.anchor;
 
 /**
@@ -54,7 +47,7 @@ export const massPace = (mass: number): number => Math.min(VORTEX_MASS.lightest,
  */
 export const funnelCeiling = (mass: number): number => {
   const { fullLift, anchor } = VORTEX_MASS;
-  return VORTEX_TOP * Math.max(0, Math.min(1, (anchor - mass) / (anchor - fullLift)));
+  return VORTEX.top * Math.max(0, Math.min(1, (anchor - mass) / (anchor - fullLift)));
 };
 
 /** How hard something of `mass` is thrown (× a fighter's speed): √(reference/mass), at most VORTEX_MASS.lightest×. */
@@ -67,20 +60,20 @@ const throwPace = (mass: number): number => Math.min(VORTEX_MASS.lightest, Math.
 export const vortexPull = (dx: number, ageMs: number, deltaMs: number, mass: number = VORTEX_MASS.reference): number => {
   const distance = Math.abs(dx);
   const strength = vortexStrength(ageMs);
-  if (distance > VORTEX_RADIUS || strength === 0) {
+  if (distance > VORTEX.radius || strength === 0) {
     return 0;
   }
-  const closeness = 1 - distance / VORTEX_RADIUS;
-  const speed = VORTEX_PULL_SPEED * strength * (0.45 + 0.55 * Math.sqrt(closeness)) * massPace(mass);
+  const closeness = 1 - distance / VORTEX.radius;
+  const speed = VORTEX.pullSpeed * strength * (0.45 + 0.55 * Math.sqrt(closeness)) * massPace(mass);
   return -Math.sign(dx) * Math.min(distance, (speed * deltaMs) / 1000);
 };
 
 /** How far (px) an enemy of `mass` in the funnel rises in `deltaMs`. */
-export const vortexRise = (deltaMs: number, mass: number = VORTEX_MASS.reference): number => (VORTEX_RISE_SPEED * massPace(mass) * deltaMs) / 1000;
+export const vortexRise = (deltaMs: number, mass: number = VORTEX_MASS.reference): number => (VORTEX.riseSpeed * massPace(mass) * deltaMs) / 1000;
 
 /** Where a lifted enemy is: circling `angle` round the funnel, `height` px up (side view: x swings, y a little). */
 export const funnelPosition = (centre: Vec2, height: number, angle: number): Vec2 => {
-  const radius = ORBIT.bottom + (ORBIT.top - ORBIT.bottom) * Math.min(1, height / VORTEX_TOP);
+  const radius = ORBIT.bottom + (ORBIT.top - ORBIT.bottom) * Math.min(1, height / VORTEX.top);
   return { x: centre.x + Math.cos(angle) * radius, y: centre.y - height + Math.sin(angle) * radius * 0.15 };
 };
 
@@ -101,7 +94,7 @@ export const flingVelocity = (dx: number, rising: boolean, rollUp: number, rollS
   const pace = throwPace(mass);
   return {
     x: Math.sign(dx || 1) * within(VORTEX_FLING.side, rollSide) * pace,
-    y: -(within(VORTEX_FLING.up, rollUp) + (rising ? VORTEX_RISE_SPEED * massPace(mass) : 0)) * pace,
+    y: -(within(VORTEX_FLING.up, rollUp) + (rising ? VORTEX.riseSpeed * massPace(mass) : 0)) * pace,
   };
 };
 
@@ -116,9 +109,9 @@ export const levitateShare = (mass: number): number => {
 };
 
 /**
- * How high (px) the enemy a vortex arrow hit has levitated `ageMs` after: straight up at VORTEX_LEVITATE_SPEED,
- * easing off towards VORTEX_LEVITATE_HEIGHT, with a gentle bob; `boost` px higher for every further hit (see
- * VORTEX_LEVITATE_BOOST), never above VORTEX_LEVITATE_MAX. Something heavier than VORTEX_MASS.levitateFull rises
+ * How high (px) the enemy a vortex arrow hit has levitated `ageMs` after: straight up at VORTEX.levitateSpeed,
+ * easing off towards VORTEX.levitateHeight, with a gentle bob; `boost` px higher for every further hit (see
+ * VORTEX.levitateBoost), never above VORTEX.levitateMax. Something heavier than VORTEX_MASS.levitateFull rises
  * slower and lower (levitateShare: a brute only a little).
  */
 export const levitateHeight = (ageMs: number, mass: number = VORTEX_MASS.reference, boost = 0): number => {
@@ -127,9 +120,9 @@ export const levitateHeight = (ageMs: number, mass: number = VORTEX_MASS.referen
   }
   const share = levitateShare(mass);
   // Lower, and also slower to get there (the time it takes grows as the share shrinks).
-  const rise = VORTEX_LEVITATE_HEIGHT * (1 - Math.exp((-VORTEX_LEVITATE_SPEED * Math.sqrt(share) * ageMs) / 1000 / VORTEX_LEVITATE_HEIGHT));
+  const rise = VORTEX.levitateHeight * (1 - Math.exp((-VORTEX.levitateSpeed * Math.sqrt(share) * ageMs) / 1000 / VORTEX.levitateHeight));
   const bob = Math.sin(ageMs / 260) * 4 * Math.min(1, ageMs / 600);
-  return Math.min(VORTEX_LEVITATE_MAX, (rise + boost + bob) * share);
+  return Math.min(VORTEX.levitateMax, (rise + boost + bob) * share);
 };
 
 /** Damage from hitting the ground at `speed` px/s (straight down): none up to a safe speed, then more the harder. */

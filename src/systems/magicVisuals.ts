@@ -1,5 +1,5 @@
 import { Graphics, type Container } from 'pixi.js';
-import { FIRE_PATCH_MS, FIRE_PATCH_RADIUS, VORTEX_MS, VORTEX_RADIUS, VORTEX_TOP } from '../config';
+import { FIRE_PATCH_MS, FIRE_PATCH_RADIUS, VORTEX } from '../config';
 import { drawBurning } from '../rendering/burning';
 import { drawVortex } from '../rendering/vortexArt';
 import type { ProjectileType, Vec2 } from '../types';
@@ -21,7 +21,7 @@ const FIRE = [0xfff1a8, 0xffd166, 0xffa63d, 0xff6b35];
 const ICE = [0xffffff, 0xe1f4ff, 0xb5e0ff, 0x8cc8f2];
 const ARCANE = [0xf1e6ff, 0xc9a8ff, 0x9a6ee6];
 /** Funnel height of the vortex (px): a little above where it throws them out. */
-const VORTEX_HEIGHT = VORTEX_TOP + 25;
+const vortexHeight = (): number => VORTEX.top + 25;
 /** Fire patch flames in burning.ts sprite units (≈ 19 px tall). */
 const PATCH_FLAME_SIZE = 0.55;
 const PATCH_FLAMES = 7;
@@ -101,20 +101,20 @@ export class MagicVisuals {
     this.container.addChild(scorch);
   }
 
-  /** A vortex opens at `point` (on the ground) for VORTEX_MS and ends in a burst of light. */
+  /** A vortex opens at `point` (on the ground) for VORTEX.ms and ends in a burst of light. */
   public vortex(point: Vec2): void {
     const art = new Graphics();
     art.zIndex = 3;
     this.container.addChild(art);
     const ground = { x: point.x, y: groundAt(point.x) };
     this.lasting.push({
-      art, point: ground, ageMs: 0, lifeMs: VORTEX_MS,
+      art, point: ground, ageMs: 0, lifeMs: VORTEX.ms,
       draw: ({ art: g, ageMs }) => {
-        drawVortex(g, ground, ageMs, VORTEX_RADIUS, VORTEX_HEIGHT);
+        drawVortex(g, ground, ageMs, VORTEX.radius, vortexHeight());
         // Dust and leaves sucked in from the edges.
         if (Math.random() < 0.5) {
           const side = Math.random() < 0.5 ? -1 : 1;
-          const from = { x: ground.x + side * random(0.6, 1) * VORTEX_RADIUS, y: groundAt(ground.x + side * VORTEX_RADIUS) - random(2, 10) };
+          const from = { x: ground.x + side * random(0.6, 1) * VORTEX.radius, y: groundAt(ground.x + side * VORTEX.radius) - random(2, 10) };
           const dust = new Graphics().circle(0, 0, random(1.5, 3)).fill({ color: pick([0x8a7a5a, 0x6b8a3a, 0xa08a62]) });
           this.spawn(dust, from, 3, { velocity: { x: -side * random(90, 160), y: random(-60, -20) }, lifeMs: random(500, 800), gravity: -20, drag: 0.6, grow: 0 });
         }

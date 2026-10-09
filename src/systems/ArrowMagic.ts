@@ -6,12 +6,7 @@ import {
   FIRE_PATCH_RADIUS,
   FIRE_SPREAD_CHANCE,
   FIRE_SPREAD_RADIUS,
-  VORTEX_HEAVY_WALK,
-  VORTEX_LEVITATE_BOOST,
-  VORTEX_LEVITATE_FALL,
-  VORTEX_MS,
-  VORTEX_RADIUS,
-  VORTEX_TOP,
+  VORTEX,
 } from '../config';
 import type { SoundId } from '../audio/SoundManager';
 import type { MountPart } from '../data/enemies';
@@ -136,7 +131,7 @@ export class ArrowMagic {
         const held = this.vortices.find((other) => other.levitating?.enemy === enemy)?.levitating;
         if (held) {
           // Already levitating: it goes up higher still.
-          held.boostTarget += VORTEX_LEVITATE_BOOST;
+          held.boostTarget += VORTEX.levitateBoost;
           this.hooks.sound('shrapnelBurst', impact);
           return;
         }
@@ -246,7 +241,7 @@ export class ArrowMagic {
    */
   private updateVortex(vortex: Vortex, deltaMs: number, walkers: readonly Walker[]): boolean {
     vortex.ageMs += deltaMs;
-    if (vortex.ageMs >= VORTEX_MS) {
+    if (vortex.ageMs >= VORTEX.ms) {
       this.dieAway(vortex);
       return false;
     }
@@ -269,11 +264,11 @@ export class ArrowMagic {
         caught.delete(enemy);
       }
     });
-    const inReach = (enemy: Walker): boolean => Math.abs(enemy.x - vortex.x) <= VORTEX_RADIUS;
+    const inReach = (enemy: Walker): boolean => Math.abs(enemy.x - vortex.x) <= VORTEX.radius;
     // Brutes are too heavy to be caught: the wind only slows them down (and a horse bolting from it).
     [...walkers.filter((enemy) => resistsVortex(massOf(enemy))), ...this.fleeing]
       .filter((enemy) => inReach(enemy) && strength > 0)
-      .forEach((enemy) => enemy.afflictions.slowByWind(VORTEX_HEAVY_WALK));
+      .forEach((enemy) => enemy.afflictions.slowByWind(VORTEX.heavyWalk));
     walkers
       .filter((enemy) => !resistsVortex(massOf(enemy)) && !caught.has(enemy) && !enemy.isDown && !enemy.isPinned && inReach(enemy))
       .filter((enemy) => !this.vortices.some((other) => other.caught.has(enemy) || other.levitating?.enemy === enemy))
@@ -296,7 +291,7 @@ export class ArrowMagic {
       const ceiling = funnelCeiling(mass);
       state.height = Math.min(ceiling, state.height + vortexRise(deltaMs, mass) * strength);
       state.angle += (VORTEX_SPIN * Math.min(1, massPace(mass)) * deltaMs) / 1000;
-      if (ceiling >= VORTEX_TOP && state.height >= VORTEX_TOP) {
+      if (ceiling >= VORTEX.top && state.height >= VORTEX.top) {
         // Out of the top: thrown up and away on the side it's going round on.
         caught.delete(enemy);
         this.launch(enemy, throwVelocity(Math.cos(state.angle) >= 0 ? 1 : -1, Math.random(), Math.random(), mass));
@@ -310,13 +305,13 @@ export class ArrowMagic {
 
   /**
    * The vortex dies away: it flings out the ones it hasn't thrown yet, away from its centre, and drops the one it
-   * held up (that one takes VORTEX_LEVITATE_FALL of the fall damage).
+   * held up (that one takes VORTEX.levitateFall of the fall damage).
    */
   private dieAway(vortex: Vortex): void {
     this.effects.vortexFade({ x: vortex.x, y: groundAt(vortex.x) });
     const held = vortex.levitating?.enemy;
     if (held?.isAlive() && !held.isDown) {
-      this.launch(held, { x: (Math.random() * 2 - 1) * LEVITATE_DRIFT, y: 0 }, VORTEX_LEVITATE_FALL);
+      this.launch(held, { x: (Math.random() * 2 - 1) * LEVITATE_DRIFT, y: 0 }, VORTEX.levitateFall);
     }
     vortex.caught.forEach((state, enemy) => {
       if (enemy.isAlive()) {

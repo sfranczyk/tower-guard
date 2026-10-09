@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { LOOK_DEAD_ZONE, LOOK_EDGE_MARGIN, aimLookAhead, easeTowards, nextLookShift } from './camera';
+import { CAMERA_LOOK, aimLookAhead, easeTowards, nextLookShift } from './camera';
 
 const WIDTH = 1134;
 
 describe('aimLookAhead', () => {
   it("doesn't move the view for a short shot", () => {
     expect(aimLookAhead(0, WIDTH)).toBe(0);
-    expect(aimLookAhead(WIDTH * LOOK_DEAD_ZONE, WIDTH)).toBe(0);
+    expect(aimLookAhead(WIDTH * CAMERA_LOOK.deadZone, WIDTH)).toBe(0);
     expect(aimLookAhead(-150, WIDTH)).toBe(0);
   });
 
@@ -21,12 +21,12 @@ describe('aimLookAhead', () => {
   });
 
   it('brings a long shot into view with the bowman near the opposite edge, never past it', () => {
-    const max = WIDTH / 2 - LOOK_EDGE_MARGIN;
-    const far = WIDTH - 2 * LOOK_EDGE_MARGIN;
+    const max = WIDTH / 2 - CAMERA_LOOK.edgeMargin;
+    const far = WIDTH - 2 * CAMERA_LOOK.edgeMargin;
     expect(aimLookAhead(far, WIDTH)).toBeCloseTo(max);
     expect(aimLookAhead(3000, WIDTH)).toBeCloseTo(max);
     // In between the landing spot stays inside the view.
-    [400, 600, 800].forEach((offset) => expect(offset - aimLookAhead(offset, WIDTH)).toBeLessThanOrEqual(WIDTH / 2 - LOOK_EDGE_MARGIN + 1e-9));
+    [400, 600, 800].forEach((offset) => expect(offset - aimLookAhead(offset, WIDTH)).toBeLessThanOrEqual(WIDTH / 2 - CAMERA_LOOK.edgeMargin + 1e-9));
   });
 });
 

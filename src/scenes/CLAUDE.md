@@ -13,9 +13,9 @@ everything under `ctx.root` on each switch. Scenes never touch the DOM: they cal
   `players` / `PlayerControl.ts`: see net/CLAUDE.md. Follows the bowman across `WORLD_WIDTH` (centred,
   `centeredCameraX(width, WORLD_WIDTH)`, in a wider view); scrolls `world` by `cameraX`.
 - **Aim camera** (`core/camera.ts`, pure): while the local player draws, `GameScene.updateAim` simulates the shot every
-  frame; `aimLookAhead` ignores a landing within `LOOK_DEAD_ZONE` of the view, then slides up to the bowman
-  `LOOK_EDGE_MARGIN` from the edge, eased (`LOOK_AIM_MS`); only slides further out unless he aims the other way
-  (`nextLookShift`); after the shot stays while he stands, eases back once he moves (`LOOK_RETURN_MS`). The drag is
+  frame; `aimLookAhead` ignores a landing within `CAMERA_LOOK.deadZone` of the view, then slides up to the bowman
+  `CAMERA_LOOK.edgeMargin` from the edge, eased (`CAMERA_LOOK.aimMs`); only slides further out unless he aims the other way
+  (`nextLookShift`); after the shot stays while he stands, eases back once he moves (`CAMERA_LOOK.returnMs`). The drag is
   measured on screen, `getAim()` maps it to the world as the camera is now.
 - **MenuScene**: menu over a live battlefield (meadow sun moved over the enemy keep); labs under "Dev tools".
   Menus, labs and the lobby show a `BACKDROP_WIDTH` landscape, centred.

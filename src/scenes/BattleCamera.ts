@@ -1,5 +1,5 @@
 import { WORLD_WIDTH } from '../config';
-import { LOOK_AIM_MS, LOOK_RETURN_MS, aimLookAhead, easeTowards, nextLookShift } from '../core/camera';
+import { CAMERA_LOOK, aimLookAhead, easeTowards, nextLookShift } from '../core/camera';
 import { centeredCameraX, viewWidth } from '../core/viewport';
 import type { Vec2 } from '../types';
 import { clamp } from '../utils/math';
@@ -39,10 +39,10 @@ export class BattleCamera {
     if (focus.aimLandingX !== undefined && focus.aimDirectionX !== undefined) {
       // Out for a longer shot, but not back in for a shorter one (unless he turns the other way).
       this.lookGoal = nextLookShift(this.lookGoal, aimLookAhead(focus.aimLandingX - focus.bowmanX, width), focus.aimDirectionX);
-      this.lookShift = easeTowards(this.lookShift, this.lookGoal, deltaMs, LOOK_AIM_MS);
+      this.lookShift = easeTowards(this.lookShift, this.lookGoal, deltaMs, CAMERA_LOOK.aimMs);
     } else if (focus.moving) {
       this.lookGoal = 0;
-      this.lookShift = easeTowards(this.lookShift, 0, deltaMs, LOOK_RETURN_MS);
+      this.lookShift = easeTowards(this.lookShift, 0, deltaMs, CAMERA_LOOK.returnMs);
     }
     const target = width >= WORLD_WIDTH
       ? centeredCameraX(width, WORLD_WIDTH)

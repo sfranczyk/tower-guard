@@ -1,5 +1,5 @@
 import { Container, Graphics } from 'pixi.js';
-import { ENEMY_ATTACK_INTERVAL_MS, HORSE_LEG, KAMIKAZE_GIB_FORCE, PLAYER_TOWER_X, PRIEST_CAST_MS, WORLD_WIDTH } from '../config';
+import { ENEMY_ATTACK, HORSE_LEG, KAMIKAZE_GIB_FORCE, PLAYER_TOWER_X, PRIEST_CAST_MS, WORLD_WIDTH } from '../config';
 import { getArcherRig, toArcherLocalAngle } from '../rendering/archer';
 import { attackImpactProgress, type AttackStyle } from '../rendering/attackSwing';
 import { MARCH_STRIDE_PER_RADIAN, WALK_STRIDE_PER_RADIAN } from '../rendering/stickman';
@@ -15,7 +15,8 @@ import type { BodyColors } from '../rendering/bodyColors';
 import { drawEnemyBody, drawEnemyGibs, enemyGibColors, type EnemyBodyState } from '../rendering/enemyBody';
 import { fromBodyAnchor, spriteToContainer, spriteToWorld, toBodyAnchor, worldToSprite, type BodyAnchor, type BodyTransform, type Torso } from '../systems/bodyAnchor';
 import { ENEMY_LOOKS, blowsApart, horseDeathKind, knockbackPush, mountedDamage, type EnemyLook, type MountPart } from '../data/enemies';
-import { ENEMY_KINDS, enemyArchetype } from '../data/enemyKinds';
+import { enemyArchetype } from '../data/enemyKinds';
+import { mountHealth } from '../data/enemyTuning';
 import { groundAt } from '../systems/terrain';
 import { drawHealthBar } from '../rendering/healthBar';
 import { STANDING_BURN_POINTS, burnPoints } from '../rendering/burning';
@@ -33,8 +34,6 @@ import { KNOCKDOWN_LIE_MS, deathKind, fallProgress, startFallState, stepFall, ty
 
 export type { ThrowNet } from '../systems/bodyMotion';
 import type { ThrowNet } from '../systems/bodyMotion';
-
-const ATTACK_ANIMATION_DURATION_MS = 1_130;
 
 export type EnemyTarget = 'bowman' | 'tower';
 
@@ -211,7 +210,7 @@ export default class Enemy extends Container {
     this.healthBar = new Graphics();
     this.addChild(this.healthBar);
     if (enemyArchetype(kind).rides) {
-      this.mount = new Mount(ENEMY_KINDS[kind].mount?.health ?? health);
+      this.mount = new Mount(mountHealth(kind, health));
       this.horseBar = new Graphics();
       this.horseBar.y = HEALTH_BAR.height / 2 + 1 + HORSE_BAR.gap + HORSE_BAR.height / 2 + 1;
       this.healthBar.addChild(this.horseBar);
@@ -544,7 +543,7 @@ export default class Enemy extends Container {
   public playAttackAnimation(onImpact?: () => void, style?: AttackStyle): void {
     const { attackStyles } = this.look;
     this.swingStyle = style ?? attackStyles[Math.floor(Math.random() * attackStyles.length)];
-    this.attackTimerMs = ATTACK_ANIMATION_DURATION_MS;
+    this.attackTimerMs = ENEMY_ATTACK.animationMs;
     this.pendingImpact = onImpact;
     this.netHooks?.attacked(this.swingStyle);
   }
@@ -889,7 +888,7 @@ export default class Enemy extends Container {
   /** Runs the swing's clock on and lands the hit at its strike key; returns how far through it is. */
   private advanceAttack(deltaMs: number): number {
     this.attackTimerMs = Math.max(0, this.attackTimerMs - deltaMs);
-    const attackProgress = 1 - this.attackTimerMs / ATTACK_ANIMATION_DURATION_MS;
+    const attackProgress = 1 - this.attackTimerMs / ENEMY_ATTACK.animationMs;
     if (this.pendingImpact && attackProgress >= attackImpactProgress(this.swingStyle)) {
       const impact = this.pendingImpact;
       this.pendingImpact = undefined;
@@ -1124,7 +1123,7 @@ export default class Enemy extends Container {
     if (this.fall || this.motion.isThrown || this.attackTimerMs > 0 || this.castTimerMs > 0 || this.attackCooldown > 0 || this.afflictions.isFrozen || this.afflictions.inVortex) {
       return false;
     }
-    this.attackCooldown = ENEMY_ATTACK_INTERVAL_MS;
+    this.attackCooldown = ENEMY_ATTACK.intervalMs;
     return true;
   }
 

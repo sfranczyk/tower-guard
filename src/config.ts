@@ -1,3 +1,4 @@
+import { tunable } from './core/tuning';
 import type { ProjectileType } from './types';
 /**
  * The view (screen) in game px: always GAME_HEIGHT tall and at least GAME_WIDTH wide (2.1:1). A wider
@@ -40,21 +41,24 @@ export const DEFAULT_ARROW_TRAILS = 1;
 export const MAX_ARROW_TRAILS = 3;
 
 export const ARROW_RELEASE_Y = 0;
-export const ARROW_SPEED_FACTOR = 1.6;
-export const ARROW_BASE_SPEED = 180;
-export const ARROW_FORCE_SPEED = 450;
-export const ARROW_GRAVITY = 700;
 /**
- * Quadratic air drag k (a = −k·|v|·v). 0.0005 makes a full-power shot lose ~30% speed in its first
- * second; terminal fall speed is √(ARROW_GRAVITY / k) ≈ 1180 px/s. Keep it small or arrows float.
+ * The player's arrows (tunable, `?tune`): launch speed (baseSpeed + power × forceSpeed) × speedFactor, gravity, and
+ * quadratic air drag k (a = −k·|v|·v; 0.0005 makes a full-power shot lose ~30% speed in its first second, terminal
+ * fall speed √(gravity / k) ≈ 1180 px/s; keep it small or arrows float). A normal hit deals `damage`, a headshot
+ * × headshotMultiplier, a piercing arrow × piercingMultiplier for each body it went through before.
  */
-export const ARROW_DRAG = 0.0005;
+export const ARROWS = tunable('ARROWS', 'Arrows', {
+  baseSpeed: 180,
+  forceSpeed: 450,
+  speedFactor: 1.6,
+  gravity: 700,
+  drag: 0.0005,
+  damage: 20,
+  headshotMultiplier: 1.25,
+  piercingMultiplier: 0.62,
+}, { meta: { headshotMultiplier: { min: 1, max: 3 }, piercingMultiplier: { max: 1 } } });
 
 export const ENEMY_SPEED = 30;
-export const ENEMY_ATTACK_INTERVAL_MS = 2000;
-export const PROJECTILE_DAMAGE = 20;
-/** Damage multiplier when an arrow hits an enemy's head. */
-export const HEADSHOT_DAMAGE_MULTIPLIER = 1.25;
 export const EXPLOSION_RADIUS = 72;
 /**
  * A fire dragon killed by a direct explosive hit blows up: the arrow's explosion this many times over (radius and
@@ -104,7 +108,7 @@ export const PRIEST_CAST_MS = 650;
 export const EXPLOSION_DAMAGE = { centre: 35, edge: 10 } as const;
 /**
  * Shrapnel arrow: Space in flight bursts it into SHRAPNEL_FRAGMENTS small arrows fanned SHRAPNEL_SPREAD
- * radians apart around its heading, each dealing SHRAPNEL_FRAGMENT_DAMAGE × PROJECTILE_DAMAGE.
+ * radians apart around its heading, each dealing SHRAPNEL_FRAGMENT_DAMAGE × ARROWS.damage.
  */
 export const SHRAPNEL_FRAGMENTS = 3;
 export const SHRAPNEL_SPREAD = 0.16;
@@ -118,7 +122,6 @@ export const SHRAPNEL_FRAGMENT_DAMAGE = 0.55;
  */
 export const SPLASH_GIB_CHANCE = { near: 0.3, far: 0.7, max: 0.95, min: 0.05 } as const;
 export const KNOCKBACK_PUSH_MAX = 110;
-export const PIERCING_DAMAGE_MULTIPLIER = 0.62;
 /**
  * Pinning arrow: an enemy it hits stays put this long (zombies as long; brutes and dragons can't be pinned), and
  * takes only a scratch, PIN_DAMAGE (random within the range, no headshot bonus).
@@ -128,7 +131,7 @@ export const PIN_DURATION_ZOMBIE_MS = 20000;
 export const PIN_DAMAGE: readonly [number, number] = [0, 4];
 export const ENEMY_TOWER_DAMAGE = 16;
 /**
- * Fire arrow (systems/afflictions.ts, systems/ArrowMagic.ts): hits for FIRE_ARROW_DAMAGE × PROJECTILE_DAMAGE and
+ * Fire arrow (systems/afflictions.ts, systems/ArrowMagic.ts): hits for FIRE_ARROW_DAMAGE × ARROWS.damage and
  * sets the enemy alight for ENEMY_BURN_MS (zombies × ENEMY_BURN_ZOMBIE_FACTOR; the fire dragon doesn't burn),
  * ENEMY_BURN_DPS dealt every BURN_TICK_MS. Each tick a burning enemy may set others within FIRE_SPREAD_RADIUS
  * alight (FIRE_SPREAD_CHANCE). In the ground it leaves a fire FIRE_PATCH_RADIUS wide for FIRE_PATCH_MS.
@@ -143,7 +146,7 @@ export const FIRE_SPREAD_CHANCE = 0.12;
 export const FIRE_PATCH_MS = 3500;
 export const FIRE_PATCH_RADIUS = 28;
 /**
- * Frost arrow: hits for FROST_ARROW_DAMAGE × PROJECTILE_DAMAGE and chills for FROST_CHILL_MS (everything it does
+ * Frost arrow: hits for FROST_ARROW_DAMAGE × ARROWS.damage and chills for FROST_CHILL_MS (everything it does
  * runs at FROST_SLOW speed). The FROST_FREEZE_HITS-th hit in a row (while still chilled), or a headshot, freezes it solid for
  * FROST_FREEZE_MS (brutes FROST_FREEZE_BRUTE_MS; dragons are only chilled). Frozen enemies killed, or caught in
  * an explosion, shatter. Fire thaws them.
@@ -155,38 +158,40 @@ export const FROST_FREEZE_HITS = 2;
 export const FROST_FREEZE_MS = 12000;
 export const FROST_FREEZE_BRUTE_MS = 5000;
 /**
- * Vortex arrow (systems/vortex.ts): where it lands a vortex opens for VORTEX_MS. It pulls ground enemies within
- * VORTEX_RADIUS to its centre (up to VORTEX_PULL_SPEED px/s), lifts them up the funnel (VORTEX_RISE_SPEED px/s)
- * and at VORTEX_TOP throws them up and out (VORTEX_THROW, px/s). How it takes each one depends on its mass (race
+ * Vortex arrow (systems/vortex.ts): where it lands a vortex opens for VORTEX.ms. It pulls ground enemies within
+ * VORTEX.radius to its centre (up to VORTEX.pullSpeed px/s), lifts them up the funnel (VORTEX.riseSpeed px/s)
+ * and at VORTEX.top throws them up and out (VORTEX_THROW, px/s). How it takes each one depends on its mass (race
  * traits; a fighter is VORTEX_MASS.reference): pulled in and lifted at reference/mass the pace (at most
  * VORTEX_MASS.lightest× for the lightest), thrown √(reference/mass) as hard; above VORTEX_MASS.fullLift it no longer reaches the top (its ceiling drops to
  * nothing at VORTEX_MASS.anchor) and circles there until the vortex lets go; from VORTEX_MASS.anchor (brutes) it isn't
- * caught at all: inside its reach it only walks at VORTEX_HEAVY_WALK of its pace. At
+ * caught at all: inside its reach it only walks at VORTEX.heavyWalk of its pace. At
  * the end it dies away and flings out the ones it hasn't lifted yet (VORTEX_FLING). Thrown enemies fall under
  * THROW_GRAVITY and take FALL_DAMAGE on landing: perSpeed × how much faster than safeSpeed they hit the ground.
- * The arrow itself does no damage: an enemy it hits glows and levitates straight up (towards VORTEX_LEVITATE_HEIGHT
- * at VORTEX_LEVITATE_SPEED px/s, rising above the funnel) while the vortex lasts, then drops, taking VORTEX_LEVITATE_FALL × the fall damage.
- * Each further vortex arrow that hits it lifts it VORTEX_LEVITATE_BOOST px higher (at most VORTEX_LEVITATE_MAX). Up to
+ * The arrow itself does no damage: an enemy it hits glows and levitates straight up (towards VORTEX.levitateHeight
+ * at VORTEX.levitateSpeed px/s, rising above the funnel) while the vortex lasts, then drops, taking VORTEX.levitateFall × the fall damage.
+ * Each further vortex arrow that hits it lifts it VORTEX.levitateBoost px higher (at most VORTEX.levitateMax). Up to
  * VORTEX_MASS.levitateFull it levitates as a man does; heavier ones rise ever slower and lower, down to
  * VORTEX_LEVITATE_HEAVY as high at VORTEX_MASS.levitateHeavy (a brute) and beyond.
  */
-export const VORTEX_MS = 4200;
-export const VORTEX_RADIUS = 150;
-export const VORTEX_PULL_SPEED = 190;
-export const VORTEX_HEAVY_WALK = 0.45;
-export const VORTEX_RISE_SPEED = 85;
-export const VORTEX_TOP = 130;
+export const VORTEX = tunable('VORTEX', 'Vortex', {
+  ms: 4200,
+  radius: 150,
+  pullSpeed: 190,
+  heavyWalk: 0.45,
+  riseSpeed: 85,
+  top: 130,
+  levitateSpeed: 110,
+  levitateHeight: 280,
+  levitateFall: 0.5,
+  levitateBoost: 110,
+  levitateMax: 400,
+}, { meta: { heavyWalk: { max: 1 }, levitateFall: { max: 1 } } });
 export const VORTEX_THROW = { up: [420, 560], side: [110, 260] } as const;
 export const VORTEX_FLING = { up: [170, 260], side: [170, 290] } as const;
 export const THROW_GRAVITY = 1100;
 /** How fast a stickman held in a vortex or thrown flails its arms and legs (1 = the original, frantic pace). */
 export const FLAIL_SPEED = 0.55;
 export const FALL_DAMAGE = { safeSpeed: 220, perSpeed: 0.025 } as const;
-export const VORTEX_LEVITATE_SPEED = 110;
-export const VORTEX_LEVITATE_HEIGHT = 280;
-export const VORTEX_LEVITATE_FALL = 0.5;
-export const VORTEX_LEVITATE_BOOST = 110;
-export const VORTEX_LEVITATE_MAX = 400;
 export const VORTEX_LEVITATE_HEAVY = 0.15;
 export const VORTEX_MASS = { reference: 1.2, lightest: 1.6, fullLift: 2.1, anchor: 3.6, levitateFull: 1.4, levitateHeavy: 4.2 } as const;
 /** The bowman's mass for a vortex (friendly fire): a man with his bow, quiver and armour. */
@@ -199,11 +204,18 @@ export const BOWMAN_MASS = 1.3;
 export const DRAGON_TURBULENCE_MS = 4200;
 export const DRAGON_TURBULENCE_SPREAD = 4;
 export const DRAGON_BUFFET = { x: 14, y: 20, tilt: 0.16 } as const;
-/** Enemy archers: stop and shoot from this distance, draw time, pause between shots, aim error. */
-export const ENEMY_ARCHER_RANGE = 340;
-export const ENEMY_ARCHER_DRAW_MS = 900;
-export const ENEMY_ARCHER_COOLDOWN_MS = 1700;
-export const ENEMY_ARCHER_SPREAD = 0.07;
+/**
+ * Enemy attacks: the pause between club swings (intervalMs) and how long a swing takes (animationMs); enemy archers
+ * stop and shoot from archerRange, draw for archerDrawMs, wait archerCooldownMs between shots, aim error archerSpread.
+ */
+export const ENEMY_ATTACK = tunable('ENEMY_ATTACK', 'Enemy attacks', {
+  intervalMs: 2000,
+  animationMs: 1130,
+  archerRange: 340,
+  archerDrawMs: 900,
+  archerCooldownMs: 1700,
+  archerSpread: 0.07,
+});
 /** Draw power (0..1) of enemy shots (their damage per shooter is in data/enemies.ts, ENEMY_DAMAGE). */
 export const ENEMY_ARROW_POWER = 0.75;
 /**
@@ -268,19 +280,21 @@ export const JUMP_BUFFER_MS = 110;
 export const ENEMY_KEEP_HEALTH = 650;
 /**
  * A run is a row of levels (each its own map and enemies); a level's enemies come in waves
- * (systems/waveDirector.ts): the first after LEVEL_START_DELAY_MS, the enemies of a wave WAVE_SPAWN_INTERVAL_MS
- * apart. The next wave comes once at most WAVE_RELEASE_ALIVE enemies are left standing and WAVE_MIN_GAP_MS have
- * passed since the last spawn, or after WAVE_MAX_GAP_MS regardless.
+ * (systems/waveDirector.ts): the first after WAVES.startDelayMs, the enemies of a wave WAVES.spawnIntervalMs
+ * apart. The next wave comes once at most WAVES.releaseAlive enemies are left standing and WAVES.minGapMs have
+ * passed since the last spawn, or after WAVES.maxGapMs regardless. Wave sizes: the first WAVES.firstSize, each next
+ * one bigger by WAVES.sizeStep, up to WAVES.maxSize.
  */
-export const WAVE_SPAWN_INTERVAL_MS = 1100;
-export const LEVEL_START_DELAY_MS = 3000;
-export const WAVE_RELEASE_ALIVE = 1;
-export const WAVE_MIN_GAP_MS = 2500;
-export const WAVE_MAX_GAP_MS = 20000;
-/** Wave sizes: the first FIRST_WAVE_SIZE, each next one bigger by WAVE_SIZE_STEP, up to MAX_WAVE_SIZE. */
-export const FIRST_WAVE_SIZE = 3;
-export const WAVE_SIZE_STEP = 2;
-export const MAX_WAVE_SIZE = 10;
+export const WAVES = tunable('WAVES', 'Waves', {
+  spawnIntervalMs: 1100,
+  startDelayMs: 3000,
+  releaseAlive: 1,
+  minGapMs: 2500,
+  maxGapMs: 20000,
+  firstSize: 3,
+  sizeStep: 2,
+  maxSize: 10,
+});
 
 /** Sound effects: default effects volume (0..1) and the base volume of each sound. */
 export const SOUND_DEFAULT_VOLUME = 0.7;

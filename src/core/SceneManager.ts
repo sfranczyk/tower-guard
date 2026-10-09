@@ -11,7 +11,7 @@ import { SoundLabScene } from '../scenes/SoundLabScene';
 import { DEFAULT_ARROW_TRAILS, ENEMY_KEEP_HEALTH, MAX_ARROW_TRAILS } from '../config';
 import { loadSandbox } from './sandboxStorage';
 import { newRun, type GameContext, type GameTextures, type Scene, type SceneName } from './Scene';
-import { COOP_PARAM, DESIGN_LAB_PARAM, LAB_PARAM, SOUND_LAB_PARAM, getUrlParam, setUrlParam } from './urlState';
+import { COOP_PARAM, DESIGN_LAB_PARAM, LAB_PARAM, SOUND_LAB_PARAM, TUNE_PARAM, getUrlParam, setUrlParam } from './urlState';
 
 /** Owns the active scene, switches between scenes and forwards ticker updates. */
 export class SceneManager {
@@ -50,6 +50,10 @@ export class SceneManager {
     ui.handlers.openAnimationLab = () => this.goTo('animationLab');
     ui.handlers.openSoundLab = () => this.goTo('soundLab');
     ui.handlers.openDesignLab = () => this.goTo('designLab');
+    ui.handlers.toggleTuning = () => {
+      ui.setTuningOpen(!ui.isTuningOpen);
+      setUrlParam(TUNE_PARAM, ui.isTuningOpen ? '' : null);
+    };
     // The settings drawer works wherever it's opened (menu or game).
     ui.handlers.trajectoryChange = (enabled) => {
       this.ctx.session.showTrajectory = enabled;
@@ -76,6 +80,7 @@ export class SceneManager {
 
   /** Opens the animation lab, design lab or sound panel when the URL says so (e.g. after a refresh), otherwise the menu. */
   public start(): void {
+    this.ctx.ui.setTuningOpen(getUrlParam(TUNE_PARAM) !== null);
     if (getUrlParam(LAB_PARAM) !== null) {
       this.goTo('animationLab');
     } else if (getUrlParam(DESIGN_LAB_PARAM) !== null) {
