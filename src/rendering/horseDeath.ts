@@ -2,8 +2,10 @@ import type { Graphics } from 'pixi.js';
 import type { Vec2 } from '../types';
 import { thrownRider } from './dragonRiderFall';
 import {
-  HORSE_GROUND_Y, assembleHorsePose, drawHorsePose, legRootX, riderPose, type HorseFrame, type HorseLegName, type HorsePose,
+  HORSE_GROUND_Y, assembleHorsePose, legRootX, type HorseFrame, type HorseLegName, type HorsePose,
 } from './horseRider';
+import { riderPose } from './horseSeat';
+import { drawHorsePose } from './horseSkeleton';
 import { drawJointPose, type JointPose } from './stickmanPose';
 
 /**

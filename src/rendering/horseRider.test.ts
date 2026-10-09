@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { Vec2 } from '../types';
-import { HORSE_GROUND_Y, HORSE_LEG, LANCE, LANCE_IMPACT, RIDER_LIMBS, gaitGroundSpeed, getHorsePose, mountedHitZones, type HorseGait, type HorsePose } from './horseRider';
+import { mountedHitZones } from './horseHitZones';
+import { HORSE_GROUND_Y, HORSE_LEG, gaitGroundSpeed, getHorsePose, type HorseGait, type HorsePose } from './horseRider';
+import { LANCE, LANCE_IMPACT, RIDER_LIMBS } from './horseSeat';
 
 const distance = (a: Vec2, b: Vec2): number => Math.hypot(a.x - b.x, a.y - b.y);
 const legs = (pose: HorsePose) => [pose.nearFore, pose.farFore, pose.nearHind, pose.farHind];

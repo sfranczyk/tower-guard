@@ -1,10 +1,12 @@
 import { WORLD_WIDTH } from '../../config';
 import { horseDeathThrow } from '../../rendering/horseDeath';
-import { gaitGroundSpeed, getHorsePose, mountedHitZones, type HorseGait, type HorsePose, type LanceHold } from '../../rendering/horseRider';
+import { mountedHitZones } from '../../rendering/horseHitZones';
+import { gaitGroundSpeed, getHorsePose, type HorseGait, type HorsePose } from '../../rendering/horseRider';
+import type { LanceHold } from '../../rendering/horseSeat';
 import { spriteToWorld, type Torso } from '../../systems/bodyAnchor';
 import { groundAt } from '../../systems/terrain';
 import { boundsAround } from '../../utils/math';
-import type { HitBox } from '../DragonEnemy';
+import type { HitBox } from './enemyTypes';
 import type Enemy from './Enemy';
 import { BODY_SCALE } from './EnemyFigure';
 import { HORSE_BOLT, Mount } from './Mount';

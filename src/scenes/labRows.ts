@@ -6,7 +6,7 @@ import { drawDragonRider } from '../rendering/dragonArt';
 import { DRAGON_DEATH_MS, drawDragonDeath, type DragonDeathKind } from '../rendering/dragonDeath';
 import { FIRE_BREATH_MS, breathControl, drawFireStream } from '../rendering/dragonFire';
 import { HORSE_DEATH_MS, drawHorseDeath } from '../rendering/horseDeath';
-import { drawHorseRider } from '../rendering/horseRider';
+import { drawHorseRider } from '../rendering/horseSkeleton';
 import { drawStickman } from '../rendering/stickman';
 import { drawStickmanCheer } from '../rendering/stickmanCheer';
 import { getFlailPose } from '../rendering/stickmanFlail';

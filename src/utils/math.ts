@@ -33,3 +33,10 @@ export const boundsAround = (points: readonly Vec2[], padding: number): Bounds =
   const bottom = Math.max(...points.map((point) => point.y)) + padding;
   return { x: left, y: top, width: right - left, height: bottom - top, left, right, top, bottom };
 };
+
+/** `point` rotated by `angle` (radians) about `about`. */
+export const rotateAbout = (point: Vec2, about: Vec2, angle: number): Vec2 => {
+  const dx = point.x - about.x;
+  const dy = point.y - about.y;
+  return { x: about.x + dx * Math.cos(angle) - dy * Math.sin(angle), y: about.y + dx * Math.sin(angle) + dy * Math.cos(angle) };
+};

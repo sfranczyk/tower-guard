@@ -49,7 +49,9 @@ animation gets a row in `scenes/labRows.ts` (or `scenes/labSequences.ts` for one
 
 ## Horse
 `horseRider.ts` (`getHorsePose`, `assembleHorsePose` from a `HorseFrame`; walk 4 beats, gallop; hooves at
-`HORSE_GROUND_Y`, IK knees/hocks), `horseDeath.ts` (`lieDown`, `drop`; `thrownRider`).
+`HORSE_GROUND_Y`, IK knees/hocks), `horseSeat.ts` (`riderPose`, `LanceHold`, `LANCE`), `horseHitZones.ts`
+(`mountedHitZones`, body/ice points), `horseSkeleton.ts` (`drawHorsePose`, lab look), `horseDeath.ts` (`lieDown`,
+`drop`; `thrownRider`).
 
 ## Effects and world
 - Burning flames (`burning.ts`: `burnFlames`, `burnSmoke`, `BURN_FLAME_SIZE`). Affliction art (`afflictionArt.ts`),

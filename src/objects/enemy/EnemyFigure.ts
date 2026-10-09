@@ -11,7 +11,7 @@ import { GibSimulation } from '../../rendering/stickmanGibs';
 import { drawEnemyBody, drawEnemyGibs, type EnemyBodyState } from '../../rendering/enemyBody';
 import { STANDING_BURN_POINTS, burnPoints } from '../../rendering/burning';
 import { FROZEN_TINT } from '../../rendering/afflictionArt';
-import { mountedBodyPoints, mountedIcePoints } from '../../rendering/horseRider';
+import { mountedBodyPoints, mountedIcePoints } from '../../rendering/horseHitZones';
 import { spriteToContainer, worldToSprite, type BodyTransform, type Torso } from '../../systems/bodyAnchor';
 import { enemyArchetype } from '../../data/enemyKinds';
 import { groundAt } from '../../systems/terrain';
