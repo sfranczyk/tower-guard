@@ -65,6 +65,8 @@ export default class Enemy extends Container {
   public readonly afflictions: AfflictionLayer;
   /** The priest's mana (healers only): refills fast, spent on heals (EnemyAI); drawn under the health bar. */
   public readonly mana?: ManaPool;
+  /** Walked off the field (a priest left alone, `escape`): no longer alive for the battle. */
+  private escaped = false;
   /** Co-op host: hears about every hit, swing, heal and spell, to replay them on the guest's screen. */
   public netHooks?: {
     damaged(amount: number, hit: HitInfo): void;
@@ -358,8 +360,15 @@ export default class Enemy extends Container {
     this.figure.update(deltaMs, moving);
   }
 
+  /** Out of the battle: dead, or a priest that walked off the field (escape). */
   public isAlive(): boolean {
-    return this.vitals.alive;
+    return this.vitals.alive && !this.escaped;
+  }
+
+  /** A priest left alone walked off the field's edge (EnemyAI): gone for good, counted as defeated. */
+  public escape(): void {
+    this.escaped = true;
+    this.halt();
   }
 
   /** Health left (e.g. whether a hit will kill it). */

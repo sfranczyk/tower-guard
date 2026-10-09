@@ -84,15 +84,18 @@ export const KNIGHT_ARMOR = 0.35;
 export const HORSE_LEG = { damage: 0.5, lameChance: 0.35, lameMs: 4000, lameSpeed: 0.4, stumbleMs: 350 } as const;
 export const HORSE_LEG_LAME_CHANCE: Partial<Record<ProjectileType, number>> = { pinning: 0.9, piercing: 0.5, fragment: 0.15, explosive: 0, vortex: 0 };
 /**
- * The dark priest (systems/healing.ts) never attacks: it walks PRIEST_FOLLOW_GAP behind the nearest soldier (on the side
- * away from its target, never nearer the target than PRIEST_STANDOFF, within PRIEST_POST_SLACK), falls back behind the
- * next ones when those around it die, and with no soldier left retreats to the enemy keep. Every PRIEST_HEAL_INTERVAL_MS it
+ * The dark priest (systems/healing.ts) never attacks: it walks PRIEST_FOLLOW_GAP behind the front soldier on its side of
+ * its target (the one nearest the target; never nearer the target than PRIEST_STANDOFF, within PRIEST_POST_SLACK). With
+ * soldiers left only beyond the target it dashes past it to hide behind them; with none it retreats to the enemy keep,
+ * and once only priests are left (no more to come) it walks off the field: PRIEST_ESCAPE_BEYOND past its right edge it
+ * has escaped and counts as defeated. Every PRIEST_HEAL_INTERVAL_MS it
  * heals each wounded enemy within PRIEST_HEAL_RADIUS by up to PRIEST_HEAL_PER_TARGET (nearest first, never itself, not the undead),
  * one mana a point. Mana refills fast (PRIEST_MANA_REGEN_PER_S up to PRIEST_MANA_MAX), so a living priest keeps a
  * crowd standing; it casts only with at least PRIEST_MIN_CAST_MANA. The cast (scepter raised) takes PRIEST_CAST_MS.
  */
 export const PRIEST_STANDOFF = 160;
 export const PRIEST_FOLLOW_GAP = 55;
+export const PRIEST_ESCAPE_BEYOND = 60;
 export const PRIEST_POST_SLACK = 15;
 export const PRIEST_HEAL_RADIUS = 170;
 export const PRIEST_HEAL_INTERVAL_MS = 900;

@@ -60,11 +60,16 @@ export class BattleEnemies {
   }
 
   /**
-   * Fallen enemies stay in the list (corpses), so every non-living one counts as defeated, but a dead horse whose rider
+   * Fallen enemies stay in the list (corpses), so every non-living one counts as defeated (a priest that escaped too), but a dead horse whose rider
    * hasn't come off it yet (he comes as an enemy of his own).
    */
   public defeated(): number {
     return this.list.filter((enemy) => !enemy.isAlive() && !(enemy instanceof Enemy && enemy.riderPending)).length;
+  }
+
+  /** More enemies still to come: waves not yet released, or a rider about to come off his dead horse. */
+  public get reinforcementsDue(): boolean {
+    return this.spawned < this.total || this.list.some((enemy) => enemy instanceof Enemy && enemy.riderPending);
   }
 
   public allDefeated(): boolean {

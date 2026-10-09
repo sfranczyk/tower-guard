@@ -42,6 +42,8 @@ export interface CombatWorld {
   readonly wind: number;
   /** Friendly fire (settings drawer): the players' arrows and their effects hit the bowmen too. */
   readonly friendlyFire: () => boolean;
+  /** More enemies still to come this level (a priest left alone walks off the field only when none are). */
+  readonly reinforcementsDue: () => boolean;
 }
 
 export interface CombatEvents {

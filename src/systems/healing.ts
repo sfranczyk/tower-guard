@@ -17,19 +17,23 @@ import type { Vec2 } from '../types';
  */
 
 /**
- * Where the priest heads (x): PRIEST_FOLLOW_GAP behind the soldier nearest to it (`soldiers`: their x), on the side
- * away from `targetX` (the bowman it goes for, or the keep), but never nearer the target than PRIEST_STANDOFF. When the
- * soldiers around it die, the nearest one left is further back, so it falls back behind them; with none left on the
- * field it retreats to `retreatX`.
+ * Where the priest heads (x): PRIEST_FOLLOW_GAP behind the front soldier on its side of `targetX` (`soldiers`: their x;
+ * the front one is the nearest the target, the bowman it goes for or the keep), but never nearer the target than
+ * PRIEST_STANDOFF. So it stays with the fighting and only backs off as the target comes on. With soldiers left only
+ * beyond the target it dashes past it (no standoff) to hide behind the nearest of them; with none it heads for
+ * `retreatX`.
  */
 export const priestPost = (priestX: number, soldiers: readonly number[], targetX: number, retreatX: number): number => {
-  if (soldiers.length === 0) {
+  const side = Math.sign(priestX - targetX) || 1;
+  const ours = soldiers.filter((x) => (Math.sign(x - targetX) || side) === side);
+  const shelter = ours.length > 0 ? ours : soldiers;
+  if (shelter.length === 0) {
     return retreatX;
   }
-  const anchor = soldiers.reduce((best, x) => (Math.abs(x - priestX) < Math.abs(best - priestX) ? x : best));
-  const away = Math.sign(anchor - targetX) || Math.sign(priestX - targetX) || 1;
-  const post = anchor + away * PRIEST_FOLLOW_GAP;
-  return Math.abs(post - targetX) < PRIEST_STANDOFF ? targetX + away * PRIEST_STANDOFF : post;
+  const front = shelter.reduce((best, x) => (Math.abs(x - targetX) < Math.abs(best - targetX) ? x : best));
+  const away = Math.sign(front - targetX) || side;
+  const post = front + away * PRIEST_FOLLOW_GAP;
+  return ours.length > 0 && Math.abs(post - targetX) < PRIEST_STANDOFF ? targetX + away * PRIEST_STANDOFF : post;
 };
 
 /** A wounded enemy the priest could heal: where it stands and how much health it is missing. */

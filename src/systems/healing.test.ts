@@ -38,20 +38,25 @@ describe('priestPost', () => {
   const bowman = 300;
   const keep = 2240;
 
-  it('walks just behind the soldier nearest to it, on the side away from the bowman', () => {
-    expect(priestPost(900, [700, 820, 1500], bowman, keep)).toBe(820 + PRIEST_FOLLOW_GAP);
+  it('walks just behind the front soldier on its side, not the one nearest to it', () => {
+    expect(priestPost(1600, [700, 820, 1500], bowman, keep)).toBe(700 + PRIEST_FOLLOW_GAP);
   });
 
-  it('falls back behind the next soldiers when those around it are gone', () => {
-    expect(priestPost(900, [1400, 1600], bowman, keep)).toBe(1400 + PRIEST_FOLLOW_GAP);
+  it('stays with the front when soldiers stand behind it', () => {
+    expect(priestPost(700 + PRIEST_FOLLOW_GAP, [700, 790, 860, 1500], bowman, keep)).toBe(700 + PRIEST_FOLLOW_GAP);
   });
 
   it('never goes nearer the bowman than its standoff, even behind a soldier fighting him', () => {
     expect(priestPost(520, [bowman + 20], bowman, keep)).toBe(bowman + PRIEST_STANDOFF);
   });
 
-  it('keeps to the far side when the bowman is behind the soldiers', () => {
-    expect(priestPost(900, [1000], 1400, keep)).toBe(1000 - PRIEST_FOLLOW_GAP);
+  it('keeps to the far side with the target on either side', () => {
+    expect(priestPost(1400, [1200], 900, keep)).toBe(1200 + PRIEST_FOLLOW_GAP);
+    expect(priestPost(500, [600, 700], 900, keep)).toBe(700 - PRIEST_FOLLOW_GAP);
+  });
+
+  it('dashes past the bowman to hide behind the soldiers beyond him when none are left on its side', () => {
+    expect(priestPost(1200, [400, 600], 900, keep)).toBe(600 - PRIEST_FOLLOW_GAP);
   });
 
   it('retreats to the keep with no soldier left', () => {

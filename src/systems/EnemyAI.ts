@@ -8,8 +8,10 @@ import {
   ENEMY_TOWER_X,
   FIRE_DRAGON_RANGE,
   GROUND_Y,
+  PRIEST_ESCAPE_BEYOND,
   PRIEST_POST_SLACK,
   SHOW_HITBOX_DEBUG,
+  WORLD_WIDTH,
 } from '../config';
 import { enemyDamage, rollDamage } from '../data/enemies';
 import { enemyArchetype, enemyTraits } from '../data/enemyKinds';
@@ -47,6 +49,8 @@ export interface EnemyAIWorld {
   readonly debug: Graphics;
   /** The level's wind (px/s² on a normal arrow); archers aim with it. */
   readonly wind: number;
+  /** More enemies still to come this level (waves not yet released, a rider about to come off his horse). */
+  readonly reinforcementsDue: () => boolean;
 }
 
 export interface EnemyAIEvents {
@@ -157,20 +161,27 @@ export class EnemyAI {
   }
 
   /**
-   * Priest: never attacks. It walks behind the soldier nearest to it (away from the bowman, or the keep while everyone
-   * hides), falls back behind the next ones when those die and, with no soldier left, retreats to the enemy keep
-   * (systems/healing.ts); meanwhile it heals.
+   * Priest: never attacks. It walks behind the front soldier on its side of the bowman (or the keep while everyone
+   * hides), dashes past the bowman to the soldiers beyond him when none are left on its side and, with no soldier left,
+   * retreats to the enemy keep (systems/healing.ts); meanwhile it heals. Once only priests are left and no more are to
+   * come, it walks off the field's right edge and has escaped (counts as defeated).
    */
   private updatePriest(priest: Enemy, deltaMs: number): void {
     priest.updateMana(deltaMs);
     const bowman = nearestExposedBowman(this.world.bowmen, priest.x);
     priest.target = bowman ? 'bowman' : 'tower';
-    const soldiers = this.world.enemies
-      .filter((other) => other !== priest && !(other instanceof DragonEnemy) && other.isAlive() && !enemyArchetype(other.kind).heals)
-      .map((other) => other.x);
-    const post = priestPost(priest.x, soldiers, bowman ? bowman.x : this.world.playerTower.x, ENEMY_TOWER_X);
-    priest.update(deltaMs, { x: post, y: groundAt(post) }, PRIEST_POST_SLACK);
+    const others = this.world.enemies.filter((other) => other !== priest && other.isAlive() && !enemyArchetype(other.kind).heals);
+    const soldiers = others.filter((other) => !(other instanceof DragonEnemy)).map((other) => other.x);
+    const escaping = others.length === 0 && !this.world.reinforcementsDue();
+    const escapeX = WORLD_WIDTH + PRIEST_ESCAPE_BEYOND;
+    const retreatX = escaping ? escapeX + PRIEST_POST_SLACK : ENEMY_TOWER_X;
+    const post = priestPost(priest.x, soldiers, bowman ? bowman.x : this.world.playerTower.x, retreatX);
+    priest.update(deltaMs, { x: post, y: groundAt(Math.min(post, WORLD_WIDTH)) }, PRIEST_POST_SLACK);
     priest.updateAnimation(deltaMs, priest.isMoving());
+    if (escaping && priest.x >= escapeX) {
+      priest.escape();
+      return;
+    }
     if (!priest.isDown && !priest.afflictions.isFrozen && !priest.afflictions.inVortex) {
       this.castHeal(priest);
     }

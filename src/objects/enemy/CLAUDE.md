@@ -30,8 +30,10 @@ open the one you need:
   `KNIGHT_ARMOR` (0.35): `ArrowHits` scales body hits and shows sparks instead of blood; headshots, piercing arrows
   and blasts deal full damage. Black knight and hammer knight march (`walkStyle: 'march'`).
 - **Dark priest** (`priest`, healer, magical) never attacks (`EnemyAI.updatePriest`): walks `PRIEST_FOLLOW_GAP` behind
-  the soldier nearest to it, never nearer than `PRIEST_STANDOFF` (`priestPost`, pure); with none left it retreats to the
-  enemy keep. Heals (`EnemyAI.castHeal`, pure `planHeals` / `ManaPool` in `systems/healing.ts`): every
+  the front soldier on its side of the target, never nearer than `PRIEST_STANDOFF` (`priestPost`, pure); with soldiers
+  only beyond the target it dashes past it to them; with none it retreats to the enemy keep, and once only priests are
+  left (`reinforcementsDue` false) walks off the right edge (`PRIEST_ESCAPE_BEYOND`): `Enemy.escape()`, no longer
+  `isAlive`, counts as defeated. Heals (`EnemyAI.castHeal`, pure `planHeals` / `ManaPool` in `systems/healing.ts`): every
   `PRIEST_HEAL_INTERVAL_MS`, each ground enemy within `PRIEST_HEAL_RADIUS` (not itself, not `healable: false`) up to
   `PRIEST_HEAL_PER_TARGET`, nearest first, a mana a point; refills at `PRIEST_MANA_REGEN_PER_S` (bar under its health).
   Cast pose `castBody`, `Enemy.castHeal`, state `'cast'`; `EffectsSystem.healPulse` and `healCrosses`.

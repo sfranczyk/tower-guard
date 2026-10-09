@@ -175,6 +175,7 @@ export class GameScene extends Scene {
         debug: this.debugGraphics,
         wind: this.wind,
         friendlyFire: () => this.ctx.session.friendlyFire,
+        reinforcementsDue: () => this.foes.reinforcementsDue,
       },
       {
         bowmanDamaged: (bowman, amount, hit) => {
