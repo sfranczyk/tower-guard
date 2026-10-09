@@ -3,7 +3,7 @@ import type { RecordingInput } from '../input/PlayerInput';
 import type { AimInput } from '../managers/InputManager';
 import type Arrow from '../objects/Arrow';
 import DragonEnemy from '../objects/DragonEnemy';
-import type Enemy from '../objects/Enemy';
+import type Enemy from '../objects/enemy/Enemy';
 import type Tower from '../objects/Tower';
 import { HUMAN_BODY, ZOMBIE_BODY } from '../rendering/bodyColors';
 import type { Player } from '../scenes/PlayerControl';

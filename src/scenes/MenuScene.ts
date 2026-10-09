@@ -3,7 +3,7 @@ import { BACKDROP_WIDTH, GAME_HEIGHT } from '../config';
 import { Scene } from '../core/Scene';
 import { centeredCameraX } from '../core/viewport';
 import { BATTLEGROUNDS } from '../data/battlegrounds';
-import Bowman from '../objects/Bowman';
+import Bowman from '../objects/bowman/Bowman';
 import Tower from '../objects/Tower';
 import { Background } from '../rendering/Background';
 import { groundAt } from '../systems/terrain';

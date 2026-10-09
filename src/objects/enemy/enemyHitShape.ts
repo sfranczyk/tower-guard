@@ -1,8 +1,8 @@
-import { STICKMAN_HEAD } from '../rendering/stickman';
-import type { FallPose } from '../rendering/stickmanFall';
-import { spriteToWorld, type BodyTransform, type Torso } from '../systems/bodyAnchor';
-import type { Bounds, Vec2 } from '../types';
-import { boundsAround } from '../utils/math';
+import { STICKMAN_HEAD } from '../../rendering/stickman';
+import type { FallPose } from '../../rendering/stickmanFall';
+import { spriteToWorld, type BodyTransform, type Torso } from '../../systems/bodyAnchor';
+import type { Bounds, Vec2 } from '../../types';
+import { boundsAround } from '../../utils/math';
 
 /**
  * Where a ground enemy can be hit, in world space (pure, tested): its head and its body, standing (an upright box from

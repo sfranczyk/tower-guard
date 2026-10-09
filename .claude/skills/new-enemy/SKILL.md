@@ -32,9 +32,11 @@ Read only what each step names; grep for the neighbouring entry (e.g. `priest`, 
 
 ## 5. Behaviour (only for a new archetype or ability)
 - `src/data/enemyKinds.ts` `ARCHETYPES` flags; AI in `src/systems/EnemyAI.ts` (one `update<Name>` method);
-  hits in `src/systems/ArrowHits.ts`; hit zones in `src/systems/combatGeometry.ts` / `objects/enemyHitShape.ts`.
-- State on `Enemy` (`src/objects/Enemy.ts` is large: grep, read with offset/limit). Prefer a new small module over
-  growing Enemy.
+  hits in `src/systems/ArrowHits.ts`; hit zones in `src/systems/combatGeometry.ts` / `objects/enemy/enemyHitShape.ts`.
+- State on `Enemy`: `src/objects/enemy/` (its CLAUDE.md lists the parts). The façade `Enemy.ts` only delegates:
+  drawing a new state → `EnemyFigure.ts`; a new timed action → `enemyActions.ts`; hit reactions →
+  `enemyDamage.ts` / `enemyFall.ts` (`damageReaction`); movement → `enemyMotion.ts`; co-op fields → `enemyNet.ts`.
+  Add a new small part for a new ability rather than growing these.
 - **Co-op**: whatever the host decides must reach the guest: an event or a snapshot field in `src/net/protocol.ts`,
   sent in `HostSync.ts`, applied in `GuestSync.ts`. Add it to the list in `src/net/CLAUDE.md`.
 
@@ -42,4 +44,4 @@ Read only what each step names; grep for the neighbouring entry (e.g. `priest`, 
 - `npm run verify`.
 - Visual check: `?designs=<id>` and, in game, `?debug` with a sandbox level containing only this enemy; one screenshot
   at scale 0.5 (several → a subagent).
-- Add 1–3 lines to `src/objects/CLAUDE.md` (behaviour) and/or `src/data/CLAUDE.md` (stats); commit.
+- Add 1–3 lines to `src/objects/enemy/CLAUDE.md` (behaviour) and/or `src/data/CLAUDE.md` (stats); commit.

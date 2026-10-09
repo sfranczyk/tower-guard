@@ -14,7 +14,7 @@ description: Checklist for adding or changing a stickman, dragon or horse animat
    `?lab=<id>`.
 4. **Looks**: if enemies or the player use it, `src/rendering/designs/bodyPoses.ts` must produce the BodyPose for it
    (pure, tested) so every look draws it; check one look in `?designs=<id>`.
-5. **Game hook-up**: the state that plays it (`objects/Enemy.ts` body state, `objects/Bowman.ts`), and co-op if the host
+5. **Game hook-up**: the state that plays it (`objects/enemy/EnemyFigure.ts` body state, `objects/bowman/BowmanFigure.ts`), and co-op if the host
    triggers it (`src/net/CLAUDE.md`).
 6. **Verify**: `npm run verify`, then open `?lab=<id>` in a background tab, one screenshot at scale 0.5. For timing
    tweaks give the user the numbers in `config.ts` / the tuning panel instead of iterating on screenshots.

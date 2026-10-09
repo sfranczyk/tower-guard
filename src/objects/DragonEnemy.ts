@@ -29,7 +29,7 @@ import { enemyArchetype, type FlyingType } from '../data/enemyKinds';
 import type { Bounds, Vec2 } from '../types';
 import { drawHealthBar } from '../rendering/healthBar';
 import { boundsAround } from '../utils/math';
-import type { HitInfo } from './Enemy';
+import type { HitInfo } from './enemy/Enemy';
 import { AfflictionLayer, type AfflictionNet } from './AfflictionLayer';
 
 /** Flames on a burning dragon, in its (scaled-down) art units. */

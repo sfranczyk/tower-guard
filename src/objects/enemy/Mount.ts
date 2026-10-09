@@ -1,5 +1,5 @@
-import { HORSE_LEG } from '../config';
-import { HORSE_DEATH_MS, getHorseDeath, horseDeathThrow, type HorseDeath, type HorseDeathKind } from '../rendering/horseDeath';
+import { HORSE_LEG } from '../../config';
+import { HORSE_DEATH_MS, getHorseDeath, horseDeathThrow, type HorseDeath, type HorseDeathKind } from '../../rendering/horseDeath';
 import type { HitInfo } from './Enemy';
 
 /** Its rider gone, the horse stands this long, then bolts off the far edge this much faster than it came. */

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { getFallPose } from '../rendering/stickmanFall';
-import type { BodyTransform } from '../systems/bodyAnchor';
+import { getFallPose } from '../../rendering/stickmanFall';
+import type { BodyTransform } from '../../systems/bodyAnchor';
 import { bodyBounds, headBounds, torsoOf } from './enemyHitShape';
 
 const standing: BodyTransform = { x: 500, y: 480, scale: 2 / 3, bodyX: 0, bodyY: -25, rotation: 0, scaleX: -0.5, scaleY: 0.52 };

@@ -1,4 +1,4 @@
-import { ENEMY_ARCHER_COOLDOWN_MS, ENEMY_ARCHER_DRAW_MS } from '../config';
+import { ENEMY_ARCHER_COOLDOWN_MS, ENEMY_ARCHER_DRAW_MS } from '../../config';
 
 const BOW_RAISE_MS = 220;
 const BOW_LOWER_MS = 400;

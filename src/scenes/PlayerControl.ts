@@ -1,6 +1,6 @@
 import { BOWMAN_START_X, BOWMAN_Y, TOWER_ENTRY_ZONE_HEIGHT, TOWER_ENTRY_ZONE_WIDTH } from '../config';
 import type { PlayerInput } from '../input/PlayerInput';
-import type Bowman from '../objects/Bowman';
+import type Bowman from '../objects/bowman/Bowman';
 import type Tower from '../objects/Tower';
 import { groundAt } from '../systems/terrain';
 import type { ProjectileType } from '../types';

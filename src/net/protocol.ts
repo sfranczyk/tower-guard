@@ -3,12 +3,12 @@ import type { RunState } from '../core/Scene';
 import type { Loadout } from '../data/loadout';
 import type { SandboxSettings } from '../data/sandbox';
 import type { AimInput } from '../managers/InputManager';
-import type { HitInfo, RiderOff, ThrowNet } from '../objects/Enemy';
+import type { HitInfo, RiderOff, ThrowNet } from '../objects/enemy/Enemy';
 import type { FallKind } from '../rendering/stickmanFall';
 import type { AttackStyle } from '../rendering/attackSwing';
 import type { EnemyType, ProjectileType } from '../types';
 import type { AfflictionNet } from '../objects/AfflictionLayer';
-import type { BowmanNet } from '../objects/Bowman';
+import type { BowmanNet } from '../objects/bowman/Bowman';
 import type { EffectKind } from '../systems/EffectsSystem';
 
 /**

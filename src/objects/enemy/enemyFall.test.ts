@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { FALL_DURATION_MS } from '../rendering/stickmanFall';
-import { KNOCKDOWN_LIE_MS, deathKind, fallProgress, pushShare, startFallState, stepFall } from './enemyFall';
+import { FALL_DURATION_MS } from '../../rendering/stickmanFall';
+import { KNOCKDOWN_LIE_MS, blastPush, damageReaction, deathKind, fallProgress, pushShare, startFallState, stepFall } from './enemyFall';
 
 describe('deathKind', () => {
   it('picks the fall by what killed it', () => {
@@ -58,5 +58,24 @@ describe('falls', () => {
       death = step.fall!;
     }
     expect(death.kind).toBe('deathStiff');
+  });
+});
+
+describe('damageReaction', () => {
+  it('picks how a hit is taken', () => {
+    expect(damageReaction('fall', true, false, 1)).toBe('stayDown');
+    expect(damageReaction('shatter', true, true, 1)).toBe('shatter');
+    expect(damageReaction('blast', true, true, 0)).toBe('blowApart');
+    expect(damageReaction('explosion', true, false, 0.5, 0.99)).toBe('deathFall');
+    expect(damageReaction('arrow', true, true, 1)).toBe('dropFromAir');
+    expect(damageReaction('lightning', false, false, 1)).toBe('knockdown');
+    expect(damageReaction('explosion', false, true, 0)).toBe('none');
+    expect(damageReaction('arrow', false, false, 1)).toBe('none');
+  });
+
+  it('pushes the closer ones further, a direct hit as the centre', () => {
+    expect(blastPush({ cause: 'blast' }).distance).toBe(0);
+    expect(blastPush({ cause: 'arrow' }).push).toBe(0);
+    expect(blastPush({ cause: 'explosion', blastDistance: 0.2 }).push).toBeGreaterThan(blastPush({ cause: 'explosion', blastDistance: 0.8 }).push);
   });
 });

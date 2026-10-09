@@ -25,7 +25,8 @@ src/
   core/         Scene, SceneManager, GameContext/GameSession, viewport, camera, sandboxStorage, urlState
   scenes/       Menu, Sandbox, Game (+ BattleArrows, BattleCamera, levelEnd, PlayerControl), labs, Coop lobby
   systems/      gameplay logic: CombatSystem (+ EnemyAI, ArrowHits, ArrowMagic), waves, ballistics, vortex, …
-  objects/      Pixi objects with state: Bowman, Enemy, DragonEnemy, Mount, Arrow, Tower, AfflictionLayer
+  objects/      Pixi objects with state: DragonEnemy, Arrow, Tower, AfflictionLayer; enemy/ (Enemy + parts),
+                bowman/ (Bowman + parts)
   rendering/    pure drawing and pose math: stickman, falls, cheers, gibs, dragons, horse, keep, designs/ (looks)
   data/         enemy catalogue and stats, projectiles, battlegrounds, sandbox, loadout
   net/          co-op: Transport, HostSync, GuestSync, protocol, coopLink

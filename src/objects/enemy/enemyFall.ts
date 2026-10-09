@@ -1,5 +1,6 @@
-import { FALL_DURATION_MS, type FallKind } from '../rendering/stickmanFall';
-import type { HitInfo } from './Enemy';
+import { FALL_DURATION_MS, type FallKind } from '../../rendering/stickmanFall';
+import { blowsApart, knockbackPush } from '../../data/enemies';
+import type { HitInfo } from './enemyTypes';
 
 /**
  * An enemy's falls (pure, tested): which death a hit plays, and the fall's own clock: a knockback slides it away from
@@ -45,6 +46,44 @@ export const deathKind = (cause: HitInfo['cause'], roll = Math.random()): FallKi
     return 'deathCrumple';
   }
   return roll < 0.5 ? 'death' : 'deathCrumple';
+};
+
+/**
+ * How an enemy takes a hit (Enemy.takeDamage): killed, it stays lying (`fall`: already down from the landing), bursts
+ * into ice (`shatter`), is blown apart (`blowApart`), drops out of the air (`dropFromAir`: lifted or thrown) or plays a
+ * death (`deathFall`); alive, a blast or lightning knocks it down (`knockdown`) unless it is up in the air.
+ */
+export type DamageReaction = 'stayDown' | 'shatter' | 'blowApart' | 'dropFromAir' | 'deathFall' | 'knockdown' | 'none';
+
+export const damageReaction = (
+  cause: HitInfo['cause'],
+  killed: boolean,
+  aloft: boolean,
+  blastDistance: number,
+  gibRoll = Math.random(),
+): DamageReaction => {
+  if (killed) {
+    if (cause === 'fall') {
+      return 'stayDown';
+    }
+    if (cause === 'shatter') {
+      return 'shatter';
+    }
+    if (blowsApart(cause, blastDistance, gibRoll)) {
+      return 'blowApart';
+    }
+    return aloft ? 'dropFromAir' : 'deathFall';
+  }
+  if (aloft) {
+    return 'none';
+  }
+  return cause === 'explosion' || cause === 'blast' || cause === 'lightning' ? 'knockdown' : 'none';
+};
+
+/** How far from a blast the hit was (0 centre .. 1 edge; a direct hit is the centre), and how far that throws it (px). */
+export const blastPush = (hit: Pick<HitInfo, 'cause' | 'blastDistance'>): { distance: number; push: number } => {
+  const distance = hit.blastDistance ?? (hit.cause === 'blast' ? 0 : 1);
+  return { distance, push: hit.cause === 'explosion' || hit.cause === 'blast' ? knockbackPush(distance) : 0 };
 };
 
 /** A fresh fall facing the hit from `fromX` (the enemy at `x`); a knockback with `push` px to slide. */

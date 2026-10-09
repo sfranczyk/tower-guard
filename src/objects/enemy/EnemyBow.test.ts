@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ENEMY_ARCHER_COOLDOWN_MS, ENEMY_ARCHER_DRAW_MS } from '../config';
+import { ENEMY_ARCHER_COOLDOWN_MS, ENEMY_ARCHER_DRAW_MS } from '../../config';
 import { EnemyBow } from './EnemyBow';
 
 /** Frames until the bow shoots (or `limit`). */

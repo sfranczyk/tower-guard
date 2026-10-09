@@ -1,7 +1,7 @@
-import type Bowman from '../objects/Bowman';
+import type Bowman from '../objects/bowman/Bowman';
 import type DragonEnemy from '../objects/DragonEnemy';
 import type { HitBox } from '../objects/DragonEnemy';
-import type Enemy from '../objects/Enemy';
+import type Enemy from '../objects/enemy/Enemy';
 import type { Vec2 } from '../types';
 
 /** Shapes the combat code shares (CombatSystem, EnemyAI, ArrowHits): the bowman's box, the enemies' hit zones. */

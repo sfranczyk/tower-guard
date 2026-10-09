@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { BOWMAN_Y, PLAYER_TOWER_X } from '../config';
 import { ManualInput } from '../input/PlayerInput';
-import type Bowman from '../objects/Bowman';
+import type Bowman from '../objects/bowman/Bowman';
 import type Tower from '../objects/Tower';
 import { PlayerControl, type Player } from './PlayerControl';
 
