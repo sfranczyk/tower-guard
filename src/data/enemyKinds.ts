@@ -277,7 +277,7 @@ export const enemyMass = (type: EnemyType): number => enemyTraits(type).mass;
 /** The share of an arrow's body hit that gets through its armour (1 = none). */
 export const enemyArmor = (type: EnemyType): number => ENEMY_KINDS[type].armor ?? 1;
 
-/** The enemies that fly (dragons, objects/DragonEnemy). */
+/** The enemies that fly (dragons, objects/dragon/DragonEnemy). */
 export type FlyingType = Extract<EnemyType, 'dragon' | 'fireDragon'>;
 
 /** A dragon (DragonEnemy) rather than a ground enemy (its archetype flies). */

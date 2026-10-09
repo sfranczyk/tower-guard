@@ -1,9 +1,19 @@
 import type { MountPart } from '../../data/enemies';
-import type { Vec2 } from '../../types';
+import type { Bounds, Vec2 } from '../../types';
 import type { AfflictionNet } from '../AfflictionLayer';
 import type { ThrowNet } from '../../systems/bodyMotion';
 
 /** The types an Enemy's callers and parts share (re-exported from Enemy.ts). */
+
+/** One hit zone of an enemy or dragon (world space). */
+export interface HitBox {
+  bounds: Bounds;
+  headshot: boolean;
+  /** A mounted knight's horse's leg (less damage, may lame it: ArrowHits). */
+  leg?: boolean;
+  /** A mounted knight: whether it's the rider or the horse that's hit. */
+  part?: MountPart;
+}
 
 /** Where an enemy heads for. */
 export type EnemyTarget = 'bowman' | 'tower';

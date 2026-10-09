@@ -18,7 +18,7 @@ import { enemyDamage, explosionDamage, legHitLames, pinDurationMs, rollDamage, t
 import { enemyArchetype, enemyArmor } from '../data/enemyKinds';
 import type Arrow from '../objects/Arrow';
 import type Bowman from '../objects/bowman/Bowman';
-import DragonEnemy from '../objects/DragonEnemy';
+import DragonEnemy from '../objects/dragon/DragonEnemy';
 import type Enemy from '../objects/enemy/Enemy';
 import type Tower from '../objects/Tower';
 import type { EnemyType, ProjectileType, Vec2 } from '../types';

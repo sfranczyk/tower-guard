@@ -1,6 +1,6 @@
 /**
  * 'dragon' is a dark flying dragon with an archer rider, 'fireDragon' a red one that breathes fire and whose
- * rider is unarmed (both objects/DragonEnemy.ts).
+ * rider is unarmed (both objects/dragon/DragonEnemy.ts).
  */
 export type EnemyType =
   | 'basic' | 'fast' | 'tank' | 'archer' | 'dragon' | 'fireDragon' | 'kamikaze' | 'zombie' | 'knight' | 'hammerKnight' | 'horseKnight' | 'priest';

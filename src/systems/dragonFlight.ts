@@ -2,7 +2,7 @@ import { DRAGON_ALTITUDE, DRAGON_HOVER_OFFSET, DRAGON_TURN_PAST, WORLD_WIDTH } f
 import { clamp } from '../utils/math';
 
 /**
- * Dragon flight as pure functions (objects/DragonEnemy.ts uses them): where it hovers, which side of its target
+ * Dragon flight as pure functions (objects/dragon/DragonEnemy.ts uses them): where it hovers, which side of its target
  * it keeps to, how it flies there (a killed dragon's fall is rendering/dragonDeath.ts).
  */
 

@@ -1,7 +1,7 @@
 import type { SoundId } from '../audio/SoundManager';
 import type { ManualInput } from '../input/PlayerInput';
 import type Arrow from '../objects/Arrow';
-import DragonEnemy from '../objects/DragonEnemy';
+import DragonEnemy from '../objects/dragon/DragonEnemy';
 import type Tower from '../objects/Tower';
 import type { Player } from '../scenes/PlayerControl';
 import type { EffectsSystem } from '../systems/EffectsSystem';

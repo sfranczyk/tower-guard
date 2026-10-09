@@ -12,7 +12,7 @@ import type { SoundId } from '../audio/SoundManager';
 import type { MountPart } from '../data/enemies';
 import { enemyArchetype, enemyMass } from '../data/enemyKinds';
 import Bowman from '../objects/bowman/Bowman';
-import DragonEnemy from '../objects/DragonEnemy';
+import DragonEnemy from '../objects/dragon/DragonEnemy';
 import type Enemy from '../objects/enemy/Enemy';
 import type { ProjectileType, Vec2 } from '../types';
 import type { BowmanHit } from './bowmanDeath';

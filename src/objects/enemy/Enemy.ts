@@ -12,7 +12,7 @@ import { enemyArchetype } from '../../data/enemyKinds';
 import { mountHealth } from '../../data/enemyTuning';
 import { groundAt } from '../../systems/terrain';
 import { boundsAround } from '../../utils/math';
-import type { HitBox } from '../DragonEnemy';
+import type { HitBox } from './enemyTypes';
 import type { Bounds, EnemyType, Vec2 } from '../../types';
 import { AfflictionLayer } from '../AfflictionLayer';
 import { EnemyActions } from './enemyActions';

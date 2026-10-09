@@ -4,7 +4,7 @@
 open the one you need:
 
 - `Enemy.ts`: the façade: fields, getters, archer bow use, short delegates to the parts below.
-- `enemyTypes.ts`: `HitInfo`, `RiderOff`, `EnemyNet`, `EnemyTarget` (re-exported from Enemy).
+- `enemyTypes.ts`: `HitInfo`, `HitBox` (also the dragon's), `RiderOff`, `EnemyNet`, `EnemyTarget` (re-exported from Enemy).
 - `EnemyFigure.ts`: the drawn body: look state per frame (walk, swing, cast, cheer, pinned, flail, flight), falls, gibs, settled corpses, body transform/torso.
 - `enemyActions.ts` (pure, tested): swing timer/style/impact, attack pause, cast, hit stagger, cheer.
 - `enemyDamage.ts` (`Vitals` pure, tested): health; `takeDamage` reactions, mounted damage share, unseat, heals.

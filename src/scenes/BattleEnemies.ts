@@ -5,7 +5,7 @@ import { ENEMY_KINDS, isFlyingType } from '../data/enemyKinds';
 import { levelEnemyTotal, type LevelSetup } from '../data/sandbox';
 import type { HostSync } from '../net/HostSync';
 import type { SpawnPlace } from '../net/protocol';
-import DragonEnemy from '../objects/DragonEnemy';
+import DragonEnemy from '../objects/dragon/DragonEnemy';
 import Enemy, { type HitInfo, type RiderOff } from '../objects/enemy/Enemy';
 import type { Foe } from '../systems/CombatSystem';
 import { WaveDirector } from '../systems/waveDirector';

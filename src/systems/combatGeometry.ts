@@ -1,6 +1,6 @@
 import type Bowman from '../objects/bowman/Bowman';
-import type DragonEnemy from '../objects/DragonEnemy';
-import type { HitBox } from '../objects/DragonEnemy';
+import type DragonEnemy from '../objects/dragon/DragonEnemy';
+import type { HitBox } from '../objects/enemy/enemyTypes';
 import type Enemy from '../objects/enemy/Enemy';
 import type { Vec2 } from '../types';
 

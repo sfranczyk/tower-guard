@@ -12,7 +12,7 @@ import { enemyDamage, explosionDamage, rollDamage } from '../data/enemies';
 import { burnDamage } from './burning';
 import type Bowman from '../objects/bowman/Bowman';
 import type { BowmanHit } from './bowmanDeath';
-import DragonEnemy from '../objects/DragonEnemy';
+import DragonEnemy from '../objects/dragon/DragonEnemy';
 import type Enemy from '../objects/enemy/Enemy';
 import type Tower from '../objects/Tower';
 import type { EnemyType, Vec2 } from '../types';
