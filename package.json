@@ -8,7 +8,8 @@
     "build": "webpack --mode production",
     "check": "tsc --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "verify": "sh scripts/verify.sh"
   },
   "keywords": [],
   "author": "Stanisław Franczyk",

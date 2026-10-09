@@ -1,0 +1,33 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run verify)",
+      "Bash(npm run -s verify)",
+      "Bash(npm run check)",
+      "Bash(npm test)"
+    ],
+    "deny": [
+      "Read(./dist/**)",
+      "Read(./node_modules/**)",
+      "Read(./package-lock.json)",
+      "Read(./src/assets/sounds/**)",
+      "Read(./human/**)"
+    ]
+  },
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          { "type": "command", "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/context-check.mjs\"" }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          { "type": "command", "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/context-check.mjs\"" }
+        ]
+      }
+    ]
+  }
+}
