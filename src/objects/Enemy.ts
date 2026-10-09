@@ -1,7 +1,7 @@
 import { Container, Graphics } from 'pixi.js';
-import { ENEMY_ATTACK_INTERVAL_MS, KAMIKAZE_GIB_FORCE, PLAYER_TOWER_X, WORLD_WIDTH } from '../config';
+import { ENEMY_ATTACK_INTERVAL_MS, KAMIKAZE_GIB_FORCE, PLAYER_TOWER_X, PRIEST_CAST_MS, WORLD_WIDTH } from '../config';
 import { getArcherRig, toArcherLocalAngle } from '../rendering/archer';
-import { attackImpactProgress } from '../rendering/attackSwing';
+import { attackImpactProgress, type AttackStyle } from '../rendering/attackSwing';
 import { WALK_STRIDE_PER_RADIAN } from '../rendering/stickman';
 import { RUN_STRIDE_PER_RADIAN } from '../rendering/runCycle';
 import { FALL_DURATION_MS, getFallPose, type FallKind, type FallPose } from '../rendering/stickmanFall';
@@ -9,6 +9,7 @@ import { CHEER_KINDS, getCheerPose, type CheerKind } from '../rendering/stickman
 import { PINNED_FOOT, getPinnedPose } from '../rendering/stickmanPinned';
 import { getFlailPose } from '../rendering/stickmanFlail';
 import { BodyMotion } from '../systems/bodyMotion';
+import { ManaPool } from '../systems/healing';
 import { GibSimulation } from '../rendering/stickmanGibs';
 import type { BodyColors } from '../rendering/bodyColors';
 import { drawEnemyBody, drawEnemyGibs, enemyGibColors, type EnemyBodyState } from '../rendering/enemyBody';
@@ -47,6 +48,19 @@ export interface HitInfo {
   blastDistance?: number;
 }
 
+/** What a co-op guest needs of a ground enemy besides its position (Enemy.getNetState). */
+export interface EnemyNet {
+  vx: number;
+  aim?: number;
+  tension?: number;
+  ready?: number;
+  pinned?: number;
+  af?: AfflictionNet;
+  th?: ThrowNet;
+  /** The priest's mana. */
+  mana?: number;
+}
+
 /** Pushed enemies stay this far inside the world and out of the player's keep. */
 const PUSH_MARGIN = 30;
 
@@ -56,6 +70,8 @@ const BODY_ORIGIN_Y = -25;
 /** drawStickman's hip and shoulder (sprite space) for walking, standing and attacking. */
 /** Health bar size and placement in container space (the container is drawn at 2/3 scale). */
 const HEALTH_BAR = { width: 30, height: 4, standingY: -68, aboveHead: 14 };
+/** The priest's mana bar, just under its health bar. */
+const MANA_BAR = { height: 2.5, gap: 1.5, color: 0x5b8cff };
 /** Explosive kills throw the pieces with a random force in this range (the lab uses 1). */
 const GIB_FORCE_MIN = 1;
 const GIB_FORCE_MAX = 1.7;
@@ -91,6 +107,10 @@ export default class Enemy extends Container {
   /** Walk/run cycle phase: advances with the distance covered, so the feet stay planted at any speed. */
   private stridePhase = 0;
   private attackTimerMs = 0;
+  /** The swing under way (a black knight picks one of its three each time). */
+  private swingStyle: AttackStyle;
+  /** Time left of a spell being cast (the priest's heal). */
+  private castTimerMs = 0;
   /** Clock of the pinned struggle (stickmanPinned), from when the pin went in. */
   private struggleMs = 0;
   private velocity = { x: 0, y: 0 };
@@ -118,8 +138,11 @@ export default class Enemy extends Container {
   public target: EnemyTarget;
   /** Fire, frost and vortex (fire, frost and vortex arrows): drawn over the body. */
   public readonly afflictions: AfflictionLayer;
-  /** Co-op host: hears about every hit and swing, to replay them on the guest's screen. */
-  public netHooks?: { damaged(amount: number, hit: HitInfo): void; attacked(): void };
+  /** The priest's mana (healers only): refills fast, spent on heals (EnemyAI); drawn under the health bar. */
+  public readonly mana?: ManaPool;
+  private readonly manaBar?: Graphics;
+  /** Co-op host: hears about every hit, swing, heal and spell, to replay them on the guest's screen. */
+  public netHooks?: { damaged(amount: number, hit: HitInfo): void; attacked(style: AttackStyle): void; healed?(amount: number): void; cast?(): void };
 
   public constructor(
     x: number,
@@ -130,12 +153,18 @@ export default class Enemy extends Container {
   ) {
     super();
     this.look = ENEMY_LOOKS[kind];
+    this.swingStyle = this.look.attackStyle;
     this.body = new Graphics();
     this.drawPlaceholder();
     this.afflictions = new AfflictionLayer(kind);
     this.addChild(this.body, this.afflictions.art);
     this.healthBar = new Graphics();
     this.addChild(this.healthBar);
+    if (enemyArchetype(kind).heals) {
+      this.mana = new ManaPool();
+      this.manaBar = new Graphics();
+      this.healthBar.addChild(this.manaBar);
+    }
     this.health = Math.max(0, health);
     this.maxHealth = Math.max(1, health);
     this.speed = Math.max(0, speed);
@@ -147,6 +176,7 @@ export default class Enemy extends Container {
     this.zIndex = 1;
     this.velocity.x = -this.speed;
     this.drawHealthBar();
+    this.drawManaBar();
   }
 
   /** Ground enemies walk; only dragons fly (lightning strikes the ground, not the sky). */
@@ -311,6 +341,7 @@ export default class Enemy extends Container {
     };
     this.velocity = { x: 0, y: 0 };
     this.attackTimerMs = 0;
+    this.castTimerMs = 0;
     this.hitStaggerMs = 0;
     this.pendingImpact = undefined;
   }
@@ -344,13 +375,54 @@ export default class Enemy extends Container {
   }
 
   /**
-   * Swings the club; `onImpact` runs when the club lands (mid-swing), unless the enemy is knocked down,
-   * killed or starts cheering first.
+   * Swings the club (`style`, or one of its swings at random); `onImpact` runs when the club lands (mid-swing),
+   * unless the enemy is knocked down, killed or starts cheering first.
    */
-  public playAttackAnimation(onImpact?: () => void): void {
+  public playAttackAnimation(onImpact?: () => void, style?: AttackStyle): void {
+    const { attackStyles } = this.look;
+    this.swingStyle = style ?? attackStyles[Math.floor(Math.random() * attackStyles.length)];
     this.attackTimerMs = ATTACK_ANIMATION_DURATION_MS;
     this.pendingImpact = onImpact;
-    this.netHooks?.attacked();
+    this.netHooks?.attacked(this.swingStyle);
+  }
+
+  /** Healed by a priest: gets `amount` health back (up to its full health). */
+  public heal(amount: number): void {
+    if (!this.isAlive() || amount <= 0) {
+      return;
+    }
+    this.netHooks?.healed?.(amount);
+    this.health = Math.min(this.maxHealth, this.health + amount);
+    this.drawHealthBar();
+  }
+
+  /** Healed this much short of its full health. */
+  public get missingHealth(): number {
+    return this.maxHealth - this.health;
+  }
+
+  /** The priest raises its scepter and casts (planted meanwhile); the heals themselves come from EnemyAI. */
+  public castHeal(): void {
+    this.castTimerMs = PRIEST_CAST_MS;
+    this.velocity = { x: 0, y: 0 };
+    this.netHooks?.cast?.();
+  }
+
+  public get isCasting(): boolean {
+    return this.castTimerMs > 0;
+  }
+
+  /** Mid-swing (its club on the way). */
+  public get isAttacking(): boolean {
+    return this.attackTimerMs > 0;
+  }
+
+  /** The priest's mana refills (host); the bar follows it. */
+  public updateMana(deltaMs: number): void {
+    if (this.mana && this.isAlive()) {
+      this.mana.update(deltaMs);
+      this.drawManaBar();
+    }
   }
 
   /** Pins the enemy to the ground for `durationMs` (a fresh pin restarts the time); not while it's up in the air. */
@@ -374,6 +446,7 @@ export default class Enemy extends Container {
     this.afflictions.holdInVortex(lift, lean, levitating);
     this.velocity = { x: 0, y: 0 };
     this.attackTimerMs = 0;
+    this.castTimerMs = 0;
     this.pendingImpact = undefined;
   }
 
@@ -390,6 +463,7 @@ export default class Enemy extends Container {
     this.motion.throw(this.x, this.y, vx, vy, spin, rotation);
     this.velocity = { x: 0, y: 0 };
     this.attackTimerMs = 0;
+    this.castTimerMs = 0;
     this.hitStaggerMs = 0;
     this.pendingImpact = undefined;
     // Faces against the way it flies, so it falls backwards along it.
@@ -410,22 +484,27 @@ export default class Enemy extends Container {
   }
 
   /** Co-op: what the guest needs besides the position (walking speed; an archer's bow; time left pinned). */
-  public getNetState(): { vx: number; aim?: number; tension?: number; ready?: number; pinned?: number; af?: AfflictionNet; th?: ThrowNet } {
+  public getNetState(): EnemyNet {
     const pinned = this.motion.isPinned ? this.motion.pinnedMs : undefined;
     const af = this.afflictions.getNetState();
     const th = this.motion.netThrow;
+    const mana = this.mana ? Math.round(this.mana.mana) : undefined;
     return this.isArcher
       ? { vx: this.velocity.x, ...this.bow.net, pinned, af, th }
-      : { vx: this.velocity.x, pinned, af, th };
+      : { vx: this.velocity.x, pinned, af, th, mana };
   }
 
   /**
    * Co-op guest: puts the enemy where the host has it (no AI runs on the guest); walking speed drives the
    * stride and facing, an archer's bow follows the host's aim and draw.
    */
-  public applyNetState(state: { x: number; y: number; vx: number; aim?: number; tension?: number; ready?: number; pinned?: number; af?: AfflictionNet; th?: ThrowNet }): void {
+  public applyNetState(state: EnemyNet & { x: number; y: number }): void {
     if (!this.isAlive()) {
       return;
+    }
+    if (this.mana && state.mana !== undefined) {
+      this.mana.set(state.mana);
+      this.drawManaBar();
     }
     if (state.th && !this.motion.isThrown && !this.fall) {
       this.throwInAir(state.th.vx, 0, state.th.spin);
@@ -573,16 +652,23 @@ export default class Enemy extends Container {
       return;
     }
 
+    if (this.castTimerMs > 0) {
+      this.castTimerMs = Math.max(0, this.castTimerMs - deltaMs);
+      this.body.rotation = 0;
+      this.drawBody({ mode: 'cast', progress: 1 - this.castTimerMs / PRIEST_CAST_MS });
+      return;
+    }
+
     if (this.attackTimerMs > 0) {
       this.attackTimerMs = Math.max(0, this.attackTimerMs - deltaMs);
       const attackProgress = 1 - this.attackTimerMs / ATTACK_ANIMATION_DURATION_MS;
-      if (this.pendingImpact && attackProgress >= attackImpactProgress(this.look.attackStyle)) {
+      if (this.pendingImpact && attackProgress >= attackImpactProgress(this.swingStyle)) {
         const impact = this.pendingImpact;
         this.pendingImpact = undefined;
         impact();
       }
       this.body.rotation = 0;
-      this.drawBody(this.isArcher ? this.archerState() : { mode: 'attack', progress: attackProgress, style: this.look.attackStyle });
+      this.drawBody(this.isArcher ? this.archerState() : { mode: 'attack', progress: attackProgress, style: this.swingStyle });
       return;
     }
 
@@ -665,8 +751,8 @@ export default class Enemy extends Container {
       this.y = groundAt(this.x);
       return;
     }
-    // Planted while swinging (the club is moving, the feet aren't).
-    if (this.attackTimerMs > 0) {
+    // Planted while swinging (the club is moving, the feet aren't) or casting.
+    if (this.attackTimerMs > 0 || this.castTimerMs > 0) {
       this.velocity.x = 0;
       this.velocity.y = 0;
       this.y = groundAt(this.x);
@@ -706,7 +792,7 @@ export default class Enemy extends Container {
 
   /** Ready to start a swing (not down, not mid-swing, pause over); starting one restarts the pause. */
   public canAttack(): boolean {
-    if (this.fall || this.motion.isThrown || this.attackTimerMs > 0 || this.attackCooldown > 0 || this.afflictions.isFrozen || this.afflictions.inVortex) {
+    if (this.fall || this.motion.isThrown || this.attackTimerMs > 0 || this.castTimerMs > 0 || this.attackCooldown > 0 || this.afflictions.isFrozen || this.afflictions.inVortex) {
       return false;
     }
     this.attackCooldown = ENEMY_ATTACK_INTERVAL_MS;
@@ -747,6 +833,7 @@ export default class Enemy extends Container {
     this.pendingImpact = undefined;
     this.fall = startFallState(kind, fromX, this.x, getUpAfterMs, push);
     this.attackTimerMs = 0;
+    this.castTimerMs = 0;
     this.hitStaggerMs = 0;
     this.body.scale.set(BODY_SCALE.x * this.fall.facing, BODY_SCALE.y);
     this.drawFall();
@@ -842,6 +929,18 @@ export default class Enemy extends Container {
   /** Bar above the head: dark track, fill from green (full) through yellow to red (low). */
   private drawHealthBar(): void {
     drawHealthBar(this.healthBar, this.getHealthRatio(), HEALTH_BAR.width, HEALTH_BAR.height);
+  }
+
+  /** The priest's mana under the health bar. */
+  private drawManaBar(): void {
+    if (!this.manaBar || !this.mana) {
+      return;
+    }
+    const { width } = HEALTH_BAR;
+    const top = HEALTH_BAR.height / 2 + 1 + MANA_BAR.gap;
+    this.manaBar.clear()
+      .rect(-width / 2 - 1, top, width + 2, MANA_BAR.height + 2).fill({ color: 0x1b1a20, alpha: 0.85 })
+      .rect(-width / 2, top + 1, width * this.mana.ratio, MANA_BAR.height).fill({ color: MANA_BAR.color });
   }
 
   /** Keeps the bar above the head, also while knocked down and getting up. */

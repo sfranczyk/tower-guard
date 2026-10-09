@@ -8,10 +8,12 @@ import {
   ENEMY_ARROW_POWER,
   FIRE_DRAGON_RANGE,
   GROUND_Y,
+  ENEMY_TOWER_X,
+  PRIEST_POST_SLACK,
   SHOW_HITBOX_DEBUG,
 } from '../config';
 import { enemyDamage, rollDamage } from '../data/enemies';
-import { enemyArchetype } from '../data/enemyKinds';
+import { enemyArchetype, enemyTraits } from '../data/enemyKinds';
 import { bowSpeed } from '../data/projectiles';
 import Arrow from '../objects/Arrow';
 import type Bowman from '../objects/Bowman';
@@ -22,6 +24,7 @@ import type Tower from '../objects/Tower';
 import type { EnemyType, Vec2 } from '../types';
 import { solveLaunchAngle } from './ballistics';
 import { flamesTouch } from './burning';
+import { planHeals, priestPost } from './healing';
 import type { BowmanHit } from './bowmanDeath';
 import { BOWMAN_CHEST, TOWER_HALF_WIDTH, bowmanBox, foeHitBoxes, type Foe } from './combatGeometry';
 import type { EffectsSystem } from './EffectsSystem';
@@ -39,6 +42,8 @@ const ARCHER_AIM_REFRESH_MS = 250;
 export interface EnemyAIWorld {
   readonly bowmen: readonly Bowman[];
   readonly playerTower: Tower;
+  /** Everyone on the field (a priest heals the others). */
+  readonly enemies: readonly Foe[];
   readonly effects: EffectsSystem;
   readonly debug: Graphics;
   /** The level's wind (px/s² on a normal arrow); archers aim with it. */
@@ -55,7 +60,8 @@ export interface EnemyAIEvents {
 /**
  * What every living enemy does each frame (CombatSystem calls `update`): walk at the nearest bowman out in the open
  * (or the keep), swing when in reach, a kamikaze blows itself up there; archers stop in range and shoot with the real
- * ballistics; dragons fly to their hover point, the archer's rider shoots and the fire dragon breathes fire.
+ * ballistics; dragons fly to their hover point, the archer's rider shoots and the fire dragon breathes fire; a priest
+ * follows the soldiers and heals the wounded around it.
  */
 export class EnemyAI {
   /** Cached aim per enemy archer. */
@@ -81,6 +87,11 @@ export class EnemyAI {
     }
     if (enemy.isArcher) {
       this.updateArcher(enemy, deltaMs);
+      this.drawDebugHitboxes(enemy);
+      return;
+    }
+    if (enemyArchetype(enemy.kind).heals) {
+      this.updatePriest(enemy, deltaMs);
       this.drawDebugHitboxes(enemy);
       return;
     }
@@ -141,6 +152,52 @@ export class EnemyAI {
     }
 
     enemy.clearHitTint();
+  }
+
+  /**
+   * Priest: never attacks. It walks behind the soldier nearest to it (away from the bowman, or the keep while everyone
+   * hides), falls back behind the next ones when those die and, with no soldier left, retreats to the enemy keep
+   * (systems/healing.ts); meanwhile it heals.
+   */
+  private updatePriest(priest: Enemy, deltaMs: number): void {
+    priest.updateMana(deltaMs);
+    const bowman = nearestExposedBowman(this.world.bowmen, priest.x);
+    priest.target = bowman ? 'bowman' : 'tower';
+    const soldiers = this.world.enemies
+      .filter((other) => other !== priest && !(other instanceof DragonEnemy) && other.isAlive() && !enemyArchetype(other.kind).heals)
+      .map((other) => other.x);
+    const post = priestPost(priest.x, soldiers, bowman ? bowman.x : this.world.playerTower.x, ENEMY_TOWER_X);
+    priest.update(deltaMs, { x: post, y: groundAt(post) }, PRIEST_POST_SLACK);
+    priest.updateAnimation(deltaMs, priest.isMoving());
+    if (!priest.isDown && !priest.afflictions.isFrozen && !priest.afflictions.inVortex) {
+      this.castHeal(priest);
+    }
+    priest.clearHitTint();
+  }
+
+  /**
+   * Priest: when the pause is over and it has the mana, raises its scepter and heals the wounded around it (nearest
+   * first, never itself or the undead; systems/healing.ts): red crosses rise from each one.
+   */
+  private castHeal(priest: Enemy): void {
+    const { mana } = priest;
+    if (!mana?.canCast || priest.isCasting || priest.isAttacking) {
+      return;
+    }
+    const wounded = this.world.enemies.filter((other): other is Enemy =>
+      other !== priest && !(other instanceof DragonEnemy) && other.isAlive() && other.missingHealth > 0 && enemyTraits(other.kind).healable);
+    const chest = (enemy: Enemy): Vec2 => ({ x: enemy.x, y: enemy.y - 25 * enemy.size });
+    const heals = planHeals(chest(priest), wounded.map((enemy) => ({ at: chest(enemy), missing: enemy.missingHealth })), mana.mana);
+    if (heals.length === 0) {
+      return;
+    }
+    priest.castHeal();
+    mana.spend(heals.reduce((sum, { amount }) => sum + amount, 0));
+    this.world.effects.healPulse({ x: priest.x, y: priest.y });
+    heals.forEach(({ index, amount }) => {
+      wounded[index].heal(amount);
+      this.world.effects.healCrosses(chest(wounded[index]));
+    });
   }
 
   private drawDebugHitboxes(enemy: Foe): void {

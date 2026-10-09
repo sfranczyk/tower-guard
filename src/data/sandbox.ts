@@ -41,11 +41,11 @@ export interface SandboxSettings {
 
 /** Default levels get a little harder each time and alternate battlegrounds. */
 const DEFAULT_LEVEL_ENEMIES: readonly LevelEnemyCounts[] = [
-  { basic: 4, fast: 0, tank: 0, archer: 1, dragon: 0, fireDragon: 0, kamikaze: 0, zombie: 0 },
-  { basic: 4, fast: 2, tank: 0, archer: 1, dragon: 0, fireDragon: 0, kamikaze: 0, zombie: 1 },
-  { basic: 4, fast: 3, tank: 1, archer: 2, dragon: 0, fireDragon: 0, kamikaze: 1, zombie: 2 },
-  { basic: 5, fast: 3, tank: 2, archer: 2, dragon: 1, fireDragon: 0, kamikaze: 2, zombie: 2 },
-  { basic: 6, fast: 4, tank: 3, archer: 3, dragon: 1, fireDragon: 1, kamikaze: 2, zombie: 3 },
+  { basic: 4, fast: 0, tank: 0, archer: 1, dragon: 0, fireDragon: 0, kamikaze: 0, zombie: 0, knight: 0, hammerKnight: 0, priest: 0 },
+  { basic: 4, fast: 2, tank: 0, archer: 1, dragon: 0, fireDragon: 0, kamikaze: 0, zombie: 1, knight: 0, hammerKnight: 0, priest: 0 },
+  { basic: 4, fast: 3, tank: 1, archer: 2, dragon: 0, fireDragon: 0, kamikaze: 1, zombie: 2, knight: 1, hammerKnight: 0, priest: 0 },
+  { basic: 5, fast: 3, tank: 2, archer: 2, dragon: 1, fireDragon: 0, kamikaze: 2, zombie: 2, knight: 2, hammerKnight: 0, priest: 1 },
+  { basic: 6, fast: 4, tank: 3, archer: 3, dragon: 1, fireDragon: 1, kamikaze: 2, zombie: 3, knight: 2, hammerKnight: 1, priest: 1 },
 ];
 
 export const createDefaultSandbox = (): SandboxSettings => ({

@@ -69,7 +69,10 @@ export const knockbackPush = (distance: number): number => KNOCKBACK_PUSH_MAX * 
 export interface EnemyLook {
   /** Body size (1 = a normal stickman). */
   size: number;
+  /** Its usual swing (the standing grip). */
   attackStyle: AttackStyle;
+  /** The swings it picks from, one per attack (the black knight has three). */
+  attackStyles: readonly AttackStyle[];
   runs: boolean;
   /**
    * How far (px) the club reaches when it lands: a bowman closer than this takes the hit, so to dodge he
@@ -83,5 +86,5 @@ export interface EnemyLook {
 
 export const ENEMY_LOOKS: Readonly<Record<EnemyType, EnemyLook>> = Object.fromEntries(ENEMY_TYPES.map((type) => {
   const { attackStyle, runs } = enemyArchetype(type);
-  return [type, { ...ENEMY_KINDS[type].build, attackStyle, runs }];
+  return [type, { ...ENEMY_KINDS[type].build, attackStyle, attackStyles: ENEMY_KINDS[type].attackStyles ?? [attackStyle], runs }];
 })) as Record<EnemyType, EnemyLook>;

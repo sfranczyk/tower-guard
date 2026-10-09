@@ -12,10 +12,11 @@ import { getPinnedPose } from '../stickmanPinned';
 import type { JointPose } from '../stickmanPose';
 import { RUN_STRIDE_PER_RADIAN } from '../runCycle';
 import type { AttackStyle } from '../attackSwing';
-import { archerBody, attackBody, runBody, walkBody, withClub, type BodyPose } from './bodyPoses';
+import { archerBody, attackBody, castBody, runBody, walkBody, withClub, type BodyPose } from './bodyPoses';
 import { banditArcherLook, goblinLook, raiderLook, sapperLook } from './enemySkins';
 import { dragonArcherLook, dragonKnightLook, drawDragonWithRider, ogreLook, zombieLook } from './heavySkins';
 import { ENEMY_DESIGNS } from './ideas';
+import { blackKnightLook, darkPriestLook, hammerKnightLook } from './knightSkins';
 import { rangerLook, wardenLook } from './playerSkins';
 import { drawHumanoid, type HumanoidLook } from './skinKit';
 import { drawEnemyGibs } from '../enemyBody';
@@ -140,6 +141,12 @@ const BRUTE_SPEED = (ENEMY_SPEED * 0.6) / 1000;
 const ARCHER_SPEED = (ENEMY_SPEED * 0.9) / 1000;
 const KAMIKAZE_SPEED = (ENEMY_SPEED * 2) / 1000;
 const ZOMBIE_SPEED = (ENEMY_SPEED * 0.45) / 1000;
+const KNIGHT_SPEED = (ENEMY_SPEED * 0.85) / 1000;
+const HAMMER_KNIGHT_SPEED = (ENEMY_SPEED * 0.65) / 1000;
+const PRIEST_SPEED = (ENEMY_SPEED * 0.8) / 1000;
+/** The priest's heal: the scepter raised, held, lowered, then a pause. */
+const CAST_LOOP_MS = 1500;
+const CAST_MS = 900;
 /** The bowman's walking speed, px/ms. */
 const PLAYER_SPEED = 0.12;
 /** The goblin is three quarters of the player's height. */
@@ -239,6 +246,57 @@ const ENEMIES: DesignEntry[] = [
       pinned(zombieLook),
       blownApart('zombie'),
       now((t) => ({ phase: walkPhase(t, ZOMBIE_SPEED), zombie: true, bodyColors: ZOMBIE_BODY }), ZOMBIE_SPEED),
+    ],
+  },
+  {
+    id: 'knight',
+    name: 'Black knight',
+    tagline: 'Armoured: aim for the visor',
+    description: 'Black plate from helm to sabatons: a closed great helm with two embers glowing through the visor slit and a dark red plume, a spiked pauldron, tassets over the thighs and a torn red cape. A longsword with a crossguard where the fighter holds his club. Body hits glance off the plate (only a third gets through); headshots and piercing arrows go through.',
+    views: [
+      walking(blackKnightLook, KNIGHT_SPEED, 'overhead'),
+      swinging('Sword cut', blackKnightLook, 'overhead'),
+      swinging('Rising cut', blackKnightLook, 'swordRise'),
+      swinging('Thrust', blackKnightLook, 'thrust'),
+      falling('Headshot', blackKnightLook, 'deathStiff'),
+      knockdown(blackKnightLook),
+      cheering(blackKnightLook, 'cheerFist', true),
+      pinned(blackKnightLook),
+      blownApart('knight'),
+    ],
+  },
+  {
+    id: 'hammer-knight',
+    name: 'Hammer knight',
+    tagline: 'Armoured, a head taller',
+    description: 'The black knight\'s bigger brother (drawn at normal size here; the game draws him 1.1 times as tall): heavier plate with rivets, broad spiked pauldrons, a horned helm and a long cape, and a war hammer with a spiked iron head swung in both hands like the brute\'s log.',
+    views: [
+      walking(hammerKnightLook, HAMMER_KNIGHT_SPEED, 'twoHanded'),
+      swinging('Hammer blow', hammerKnightLook, 'twoHanded'),
+      knockdown(hammerKnightLook),
+      falling('Death', hammerKnightLook, 'deathCrumple'),
+      cheering(hammerKnightLook, 'cheerFist', true),
+      blownApart('hammerKnight'),
+    ],
+  },
+  {
+    id: 'priest',
+    name: 'Dark priest',
+    tagline: 'Heals the others: kill it first',
+    description: 'A deep hood over a gaunt pale face with red eyes, a black-purple robe to the shins with a crimson stripe and sash, a bone pendant, and a scepter topped with a little skull and a red orb. It never attacks: it follows behind the soldiers and raises the scepter to heal them (the orb flares); the undead are beyond its magic.',
+    views: [
+      {
+        label: 'Heal',
+        draw: (g, t) => {
+          const progress = Math.min(1, (t % CAST_LOOP_MS) / CAST_MS);
+          g.clear();
+          drawHumanoid(g, castBody(progress), darkPriestLook(t, Math.sin(Math.PI * progress)));
+        },
+      },
+      walking(darkPriestLook, PRIEST_SPEED, 'overhead'),
+      falling('Death', darkPriestLook, 'death'),
+      cheering(darkPriestLook, 'cheerWave', true),
+      blownApart('priest'),
     ],
   },
   {

@@ -7,13 +7,15 @@
  * - twoHanded: a longer club gripped with both hands, a bigger wind-up and a heavier lunge;
  * - uppercut: a short club swung from below: crouched wind-up low behind, then up and forward while
  *   rising;
+ * - swordRise: a sword cut from below: blade lowered behind the hip, then swept up and forward through the bowman;
+ * - thrust: a sword drawn back by the chest, point forward, then driven straight out in a long lunge;
  * - grab: the zombie's unarmed attack, from its arms-out stance (ZOMBIE_REST): lunges reaching further,
  *   then yanks both hands back to its chest as if dragging the bowman in.
  *
  * Angles use drawStickman's arm convention (0 = hanging down, π/2 = forward, π = straight up,
  * above π = behind the head); `torsoLean` tilts the shoulder forward (+) or back (−) about the hip.
  */
-export type AttackStyle = 'overhead' | 'twoHanded' | 'uppercut' | 'grab';
+export type AttackStyle = 'overhead' | 'twoHanded' | 'uppercut' | 'swordRise' | 'thrust' | 'grab';
 
 export interface AttackPose {
   /** Front (club) upper arm angle. */
@@ -47,6 +49,9 @@ export const CLUBS: Readonly<Record<AttackStyle, ClubShape>> = {
   overhead: { reach: 28, butt: 8, width: 5, twoHanded: false },
   twoHanded: { reach: 42, butt: 14, width: 5.5, twoHanded: true },
   uppercut: { reach: 17, butt: 5, width: 5, twoHanded: false },
+  // The black knight's sword, whichever way it swings.
+  swordRise: { reach: 28, butt: 8, width: 5, twoHanded: false },
+  thrust: { reach: 28, butt: 8, width: 5, twoHanded: false },
   // No club: the zombie grabs with its hands.
   grab: { reach: 0, butt: 0, width: 0, twoHanded: false },
 };
@@ -82,6 +87,24 @@ const STYLE_KEYS: Readonly<Record<AttackStyle, readonly Key[]>> = {
     // Swing up and forward, rising and leaning back; the club ends pointing up and forward.
     { t: 0.48, armAngle: 1.95, forearmBend: 0.1, clubTilt: 1.05, rearArmAngle: -0.7, torsoLean: -0.18, dip: -2, step: 7 },
     { t: 0.58, armAngle: 2.1, forearmBend: 0.1, clubTilt: 0.95, rearArmAngle: -0.55, torsoLean: -0.12, dip: -1, step: 7 },
+    { t: 1, ...ATTACK_REST },
+  ],
+  swordRise: [
+    { t: 0, ...ATTACK_REST },
+    // Blade lowered behind the hip, crouching into it.
+    { t: 0.32, armAngle: -0.85, forearmBend: 0.3, clubTilt: 0.35, rearArmAngle: 0.7, torsoLean: 0.18, dip: 3.5, step: -1 },
+    // Swept up and forward through the target, rising onto the front foot.
+    { t: 0.5, armAngle: 2.25, forearmBend: 0.15, clubTilt: 1.2, rearArmAngle: -0.6, torsoLean: -0.12, dip: -1.5, step: 9 },
+    { t: 0.62, armAngle: 2.45, forearmBend: 0.12, clubTilt: 1.1, rearArmAngle: -0.5, torsoLean: -0.1, dip: -1, step: 9 },
+    { t: 1, ...ATTACK_REST },
+  ],
+  thrust: [
+    { t: 0, ...ATTACK_REST },
+    // Drawn back by the chest, the point forward (the wrist keeps the blade level: clubTilt = forearm angle).
+    { t: 0.36, armAngle: -0.35, forearmBend: 1.95, clubTilt: 1.6, rearArmAngle: 0.9, torsoLean: -0.1, dip: 1, step: -3 },
+    // Driven straight out in a long lunge.
+    { t: 0.5, armAngle: 1.55, forearmBend: 0.05, clubTilt: 1.6, rearArmAngle: -0.7, torsoLean: 0.3, dip: 3.5, step: 13 },
+    { t: 0.64, armAngle: 1.5, forearmBend: 0.08, clubTilt: 1.58, rearArmAngle: -0.6, torsoLean: 0.26, dip: 3, step: 12 },
     { t: 1, ...ATTACK_REST },
   ],
   grab: [

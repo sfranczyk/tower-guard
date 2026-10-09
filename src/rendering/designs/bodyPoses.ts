@@ -166,6 +166,30 @@ export const attackBody = (progress: number, style: AttackStyle): BodyPose => {
   };
 };
 
+/**
+ * A spell cast at progress 0..1 (the dark priest healing): the scepter (an overhead club) comes up high, held there
+ * with the free hand reaching out, then lowered. Starts and ends in the standing pose with the club.
+ */
+export const castBody = (progress: number): BodyPose => {
+  const p = Math.max(0, Math.min(1, progress));
+  const raise = smooth(Math.min(1, p / 0.3)) * (1 - smooth(Math.max(0, (p - 0.72) / 0.28)));
+  const mix = (from: number, to: number): number => from + (to - from) * raise;
+  const hip = { x: 0, y: BODY_FOOT_Y - 55 };
+  const body = torso(hip, mix(0, -0.12));
+  const armAngle = mix(ATTACK_REST.armAngle, 2.75);
+  const bend = mix(ATTACK_REST.forearmBend, 0.08);
+  const front = arm(body.shoulder, armAngle, bend);
+  // The wrist turns the scepter from pointing forward to straight up.
+  const club = clubFrom(front.hand, armAngle + bend, mix(0, 1.25), 'overhead');
+  const rear = arm(body.shoulder, mix(ATTACK_REST.rearArmAngle, 1.35), mix(0.2, 0.35));
+  return {
+    ...body,
+    ...legs(hip, { x: STANCE_HALF_WIDTH, y: BODY_FOOT_Y }, { x: -STANCE_HALF_WIDTH, y: BODY_FOOT_Y }),
+    frontElbow: front.elbow, frontHand: front.hand, rearElbow: rear.elbow, rearHand: rear.hand,
+    club,
+  };
+};
+
 /** Standing still, arms hanging (the end of an attack, a pause in the walk). */
 export const standBody = (club?: AttackStyle): BodyPose => (club ? attackBody(0, club) : { ...attackBody(0, 'overhead'), club: undefined });
 

@@ -67,6 +67,29 @@ export const FIRE_DRAGON_BLAST_POWER = 3;
 export const KAMIKAZE_BLAST_POWER = 2;
 export const KAMIKAZE_GIB_FORCE = 1.8;
 /**
+ * Knights' black plate: the share of an arrow's body hit that gets through (headshots through the visor, piercing
+ * arrows and blasts deal their full damage).
+ */
+export const KNIGHT_ARMOR = 0.35;
+/**
+ * The dark priest (systems/healing.ts) never attacks: it walks PRIEST_FOLLOW_GAP behind the nearest soldier (on the side
+ * away from its target, never nearer the target than PRIEST_STANDOFF, within PRIEST_POST_SLACK), falls back behind the
+ * next ones when those around it die, and with no soldier left retreats to the enemy keep. Every PRIEST_HEAL_INTERVAL_MS it
+ * heals each wounded enemy within PRIEST_HEAL_RADIUS by up to PRIEST_HEAL_PER_TARGET (nearest first, never itself, not the undead),
+ * one mana a point. Mana refills fast (PRIEST_MANA_REGEN_PER_S up to PRIEST_MANA_MAX), so a living priest keeps a
+ * crowd standing; it casts only with at least PRIEST_MIN_CAST_MANA. The cast (scepter raised) takes PRIEST_CAST_MS.
+ */
+export const PRIEST_STANDOFF = 160;
+export const PRIEST_FOLLOW_GAP = 55;
+export const PRIEST_POST_SLACK = 15;
+export const PRIEST_HEAL_RADIUS = 170;
+export const PRIEST_HEAL_INTERVAL_MS = 900;
+export const PRIEST_HEAL_PER_TARGET = 10;
+export const PRIEST_MANA_MAX = 40;
+export const PRIEST_MANA_REGEN_PER_S = 14;
+export const PRIEST_MIN_CAST_MANA = 4;
+export const PRIEST_CAST_MS = 650;
+/**
  * Explosion damage by distance from the blast: `centre` at the middle (and for the enemy an explosive arrow hits
  * directly), falling off linearly to `edge` at EXPLOSION_RADIUS. The arrow itself does no damage.
  */
@@ -126,14 +149,18 @@ export const FROST_FREEZE_BRUTE_MS = 5000;
 /**
  * Vortex arrow (systems/vortex.ts): where it lands a vortex opens for VORTEX_MS. It pulls ground enemies within
  * VORTEX_RADIUS to its centre (up to VORTEX_PULL_SPEED px/s), lifts them up the funnel (VORTEX_RISE_SPEED px/s)
- * and at VORTEX_TOP throws them up and out (VORTEX_THROW, px/s). Brutes are too heavy to be caught: inside its
- * reach they only walk at VORTEX_HEAVY_WALK of their pace. At
+ * and at VORTEX_TOP throws them up and out (VORTEX_THROW, px/s). How it takes each one depends on its mass (race
+ * traits; a fighter is VORTEX_MASS.reference): pulled in and lifted at reference/mass the pace (at most
+ * VORTEX_MASS.lightest× for the lightest), thrown √(reference/mass) as hard; above VORTEX_MASS.fullLift it no longer reaches the top (its ceiling drops to
+ * nothing at VORTEX_MASS.anchor) and circles there until the vortex lets go; from VORTEX_MASS.anchor (brutes) it isn't
+ * caught at all: inside its reach it only walks at VORTEX_HEAVY_WALK of its pace. At
  * the end it dies away and flings out the ones it hasn't lifted yet (VORTEX_FLING). Thrown enemies fall under
  * THROW_GRAVITY and take FALL_DAMAGE on landing: perSpeed × how much faster than safeSpeed they hit the ground.
  * The arrow itself does no damage: an enemy it hits glows and levitates straight up (towards VORTEX_LEVITATE_HEIGHT
  * at VORTEX_LEVITATE_SPEED px/s, rising above the funnel) while the vortex lasts, then drops, taking VORTEX_LEVITATE_FALL × the fall damage.
- * Each further vortex arrow that hits it lifts it VORTEX_LEVITATE_BOOST px higher (at most VORTEX_LEVITATE_MAX); a
- * brute only rises VORTEX_LEVITATE_HEAVY as high.
+ * Each further vortex arrow that hits it lifts it VORTEX_LEVITATE_BOOST px higher (at most VORTEX_LEVITATE_MAX). Up to
+ * VORTEX_MASS.levitateFull it levitates as a man does; heavier ones rise ever slower and lower, down to
+ * VORTEX_LEVITATE_HEAVY as high at VORTEX_MASS.levitateHeavy (a brute) and beyond.
  */
 export const VORTEX_MS = 4200;
 export const VORTEX_RADIUS = 150;
@@ -153,6 +180,9 @@ export const VORTEX_LEVITATE_FALL = 0.5;
 export const VORTEX_LEVITATE_BOOST = 110;
 export const VORTEX_LEVITATE_MAX = 400;
 export const VORTEX_LEVITATE_HEAVY = 0.15;
+export const VORTEX_MASS = { reference: 1.2, lightest: 1.6, fullLift: 2.1, anchor: 3.6, levitateFull: 1.4, levitateHeavy: 4.2 } as const;
+/** The bowman's mass for a vortex (friendly fire): a man with his bow, quiver and armour. */
+export const BOWMAN_MASS = 1.3;
 /**
  * A vortex arrow hitting a dragon: a ring of wind swirls round it for DRAGON_TURBULENCE_MS and it's buffeted
  * (DRAGON_BUFFET: px sideways and up and down, tilt in radians). Meanwhile the fire dragon can't breathe fire and

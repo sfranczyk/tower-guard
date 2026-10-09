@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Vec2 } from '../../types';
-import { BODY_FOOT_Y, archerBody, attackBody, bowmanBody, runBody, walkBody, type BodyPose } from './bodyPoses';
+import { BODY_FOOT_Y, archerBody, attackBody, bowmanBody, castBody, runBody, standBody, walkBody, type BodyPose } from './bodyPoses';
 
 const distance = (a: Vec2, b: Vec2): number => Math.hypot(a.x - b.x, a.y - b.y);
 
@@ -43,7 +43,7 @@ describe('body poses for new looks', () => {
     progressSteps.forEach((p) => expectStickmanProportions(runBody(p, 'uppercut')));
   });
 
-  it.each(['overhead', 'twoHanded', 'uppercut', 'grab'] as const)('%s: swings with the club in the fist and the feet planted', (style) => {
+  it.each(['overhead', 'twoHanded', 'uppercut', 'swordRise', 'thrust', 'grab'] as const)('%s: swings with the club in the fist and the feet planted', (style) => {
     for (const p of progressSteps) {
       const pose = attackBody(p, style);
       expectStickmanProportions(pose, style !== 'twoHanded');
@@ -54,6 +54,23 @@ describe('body poses for new looks', () => {
         expect(distance(pose.club.butt, pose.frontHand) + distance(pose.frontHand, pose.club.tip)).toBeCloseTo(shaft, 6);
       }
     }
+  });
+
+  it('casts with the scepter raised high, starting and ending in the standing pose', () => {
+    for (const p of progressSteps) {
+      const pose = castBody(p);
+      expectStickmanProportions(pose);
+      expect(pose.frontFoot.y).toBeCloseTo(BODY_FOOT_Y);
+      expect(pose.rearFoot.y).toBeCloseTo(BODY_FOOT_Y);
+    }
+    const stand = standBody('overhead');
+    for (const end of [castBody(0), castBody(1)]) {
+      expect(distance(end.frontHand, stand.frontHand)).toBeLessThan(1e-6);
+      expect(distance(end.club!.tip, stand.club!.tip)).toBeLessThan(1e-6);
+    }
+    // Held up: the scepter's tip is above the head.
+    const raised = castBody(0.5);
+    expect(raised.club!.tip.y).toBeLessThan(raised.head.y);
   });
 
   it('holds the bow in the rear hand and draws with the front one', () => {

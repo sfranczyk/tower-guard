@@ -5,6 +5,7 @@ import type { SandboxSettings } from '../data/sandbox';
 import type { AimInput } from '../managers/InputManager';
 import type { HitInfo, ThrowNet } from '../objects/Enemy';
 import type { FallKind } from '../rendering/stickmanFall';
+import type { AttackStyle } from '../rendering/attackSwing';
 import type { EnemyType, ProjectileType } from '../types';
 import type { AfflictionNet } from '../objects/AfflictionLayer';
 import type { BowmanNet } from '../objects/Bowman';
@@ -89,6 +90,8 @@ export interface EnemySnap {
   af?: AfflictionNet;
   /** Thrown through the air by a vortex. */
   th?: ThrowNet;
+  /** The priest's mana. */
+  mana?: number;
 }
 
 /** A dragon: position, the archer rider's bow, and the fire dragon's breath (ms into it) and aim. */
@@ -120,7 +123,11 @@ export type GameEvent =
   | { e: 'spawn'; id: number; type: EnemyType }
   /** An enemy takes damage (the guest runs the same takeDamage, so the same reaction plays). */
   | { e: 'hit'; id: number; amount: number; hit: HitInfo; push?: number }
-  | { e: 'attack'; id: number }
+  /** A swing (`style`: which of its swings). */
+  | { e: 'attack'; id: number; style?: AttackStyle }
+  /** A priest casts its heal (`cast`), and an enemy gets health back (`heal`). */
+  | { e: 'cast'; id: number }
+  | { e: 'heal'; id: number; amount: number }
   /** The enemies won: all of them cheer. */
   | { e: 'cheer' }
   | { e: 'arrow'; id: number; owner: number; type: ProjectileType; x: number; y: number; angle: number; speed: number; hostile: boolean; shooter?: EnemyType }

@@ -175,13 +175,28 @@ src/
   pure; feet and hands are kept on the ground by `groundedAngle`, and tests check every frame.
 - **Enemy catalogue** (`data/enemyKinds.ts`, pure, tested): every enemy (`EnemyType`, the id saved in setups and sent
   in co-op) is an entry in `ENEMY_KINDS`: an **archetype** (how it fights: `fighter`, `runner`, `heavy`, `archer`,
-  `kamikaze`, `grabber`, `skyArcher`, `fireBreather`; `ARCHETYPES` says whether it carries a club, runs, shoots,
-  detonates, flies, breathes fire), a **race** (`human`, `goblin`, `ogre`, `undead`, `dragon`; `RACES` give the
-  traits: heavy = no vortex catches it, freeze and pin durations, burn factor), **magical** (dragons), plus its stats,
+  `kamikaze`, `grabber`, `skyArcher`, `fireBreather`, `healer`; `ARCHETYPES` says whether it carries a club, runs, shoots,
+  detonates, flies, breathes fire, heals), a **race** (`human`, `goblin`, `ogre`, `undead`, `dragon`; `RACES` give the
+  traits: mass (a fighter 1.2; how a vortex takes it, see below), freeze and pin durations, burn factor, healable), **magical** (dragons), plus its stats,
   damage, keep damage, build (size, strike reach) and `arrival` (where in a level it starts to come). Gameplay code asks `enemyArchetype(type)` and
   `enemyTraits(type)` (race traits with the variant's overrides), never the id; looks stay per variant
   (`rendering/enemyBody.ts`, `ICON_ENEMIES`). A new variant (an orc kamikaze) is one entry here plus its look and icon.
-  Now: fighter, archer, kamikaze = human; runner = goblin; brute = ogre; zombie = undead; both dragons = dragon.
+  Now: fighter, archer, kamikaze, both knights, priest = human; runner = goblin; brute = ogre; zombie = undead; both
+  dragons = dragon. An entry may have `armor` (`enemyArmor`): the share of an arrow's body hit that gets through.
+- **Black knights** (`knight`: fighter archetype, a longsword, picks one of three swings per attack, `attackStyles`:
+  `overhead`, `swordRise` (a cut from below), `thrust`; co-op sends the style with `attack`; `hammerKnight`: heavy
+  archetype, a war hammer in both hands, 1.1× tall): black plate (`rendering/designs/knightSkins.ts`), `armor` = `KNIGHT_ARMOR` (0.35): `ArrowHits`
+  scales body hits by it and shows sparks instead of blood; headshots, piercing arrows and blasts deal full damage.
+- **Dark priest** (`priest`, healer archetype, magical) never attacks (`EnemyAI.updatePriest`): it walks
+  `PRIEST_FOLLOW_GAP` behind the soldier nearest to it, away from its target and never nearer than `PRIEST_STANDOFF`
+  (`priestPost`, pure), so when those around it die it falls back behind the next ones, and with none left it retreats
+  to the enemy keep. It heals the wounded around it (`EnemyAI.castHeal`, pure `planHeals` / `ManaPool` in
+  `systems/healing.ts`, tested): every `PRIEST_HEAL_INTERVAL_MS`, each ground enemy within `PRIEST_HEAL_RADIUS` (not
+  itself, not the undead: race trait `healable`) up to `PRIEST_HEAL_PER_TARGET`,
+  nearest first, a mana a point; mana refills at `PRIEST_MANA_REGEN_PER_S` (bar under its health bar). The cast raises
+  the scepter (`castBody` in bodyPoses, `Enemy.castHeal`, EnemyBodyState `'cast'`); `EffectsSystem.healPulse` (a red ring
+  over its reach, sparks at the orb) and `healCrosses` (red crosses rising from each one healed). Co-op: `cast` and
+  `heal` events, `EnemySnap.mana`, fx `heal` / `healPulse`.
 - **Enemy toughness and damage** (`data/enemyKinds.ts` via `data/enemies.ts`, tested): health per type against a 20-damage arrow
   (headshot ×`HEADSHOT_DAMAGE_MULTIPLIER` = 1.25): fighter 35, runner 22, archer 24 (one headshot), brute 110,
   dragon 170. `ENEMY_DAMAGE` gives each type a random range (`rollDamage`) for club swings and, for shooters,
@@ -209,7 +224,7 @@ src/
   anchors scale too; the health bar keeps its size) and chop two-handed with a long club.
 - **Enemy bodies** (`rendering/enemyBody.ts`): enemies are drawn in their looks from the design lab, not as
   stickmen: fighter = raider, runner = goblin (dagger), archer = hooded bandit, brute = ogre, kamikaze = sapper
-  (wrapped in dynamite, a stick in each hand), zombie = rotting peasant. `Enemy` passes its state (walk/run phase,
+  (wrapped in dynamite, a stick in each hand), zombie = rotting peasant, knights in black plate, the priest in a robe. `Enemy` passes its state (walk/run phase,
   stand, attack progress, archer bow, or a JointPose for falls, cheers and the pinned struggle) to `drawEnemyBody`,
   which builds the BodyPose with drawStickman's numbers and draws the look, so moves, sprite transform and hitboxes
   are unchanged (archers walk upright). Blown apart, the same `GibSimulation` is drawn in the look
@@ -221,7 +236,8 @@ src/
   The near dragon wing is drawn over the rider, so it hides him on the upstroke.
 - **Club attacks** (`rendering/attackSwing.ts`, pure keyframes by progress, `pose.attackStyle`): `overhead`
   (one-handed, enemies in the game), `twoHanded` (longer club in both hands; the rear hand reaches the shaft
-  by IK) and `uppercut` (short club from below); `CLUBS` sets each club's length. Wind-up, a fast strike
+  by IK), `uppercut` (short club from below), and the black knight's sword `swordRise` (from behind the hip up through
+  the target) and `thrust` (drawn back by the chest, the blade kept level, then a long lunge); `CLUBS` sets each club's length. Wind-up, a fast strike
   with a wrist snap (`clubTilt`; `forearmBend` stays ≥ 0 so elbows never bend backwards, tested), a lunge and dip, then recovery. Progress 0 and 1 equal the standing pose, so a swing
   never jumps; drawStickman tilts the torso about the hip so the feet stay put.
   Melee damage lands with the club: `Enemy.playAttackAnimation(onImpact)` runs `onImpact` at
@@ -303,6 +319,10 @@ src/
   are, so a look covers every animation and keeps the hitboxes. `skinKit.ts` places parts in the torso/head frames (works
   lying down too) and `drawHumanoid` draws a `HumanoidLook`; looks are in `enemySkins.ts`, `heavySkins.ts`,
   `playerSkins.ts`; the ideas in `ideas.ts` (+ `ideaHumanoids.ts`, `ideaCreatures.ts`, own `designSkeleton.ts`).
+- **Horse and rider** (`rendering/horseRider.ts`, pure `getHorsePose`, tested; animation lab only): a stickman astride
+  a horse in the skeleton look, `walk` (four beats) and `gallop` (hind, hind, fore, fore, suspension; the body rocks,
+  the rider leans in); hooves on the ground at `HORSE_GROUND_Y`, knees and hocks by two-bone IK, the rider's feet in
+  the stirrups and hands on the reins. Lab rows: `horse-walk`, `horse-gallop`.
 - **Animation lab** (drawn in Pixi on a cream panel over the meadow, matching the HTML UI; "← Menu" goes back to the
   menu, as in the design lab): every animation once, on the bare skeleton (dragons as in the game), in tabs Movement,
   Combat, Hurt, Death, Cheer. The rows are `LAB_CATEGORIES` in `scenes/labRows.ts` (one per move: the player and the
@@ -340,8 +360,14 @@ src/
   `THROW_GRAVITY`, `FALL_DAMAGE` in config). Fire and frost hit weaker (`MAGIC_HIT_DAMAGE` in CombatSystem), a vortex
   arrow not at all: the enemy it hits glows violet and levitates straight up (`levitateHeight`) over the vortex it
   opens, and drops when it dies away (`VORTEX_LEVITATE_FALL` of the fall damage); a further vortex arrow lifts it
-  `VORTEX_LEVITATE_BOOST` higher. Brutes are never caught (`resistsVortex`): in reach they walk at `VORTEX_HEAVY_WALK`
-  (`AfflictionLayer.slowByWind`), and a direct hit only lifts them a little (`VORTEX_LEVITATE_HEAVY`). Nothing is
+  `VORTEX_LEVITATE_BOOST` higher. It all goes by **mass** (`enemyMass`, race traits with the variant's own; goblin 0.8,
+  zombie 1, fighter, archer and priest 1.2 (`VORTEX_MASS.reference`: the base pace), bowman `BOWMAN_MASS` 1.3,
+  kamikaze 1.4, black knight 1.9, hammer knight 2.5, ogre 4.2; thresholds `VORTEX_MASS`): pulled in and lifted at
+  `massPace` (reference/mass, at most `lightest`×), thrown and flung √(reference/mass) as hard; above `fullLift` (2.1)
+  it only gets up to `funnelCeiling` and circles there (slower the heavier) until the vortex dies and flings it; from
+  `anchor` (3.6, `resistsVortex`) it isn't caught: in reach it walks at `VORTEX_HEAVY_WALK`
+  (`AfflictionLayer.slowByWind`). A direct hit levitates as a fighter up to `levitateFull` (1.4), then slower and lower
+  (`levitateShare`) down to `VORTEX_LEVITATE_HEAVY` at `levitateHeavy` (4.2). Nothing is
   pinned while up in the air. A dragon it hits gets no ground
   vortex but a ring of wind (`drawAirVortex`) and turbulence for `DRAGON_TURBULENCE_MS` (`AfflictionLayer.stir`,
   `buffetOffset`): thrown about and tilted, the fire dragon can't breathe fire, the archer shoots

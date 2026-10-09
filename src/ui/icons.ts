@@ -116,6 +116,20 @@ export const ICON_ENEMIES = {
   // Rotting peasant: shuffling, head hung forward, both arms held out.
   zombie: figure(`<circle cx="11.5" cy="7" r="3"/><path d="M10 10l-.5 8M9.5 18l-4 7M9.5 18l3 7M10 12.5l11 .5M10 14l10.5 1.5"/>
     <path d="M21 13l2-.8M20.5 15.5l2 .4" stroke-width="1.4"/><circle cx="13.5" cy="20.5" r="1" fill="#72c43c" stroke="none"/>`, '#5f8a3e'),
+  // Black knight: a closed helm with ember eyes, black plate, a sword raised.
+  knight: figure(`<rect x="7.5" y="2.5" width="7.5" height="7.5" rx="2.2" fill="#2a2c33"/><path d="M10 6.2h4" stroke="#ff5a3c" stroke-width="1.3"/>
+    <path d="M11 10.5v7.5M11 18l-4 7M11 18l4 7M11 12.5l-4 4M11 12.5l4.5-1.5" stroke-width="2.8"/>
+    <path d="M16 11 22.5 2.5" stroke="#a9b0ba" stroke-width="1.9"/><path d="M14.2 9.3l3.6 3" stroke="#5c616c" stroke-width="1.7"/>`, '#2a2c33'),
+  // Hammer knight: bigger, a horned helm, a war hammer in both hands.
+  hammerKnight: figure(`<path d="M8 4.5Q5 3 5.5.8M15 4.5Q18 3 17.5.8" stroke="#c9c0ad" stroke-width="1.5"/>
+    <rect x="7" y="3" width="9" height="8" rx="2.4" fill="#2a2c33"/><path d="M10 6.8h4.5" stroke="#ff5a3c" stroke-width="1.3"/>
+    <path d="M11.5 11v7.5M11.5 18.5l-5 6.5M11.5 18.5l5 6.5M11.5 13l5.5 1M11.5 13l4 4" stroke-width="3.4"/>
+    <path d="M14.5 19.5 22 5" stroke="#5a3a20" stroke-width="1.8"/><path d="M18.4 3.4l6.2 3.2-1.8 3.5-6.2-3.2z" fill="#3d4048" stroke="none"/>`, '#2a2c33'),
+  // Dark priest: hooded, red eyes, a long robe, a scepter with a red orb; a red cross for its heals.
+  priest: figure(`<path d="M11 2 6.8 6.8V11h8.4V6.8z" fill="#2b1d2e" stroke="none"/><circle cx="12.2" cy="7.6" r="1" fill="#ff2a2a" stroke="none"/>
+    <path d="M7.5 11h7.5l3 14H4.5z" fill="#2b1d2e" stroke="none"/><path d="M11.5 11.5l1 13.5" stroke="#9b1f2a" stroke-width="1.4"/>
+    <path d="M14 13.5l4.5-1.5" stroke="#2b1d2e" stroke-width="2.4"/><path d="M19 14.5V4.5" stroke="#3a2a20" stroke-width="1.6"/>
+    <circle cx="19" cy="4" r="2.3" fill="#c4182a" stroke="none"/><path d="M24 9v5M21.5 11.5h5" stroke="#d8333f" stroke-width="1.7"/>`, '#2b1d2e'),
   // Dragon archer: a dark dragon, its rider aiming a bow ahead.
   dragon: dragon('#3b2a22', '#6a5242', '#9a8068', `<path d="M14.2 11.6 17.4 10.6"/><path d="M17 6.6Q19.6 10.2 17 13.8" stroke="#8a6238" stroke-width="1.2"/>`),
   // Fire dragon: red, breathing a flame; its rider holds the reins with both hands.

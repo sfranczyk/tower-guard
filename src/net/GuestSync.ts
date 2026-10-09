@@ -131,7 +131,19 @@ export class GuestSync {
       case 'attack': {
         const enemy = this.enemyById.get(event.id);
         if (enemy && !(enemy instanceof DragonEnemy)) {
-          enemy.playAttackAnimation();
+          enemy.playAttackAnimation(undefined, event.style);
+        }
+        break;
+      }
+      case 'cast':
+      case 'heal': {
+        const enemy = this.enemyById.get(event.id);
+        if (enemy && !(enemy instanceof DragonEnemy)) {
+          if (event.e === 'cast') {
+            enemy.castHeal();
+          } else {
+            enemy.heal(event.amount);
+          }
         }
         break;
       }
@@ -179,6 +191,10 @@ export class GuestSync {
           effects.shatter(point);
         } else if (event.kind === 'firePatch') {
           effects.firePatch(point);
+        } else if (event.kind === 'heal') {
+          effects.healCrosses(point);
+        } else if (event.kind === 'healPulse') {
+          effects.healPulse(point);
         } else if (event.kind === 'vortex') {
           effects.vortex(point);
         } else {

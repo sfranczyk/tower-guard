@@ -1,5 +1,5 @@
 import { Graphics, type Container } from 'pixi.js';
-import { EXPLOSION_RADIUS, FIRE_DRAGON_BLAST_POWER, LIGHTNING_RADIUS } from '../config';
+import { EXPLOSION_RADIUS, FIRE_DRAGON_BLAST_POWER, LIGHTNING_RADIUS, PRIEST_HEAL_RADIUS } from '../config';
 import { HUMAN_BODY, type BodyColors } from '../rendering/bodyColors';
 import type { ProjectileType, Vec2 } from '../types';
 import { MagicVisuals } from './magicVisuals';
@@ -8,7 +8,7 @@ import { groundAt } from './terrain';
 /** Effects a co-op host replays on the guest's screen. */
 export type EffectKind =
   | 'blood' | 'greenBlood' | 'impact' | 'explosion' | 'dragonBlast' | 'lightning'
-  | 'fire' | 'frost' | 'shatter' | 'firePatch' | 'vortex' | 'vortexFade';
+  | 'fire' | 'frost' | 'shatter' | 'firePatch' | 'vortex' | 'vortexFade' | 'heal' | 'healPulse';
 
 type BloodParticle = {
   sprite: Graphics;
@@ -134,6 +134,38 @@ export class EffectsSystem {
     }
     const stainX = point.x + (Math.random() - 0.5) * 12;
     this.bloodStain(stainX, groundAt(stainX) - 1, colors.stain);
+  }
+
+  /** Small red crosses rising from an enemy a priest heals (`point`: its chest). */
+  public healCrosses(point: Vec2): void {
+    this.onEffect?.('heal', point);
+    for (let index = 0; index < 5; index += 1) {
+      const size = random(3.4, 4.8);
+      const cross = new Graphics()
+        .rect(-size, -size * 0.32, size * 2, size * 0.64).rect(-size * 0.32, -size, size * 0.64, size * 2).fill({ color: 0xe8323f })
+        .rect(-size * 0.55, -size * 0.12, size * 1.1, size * 0.24).fill({ color: 0xffb3b8 });
+      this.spawn(cross, { x: point.x + random(-9, 9), y: point.y + random(-14, 6) }, 5, {
+        velocity: { x: random(-10, 10), y: random(-45, -28) },
+        lifeMs: random(750, 1100), gravity: -8, drag: 0.6, grow: -0.3,
+      });
+    }
+  }
+
+  /** A priest's heal going out: a red ring over the ground within its reach and a flash at the scepter (`point`: its feet). */
+  public healPulse(point: Vec2): void {
+    this.onEffect?.('healPulse', point);
+    const ring = new Graphics()
+      .ellipse(0, 0, PRIEST_HEAL_RADIUS * 0.85, PRIEST_HEAL_RADIUS * 0.17).stroke({ width: 2, color: 0xd8333f })
+      .ellipse(0, 0, PRIEST_HEAL_RADIUS * 0.85, PRIEST_HEAL_RADIUS * 0.17).fill({ color: 0xd8333f, alpha: 0.1 });
+    this.spawn(ring, { x: point.x, y: groundAt(point.x) }, 0, { velocity: { x: 0, y: 0 }, lifeMs: 650, gravity: 0, drag: 0, grow: 0.18, startAlpha: 0.7 });
+    // The orb flares and throws off sparks.
+    const orb = { x: point.x, y: point.y - 62 };
+    const flash = new Graphics().circle(0, 0, 5).fill({ color: 0xff6a70 });
+    this.spawn(flash, orb, 5, { velocity: { x: 0, y: 0 }, lifeMs: 320, gravity: 0, drag: 0, grow: 0.9, startAlpha: 0.7 });
+    for (let index = 0; index < 8; index += 1) {
+      const spark = new Graphics().circle(0, 0, random(1, 1.8)).fill({ color: pick([0xff3a48, 0xffb3b8, 0xe8323f]) });
+      this.spawn(spark, orb, 5, { velocity: burst(-Math.PI, Math.PI, 40, 110), lifeMs: random(300, 550), gravity: 60, drag: 2.5, grow: 0 });
+    }
   }
 
   public impact(point: Vec2): void {

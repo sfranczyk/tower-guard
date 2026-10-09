@@ -1,6 +1,7 @@
 import {
   ENEMY_BURN_ZOMBIE_FACTOR,
   ENEMY_SPEED,
+  KNIGHT_ARMOR,
   FROST_FREEZE_BRUTE_MS,
   FROST_FREEZE_MS,
   PIN_DURATION_MS,
@@ -19,7 +20,7 @@ import type { EnemyType } from '../types';
  * variant (an orc kamikaze, an elf archer) is one entry here plus its look and icon.
  */
 
-export type EnemyArchetype = 'fighter' | 'runner' | 'heavy' | 'archer' | 'kamikaze' | 'grabber' | 'skyArcher' | 'fireBreather';
+export type EnemyArchetype = 'fighter' | 'runner' | 'heavy' | 'archer' | 'kamikaze' | 'grabber' | 'skyArcher' | 'fireBreather' | 'healer';
 
 export type EnemyRace = 'human' | 'goblin' | 'ogre' | 'undead' | 'dragon';
 
@@ -55,11 +56,13 @@ export interface ArchetypeInfo {
   flies: boolean;
   /** Breathes fire at the bowman (a dragon); blows up when killed by a direct explosive hit. */
   breathesFire: boolean;
+  /** Keeps back from the bowman and heals the wounded around it with its mana (EnemyAI, systems/healing.ts). */
+  heals: boolean;
 }
 
 /** An unarmed walker that does none of the special things (the archetypes below say what they add). */
 const ON_FOOT: ArchetypeInfo = {
-  attackStyle: 'overhead', runs: false, club: false, shoots: false, detonates: false, flies: false, breathesFire: false,
+  attackStyle: 'overhead', runs: false, club: false, shoots: false, detonates: false, flies: false, breathesFire: false, heals: false,
 };
 
 export const ARCHETYPES: Readonly<Record<EnemyArchetype, ArchetypeInfo>> = {
@@ -76,18 +79,25 @@ export const ARCHETYPES: Readonly<Record<EnemyArchetype, ArchetypeInfo>> = {
   skyArcher: { ...ON_FOOT, flies: true },
   // A dragon that breathes fire (CombatSystem.updateFireDragon) and blows up when killed by a direct explosive hit.
   fireBreather: { ...ON_FOOT, flies: true, breathesFire: true },
+  // Follows the soldiers and heals the wounded around it; never attacks (its scepter is drawn as the club).
+  healer: { ...ON_FOOT, club: true, heals: true },
 };
 
 /** How the arrows' effects take to an enemy (races set them; a variant can override any). */
 export interface EnemyTraits {
-  /** Too heavy for a vortex to catch (it only slows them, and a direct hit lifts them a little). */
-  heavy: boolean;
+  /**
+   * How heavy it is (a man is VORTEX_MASS.reference, 1.2): how a vortex takes it (systems/vortex.ts: from VORTEX_MASS.anchor, a brute, it isn't
+   * caught at all, only slowed, and a direct hit barely lifts it).
+   */
+  mass: number;
   /** How long a freeze holds it (ms); 0 = it can't be frozen, only chilled. */
   freezeMs: number;
   /** How long a fire burns on it, × ENEMY_BURN_MS; 0 = it doesn't burn. */
   burnFactor: number;
   /** How long a pinning arrow holds it (ms); 0 = it can't be pinned. */
   pinMs: number;
+  /** A priest's magic can heal it (not the undead). */
+  healable: boolean;
 }
 
 export interface RaceInfo {
@@ -97,17 +107,21 @@ export interface RaceInfo {
   magical: boolean;
 }
 
-const NORMAL_TRAITS: EnemyTraits = { heavy: false, freezeMs: FROST_FREEZE_MS, burnFactor: 1, pinMs: PIN_DURATION_MS };
+const NORMAL_TRAITS: EnemyTraits = { mass: 1.2, freezeMs: FROST_FREEZE_MS, burnFactor: 1, pinMs: PIN_DURATION_MS, healable: true };
 
 export const RACES: Readonly<Record<EnemyRace, RaceInfo>> = {
   human: { label: 'Human', traits: NORMAL_TRAITS, magical: false },
-  goblin: { label: 'Goblin', traits: NORMAL_TRAITS, magical: false },
+  // Small and light: a vortex tosses them about.
+  goblin: { label: 'Goblin', traits: { ...NORMAL_TRAITS, mass: 0.8 }, magical: false },
   // Big and heavy: no vortex lifts them, the ice holds them only briefly, no pin holds them down.
-  ogre: { label: 'Ogre', traits: { heavy: true, freezeMs: FROST_FREEZE_BRUTE_MS, burnFactor: 1, pinMs: 0 }, magical: false },
-  // Dry and numb: burns longer, keeps struggling on a pin longer.
-  undead: { label: 'Undead', traits: { ...NORMAL_TRAITS, burnFactor: ENEMY_BURN_ZOMBIE_FACTOR, pinMs: PIN_DURATION_ZOMBIE_MS }, magical: false },
+  ogre: { label: 'Ogre', traits: { ...NORMAL_TRAITS, mass: 4.2, freezeMs: FROST_FREEZE_BRUTE_MS, pinMs: 0 }, magical: false },
+  // Dry and numb: burns longer, keeps struggling on a pin longer; a priest's healing doesn't reach the dead.
+  undead: {
+    label: 'Undead', traits: { ...NORMAL_TRAITS, mass: 1, burnFactor: ENEMY_BURN_ZOMBIE_FACTOR, pinMs: PIN_DURATION_ZOMBIE_MS, healable: false }, magical: false,
+  },
   // Up in the air: never frozen solid or pinned.
-  dragon: { label: 'Dragon', traits: { ...NORMAL_TRAITS, freezeMs: 0, pinMs: 0 }, magical: true },
+  // Up in the air (a vortex only stirs them: turbulence) and huge.
+  dragon: { label: 'Dragon', traits: { ...NORMAL_TRAITS, mass: 7.2, freezeMs: 0, pinMs: 0 }, magical: true },
 };
 
 /** How a variant looks and moves besides its archetype: body size (1 = a man), club reach, standing sway. */
@@ -138,6 +152,13 @@ export interface EnemyKind {
   arrival: number;
   /** Overrides of its race's traits. */
   traits?: Partial<EnemyTraits>;
+  /** Swings it picks from at random, one per attack (default: its archetype's one). */
+  attackStyles?: readonly AttackStyle[];
+  /**
+   * Plate armour: the share of an arrow's body hit that gets through (headshots, piercing arrows and blasts in full;
+   * ArrowHits). None = 1.
+   */
+  armor?: number;
 }
 
 /**
@@ -184,11 +205,31 @@ export const ENEMY_KINDS: Readonly<Record<EnemyType, EnemyKind>> = {
   kamikaze: {
     label: 'Kamikaze', archetype: 'kamikaze', race: 'human', magical: false, arrival: 0.25,
     stats: { health: 18, speed: ENEMY_SPEED * 2 }, damage: { melee: [24, 32] }, keepDamage: { melee: 8 }, build: { size: 1, strikeReach: 0 },
+    traits: { mass: 1.4 },
   },
   // Slow, arms out, hard to put down.
   zombie: {
     label: 'Zombie', archetype: 'grabber', race: 'undead', magical: false, arrival: 0.1,
     stats: { health: 60, speed: ENEMY_SPEED * 0.45 }, damage: { melee: [8, 12] }, build: { size: 1, strikeReach: 50, stepMs: 240 },
+  },
+  // Black plate: body hits barely dent it (KNIGHT_ARMOR), so aim for the visor or use piercing arrows. A sword: it cuts
+  // down, cuts up from below or thrusts.
+  knight: {
+    label: 'Black knight', archetype: 'fighter', race: 'human', magical: false, arrival: 0.2, armor: KNIGHT_ARMOR,
+    attackStyles: ['overhead', 'swordRise', 'thrust'],
+    stats: { health: 50, speed: ENEMY_SPEED * 0.85 }, damage: { melee: [9, 14] }, build: { size: 1, strikeReach: 60 },
+    traits: { mass: 1.9 },
+  },
+  // A head taller, in the same black plate, with a war hammer in both hands.
+  hammerKnight: {
+    label: 'Hammer knight', archetype: 'heavy', race: 'human', magical: false, arrival: 0.35, armor: KNIGHT_ARMOR,
+    stats: { health: 80, speed: ENEMY_SPEED * 0.65 }, damage: { melee: [16, 24] }, keepDamage: { melee: 2 }, build: { size: 1.1, strikeReach: 75 },
+    traits: { mass: 2.5 },
+  },
+  // Frail and never attacks, but it keeps the others standing: kill it first.
+  priest: {
+    label: 'Dark priest', archetype: 'healer', race: 'human', magical: true, arrival: 0.15,
+    stats: { health: 30, speed: ENEMY_SPEED * 0.8 }, damage: { melee: [0, 0] }, build: { size: 1, strikeReach: 0 },
   },
 };
 
@@ -199,6 +240,12 @@ export const enemyArchetype = (type: EnemyType): ArchetypeInfo => ARCHETYPES[ENE
 
 /** Its race's traits with its own overrides. */
 export const enemyTraits = (type: EnemyType): EnemyTraits => ({ ...RACES[ENEMY_KINDS[type].race].traits, ...ENEMY_KINDS[type].traits });
+
+/** How heavy it is (a man 1.2, VORTEX_MASS.reference; race traits with the variant's own). */
+export const enemyMass = (type: EnemyType): number => enemyTraits(type).mass;
+
+/** The share of an arrow's body hit that gets through its armour (1 = none). */
+export const enemyArmor = (type: EnemyType): number => ENEMY_KINDS[type].armor ?? 1;
 
 /** The enemies that fly (dragons, objects/DragonEnemy). */
 export type FlyingType = Extract<EnemyType, 'dragon' | 'fireDragon'>;

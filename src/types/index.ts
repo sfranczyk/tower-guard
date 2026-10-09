@@ -2,7 +2,8 @@
  * 'dragon' is a dark flying dragon with an archer rider, 'fireDragon' a red one that breathes fire and whose
  * rider is unarmed (both objects/DragonEnemy.ts).
  */
-export type EnemyType = 'basic' | 'fast' | 'tank' | 'archer' | 'dragon' | 'fireDragon' | 'kamikaze' | 'zombie';
+export type EnemyType =
+  | 'basic' | 'fast' | 'tank' | 'archer' | 'dragon' | 'fireDragon' | 'kamikaze' | 'zombie' | 'knight' | 'hammerKnight' | 'priest';
 /** 'fragment' is one of the small arrows a shrapnel arrow bursts into (not selectable). */
 export type ProjectileType = 'normal' | 'explosive' | 'piercing' | 'shrapnel' | 'pinning' | 'fire' | 'frost' | 'vortex' | 'fragment';
 

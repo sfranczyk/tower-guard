@@ -1,4 +1,5 @@
 import {
+  BOWMAN_MASS,
   BURN_TICK_MS,
   ENEMY_BURN_DPS,
   FIRE_PATCH_MS,
@@ -13,15 +14,15 @@ import {
   VORTEX_TOP,
 } from '../config';
 import type { SoundId } from '../audio/SoundManager';
-import { enemyArchetype } from '../data/enemyKinds';
+import { enemyArchetype, enemyMass } from '../data/enemyKinds';
 import Bowman from '../objects/Bowman';
 import DragonEnemy from '../objects/DragonEnemy';
 import type Enemy from '../objects/Enemy';
-import type { EnemyType, ProjectileType, Vec2 } from '../types';
+import type { ProjectileType, Vec2 } from '../types';
 import type { BowmanHit } from './bowmanDeath';
 import {
-  VORTEX_CORE, VORTEX_SPIN, fallDamage, flingVelocity, funnelPosition, levitateHeight, resistsVortex, throwVelocity, vortexPull, vortexRise,
-  vortexStrength,
+  VORTEX_CORE, VORTEX_SPIN, fallDamage, flingVelocity, funnelCeiling, funnelPosition, levitateHeight, massPace, resistsVortex, throwVelocity,
+  vortexPull, vortexRise, vortexStrength,
 } from './vortex';
 import type { EffectsSystem } from './EffectsSystem';
 import { groundAt } from './terrain';
@@ -35,8 +36,8 @@ type Foe = Enemy | DragonEnemy;
  */
 type Walker = Enemy | Bowman;
 
-/** A bowman counts as a fighter (how high he levitates, whether a vortex can catch him). */
-const kindOf = (body: Walker): EnemyType => (body instanceof Bowman ? 'basic' : body.kind);
+/** How heavy it is for a vortex (1 = a man): an enemy's race and variant, a bowman BOWMAN_MASS. */
+const massOf = (body: Walker): number => (body instanceof Bowman ? BOWMAN_MASS : enemyMass(body.kind));
 
 /** How far an enemy being pulled in leans into it at full strength (radians). */
 const VORTEX_LEAN = 0.32;
@@ -235,7 +236,7 @@ export class ArrowMagic {
       } else {
         // Straight up, glowing, swaying a little (and higher with every further hit).
         levitating.boost += (levitating.boostTarget - levitating.boost) * Math.min(1, (BOOST_RATE * deltaMs) / 1000);
-        const height = levitateHeight(vortex.ageMs, kindOf(enemy), levitating.boost);
+        const height = levitateHeight(vortex.ageMs, massOf(enemy), levitating.boost);
         enemy.holdInVortex(levitating.x, height, Math.sin(vortex.ageMs / 420) * LEVITATE_SWAY, true);
       }
     }
@@ -247,16 +248,17 @@ export class ArrowMagic {
     });
     const inReach = (enemy: Walker): boolean => Math.abs(enemy.x - vortex.x) <= VORTEX_RADIUS;
     // Brutes are too heavy to be caught: the wind only slows them down.
-    walkers.filter((enemy) => resistsVortex(kindOf(enemy)) && inReach(enemy) && strength > 0).forEach((enemy) => enemy.afflictions.slowByWind(VORTEX_HEAVY_WALK));
+    walkers.filter((enemy) => resistsVortex(massOf(enemy)) && inReach(enemy) && strength > 0).forEach((enemy) => enemy.afflictions.slowByWind(VORTEX_HEAVY_WALK));
     walkers
-      .filter((enemy) => !resistsVortex(kindOf(enemy)) && !caught.has(enemy) && !enemy.isDown && !enemy.isPinned && inReach(enemy))
+      .filter((enemy) => !resistsVortex(massOf(enemy)) && !caught.has(enemy) && !enemy.isDown && !enemy.isPinned && inReach(enemy))
       .filter((enemy) => !this.vortices.some((other) => other.caught.has(enemy) || other.levitating?.enemy === enemy))
       .forEach((enemy) => caught.set(enemy, { phase: 'pull', height: 0, angle: 0 }));
 
     caught.forEach((state, enemy) => {
+      const mass = massOf(enemy);
       if (state.phase === 'pull') {
         const dx = enemy.x - vortex.x;
-        const x = enemy.x + vortexPull(dx, vortex.ageMs, deltaMs);
+        const x = enemy.x + vortexPull(dx, vortex.ageMs, deltaMs, mass);
         if (Math.abs(x - vortex.x) <= VORTEX_CORE) {
           // Caught by the funnel: up it goes, starting on the side it came from.
           state.phase = 'rise';
@@ -265,12 +267,14 @@ export class ArrowMagic {
         enemy.holdInVortex(x, 0, -Math.sign(dx) * VORTEX_LEAN * strength);
         return;
       }
-      state.height += vortexRise(deltaMs) * strength;
-      state.angle += (VORTEX_SPIN * deltaMs) / 1000;
-      if (state.height >= VORTEX_TOP) {
+      // Too heavy to reach the top, it circles as high as it gets until the vortex lets go (and slower, the heavier).
+      const ceiling = funnelCeiling(mass);
+      state.height = Math.min(ceiling, state.height + vortexRise(deltaMs, mass) * strength);
+      state.angle += (VORTEX_SPIN * Math.min(1, massPace(mass)) * deltaMs) / 1000;
+      if (ceiling >= VORTEX_TOP && state.height >= VORTEX_TOP) {
         // Out of the top: thrown up and away on the side it's going round on.
         caught.delete(enemy);
-        this.launch(enemy, throwVelocity(Math.cos(state.angle) >= 0 ? 1 : -1, Math.random(), Math.random()));
+        this.launch(enemy, throwVelocity(Math.cos(state.angle) >= 0 ? 1 : -1, Math.random(), Math.random(), mass));
         return;
       }
       const position = funnelPosition({ x: vortex.x, y: groundAt(vortex.x) }, state.height, state.angle);
@@ -291,7 +295,7 @@ export class ArrowMagic {
     }
     vortex.caught.forEach((state, enemy) => {
       if (enemy.isAlive()) {
-        this.launch(enemy, flingVelocity(enemy.x - vortex.x, state.phase === 'rise', Math.random(), Math.random()));
+        this.launch(enemy, flingVelocity(enemy.x - vortex.x, state.phase === 'rise', Math.random(), Math.random(), massOf(enemy)));
       }
     });
     vortex.caught.clear();

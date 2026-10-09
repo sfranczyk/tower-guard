@@ -41,7 +41,7 @@ describe('getAttackPose', () => {
 });
 
 describe('attack styles', () => {
-  const styles: AttackStyle[] = ['overhead', 'twoHanded', 'uppercut'];
+  const styles: AttackStyle[] = ['overhead', 'twoHanded', 'uppercut', 'swordRise', 'thrust'];
 
   it('all start and end at the standing pose and move without jumps', () => {
     styles.forEach((style) => {
@@ -72,6 +72,21 @@ describe('attack styles', () => {
   it('two-handed winds up further and lunges harder than one-handed', () => {
     expect(getAttackPose(0.38, 'twoHanded').armAngle).toBeGreaterThan(getAttackPose(0.34, 'overhead').armAngle);
     expect(getAttackPose(0.55, 'twoHanded').step).toBeGreaterThan(getAttackPose(0.5, 'overhead').step);
+  });
+
+  it('the rising sword cut starts low behind and ends high in front', () => {
+    expect(getAttackPose(0.32, 'swordRise').armAngle).toBeLessThan(0);
+    expect(getAttackPose(0.5, 'swordRise').armAngle).toBeGreaterThan(Math.PI / 2);
+  });
+
+  it('the thrust drives the blade out level, the arm straight, in a long lunge', () => {
+    const windUp = getAttackPose(0.36, 'thrust');
+    const strike = getAttackPose(0.5, 'thrust');
+    // Blade level (its direction is clubTilt − forearm angle): forward both drawn back and driven out.
+    expect(Math.abs(windUp.clubTilt - (windUp.armAngle + windUp.forearmBend))).toBeLessThan(0.05);
+    expect(Math.abs(strike.clubTilt - (strike.armAngle + strike.forearmBend))).toBeLessThan(0.05);
+    expect(strike.forearmBend).toBeLessThan(0.1);
+    expect(strike.step).toBeGreaterThan(getAttackPose(0.5, 'overhead').step);
   });
 
   it('uppercut winds up low behind and strikes upwards', () => {

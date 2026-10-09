@@ -5,9 +5,10 @@ import type { BodyColors } from './bodyColors';
 import { HUMAN_BODY, ZOMBIE_BODY } from './bodyColors';
 import type { AttackStyle } from './attackSwing';
 import type { JointPose } from './stickmanPose';
-import { archerBody, attackBody, runBody, standBody, walkBody, withClub, type BodyPose } from './designs/bodyPoses';
+import { archerBody, attackBody, castBody, runBody, standBody, walkBody, withClub, type BodyPose } from './designs/bodyPoses';
 import { banditArcherLook, goblinLook, raiderLook, sapperLook } from './designs/enemySkins';
 import { ogreLook, zombieLook } from './designs/heavySkins';
+import { blackKnightLook, darkPriestLook, hammerKnightLook } from './designs/knightSkins';
 import { drawHumanoid, type HumanoidLook } from './designs/skinKit';
 import { drawLookGibs } from './designs/lookGibs';
 import type { GibSimulation } from './stickmanGibs';
@@ -15,13 +16,14 @@ import type { GibSimulation } from './stickmanGibs';
 /**
  * Enemies drawn in their looks (rendering/designs) over the same poses drawStickman uses, so movement,
  * swings, falls and hitboxes are unchanged: fighter = raider, runner = goblin, archer = hooded bandit,
- * brute = ogre, kamikaze = sapper, zombie = rotting peasant.
+ * brute = ogre, kamikaze = sapper, zombie = rotting peasant; the black knight, hammer knight and dark priest as they are.
  */
 
 type GroundEnemy = Exclude<EnemyType, 'dragon' | 'fireDragon'>;
 
 interface EnemyBodyLook {
-  look: (timeMs: number) => HumanoidLook;
+  /** Its look now (`cast` 0..1: how far into a spell, for the priest's glowing scepter). */
+  look: (timeMs: number, cast: number) => HumanoidLook;
   /** What it carries in the game: a club style, or nothing (archers, kamikazes and zombies). */
   club?: AttackStyle;
   /** Colours of the pieces when blown apart, and of the blood. */
@@ -37,6 +39,9 @@ const LOOKS: Readonly<Record<GroundEnemy, EnemyBodyLook>> = {
   archer: { look: fixed(banditArcherLook()), gibs: { ...HUMAN_BODY, bone: 0xd2a07a, boneRear: 0x9a3a32 } },
   kamikaze: { look: sapperLook, gibs: { ...HUMAN_BODY, bone: 0xe0b48c, boneRear: 0xc0392b } },
   zombie: { look: zombieLook, gibs: { ...ZOMBIE_BODY, bone: 0x9fb38a, boneRear: 0x5b6b7a } },
+  knight: { look: blackKnightLook, club: 'overhead', gibs: { ...HUMAN_BODY, bone: 0x2a2c33, boneRear: 0x18191e } },
+  hammerKnight: { look: hammerKnightLook, club: 'twoHanded', gibs: { ...HUMAN_BODY, bone: 0x2a2c33, boneRear: 0x18191e } },
+  priest: { look: darkPriestLook, club: 'overhead', gibs: { ...HUMAN_BODY, bone: 0x2b1d2e, boneRear: 0xcfc4b0 } },
 };
 
 const lookOf = (kind: EnemyType): EnemyBodyLook => LOOKS[kind as GroundEnemy] ?? LOOKS.basic;
@@ -56,6 +61,8 @@ export type EnemyBodyState =
   | { mode: 'stand'; phase: number }
   | { mode: 'attack'; progress: number; style: AttackStyle }
   | { mode: 'archer'; localAngle: number; tension: number; ready: number; walkPhase?: number }
+  /** A spell (the priest's heal), progress 0..1. */
+  | { mode: 'cast'; progress: number }
   /** Falls (sprite at originY, like drawJointPose), cheers and the pinned struggle. */
   | { mode: 'joints'; pose: JointPose; club: boolean };
 
@@ -75,6 +82,8 @@ const poseFor = (kind: EnemyType, state: EnemyBodyState): BodyPose => {
       return zombie ? attackBody(0, 'grab') : standBody(club);
     case 'attack':
       return attackBody(state.progress, zombie ? 'grab' : state.style);
+    case 'cast':
+      return castBody(state.progress);
     case 'archer':
       return archerBody(state.localAngle, state.tension, state.ready, state.walkPhase === undefined ? undefined : state.walkPhase / TWO_PI);
     case 'joints':
@@ -86,11 +95,12 @@ const poseFor = (kind: EnemyType, state: EnemyBodyState): BodyPose => {
 export const drawEnemyBody = (sprite: Graphics, kind: EnemyType, state: EnemyBodyState, originY: number, timeMs: number): void => {
   sprite.clear();
   sprite.y = state.mode === 'joints' ? originY : originY - LIVE_POSE_LIFT;
-  drawHumanoid(sprite, poseFor(kind, state), lookOf(kind).look(timeMs));
+  const cast = state.mode === 'cast' ? Math.sin(Math.PI * state.progress) : 0;
+  drawHumanoid(sprite, poseFor(kind, state), lookOf(kind).look(timeMs, cast));
 };
 
 /** Draws a blown-apart enemy of `kind`: its look's own parts flying (rendering/designs/lookGibs). */
 export const drawEnemyGibs = (sprite: Graphics, kind: EnemyType, simulation: GibSimulation, originY: number, timeMs: number): void => {
   const { look, gibs } = lookOf(kind);
-  drawLookGibs(sprite, simulation, look(timeMs), gibs, originY);
+  drawLookGibs(sprite, simulation, look(timeMs, 0), gibs, originY);
 };

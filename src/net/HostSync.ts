@@ -101,7 +101,9 @@ export class HostSync {
     } else {
       enemy.netHooks = {
         damaged: (amount, hit) => this.push({ e: 'hit', id, amount, hit }),
-        attacked: () => this.push({ e: 'attack', id }),
+        attacked: (style) => this.push({ e: 'attack', id, style }),
+        healed: (amount) => this.push({ e: 'heal', id, amount }),
+        cast: () => this.push({ e: 'cast', id }),
       };
     }
   }

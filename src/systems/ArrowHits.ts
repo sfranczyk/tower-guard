@@ -16,7 +16,7 @@ import {
 } from '../config';
 import type { SoundId } from '../audio/SoundManager';
 import { enemyDamage, explosionDamage, pinDurationMs, rollDamage, type DamageTarget } from '../data/enemies';
-import { enemyArchetype } from '../data/enemyKinds';
+import { enemyArchetype, enemyArmor } from '../data/enemyKinds';
 import type Arrow from '../objects/Arrow';
 import type Bowman from '../objects/Bowman';
 import DragonEnemy from '../objects/DragonEnemy';
@@ -307,9 +307,13 @@ export class ArrowHits {
       return;
     }
     const frozen = !(enemy instanceof DragonEnemy) && enemy.afflictions.isFrozen;
+    // Plate armour turns most of a body hit: sparks fly instead of blood (headshots, piercing arrows and blasts go through).
+    const armor = headshot || arrow.type === 'piercing' || arrow.type === 'explosive' ? 1 : enemyArmor(enemy.kind);
     if (frozen) {
       // Ice chips instead of blood.
       effects.frostBurst(impactPoint);
+    } else if (armor < 1) {
+      effects.impact(impactPoint);
     } else {
       effects.bloodBurst(impactPoint, enemy.bodyColors);
       // The arrow sinking in (an explosive arrow's hit is just its blast).
@@ -328,7 +332,7 @@ export class ArrowHits {
     // An explosive arrow deals only its blast (no impact damage, so no headshot either); a kill blows the body apart.
     const explosive = arrow.type === 'explosive';
     const pinning = arrow.type === 'pinning';
-    const damage = ArrowHits.arrowHitDamage(arrow, headshot);
+    const damage = ArrowHits.arrowHitDamage(arrow, headshot) * armor;
     if (headshot && !explosive && !pinning) {
       this.events.headshot();
     }

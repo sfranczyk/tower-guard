@@ -1,9 +1,11 @@
 import type { Graphics } from 'pixi.js';
+import type { AttackStyle } from '../rendering/attackSwing';
 import { STANDING_BURN_POINTS, drawBurning } from '../rendering/burning';
 import { DRAGON_PALETTES } from '../rendering/dragon';
 import { drawDragonRider } from '../rendering/dragonArt';
 import { DRAGON_DEATH_MS, drawDragonDeath, type DragonDeathKind } from '../rendering/dragonDeath';
 import { FIRE_BREATH_MS, breathControl, drawFireStream } from '../rendering/dragonFire';
+import { drawHorseRider } from '../rendering/horseRider';
 import { drawStickman } from '../rendering/stickman';
 import { drawStickmanCheer } from '../rendering/stickmanCheer';
 import { getFlailPose } from '../rendering/stickmanFlail';
@@ -72,6 +74,8 @@ export interface LabCategory {
 const DRAGON = { flying: true, sky: true, previewScale: 0.17, zoomScale: 1.15, offsetX: 25 } as const;
 const DRAGON_DEATH = { sky: true, previewScale: 0.12, zoomScale: 1, offsetX: 85 } as const;
 const DRAGON_DEATH_PAUSE_MS = 1200;
+/** The horse and rider stand twice as tall as a stickman: drawn smaller, centred on the horse. */
+const HORSE = { previewScale: 0.25, zoomScale: 1.45, offsetX: -12 } as const;
 
 /** Fire breath: a moment of plain flight before each breath, aimed this far (radians) below level. */
 const FIRE_BREATH_PAUSE_MS = 1200;
@@ -101,7 +105,7 @@ const dragonDeath = (kind: DragonDeathKind) => (sprite: Graphics, clock: LabCloc
   drawDragonDeath(sprite, clock.timeMs % (DRAGON_DEATH_MS + DRAGON_DEATH_PAUSE_MS), kind);
 };
 
-const swing = (attackStyle: 'overhead' | 'twoHanded' | 'uppercut') => (sprite: Graphics, clock: LabClock): void => {
+const swing = (attackStyle: AttackStyle) => (sprite: Graphics, clock: LabClock): void => {
   drawStickman(sprite, 0, { idleBlend: 1, armed: true, attackStyle, attackPhase: clock.swingPhase, originY: 0 });
 };
 
@@ -109,7 +113,7 @@ export const LAB_CATEGORIES: readonly LabCategory[] = [
   {
     id: 'movement',
     tab: 'Movement',
-    intro: 'Standing, walking, running and flying. Click one to zoom in.',
+    intro: 'Standing, walking, running, riding and flying. Click one to zoom in.',
     rows: [
       {
         id: 'stand',
@@ -140,6 +144,20 @@ export const LAB_CATEGORIES: readonly LabCategory[] = [
         title: 'Zombie shuffle',
         description: 'Leaning forward with both arms held out in front, swaying a little while it shuffles.',
         render: (sprite, clock) => drawStickman(sprite, clock.timeMs / 240, { zombie: true, originY: 0 }),
+      },
+      {
+        id: 'horse-walk',
+        title: 'Riding: walk',
+        description: 'A stickman on a horse at a walk: four even beats (hind, fore, the other hind, the other fore), the head nodding with each step; the rider sits upright, feet in the stirrups, hands on the reins.',
+        ...HORSE,
+        render: (sprite, clock) => drawHorseRider(sprite, clock.timeMs, 'walk'),
+      },
+      {
+        id: 'horse-gallop',
+        title: 'Riding: gallop',
+        description: 'The same horse at a gallop: both hind hooves, then both fore, then a moment with all four off the ground; the body rocks, the neck pumps and the tail streams. The rider leans forward and rises a little with each stride.',
+        ...HORSE,
+        render: (sprite, clock) => drawHorseRider(sprite, clock.timeMs, 'gallop'),
       },
       {
         id: 'dragon-flight',
@@ -173,7 +191,7 @@ export const LAB_CATEGORIES: readonly LabCategory[] = [
       {
         id: 'club-overhead',
         title: 'Club: overhead',
-        description: 'One-handed: winds up behind the head, strikes down with a lunge and dip, recovers to the stance. Fighters.',
+        description: 'One-handed: winds up behind the head, strikes down with a lunge and dip, recovers to the stance. Fighters, and the black knights\' downward cut.',
         render: swing('overhead'),
       },
       {
@@ -187,6 +205,18 @@ export const LAB_CATEGORIES: readonly LabCategory[] = [
         title: 'Club: uppercut',
         description: 'A short club from below: crouched wind-up behind the hip, then up and forward while stepping in. Runners.',
         render: swing('uppercut'),
+      },
+      {
+        id: 'sword-rise',
+        title: 'Sword: rising cut',
+        description: 'Blade lowered behind the hip in a crouch, then swept up and forward through the target onto the front foot. Black knights.',
+        render: swing('swordRise'),
+      },
+      {
+        id: 'sword-thrust',
+        title: 'Sword: thrust',
+        description: 'Draws the sword back by the chest with the point forward, then drives it straight out in a long lunge. Black knights.',
+        render: swing('thrust'),
       },
       {
         id: 'zombie-grab',
