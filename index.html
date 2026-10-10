@@ -42,6 +42,8 @@
         /* Dev tuning panel (?tune, ui/TuningPanel.ts): a side panel over the canvas's right edge, collapsible to a tab. */
         .tuning-panel { position: absolute; top: 8px; right: 8px; bottom: 8px; z-index: 20; width: 300px; display: flex; flex-direction: column; gap: 8px; padding: 12px 12px 10px; border-radius: 16px; background: var(--panel); color: var(--ink); line-height: 1.3; font-size: 13px; box-shadow: 0 5px 0 var(--panel-edge), 0 18px 40px rgba(0, 0, 0, .3); }
         .tuning-panel[hidden] { display: none; }
+        /* The settings drawer covers it (the drawer lives in #ui-root, under the panel's z-index otherwise). */
+        .stage:has(.drawer:not([hidden])) .tuning-panel { z-index: 5; }
         .tuning-panel.collapsed { bottom: auto; width: auto; padding: 0; background: none; box-shadow: none; }
         .tuning-panel.collapsed > :not(.tuning-tab), .tuning-panel:not(.collapsed) > .tuning-tab { display: none; }
         .tuning-tab { padding: 8px 12px; border-radius: 12px; background: var(--panel); color: var(--ink); font-family: var(--display); font-weight: 600; font-size: 15px; box-shadow: 0 4px 0 var(--panel-edge), 0 8px 14px rgba(0, 0, 0, .2); }
@@ -89,8 +91,10 @@
         .screen { position: absolute; inset: 0; display: grid; place-items: center; pointer-events: auto; }
         /* Overlays are laid out for a canvas at scale 1 and zoom with it (--ui-scale, set by DomUi.fitCanvas). */
         .menu-stack, .panel-card, .end-card, .drawer, .test-screen { zoom: var(--ui-scale, 1); }
-        .menu-screen { background: transparent; }
-        .menu-stack { display: flex; flex-direction: column; align-items: center; transform: translateY(-9%); text-align: center; }
+        /* Sits a little above centre; when the open dev tools make it taller than the view it scrolls instead of clipping the logo. */
+        .menu-screen { display: flex; flex-direction: column; overflow-y: auto; padding: 14px 0; background: transparent; }
+        .menu-screen::after { content: ''; flex: 0 1 18%; }
+        .menu-stack { display: flex; flex-direction: column; align-items: center; margin: auto; text-align: center; }
         .logo { font-family: var(--display); font-weight: 700; font-size: 72px; line-height: 1; color: #fffdf6; text-shadow: 0 5px 0 color-mix(in srgb, var(--accent) 80%, black), 0 12px 24px rgba(20, 40, 40, .35); }
         .tagline { font-family: var(--display); font-weight: 500; font-size: 16px; color: #fbf8ee; margin: 10px 0 22px; text-shadow: 0 2px 0 rgba(30, 60, 60, .8), 0 0 12px rgba(30, 60, 60, .55); }
         .menu-card { display: flex; flex-direction: column; gap: 14px; width: 300px; padding: 18px; border-radius: 22px; background: rgba(246, 241, 228, .92); box-shadow: 0 16px 40px rgba(30, 60, 60, .25); }
@@ -268,8 +272,8 @@
         .end-stats strong { font-family: var(--display); font-weight: 600; font-size: 17px; }
         .end-stats span { font-size: 11px; color: var(--ink-soft); }
 
-        /* ---------- Animation lab buttons (over its own canvas backdrop; --view-inset keeps them on the centred panel in wide views) ---------- */
-        .test-screen { position: absolute; top: 14px; right: calc(14px + var(--view-inset, 0px)); display: flex; gap: 8px; pointer-events: none; }
+        /* ---------- Lab buttons (inside the canvas-drawn panel's top-right corner, like the sound lab's top bar; --view-inset keeps them on the centred panel in wide views) ---------- */
+        .test-screen { position: absolute; top: 24px; right: calc(30px + var(--view-inset, 0px)); display: flex; gap: 8px; pointer-events: none; }
 
         @media (max-width: 760px) {
             .hud { flex-wrap: wrap; justify-content: center; }

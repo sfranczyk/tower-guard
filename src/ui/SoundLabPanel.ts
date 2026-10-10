@@ -89,7 +89,7 @@ export class SoundLabPanel {
     }).join('');
 
     renderPanel(this.root, `
-      ${panelTop('<button class="secondary-button small-button" data-sound-lab-back>← Back</button>', 'Sounds', '', 'Sound test panel')}
+      ${panelTop('', 'Sounds', '<button class="secondary-button small-button" data-sound-lab-back>← Menu</button>', 'Sound test panel')}
       <div class="panel-body">
       <div class="sound-volumes">
         <label class="field"><span class="hud-label">Effects volume</span><input data-lab-effects-volume type="range" min="0" max="100" step="5" value="${Math.round(settings.effectsVolume * 100)}"></label>
