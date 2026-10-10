@@ -1,5 +1,6 @@
 import type { AudioSettings } from '../audio/audioSettings';
 import type { SoundId } from '../audio/SoundManager';
+import { panelTop, renderPanel } from './panelLayout';
 
 export interface SoundLabRow {
   id: SoundId;
@@ -87,9 +88,9 @@ export class SoundLabPanel {
         </div>`;
     }).join('');
 
-    this.root.innerHTML = `
-      <div class="eyebrow">Sound test panel</div>
-      <h2>Sounds</h2>
+    renderPanel(this.root, `
+      ${panelTop('<button class="secondary-button small-button" data-sound-lab-back>← Back</button>', 'Sounds', '', 'Sound test panel')}
+      <div class="panel-body">
       <div class="sound-volumes">
         <label class="field"><span class="hud-label">Effects volume</span><input data-lab-effects-volume type="range" min="0" max="100" step="5" value="${Math.round(settings.effectsVolume * 100)}"></label>
         <label class="field"><span class="hud-label">Music volume</span><input data-lab-music-volume type="range" min="0" max="100" step="5" value="${Math.round(settings.musicVolume * 100)}"></label>
@@ -107,9 +108,7 @@ export class SoundLabPanel {
         </div>
       </div>
       ${effectRows}
-      <div class="sandbox-actions">
-        <button class="secondary-button" data-sound-lab-back>Back</button>
-      </div>`;
+      </div>`);
   }
 
   /** Called every frame: play/stop label, position and progress bar of the theme. */

@@ -13,6 +13,7 @@ import {
 import type { EnemyType } from '../types';
 import { ICON_BOWMAN, ICON_ENEMIES, ICON_KEEP } from './icons';
 import { mapThumbnail } from './mapThumbnail';
+import { panelTop, renderPanel } from './panelLayout';
 import { editQuiverIn } from './quiverEditing';
 import { quiverPage, type PartnerQuiver } from './quiverPage';
 
@@ -33,8 +34,8 @@ export interface SandboxFormCallbacks {
 /**
  * The sandbox setup form, in two pages. Levels: the run is a row of levels (tabs, each with its map and enemy
  * count, plus add and remove); below, the selected level's battleground (map cards) and enemies (a card per type
- * with − / +). Quiver: which arrow goes in each weapon slot (`quiverPage`). Bowman and keep health sit in the
- * header (SandboxSettings.levels; a level's enemies then come in waves, systems/waveDirector).
+ * with − / +). Quiver: which arrow goes in each weapon slot (`quiverPage`). Back and Start sit in the top bar, the
+ * pages and bowman and keep health under it; only the page scrolls (SandboxSettings.levels; a level's enemies then come in waves, systems/waveDirector).
  */
 export class SandboxForm {
   private settings?: SandboxSettings;
@@ -81,9 +82,14 @@ export class SandboxForm {
     const numberInput = (attribute: string, value: number, limits: { min: number; max: number; step: number }): string =>
       `<input type="number" ${attribute} value="${value}" min="${limits.min}" max="${limits.max}" step="${limits.step}">`;
 
-    this.root.innerHTML = `
+    renderPanel(this.root, `
+      ${panelTop(
+    '<button class="secondary-button small-button" data-sandbox-back>← Back</button>',
+    'Battle setup',
+    '<button class="primary-button" data-sandbox-start>Start battle</button>',
+    'Sandbox',
+  )}
       <div class="sandbox-head">
-        <div><div class="eyebrow">Sandbox</div><h2>Battle setup</h2></div>
         <div class="sandbox-pages" role="tablist" aria-label="Setup pages">
           ${PAGES.map(({ id, label }) => `<button type="button" class="sandbox-page${id === this.page ? ' active' : ''}" role="tab" aria-selected="${id === this.page}" data-page="${id}">${label}</button>`).join('')}
         </div>
@@ -92,11 +98,9 @@ export class SandboxForm {
           <label class="health-field" title="Keep health">${ICON_KEEP}<span>Keep</span>${numberInput('data-keep-health', settings.keepHealth, HEALTH_LIMITS.keep)}</label>
         </div>
       </div>
-      ${this.page === 'levels' ? this.levelsPage(settings) : quiverPage(settings.loadout, this.selectedSlot, this.partner)}
-      <div class="sandbox-actions">
-        <button class="secondary-button" data-sandbox-back>Back</button>
-        <button class="primary-button" data-sandbox-start>Start battle</button>
-      </div>`;
+      <div class="panel-body">
+        ${this.page === 'levels' ? this.levelsPage(settings) : quiverPage(settings.loadout, this.selectedSlot, this.partner)}
+      </div>`);
   }
 
   private levelsPage(settings: SandboxSettings): string {

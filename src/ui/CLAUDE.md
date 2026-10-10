@@ -3,8 +3,9 @@
 - Style: the landscape look: flat shapes, cream panels, chunky gold/cream buttons (`primary-button`,
   `secondary-button`), the Fredoka display font, flat SVG icons (`icons.ts`), markup in `template.ts`, styles in
   `index.html`. Game text is English. Accent and backdrop follow the map (`DomUi.setTheme`, battleground `ui`).
-- **HUD** (`Hud.ts`): sits *outside* the canvas (bar above, status line below); `DomUi.fitCanvas()` scales the canvas
-  into the remaining space. Never place HUD elements over the play field. Weapons are square slots (`LOADOUT_SLOTS` = 5,
+- **HUD** (`Hud.ts`): sits *outside* the canvas (bar above: level progress left, weapons centred, settings right;
+  status line below); `DomUi.fitCanvas()` scales the canvas into the remaining space. Never place HUD elements over the
+  play field. Keep and bowman health are bars in the world (Tower, `Bowman.setHealthRatio`), not in the HUD. Weapons are square slots (`LOADOUT_SLOTS` = 5,
   `weaponSlots`): icon only (name in the tooltip), key in the corner, ammo underneath (∞ for now); built from the quiver
   (`DomUi.setLoadout`).
 - **Overlays on the canvas** (menu, sandbox/sound panels, end screen, settings drawer) are laid out for a canvas at
@@ -12,7 +13,7 @@
   at the bottom of its card.
 - **Sandbox form** (`SandboxForm.ts`): level tabs (map thumbnail, enemy count, add/remove, 1–5), the selected level's
   battleground (map cards, `mapThumbnail.ts`: a tiny SVG landscape from the palette) and enemies (a card per type with
-  − / +, type icons), bowman/keep health in the header. Second page, Quiver (`quiverPage.ts`): fill the five slots
+  − / +, type icons), bowman/keep health under the top bar. Second page, Quiver (`quiverPage.ts`): fill the five slots
   (click a slot then an arrow, or drag: `quiverDrag.ts`; editing shared with co-op: `quiverEditing.ts`).
 - **Settings drawer** (handlers in `SceneManager`, works in menu and game): sound/music toggles and volumes
   (persisted), trajectory preview (off by default), arrow trails (0–3, `DEFAULT_ARROW_TRAILS` = 1), cursor circle,

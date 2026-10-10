@@ -4,7 +4,8 @@ import { levelEndInfo, type LevelOutcome } from './levelEnd';
 
 /**
  * Shows the end of a level. A cleared level with levels left offers the next one (`nextRun`: health carries over);
- * otherwise it's the end of the run and the button goes back to the setup. Returns what the button (and Space) does.
+ * otherwise it's the end of the run and the button goes back to the main menu (co-op: both to the lobby); a new run is
+ * set up only from there. Returns what the button (and Space) does.
  */
 export const showLevelEnd = (ctx: GameContext, outcome: LevelOutcome, nextRun: () => RunState, hostSync?: HostSync): (() => void) => {
   const { session, ui } = ctx;
@@ -18,8 +19,9 @@ export const showLevelEnd = (ctx: GameContext, outcome: LevelOutcome, nextRun: (
     : () => {
       // Co-op: the guest goes back to the lobby and waits for the next battle.
       session.net?.transport.send({ t: 'lobby' });
-      ctx.goTo('sandbox');
+      ctx.goTo(session.net ? 'coop' : 'menu');
     };
-  ui.showEndScreen({ ...info, buttonLabel: next ? 'Next level' : 'Back to sandbox setup', onButton: action });
+  const backLabel = session.net ? 'Back to the lobby' : 'Return to menu';
+  ui.showEndScreen({ ...info, buttonLabel: next ? 'Next level' : backLabel, onButton: action });
   return action;
 };

@@ -1,5 +1,6 @@
 import type { Loadout } from '../data/loadout';
 import { editQuiverIn } from './quiverEditing';
+import { panelTop, renderPanel } from './panelLayout';
 import { partnerQuiver, quiverPage } from './quiverPage';
 
 /** What the co-op lobby shows. */
@@ -67,7 +68,9 @@ export class CoopPanel {
 
   public render(view: CoopView): void {
     this.view = view;
-    const leave = (label: string): string => `<button class="secondary-button" data-coop-leave>${label}</button>`;
+    // Back / leave sits in the top bar.
+    let leave = 'Back';
+    let actions = '';
     let body: string;
     switch (view.kind) {
       case 'choose':
@@ -78,34 +81,35 @@ export class CoopPanel {
             <input data-coop-code maxlength="7" placeholder="Room code" autocomplete="off" spellcheck="false">
             <button class="secondary-button" data-coop-join>Join</button>
           </div>
-          ${view.error ? `<p class="coop-error">${escapeHtml(view.error)}</p>` : ''}
-          ${leave('Back')}`;
+          ${view.error ? `<p class="coop-error">${escapeHtml(view.error)}</p>` : ''}`;
         break;
       case 'hosting':
+        leave = view.code ? 'Close the room' : 'Cancel';
+        actions = view.code && view.partner ? '<button class="primary-button" data-coop-setup>Battle setup</button>' : '';
         body = view.code
           ? `
           <p class="coop-copy">Give your partner this room code:</p>
           <div class="coop-code">${escapeHtml(view.code)}</div>
           <p class="coop-status">${view.partner ? 'Your partner has joined!' : 'Waiting for your partner…'}</p>
-          ${view.partner ? partnerQuiver({ label: "Partner's quiver", loadout: view.partnerLoadout }) : ''}
-          ${view.partner ? '<button class="primary-button" data-coop-setup>Battle setup</button>' : ''}
-          ${leave('Close the room')}`
-          : `<p class="coop-status">Opening a room…</p>${leave('Cancel')}`;
+          ${view.partner ? partnerQuiver({ label: "Partner's quiver", loadout: view.partnerLoadout }) : ''}`
+          : '<p class="coop-status">Opening a room…</p>';
         break;
       case 'joining':
-        body = `<p class="coop-status">Joining room ${escapeHtml(view.code)}…</p>${leave('Cancel')}`;
+        leave = 'Cancel';
+        body = `<p class="coop-status">Joining room ${escapeHtml(view.code)}…</p>`;
         break;
       case 'joined':
         body = `
           <div class="coop-code">${escapeHtml(view.code)}</div>
           <p class="coop-status">${escapeHtml(view.notice ?? 'Connected! Pick your arrows while the host sets up the battle…')}</p>
-          ${quiverPage(view.loadout, this.selectedSlot, { label: "Host's quiver", loadout: view.partnerLoadout })}
-          ${leave('Leave the room')}`;
+          ${quiverPage(view.loadout, this.selectedSlot, { label: "Host's quiver", loadout: view.partnerLoadout })}`;
+        leave = 'Leave the room';
         break;
     }
     // The guest's quiver needs the room of a full card.
     this.root.classList.toggle('coop-wide', view.kind === 'joined');
-    this.root.innerHTML = `<h2>Co-op</h2><div class="coop-body">${body}</div>`;
+    const back = `<button class="secondary-button small-button" data-coop-leave>← ${leave}</button>`;
+    renderPanel(this.root, `${panelTop(back, 'Co-op', actions)}<div class="panel-body coop-body">${body}</div>`);
     this.root.querySelector<HTMLInputElement>('[data-coop-code]')?.focus();
   }
 

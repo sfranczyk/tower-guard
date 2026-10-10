@@ -1,5 +1,5 @@
 import { ARROW_INFO, type ArrowType } from '../data/loadout';
-import { ICON_BOWMAN, ICON_GEAR, ICON_KEEP, ICON_LEVEL, ICON_WEAPONS } from './icons';
+import { ICON_GEAR, ICON_LEVEL, ICON_WEAPONS } from './icons';
 
 /**
  * Static DOM markup. Elements are looked up by their data-* attributes in DomUi.
@@ -31,6 +31,7 @@ export const OVERLAY_TEMPLATE = `
       </section>
       <div class="drawer" data-drawer hidden>
         <div class="drawer-header"><h2>Settings</h2><button class="round-button" data-close-options aria-label="Close settings">×</button></div>
+        <div class="drawer-body">
         <label class="field toggle-field"><span>Trajectory preview</span><input data-trajectory type="checkbox"></label>
         <label class="field toggle-field"><span>Aim circle at cursor</span><input data-cursor-circle type="checkbox"></label>
         <label class="field toggle-field" title="Your arrows, their blasts, fire, frost, vortices and pins hit bowmen too"><span>Friendly fire</span><input data-friendly-fire type="checkbox" checked></label>
@@ -41,6 +42,7 @@ export const OVERLAY_TEMPLATE = `
         <label class="field"><span>Music volume</span><input data-music-volume type="range" min="0" max="100" step="5" value="35"></label>
         <label class="field toggle-field"><span>Sound effects</span><input data-sound type="checkbox" checked></label>
         <label class="field"><span>Effects volume</span><input data-volume type="range" min="0" max="100" step="5" value="70"></label>
+        </div>
       </div>
       <section class="screen panel-screen" data-sound-lab hidden>
         <div class="panel-card sound-lab-card" data-sound-lab-panel></div>
@@ -73,13 +75,8 @@ export const weaponSlots = (loadout: readonly (ArrowType | null)[]): string => l
 }).join('');
 
 export const HUD_TOP_TEMPLATE = `
-  <div class="hud-chip">${ICON_KEEP}<div><div class="chip-label">Keep</div><div class="meter"><i data-tower-bar></i></div><div class="chip-value" data-tower-health>600 / 600</div></div></div>
-  <div class="hud-chip">${ICON_BOWMAN}<div><div class="chip-label" data-bowman-label>Bowman</div><div class="meter"><i data-bowman-bar></i></div><div class="chip-value" data-bowman-health>100 / 100</div></div></div>
-  <div class="hud-chip" data-bowman2-chip hidden>${ICON_BOWMAN}<div><div class="chip-label">Player 2</div><div class="meter"><i data-bowman2-bar></i></div><div class="chip-value" data-bowman2-health>100 / 100</div></div></div>
   <div class="hud-chip">${ICON_LEVEL}<div><div class="chip-label">Level <span data-level-number>1 / 1</span></div><div class="pips" data-enemy-pips></div><div class="meter" hidden><i data-level-bar></i></div><div class="chip-value" data-enemy-count>0 of 0 defeated</div></div></div>
-  <div class="hud-spacer"></div>
   <div class="weapons" data-projectiles></div>
-  <div class="hud-spacer"></div>
   <button class="round-button" data-options aria-label="Open settings">${ICON_GEAR}</button>
 `;
 

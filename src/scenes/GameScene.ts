@@ -362,13 +362,8 @@ export class GameScene extends Scene {
   }
 
   private updateHud(): void {
+    this.players.forEach((player) => player.bowman.setHealthRatio(player.health / this.ctx.session.sandbox.bowmanHealth));
     this.ctx.ui.updateHud({
-      towerHealth: this.playerTower.getHealth(),
-      towerMaxHealth: this.playerTower.maxHealth,
-      // Player 1's bar first, then player 2's, the same on both screens.
-      bowmanHealth: this.players[0].health,
-      bowmanMaxHealth: this.ctx.session.sandbox.bowmanHealth,
-      partnerHealth: this.team.coop ? this.players[1].health : undefined,
       defeatedEnemies: this.foes.defeated(),
       totalEnemies: this.foes.total,
       level: this.ctx.session.run.levelIndex + 1,

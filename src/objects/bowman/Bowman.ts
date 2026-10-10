@@ -1,4 +1,4 @@
-import { Container } from 'pixi.js';
+import { Container, Graphics } from 'pixi.js';
 import { BOWMAN_WALK_SPEED } from '../../config';
 import type { Rect, Vec2 } from '../../types';
 import { AfflictionLayer } from '../AfflictionLayer';
@@ -6,6 +6,7 @@ import { BodyMotion } from '../../systems/bodyMotion';
 import { startKnockdown, stepKnockdown, type Knockdown } from '../../systems/bowmanMotion';
 import type { ArmorPalette } from '../../rendering/armor';
 import { STANDING_BURN_POINTS } from '../../rendering/burning';
+import { drawHealthBar } from '../../rendering/healthBar';
 import { relight } from '../../systems/burning';
 import type { BowmanLook } from '../../rendering/bowmanBody';
 import { FALL_DURATION_MS, getFallPose, type FallKind } from '../../rendering/stickmanFall';
@@ -26,6 +27,8 @@ const BURN_FLAME_SIZE = 1.6;
 const AFFLICTION_SIZE = 1;
 /** Levitating, he's drawn in front of the funnel. */
 const LEVITATE_Z = 4;
+/** Health bar over his head (container space, drawn at 1/3: the enemies' size on screen), `aboveHead` over his top point. */
+const HEALTH_BAR = { width: 60, height: 8, aboveHead: 34 };
 
 export interface BowmanConfig {
   width?: number;
@@ -72,6 +75,9 @@ export class Bowman extends Container {
    * the foot to the ground by a pinning arrow (can't walk, jump or hide, still shoots).
    */
   public readonly motion = new BodyMotion();
+  /** The health bar over his head (`setHealthRatio`; players' health lives in the battle's Player). */
+  private readonly healthBar = new Graphics();
+  private healthRatio = 1;
   /** Co-op host: told when he's knocked down or catches fire, to replay it on the guest's screen. */
   public netHooks?: { knockedBack(fromX: number, strength: number): void; ignited(): void };
 
@@ -89,7 +95,7 @@ export class Bowman extends Container {
     this.health = this.maxHealth;
     this.figure = new BowmanFigure(this, config.look ?? 'ranger', config.armorColors);
 
-    this.addChild(this.figure.body, this.afflictions.art);
+    this.addChild(this.figure.body, this.afflictions.art, this.healthBar);
 
     this.scale.set(1 / 3);
     this.zIndex = 2;
@@ -377,6 +383,25 @@ export class Bowman extends Container {
     this.figure.body.tint = this.afflictions.tint;
     // On the body as it is now (standing, falling, lying or flailing); the ice block round the standing figure.
     this.afflictions.draw(this.figure.burnPoints(), AFFLICTION_SIZE, this.figure.toContainer(STANDING_BURN_POINTS));
+    this.placeHealthBar();
+  }
+
+  /** His health share (0..1) for the bar over his head. */
+  public setHealthRatio(ratio: number): void {
+    this.healthRatio = ratio;
+  }
+
+  /** Over his head as he is now (standing, falling, flailing); hidden once dead. */
+  private placeHealthBar(): void {
+    this.healthBar.visible = !this.isDead;
+    if (!this.healthBar.visible) {
+      return;
+    }
+    const points = this.figure.burnPoints();
+    const top = Math.min(...points.map((point) => point.y));
+    const centre = points.reduce((sum, point) => sum + point.x, 0) / points.length;
+    this.healthBar.position.set(centre, top - HEALTH_BAR.aboveHead);
+    drawHealthBar(this.healthBar, this.healthRatio, HEALTH_BAR.width, HEALTH_BAR.height);
   }
 
   private updateBody(deltaMs: number, moving: boolean, sprinting: boolean): void {

@@ -213,12 +213,12 @@ export const ENEMY_KINDS: Readonly<Record<EnemyType, EnemyKind>> = {
   },
   // Goblins, three quarters of a man's height.
   fast: {
-    label: 'Runner', archetype: 'runner', race: 'goblin', magical: false, arrival: 0.05,
+    label: 'Goblin runner', archetype: 'runner', race: 'goblin', magical: false, arrival: 0.05,
     stats: { health: 22, speed: ENEMY_SPEED * 2.1 }, damage: { melee: [3, 6] }, build: { size: 0.75, strikeReach: 45 },
   },
   // Ogres stand half again as tall: their long club is hard to step away from.
   tank: {
-    label: 'Brute', archetype: 'heavy', race: 'ogre', magical: false, arrival: 0.3,
+    label: 'Ogre brute', archetype: 'heavy', race: 'ogre', magical: false, arrival: 0.3,
     stats: { health: 110, speed: ENEMY_SPEED * 0.6 }, damage: { melee: [14, 22] }, keepDamage: { melee: 2 }, build: { size: 1.5, strikeReach: 85 },
   },
   // Fragile, keeps its distance and shoots.
