@@ -212,7 +212,9 @@
         .quiver-slot.empty { border-color: var(--panel-edge); }
         .quiver-slot.selected { outline-color: var(--gold); transform: translateY(-3px); }
         .quiver-clear { position: absolute; top: -8px; right: -8px; width: 20px; height: 20px; border-radius: 10px; background: var(--panel); color: var(--bad); font-family: var(--display); font-weight: 700; font-size: 14px; line-height: 1; box-shadow: 0 2px 0 var(--panel-edge); pointer-events: auto; }
-        .arrow-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+        .arrow-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px 10px; align-items: start; }
+        .arrow-path { display: flex; flex-direction: column; gap: 6px; }
+        .arrow-path .sandbox-section-label { margin: 0; }
         .arrow-card { position: relative; display: flex; align-items: center; gap: 7px; padding: 4px 22px 4px 4px; border-radius: 10px; background: var(--panel-sunk); color: var(--ink); text-align: left; box-shadow: 0 2px 0 var(--panel-edge); transition: transform .08s ease; pointer-events: auto; }
         .arrow-card:hover { transform: translateY(-1px); }
         .arrow-card .weapon-art { flex-shrink: 0; width: 32px; height: 32px; padding: 1px; border-radius: 8px; background: var(--panel); }
@@ -280,6 +282,7 @@
             .hud-top { grid-template-columns: auto 1fr auto; }
             .meter { width: 64px; }
             .weapon-slot { width: 42px; height: 42px; }
+            .arrow-cards { grid-template-columns: 1fr; }
             .weapon-art { width: 34px; height: 34px; }
             .sound-volumes { grid-template-columns: 1fr; }
         }

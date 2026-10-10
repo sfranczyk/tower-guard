@@ -11,6 +11,7 @@ Grep for a neighbouring arrow (`frost`, `pinning`, `shrapnel`) and copy its shap
 - `src/types/index.ts`: the projectile type id.
 - `src/data/projectiles.ts`: mass, head drag, speed multiplier (+ `projectiles.test.ts`). Gravity stays shared.
 - `src/data/loadout.ts`: available in the quiver (+ test). `src/data/sandbox.ts` only if a default loadout changes.
+- `src/data/arrowTree.ts`: its path (archer, craftsman, mage) and parent arrow in `ARROW_TREE` (the type check demands it).
 - Tuning → `src/config.ts` (prefix by arrow, e.g. `FROST_*`).
 
 ## 2. Looks
