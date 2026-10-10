@@ -3,7 +3,7 @@ import { FROST_FREEZE_BRUTE_MS, FROST_FREEZE_MS, HORSE_LEG, KNIGHT_ARMOR, PIN_DU
 import { burnDurationMs, freezeDurationMs } from '../systems/afflictions';
 import { resistsVortex } from '../systems/vortex';
 import { horseDeathKind, legHitLames, legLameChance, mountedDamage } from './enemies';
-import { ARCHETYPES, ENEMY_KINDS, ENEMY_TYPES, RACES, enemyArchetype, enemyArmor, enemyMass, enemyTraits, isFlyingType } from './enemyKinds';
+import { ARCHETYPES, ENEMY_GROUP_IDS, ENEMY_KINDS, ENEMY_TYPES, RACES, enemyArchetype, enemyTypesOf, enemyArmor, enemyMass, enemyTraits, isFlyingType } from './enemyKinds';
 
 describe('ENEMY_KINDS', () => {
   it('lists every enemy once, in the setup order', () => {
@@ -24,6 +24,15 @@ describe('ENEMY_KINDS', () => {
     expect(of('hammerKnight')).toEqual(['heavy', 'human']);
     expect(of('priest')).toEqual(['healer', 'human']);
     expect(of('horseKnight')).toEqual(['cavalry', 'human']);
+  });
+
+  it('sorts the enemies into groups by race', () => {
+    expect(Object.fromEntries(ENEMY_GROUP_IDS.map((group) => [group, enemyTypesOf(group)]))).toEqual({
+      humans: ['basic', 'archer', 'kamikaze', 'knight', 'hammerKnight', 'horseKnight', 'priest'],
+      mightyHumans: ['dragon', 'fireDragon'],
+      nonHumans: ['fast', 'tank'],
+      creatures: ['zombie'],
+    });
   });
 
   it('weighs each enemy (a fighter 1.2): goblins lightest, then the undead, knights heavier, ogres, then horse and rider heaviest on the ground', () => {

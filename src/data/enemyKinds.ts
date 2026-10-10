@@ -25,6 +25,22 @@ export type EnemyArchetype = 'fighter' | 'runner' | 'heavy' | 'archer' | 'kamika
 
 export type EnemyRace = 'human' | 'goblin' | 'ogre' | 'undead' | 'dragon';
 
+/**
+ * The enemies' groups, by race: what the setup's enemy picker sorts them by, and what a story level is built from
+ * (mostly one group, or humans with mighty humans).
+ */
+export type EnemyGroup = 'humans' | 'mightyHumans' | 'nonHumans' | 'creatures';
+
+export const ENEMY_GROUPS: Readonly<Record<EnemyGroup, { label: string }>> = {
+  humans: { label: 'Humans' },
+  mightyHumans: { label: 'Mighty humans' },
+  nonHumans: { label: 'Non-humans' },
+  creatures: { label: 'Creatures' },
+};
+
+/** Every group, in the setup's order. */
+export const ENEMY_GROUP_IDS = Object.keys(ENEMY_GROUPS) as readonly EnemyGroup[];
+
 export interface EnemyStats {
   health: number;
   speed: number;
@@ -110,6 +126,7 @@ export interface EnemyTraits {
 
 export interface RaceInfo {
   label: string;
+  group: EnemyGroup;
   traits: EnemyTraits;
   /** Every one of this race is magical (dragons). */
   magical: boolean;
@@ -118,18 +135,19 @@ export interface RaceInfo {
 const NORMAL_TRAITS: EnemyTraits = { mass: 1.2, freezeMs: FROST_FREEZE_MS, burnFactor: 1, pinMs: PIN_DURATION_MS, healable: true };
 
 export const RACES: Readonly<Record<EnemyRace, RaceInfo>> = {
-  human: { label: 'Human', traits: NORMAL_TRAITS, magical: false },
+  human: { label: 'Human', group: 'humans', traits: NORMAL_TRAITS, magical: false },
   // Small and light: a vortex tosses them about.
-  goblin: { label: 'Goblin', traits: { ...NORMAL_TRAITS, mass: 0.8 }, magical: false },
+  goblin: { label: 'Goblin', group: 'nonHumans', traits: { ...NORMAL_TRAITS, mass: 0.8 }, magical: false },
   // Big and heavy: no vortex lifts them, the ice holds them only briefly, no pin holds them down.
-  ogre: { label: 'Ogre', traits: { ...NORMAL_TRAITS, mass: 4.2, freezeMs: FROST_FREEZE_BRUTE_MS, pinMs: 0 }, magical: false },
+  ogre: { label: 'Ogre', group: 'nonHumans', traits: { ...NORMAL_TRAITS, mass: 4.2, freezeMs: FROST_FREEZE_BRUTE_MS, pinMs: 0 }, magical: false },
   // Dry and numb: burns longer, keeps struggling on a pin longer; a priest's healing doesn't reach the dead.
   undead: {
-    label: 'Undead', traits: { ...NORMAL_TRAITS, mass: 1, burnFactor: ENEMY_BURN_ZOMBIE_FACTOR, pinMs: PIN_DURATION_ZOMBIE_MS, healable: false }, magical: false,
+    label: 'Undead', group: 'creatures', traits: { ...NORMAL_TRAITS, mass: 1, burnFactor: ENEMY_BURN_ZOMBIE_FACTOR, pinMs: PIN_DURATION_ZOMBIE_MS, healable: false }, magical: false,
   },
   // Up in the air: never frozen solid or pinned.
-  // Up in the air (a vortex only stirs them: turbulence) and huge.
-  dragon: { label: 'Dragon', traits: { ...NORMAL_TRAITS, mass: 7.2, freezeMs: 0, pinMs: 0 }, magical: true },
+  // Up in the air (a vortex only stirs them: turbulence) and huge. (A dragon with its rider: a mighty human; a wild
+  // dragon would be a creature, its own race.)
+  dragon: { label: 'Dragon', group: 'mightyHumans', traits: { ...NORMAL_TRAITS, mass: 7.2, freezeMs: 0, pinMs: 0 }, magical: true },
 };
 
 /** How a variant looks and moves besides its archetype: body size (1 = a man), club reach, standing sway. */
@@ -270,6 +288,12 @@ export const enemyArchetype = (type: EnemyType): ArchetypeInfo => ARCHETYPES[ENE
 
 /** Its race's traits with its own overrides. */
 export const enemyTraits = (type: EnemyType): EnemyTraits => ({ ...RACES[ENEMY_KINDS[type].race].traits, ...ENEMY_KINDS[type].traits });
+
+/** Its group (by its race). */
+export const enemyGroup = (type: EnemyType): EnemyGroup => RACES[ENEMY_KINDS[type].race].group;
+
+/** The enemies of a group, in the setup's order. */
+export const enemyTypesOf = (group: EnemyGroup): readonly EnemyType[] => ENEMY_TYPES.filter((type) => enemyGroup(type) === group);
 
 /** How heavy it is (a man 1.2, VORTEX_MASS.reference; race traits with the variant's own). */
 export const enemyMass = (type: EnemyType): number => enemyTraits(type).mass;

@@ -11,6 +11,8 @@ All pure and tested. Tuning numbers live in `config.ts`, sandbox defaults in `sa
   `arrival` (where in a level it starts to come). Gameplay code asks `enemyArchetype(type)` and `enemyTraits(type)` (race
   traits with the variant's overrides), never the id; looks stay per variant (`rendering/enemyBody.ts`, `ICON_ENEMIES`).
   A new variant is one entry here plus its look and icon (see the `/new-enemy` skill).
+  Each race belongs to a **group** (`ENEMY_GROUPS`: humans, mighty humans = dragon riders, non-humans = goblin/ogre,
+  creatures = undead; `enemyGroup`, `enemyTypesOf`): the setup's enemy picker is split by it, story levels build on it.
   Now: fighter, archer, kamikaze, the three knights, priest = human; runner = goblin; brute = ogre; zombie = undead; both
   dragons = dragon. An entry may have `armor` (`enemyArmor`): the share of an arrow's body hit that gets through.
 - **Toughness and damage** (`enemies.ts`): health per type against a 20-damage arrow (headshot

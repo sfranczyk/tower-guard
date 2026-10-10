@@ -1,6 +1,6 @@
 import { BATTLEGROUNDS, BATTLEGROUND_IDS, type BattlegroundId } from '../data/battlegrounds';
+import { ENEMY_GROUPS, ENEMY_GROUP_IDS, enemyTypesOf } from '../data/enemyKinds';
 import {
-  ENEMY_TYPES,
   ENEMY_TYPE_LABELS,
   HEALTH_LIMITS,
   MAX_ENEMIES_PER_TYPE,
@@ -116,9 +116,10 @@ export class SandboxForm {
             ${mapThumbnail(BATTLEGROUNDS[id])}<span>${BATTLEGROUNDS[id].name}</span></button>`).join('')}
         </div>
         <div class="sandbox-section-label">Enemies <span data-level-total>${levelEnemyTotal(level.enemies)}</span></div>
+        ${ENEMY_GROUP_IDS.map((group) => `<div class="enemy-group-label">${ENEMY_GROUPS[group].label}</div>
         <div class="enemy-cards">
-          ${ENEMY_TYPES.map((type) => this.enemyCard(type, level.enemies[type])).join('')}
-        </div>
+          ${enemyTypesOf(group).map((type) => this.enemyCard(type, level.enemies[type])).join('')}
+        </div>`).join('')}
       </div>`;
   }
 
