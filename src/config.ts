@@ -1,13 +1,20 @@
 import { tunable } from './core/tuning';
 import type { ProjectileType } from './types';
 /**
- * The view (screen) in game px: always GAME_HEIGHT tall and at least GAME_WIDTH wide (2.1:1). A wider
+ * The view (screen) in game px: always GAME_HEIGHT tall and at least GAME_WIDTH wide (~2.14:1). A wider
  * window, or one big enough to pass MAX_VIEW_SCALE, widens the view (more landscape) instead of scaling
  * everything up, up to MAX_VIEW_WIDTH (see core/viewport.ts).
  */
-export const GAME_WIDTH = 1134;
-export const GAME_HEIGHT = 540;
-export const MAX_VIEW_WIDTH = 1800;
+export const GAME_WIDTH = 1260;
+export const GAME_HEIGHT = 590;
+export const MAX_VIEW_WIDTH = 1970;
+/**
+ * World y at the view's bottom and top edge. The ground and scenery are laid out for a view bottom at 540, so
+ * a taller view shows more sky: world y 0 sits -VIEW_TOP below the top of the screen (scenery containers and
+ * the battle camera are moved down by that much).
+ */
+export const VIEW_BOTTOM = 540;
+export const VIEW_TOP = VIEW_BOTTOM - GAME_HEIGHT;
 /** Largest on-screen scale (CSS px per game px) before the view widens instead of growing. */
 export const MAX_VIEW_SCALE = 1.4;
 /** Upper limit of the renderer resolution (backing pixels per game px) for big windows and browser zoom. */

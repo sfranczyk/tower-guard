@@ -1,5 +1,5 @@
 import { Graphics, type Container } from 'pixi.js';
-import { BACKDROP_WIDTH, GAME_HEIGHT, GROUND_Y, SCENERY_MARGIN, WORLD_WIDTH } from '../config';
+import { BACKDROP_WIDTH, GAME_HEIGHT, GROUND_Y, SCENERY_MARGIN, VIEW_BOTTOM, VIEW_TOP, WORLD_WIDTH } from '../config';
 import type { Battleground } from '../data/battlegrounds';
 import { layoutClouds, mixColor, type CloudLayer, type CloudShape } from './clouds';
 import { drawHills, drawVegetation } from './landscape';
@@ -41,7 +41,9 @@ export class Background {
     const sceneryWidth = this.right - this.left;
     // Everything that touches the ground (drawing, walking, arrows) uses this map's wave height.
     useTerrain(battleground.terrainAmplitude, battleground.terrainWaviness);
-    container.addChild(new Graphics().rect(this.left, 0, sceneryWidth, GAME_HEIGHT).fill({ color: 0x10233a }));
+    // World y 0 sits below the top of the view (VIEW_TOP); the battle camera keeps this offset too.
+    container.y = -VIEW_TOP;
+    container.addChild(new Graphics().rect(this.left, VIEW_TOP, sceneryWidth, GAME_HEIGHT).fill({ color: 0x10233a }));
     container.addChild(this.createSky(battleground));
 
     const { sun } = battleground;
@@ -117,12 +119,12 @@ export class Background {
     return graphics;
   }
 
-  /** Horizontal bands from the top colour down to the horizon. */
+  /** Horizontal bands from the top colour at the view's top edge down to the horizon. */
   private createSky({ sky }: Battleground): Graphics {
     const graphics = new Graphics();
-    const bandHeight = GROUND_Y / sky.length;
+    const bandHeight = (GROUND_Y - VIEW_TOP) / sky.length;
     sky.forEach((color, index) => {
-      graphics.rect(this.left, index * bandHeight, this.right - this.left, bandHeight + 1).fill({ color });
+      graphics.rect(this.left, VIEW_TOP + index * bandHeight, this.right - this.left, bandHeight + 1).fill({ color });
     });
     return graphics;
   }
@@ -135,7 +137,7 @@ export class Background {
     for (let x = left; x <= right + TERRAIN_STEP; x += TERRAIN_STEP) {
       surface.push(x, groundAt(x));
     }
-    ground.poly([...surface, right + TERRAIN_STEP, GAME_HEIGHT, left, GAME_HEIGHT]).fill({ color: colors.fill });
+    ground.poly([...surface, right + TERRAIN_STEP, VIEW_BOTTOM, left, VIEW_BOTTOM]).fill({ color: colors.fill });
     ground.moveTo(surface[0], surface[1]);
     for (let index = 2; index < surface.length; index += 2) {
       ground.lineTo(surface[index], surface[index + 1]);

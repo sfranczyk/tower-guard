@@ -1,5 +1,5 @@
 import { Graphics } from 'pixi.js';
-import { BACKDROP_WIDTH, GAME_HEIGHT, WORLD_WIDTH } from '../config';
+import { BACKDROP_WIDTH, VIEW_BOTTOM, WORLD_WIDTH } from '../config';
 import type { Battleground } from '../data/battlegrounds';
 import { groundAt } from '../systems/terrain';
 
@@ -10,20 +10,20 @@ export const drawHills = ({ hills: [far, near], hillShape }: Battleground): Grap
     hills.moveTo(0, 405).bezierCurveTo(160, 360, 300, 372, 430, 392)
       .bezierCurveTo(600, 418, 760, 340, 940, 362)
       .bezierCurveTo(1060, 376, 1130, 388, BACKDROP_WIDTH, 380)
-      .lineTo(BACKDROP_WIDTH, GAME_HEIGHT).lineTo(0, GAME_HEIGHT).closePath().fill({ color: far });
+      .lineTo(BACKDROP_WIDTH, VIEW_BOTTOM).lineTo(0, VIEW_BOTTOM).closePath().fill({ color: far });
     hills.moveTo(0, 448).bezierCurveTo(140, 418, 290, 422, 420, 440)
       .bezierCurveTo(560, 460, 700, 408, 860, 424)
       .bezierCurveTo(1000, 438, 1110, 452, BACKDROP_WIDTH, 436)
-      .lineTo(BACKDROP_WIDTH, GAME_HEIGHT).lineTo(0, GAME_HEIGHT).closePath().fill({ color: near });
+      .lineTo(BACKDROP_WIDTH, VIEW_BOTTOM).lineTo(0, VIEW_BOTTOM).closePath().fill({ color: near });
   } else if (hillShape === 'mountains') {
     drawMountains(hills, far, near);
   } else {
     hills.moveTo(0, 360).bezierCurveTo(180, 250, 310, 340, 480, 275)
       .bezierCurveTo(650, 215, 820, 330, BACKDROP_WIDTH, 245)
-      .lineTo(BACKDROP_WIDTH, GAME_HEIGHT).lineTo(0, GAME_HEIGHT).closePath().fill({ color: far });
+      .lineTo(BACKDROP_WIDTH, VIEW_BOTTOM).lineTo(0, VIEW_BOTTOM).closePath().fill({ color: far });
     hills.moveTo(0, 412).bezierCurveTo(190, 320, 390, 390, 570, 330)
       .bezierCurveTo(760, 270, 900, 390, BACKDROP_WIDTH, 312)
-      .lineTo(BACKDROP_WIDTH, GAME_HEIGHT).lineTo(0, GAME_HEIGHT).closePath().fill({ color: near });
+      .lineTo(BACKDROP_WIDTH, VIEW_BOTTOM).lineTo(0, VIEW_BOTTOM).closePath().fill({ color: near });
   }
   hills.zIndex = 0;
   return hills;
@@ -54,7 +54,7 @@ const drawMountains = (g: Graphics, far: number, near: number): void => {
       range.push((x + next[0]) / 2, VALLEY_Y - 20 + (index % 2) * 25);
     }
   });
-  range.push(BACKDROP_WIDTH, PEAKS[PEAKS.length - 1][1] + 30, BACKDROP_WIDTH, GAME_HEIGHT, 0, GAME_HEIGHT);
+  range.push(BACKDROP_WIDTH, PEAKS[PEAKS.length - 1][1] + 30, BACKDROP_WIDTH, VIEW_BOTTOM, 0, VIEW_BOTTOM);
   g.poly(range).fill({ color: far });
   // Snow caps: the top third of each peak, with a ragged lower edge.
   PEAKS.forEach(([x, top]) => {
@@ -67,7 +67,7 @@ const drawMountains = (g: Graphics, far: number, near: number): void => {
   g.moveTo(0, 392).bezierCurveTo(150, 350, 280, 372, 420, 356)
     .bezierCurveTo(600, 334, 720, 384, 880, 362)
     .bezierCurveTo(1010, 346, 1120, 370, BACKDROP_WIDTH, 358)
-    .lineTo(BACKDROP_WIDTH, GAME_HEIGHT).lineTo(0, GAME_HEIGHT).closePath().fill({ color: near });
+    .lineTo(BACKDROP_WIDTH, VIEW_BOTTOM).lineTo(0, VIEW_BOTTOM).closePath().fill({ color: near });
   drawMist(g, 404, 50, 0.16);
 };
 

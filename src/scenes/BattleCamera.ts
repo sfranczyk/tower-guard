@@ -1,4 +1,4 @@
-import { WORLD_WIDTH } from '../config';
+import { VIEW_TOP, WORLD_WIDTH } from '../config';
 import { CAMERA_LOOK, aimLookAhead, easeTowards, nextLookShift } from '../core/camera';
 import { centeredCameraX, viewWidth } from '../core/viewport';
 import type { Vec2 } from '../types';
@@ -49,6 +49,6 @@ export class BattleCamera {
       : clamp(focus.bowmanX + this.lookShift - width / 2, 0, WORLD_WIDTH - width);
     this.x = this.placed ? easeTowards(this.x, target, deltaMs, CAMERA_FOLLOW_MS) : target;
     this.placed = true;
-    return { x: -this.x + shake.x, y: shake.y };
+    return { x: -this.x + shake.x, y: -VIEW_TOP + shake.y };
   }
 }

@@ -4,6 +4,7 @@ import {
   ENEMY_KEEP_HEALTH,
   ENEMY_TOWER_X,
   GAME_HEIGHT,
+  VIEW_TOP,
   GROUND_Y,
   PLAYER_TOWER_X,
   SHOW_HITBOX_DEBUG,
@@ -319,7 +320,7 @@ export class GameScene extends Scene {
     const { ui } = this.ctx;
     this.localInput = new LocalInput(new InputManager({
       eventTarget: this.ctx.app.canvas,
-      worldPointFromScreen: (point) => ({ x: point.x + this.camera.x, y: point.y }),
+      worldPointFromScreen: (point) => ({ x: point.x + this.camera.x, y: point.y + VIEW_TOP }),
       maxDragDistance: 200,
       screenSize: () => ({ x: viewWidth(), y: GAME_HEIGHT }),
     }));
