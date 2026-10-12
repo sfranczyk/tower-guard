@@ -45,6 +45,8 @@ export class HostSync {
   private readonly enemyIds = new Map<Foe, number>();
   private nextEnemyId = 1;
   private nextArrowId = 1;
+  /** The guest pressed Esc (the host decides and answers with `sendPause`). */
+  public onPauseRequest?: (paused: boolean) => void;
 
   public constructor(
     private readonly transport: Transport,
@@ -54,6 +56,8 @@ export class HostSync {
     transport.onMessage((message) => {
       if (message.t === 'input') {
         HostSync.applyInput(guestInput, message);
+      } else if (message.t === 'pause') {
+        this.onPauseRequest?.(message.paused);
       }
     });
   }
@@ -73,6 +77,11 @@ export class HostSync {
     if (message.projectile) {
       input.pickProjectile(message.projectile);
     }
+  }
+
+  /** Pauses or resumes the guest's battle along with the host's. */
+  public sendPause(paused: boolean): void {
+    this.transport.send({ t: 'pause', paused });
   }
 
   public push(event: GameEvent): void {

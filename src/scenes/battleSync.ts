@@ -25,6 +25,8 @@ export interface BattleSyncSetup {
   playSound(id: SoundId, at: Vec2): void;
   /** Guest: the host decided what comes after the level. */
   showGuestEnd(info: EndInfo): void;
+  /** Guest: the host paused or resumed the battle. */
+  guestPaused(paused: boolean): void;
 }
 
 /**
@@ -58,6 +60,7 @@ export const startBattleSync = (setup: BattleSyncSetup): { hostSync?: HostSync; 
     setStatus: (text) => ctx.ui.setStatus(text),
     showEnd: setup.showGuestEnd,
     restart: (message) => restartAsGuest(ctx, message),
+    setPaused: setup.guestPaused,
     backToLobby: () => ctx.goTo('coop'),
   }, players.local.input as RecordingInput);
   return { guestSync };

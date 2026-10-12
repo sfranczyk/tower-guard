@@ -11,6 +11,7 @@ everything under `ctx.root` on each switch. Scenes never touch the DOM: they cal
   places unhorsed riders, defeated count, O-key hide), bowmen to `BattlePlayers` (creation, per-frame picks/shots/bursts,
   falls, `status`), co-op setup to `startBattleSync` (`battleSync.ts`), the end screen to `showLevelEnd`
   (`levelEndScreen.ts`, text from pure `levelEndInfo`), status texts to `battleText.ts` (pure). A
+  Esc pauses (`togglePause` / `setPaused`: `update` stops, `DomUi.showPause`; co-op: net/CLAUDE.md). A
   cleared level offers "Next level" (health carries over) until the last, then Victory; defeat goes back to setup. The
   world keeps running after a level ends (enemies cheer on defeat).
   `players` / `PlayerControl.ts`: see net/CLAUDE.md. Follows the bowman across `WORLD_WIDTH` (centred,

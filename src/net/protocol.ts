@@ -177,4 +177,6 @@ export type NetMessage =
   | { t: 'lobby' }
   /** Either way: the sender's own quiver (sent on linking up and on every change; handled by net/coopLink). */
   | { t: 'loadout'; loadout: Loadout }
+  /** Guest → host: Esc asks to pause or resume; host → guest: the battle is paused or resumed (both screens). */
+  | { t: 'pause'; paused: boolean }
   | InputMessage;

@@ -42,6 +42,8 @@ export interface GuestWorld {
   showEnd(info: EndInfo): void;
   /** The host started the next level (or a new battle). */
   restart(message: Extract<NetMessage, { t: 'start' }>): void;
+  /** The host paused or resumed the battle (on either player's Esc). */
+  setPaused(paused: boolean): void;
   /** The host went back to the battle setup. */
   backToLobby(): void;
 }
@@ -90,6 +92,11 @@ export class GuestSync {
     this.burst = true;
   }
 
+  /** Esc: asks the host to pause or resume (it applies only once the host answers). */
+  public requestPause(paused: boolean): void {
+    this.transport.send({ t: 'pause', paused });
+  }
+
   public queueProjectile(type: ProjectileType): void {
     this.projectile = type;
   }
@@ -110,6 +117,9 @@ export class GuestSync {
         break;
       case 'lobby':
         this.world.backToLobby();
+        break;
+      case 'pause':
+        this.world.setPaused(message.paused);
         break;
       default:
         break;

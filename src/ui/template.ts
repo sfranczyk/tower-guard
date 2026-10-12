@@ -29,6 +29,13 @@ export const OVERLAY_TEMPLATE = `
         <button class="secondary-button small-button" data-lab-menu>← Menu</button>
         <button class="secondary-button small-button" data-lab-back hidden>← All animations</button>
       </section>
+      <section class="screen end-screen" data-pause hidden>
+        <div class="end-card">
+          <h2>Paused</h2>
+          <p data-pause-copy>Press Esc to resume.</p>
+          <button class="secondary-button" data-pause-menu>Main menu</button>
+        </div>
+      </section>
       <div class="drawer" data-drawer hidden>
         <div class="drawer-header"><h2>Settings</h2><button class="round-button" data-close-options aria-label="Close settings">×</button></div>
         <div class="drawer-body">

@@ -56,6 +56,8 @@ export interface UiHandlers {
   /** Animation lab: leave the zoomed view and return to the list. */
   labBack?: () => void;
   toggleOptions?: () => void;
+  /** The pause dialog's "Main menu" button. */
+  pauseMenu?: () => void;
   selectProjectile?: (type: ProjectileType) => void;
   /** `level`: the level being edited (its battleground is shown behind the form). */
   sandboxChange?: (settings: SandboxSettings, level: number) => void;
@@ -97,6 +99,8 @@ export class DomUi {
   private readonly labScreen: HTMLElement;
   private readonly optionsDrawer: HTMLElement;
   private readonly endScreen: HTMLElement;
+  private readonly pauseScreen: HTMLElement;
+  private readonly pauseCopy: HTMLElement;
   private readonly endTitle: HTMLElement;
   private readonly endCopy: HTMLElement;
   private readonly endButton: HTMLButtonElement;
@@ -139,6 +143,8 @@ export class DomUi {
     this.labScreen = this.query('[data-test]');
     this.optionsDrawer = this.query('[data-drawer]');
     this.endScreen = this.query('[data-end]');
+    this.pauseScreen = this.query('[data-pause]');
+    this.pauseCopy = this.query('[data-pause-copy]');
     this.endTitle = this.query('[data-end-title]');
     this.endCopy = this.query('[data-end-copy]');
     this.endButton = this.query<HTMLButtonElement>('[data-end-button]');
@@ -192,6 +198,7 @@ export class DomUi {
     this.onClick('[data-options]', () => this.handlers.toggleOptions?.());
     this.onClick('[data-close-options]', () => this.handlers.toggleOptions?.());
     this.endButton.addEventListener('click', () => this.onEndButton?.());
+    this.onClick('[data-pause-menu]', () => this.handlers.pauseMenu?.());
     this.weaponsRoot.addEventListener('click', (event) => {
       const button = (event.target as HTMLElement).closest<HTMLButtonElement>('[data-projectile]');
       if (button) {
@@ -230,6 +237,7 @@ export class DomUi {
     this.hudBottom.hidden = screen !== 'game';
     this.labBackButton.hidden = true;
     this.endScreen.hidden = true;
+    this.pauseScreen.hidden = true;
     this.optionsDrawer.hidden = true;
     this.fitCanvas();
   }
@@ -328,6 +336,18 @@ export class DomUi {
     this.endButton.textContent = options.buttonLabel;
     this.onEndButton = options.onButton;
     this.endScreen.hidden = false;
+  }
+
+  /**
+   * The battle's pause dialog (hidden with `undefined`). It lies under the settings drawer and the tuning panel, so
+   * both stay usable while paused.
+   */
+  public showPause(pause: { byPartner: boolean; coop: boolean } | undefined): void {
+    this.pauseScreen.hidden = !pause;
+    if (pause) {
+      const who = pause.byPartner ? 'Your partner paused the battle. ' : pause.coop ? 'Paused for both players. ' : '';
+      this.pauseCopy.textContent = `${who}Press Esc to resume.`;
+    }
   }
 
   /** The dev tuning panel (`?tune`), over the canvas's right edge. */

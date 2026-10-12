@@ -10,7 +10,9 @@ transport so they arrive in any scene) and sees the other's (`partnerQuiver`: th
 page, the guest under their own); `NetLink.loadouts` holds both by player and `loadoutOf(session, index)` is what each
 fights with (HUD slots, keys, the host checks the guest's picks). `ctx.session.net` (`NetLink`: role, code,
 `Transport`, the level's wind, both quivers) and `playerCount` 2; `net/coopLink.ts` links up and handles a dropped link
-(guest back to the lobby with a notice; host plays on, player 2 stands still); Esc in a co-op battle leaves the room.
+(guest back to the lobby with a notice; host plays on, player 2 stands still). Esc pauses both screens: the guest asks
+(`{ t: 'pause' }`, `GuestSync.requestPause`), the host decides and answers (`HostSync.onPauseRequest` / `sendPause`);
+the pause dialog's "Main menu" leaves the room.
 
 - **Players**: `GameScene.players`, one `Player` per bowman (`scenes/PlayerControl.ts`: bowman, `PlayerInput`, health,
   weapon). The host is player 1, the guest player 2 (`localIndex`; camera, aim overlay, status line follow the local

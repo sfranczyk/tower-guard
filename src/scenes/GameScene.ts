@@ -79,6 +79,10 @@ export class GameScene extends Scene {
   /** Where the local player's drawn shot would land (x), while aiming. */
   private aimLandingX?: number;
   private optionsVisible = false;
+  /** Esc pauses the battle (co-op: on both screens, the host decides); the world stands still until Esc again. */
+  private paused = false;
+  /** Guest: this player's Esc asked the host to pause (so the dialog doesn't say the partner did). */
+  private pauseAsked = false;
   private gameEnded = false;
   /** What the end screen's button (and Space) does. */
   private endAction?: () => void;
@@ -206,7 +210,14 @@ export class GameScene extends Scene {
       spawnEnemy: (type, place) => this.foes.spawn(type, place),
       playSound: (id, at) => this.playSound(id, at),
       showGuestEnd: (info) => this.showGuestEnd(info),
+      guestPaused: (paused) => this.setPaused(paused, !this.pauseAsked),
     }));
+    if (this.hostSync) {
+      this.hostSync.onPauseRequest = (paused) => {
+        this.setPaused(paused, true);
+        this.hostSync?.sendPause(paused);
+      };
+    }
     if (SHOW_HITBOX_DEBUG) {
       // Debug console hook (?debug): window.__towerGuard.scene gives access to the running level.
       (window as unknown as { __towerGuard?: unknown }).__towerGuard = { scene: this };
@@ -234,6 +245,14 @@ export class GameScene extends Scene {
 
   /** The world keeps running after the level ends; the end screen just overlays it. */
   public update(deltaMs: number): void {
+    // The guest left mid-level: player 2 stands still from now on.
+    if (this.hostSync && !this.ctx.session.net) {
+      this.hostSync = undefined;
+      (this.players[1]?.input as ManualInput | undefined)?.set({ direction: 0, sprint: false, aim: undefined });
+    }
+    if (this.paused) {
+      return;
+    }
     this.foes.update(deltaMs);
     this.background.update(deltaMs);
     this.weather?.update(deltaMs, this.camera.x);
@@ -260,11 +279,28 @@ export class GameScene extends Scene {
       this.checkEndConditions();
     }
     this.hostSync?.update(deltaMs);
-    // The guest left mid-level: player 2 stands still from now on.
-    if (this.hostSync && !this.ctx.session.net) {
-      this.hostSync = undefined;
-      (this.players[1]?.input as ManualInput | undefined)?.set({ direction: 0, sprint: false, aim: undefined });
+  }
+
+  /** Esc: pauses or resumes (a co-op guest asks the host, which pauses both screens). */
+  private togglePause(): void {
+    const paused = !this.paused;
+    if (this.guestSync) {
+      this.pauseAsked = paused;
+      this.guestSync.requestPause(paused);
+      return;
     }
+    this.setPaused(paused, false);
+    this.hostSync?.sendPause(paused);
+  }
+
+  private setPaused(paused: boolean, byPartner: boolean): void {
+    if (this.gameEnded) {
+      return;
+    }
+    this.paused = paused;
+    this.pauseAsked = false;
+    this.localInput?.cancelAim();
+    this.ctx.ui.showPause(paused ? { byPartner, coop: this.role !== 'solo' } : undefined);
   }
 
   /** Guest: the host decides what comes after the level. */
@@ -292,20 +328,29 @@ export class GameScene extends Scene {
 
     ui.handlers.toggleOptions = () => this.toggleOptions();
     ui.handlers.selectProjectile = (type) => this.localInput?.queueProjectile(type);
+    ui.handlers.pauseMenu = () => {
+      // Leaving a co-op battle leaves the room (the partner is told).
+      leaveCoop(this.ctx);
+      this.ctx.goTo('menu');
+    };
     this.onExit(() => {
       ui.handlers.toggleOptions = undefined;
+      ui.handlers.pauseMenu = undefined;
       ui.handlers.selectProjectile = undefined;
     });
 
     this.listenWindow('keydown', (event) => {
       if (event.code === 'Escape') {
-        // Leaving a co-op battle leaves the room (the partner is told).
-        leaveCoop(this.ctx);
-        this.ctx.goTo('menu');
+        if (!this.gameEnded) {
+          this.togglePause();
+        }
         return;
       }
       if (event.code === 'KeyI') {
         this.toggleOptions();
+      }
+      if (this.paused) {
+        return;
       }
       const projectile = this.localLoadout[slotOfKey(event.code)];
       if (projectile) {
