@@ -49,6 +49,15 @@ describe('horse and rider', () => {
     expect(distance(start.rider.head, end.rider.head)).toBeLessThan(1e-6);
   });
 
+  it.each(['walk', 'gallop'] as const)('%s: the hind legs almost straighten as they push off, and never overstretch', (gait) => {
+    const reach = frames(gait).flatMap((timeMs) => {
+      const pose = getHorsePose(timeMs, gait);
+      return [pose.nearHind, pose.farHind].map(({ root, hoof }) => distance(root, hoof) / (HORSE_LEG.upper + HORSE_LEG.lower));
+    });
+    expect(Math.max(...reach)).toBeGreaterThan(gait === 'gallop' ? 0.95 : 0.92);
+    expect(Math.max(...reach)).toBeLessThan(0.995);
+  });
+
   it('stands with all four hooves still on the ground', () => {
     expect(gaitGroundSpeed('stand')).toBe(0);
     const first = getHorsePose(0, 'stand');

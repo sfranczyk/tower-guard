@@ -28,6 +28,11 @@ interface GaitSpec {
   lift: number;
   /** Share of the cycle each hoof is on the ground. */
   stance: number;
+  /**
+   * How far back (px) the hind hooves' track is shifted: they land under the belly and push off well behind, the leg
+   * almost straight; the lift is also delayed, so it leaves the ground still extended before it folds.
+   */
+  hindBack: number;
   /** When each hoof lands (fraction of the cycle): near hind, far hind, near fore, far fore. */
   landings: { nearHind: number; farHind: number; nearFore: number; farFore: number };
   /** Body rise and fall (px), pitch (radians, + = nose down) and head nod (radians). */
@@ -41,19 +46,19 @@ interface GaitSpec {
 const GAITS: Readonly<Record<HorseGait, GaitSpec>> = {
   // All four hooves planted; it breathes and shakes its head a little.
   stand: {
-    cycleMs: 2600, stride: 0, lift: 0, stance: 1,
+    cycleMs: 2600, stride: 0, lift: 0, stance: 1, hindBack: 0,
     landings: { nearHind: 0, nearFore: 0, farHind: 0, farFore: 0 },
     bob: 0.8, pitch: 0.006, nod: 0.06, lean: 0.03,
   },
   // Four beats, evenly spaced: hind, fore on the same side, the other hind, the other fore.
   walk: {
-    cycleMs: 1200, stride: 15, lift: 12, stance: 0.62,
+    cycleMs: 1200, stride: 15, lift: 12, stance: 0.62, hindBack: 15,
     landings: { nearHind: 0, nearFore: 0.25, farHind: 0.5, farFore: 0.75 },
     bob: 1.5, pitch: 0.012, nod: 0.07, lean: 0.06,
   },
   // Hind, hind, fore, fore, then all four off the ground.
   gallop: {
-    cycleMs: 620, stride: 24, lift: 24, stance: 0.32,
+    cycleMs: 620, stride: 24, lift: 24, stance: 0.32, hindBack: 17,
     landings: { farHind: 0, nearHind: 0.1, farFore: 0.3, nearFore: 0.4 },
     bob: 4, pitch: 0.05, nod: 0.16, lean: 0.32,
   },
@@ -100,13 +105,15 @@ export const gaitGroundSpeed = (gait: HorseGait): number => {
 const wrap = (p: number): number => ((p % 1) + 1) % 1;
 const add = (a: Vec2, b: Vec2): Vec2 => ({ x: a.x + b.x, y: a.y + b.y });
 /** A hoof `sinceLanding` (cycles) after it landed: planted and sliding back, then lifted and swung forward. */
-const hoofAt = (sinceLanding: number, rootX: number, { stride, lift, stance }: GaitSpec): Vec2 => {
+const hoofAt = (sinceLanding: number, rootX: number, { stride, lift, stance }: GaitSpec, hind: boolean): Vec2 => {
   const q = wrap(sinceLanding);
   if (q < stance) {
     return { x: rootX + stride * (1 - (2 * q) / stance), y: HORSE_GROUND_Y };
   }
   const u = (q - stance) / (1 - stance);
-  return { x: rootX - stride + 2 * stride * smooth(u), y: HORSE_GROUND_Y - lift * Math.sin(Math.PI * u) };
+  // A hind hoof peels off late (toe last), so the leg stays extended behind a moment longer.
+  const liftU = hind ? u ** 1.6 : u;
+  return { x: rootX - stride + 2 * stride * smooth(u), y: HORSE_GROUND_Y - lift * Math.sin(Math.PI * liftU) };
 };
 
 /** The body's frame (before bob and pitch): the horse stands with its back at about y -38. */
@@ -220,7 +227,10 @@ export const getHorsePose = (timeMs: number, gait: HorseGait, lance?: LanceHold)
   const pitch = spec.pitch * (gait === 'walk' ? Math.sin(cycle * 2) : Math.sin(cycle + 0.6));
   const nod = spec.nod * (gait === 'walk' ? Math.sin(cycle * 2) : gait === 'gallop' ? Math.sin(cycle - 1.2) : Math.sin(cycle) * Math.max(0, Math.sin(cycle * 3)));
   const { landings } = spec;
-  const hoof = (name: HorseLegName): Vec2 => hoofAt(p - landings[name], LEG_ROOTS[name].root.x, spec);
+  const hoof = (name: HorseLegName): Vec2 => {
+    const hind = LEG_ROOTS[name].bend < 0;
+    return hoofAt(p - landings[name], LEG_ROOTS[name].root.x - (hind ? spec.hindBack : 0), spec, hind);
+  };
   const frame: HorseFrame = {
     rise, pitch, nod,
     swish: Math.sin(cycle + 0.8) * (gait === 'gallop' ? 7 : gait === 'walk' ? 3 : 2),

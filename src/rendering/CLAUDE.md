@@ -49,7 +49,7 @@ animation gets a row in `scenes/labRows.ts` (or `scenes/labSequences.ts` for one
 
 ## Horse
 `horseRider.ts` (`getHorsePose`, `assembleHorsePose` from a `HorseFrame`; walk 4 beats, gallop; hooves at
-`HORSE_GROUND_Y`, IK knees/hocks), `horseSeat.ts` (`riderPose`, `LanceHold`, `LANCE`), `horseHitZones.ts`
+`HORSE_GROUND_Y`, IK knees/hocks; `hindBack` shifts the hind track back so they push off nearly straight), `horseSeat.ts` (`riderPose`, `LanceHold`, `LANCE`), `horseHitZones.ts`
 (`mountedHitZones`, body/ice points), `horseSkeleton.ts` (`drawHorsePose`, lab look), `horseDeath.ts` (`lieDown`,
 `drop`; `thrownRider`).
 
