@@ -218,6 +218,15 @@ export const DRAGON_TURBULENCE_MS = 4200;
 export const DRAGON_TURBULENCE_SPREAD = 4;
 export const DRAGON_BUFFET = { x: 14, y: 20, tilt: 0.16 } as const;
 /**
+ * Regeneration (trolls, `regenerates` in data/enemyKinds): perSecond health back, in steps every tickMs (each step is
+ * a co-op heal event). Burning stops it, and it starts again only afterBurnMs after the fire is out; frozen, it waits.
+ */
+export const REGEN = tunable('REGEN', 'Troll regeneration', {
+  perSecond: 6,
+  tickMs: 500,
+  afterBurnMs: 1500,
+});
+/**
  * Enemy attacks: the pause between club swings (intervalMs) and how long a swing takes (animationMs); enemy archers
  * stop and shoot from archerRange, draw for archerDrawMs, wait archerCooldownMs between shots, aim error archerSpread.
  */

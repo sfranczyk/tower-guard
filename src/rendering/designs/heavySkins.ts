@@ -7,7 +7,7 @@ import { limb, shape } from './designShapes';
 import { banditArcherLook } from './enemySkins';
 import { at, drawHumanoid, ellipseIn, shapeIn, torsoFrame, type HumanoidLook, type LimbLook } from './skinKit';
 
-/** New looks for the brute (an ogre), the zombie (a rotting peasant) and the dragon riders. */
+/** New looks for the brute (an ogre), the troll, the zombie (a rotting peasant) and the dragon riders. */
 
 const xy = (point: Vec2): [number, number] => [point.x, point.y];
 const limbs = (upper: number, lower: number, upperWidth: [number, number], lowerWidth: [number, number]): LimbLook =>
@@ -59,6 +59,65 @@ export const ogreLook = (): HumanoidLook => {
         shape(g, [point(length * at - 1.5, side * 5), point(length * at + 1.5, side * 5), point(length * at, side * 10)], 0x9aa3ab);
         g.circle(base.x, base.y, 1.2).fill({ color: 0x9aa3ab });
       });
+    },
+  };
+};
+
+/**
+ * Troll: lanky and hunched, grey-green hide with moss on the back, long arms ending in big hands, a shaggy mane, a
+ * long drooping nose, and a stone lashed to a crooked branch.
+ */
+export const trollLook = (): HumanoidLook => {
+  const SKIN = 0x7f8f74, DARK = 0x5d6b55, BELLY = 0x95a487, MOSS = 0x4f6b32, HAIR = 0x2f3324, ROPE = 0x8a7a54;
+  return {
+    arm: limbs(SKIN, SKIN, [9, 8], [9, 10]),
+    armFar: limbs(DARK, DARK, [9, 8], [9, 10]),
+    leg: limbs(SKIN, SKIN, [11, 9], [9, 8]),
+    legFar: limbs(DARK, DARK, [11, 9], [9, 8]),
+    hand: SKIN, handFar: DARK, handRadius: 7,
+    foot: { color: SKIN, colorFar: DARK, length: 19, height: 7 },
+    torso: (g, pose, frame) => {
+      // Hunched: the back bulges behind the spine.
+      shapeIn(g, pose.hip, frame, [[-6, -10], [14, -17], [34, -15], [42, -4], [40, 7], [26, 12], [8, 13], [-6, 9]], SKIN);
+      ellipseIn(g, at(pose.hip, frame, 12, 5), frame, 8, 11, BELLY);
+      for (const [u, f, r] of [[30, -12, 4.5], [22, -14, 3.5], [36, -8, 3], [14, -13, 2.5]] as const) {
+        ellipseIn(g, at(pose.hip, frame, u, f), frame, r * 1.2, r, MOSS);
+      }
+    },
+    overLegs: (g, pose, frame) => {
+      // A ragged loincloth of bark and moss.
+      shapeIn(g, pose.hip, frame, [[2, -11], [2, 12], [-12, 10], [-8, 5], [-14, 0], [-9, -4], [-13, -9]], 0x5a4a32);
+      limb(g, at(pose.hip, frame, 1, -11), at(pose.hip, frame, 1, 12), 2.5, 2.5, ROPE);
+      ellipseIn(g, at(pose.hip, frame, -6, -5), frame, 2.6, 2, MOSS);
+    },
+    head: (g, pose, frame) => {
+      // Low and thrust forward, under a shaggy mane.
+      const head = at(pose.head, frame, -4, 3);
+      for (const [u, f] of [[7, -9], [3, -11], [-2, -10], [-6, -8], [9, -4]] as const) {
+        shapeIn(g, head, frame, [[u + 3, f + 2], [u - 1, f - 4], [u - 3, f + 3]], HAIR);
+      }
+      g.circle(head.x, head.y, 9).fill({ color: SKIN });
+      shapeIn(g, head, frame, [[9, -6], [11, 2], [6, 6], [4, -4]], HAIR);
+      // Heavy brow, a small eye under it, the long nose drooping past the mouth.
+      shapeIn(g, head, frame, [[5, 0], [5.5, 9], [2.5, 9], [3, 0]], DARK);
+      g.circle(...xy(at(head, frame, 1.5, 5)), 1.4).fill({ color: 0xd8c040 });
+      shapeIn(g, head, frame, [[2, 6], [1, 14], [-4, 15.5], [-5.5, 12], [-2, 8]], BELLY);
+      ellipseIn(g, at(head, frame, -4, 13.5), frame, 2, 1.6, DARK);
+      limb(g, at(head, frame, -5.5, 3), at(head, frame, -6, 8), 1.8, 1.8, 0x2a2a1e);
+      shapeIn(g, head, frame, [[-5, 7], [-2, 8], [-5, 9]], 0xe6dcb8);
+    },
+    club: (g, butt, tip) => {
+      const length = Math.hypot(tip.x - butt.x, tip.y - butt.y) || 1;
+      const d = { x: (tip.x - butt.x) / length, y: (tip.y - butt.y) / length };
+      const point = (distance: number, side = 0): Vec2 => ({ x: butt.x + d.x * distance - d.y * side, y: butt.y + d.y * distance + d.x * side });
+      // A crooked branch with a twig stub, a rough stone lashed to its end.
+      limb(g, butt, point(length * 0.45, 1.5), 5, 6, 0x5a3a20);
+      limb(g, point(length * 0.45, 1.5), point(length * 0.85, -1), 6, 7, 0x5a3a20);
+      limb(g, point(length * 0.4, 1.5), point(length * 0.5, 7), 2.5, 1.5, 0x5a3a20);
+      shape(g, [point(length * 0.78, -8), point(length * 0.9, -10), point(length * 1.04, -7), point(length * 1.08, 3),
+        point(length * 0.98, 9), point(length * 0.82, 8), point(length * 0.76, 0)], 0x7d7f7a);
+      shape(g, [point(length * 0.86, -7), point(length * 0.98, -6), point(length * 0.93, -1)], 0x9a9c96);
+      limb(g, point(length * 0.8, -8), point(length * 0.84, 8), 2, 2, ROPE);
     },
   };
 };

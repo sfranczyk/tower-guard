@@ -103,6 +103,10 @@ export const ICON_ENEMIES = {
   // Ogre: big and thick-limbed, a long club in both hands.
   tank: figure(`<circle cx="10" cy="6" r="3.8" stroke-width="2.6"/><path d="M10 10v8M10 18l-5 7M10 18l5 7M10 12.5l6 1.5M10 12.5l4.5 4" stroke-width="3.4"/>
     ${club(15, 16, 23, 5, 3)}`),
+  // Troll: hunched, a long nose and long arms, a stone on a branch.
+  troll: figure(`<circle cx="9.5" cy="8" r="3.4" stroke-width="2.4"/><path d="M12.5 8.5l3 2.5" stroke-width="2"/>
+    <path d="M9 11.5l-1 7M8 18.5l-4 7M8 18.5l4.5 7M8.8 13l6.5 3M8.8 13l3.5 6" stroke-width="3"/>
+    <path d="M15 16l7-9" stroke="#5a3a20" stroke-width="2.2"/><path d="M20 4.5l4 1 .5 3.5-3 2-3-1.5z" fill="#7d7f7a" stroke="none"/>`),
   // Bandit archer: drawing the bow, an arrow on the string.
   archer: figure(`<circle cx="10" cy="6" r="3"/><path d="M10 9v9M10 18l-4 7M10 18l4 7M10 12l7.5 0M10 12.5l3.5 1"/>
     <path d="M18 4c4 4.5 4 11.5 0 16" stroke="#8a6238"/><path d="M18 4 13.5 13.5 18 20" stroke="#9aa4ae" stroke-width=".9"/>

@@ -7,7 +7,7 @@ import type { AttackStyle } from './attackSwing';
 import type { JointPose } from './stickmanPose';
 import { archerBody, attackBody, castBody, runBody, standBody, walkBody, withClub, type BodyPose } from './designs/bodyPoses';
 import { banditArcherLook, goblinLook, raiderLook, sapperLook } from './designs/enemySkins';
-import { ogreLook, zombieLook } from './designs/heavySkins';
+import { ogreLook, trollLook, zombieLook } from './designs/heavySkins';
 import { blackKnightLook, darkPriestLook, hammerKnightLook } from './designs/knightSkins';
 import { drawHumanoid, type HumanoidLook } from './designs/skinKit';
 import { drawLookGibs } from './designs/lookGibs';
@@ -18,7 +18,7 @@ import { drawMountedKnight } from './designs/warhorse';
 /**
  * Enemies drawn in their looks (rendering/designs) over the same poses drawStickman uses, so movement,
  * swings, falls and hitboxes are unchanged: fighter = raider, runner = goblin, archer = hooded bandit,
- * brute = ogre, kamikaze = sapper, zombie = rotting peasant; the black knight, hammer knight and dark priest as they are;
+ * brute = ogre, troll, kamikaze = sapper, zombie = rotting peasant; the black knight, hammer knight and dark priest as they are;
  * the mounted knight is the black knight on a warhorse (designs/warhorse.ts) in the 'mounted' state.
  */
 
@@ -39,6 +39,7 @@ const LOOKS: Readonly<Record<GroundEnemy, EnemyBodyLook>> = {
   basic: { look: raiderLook, club: 'overhead', gibs: { ...HUMAN_BODY, bone: 0xd9a074, boneRear: 0x7b5233 } },
   fast: { look: goblinLook, club: 'uppercut', gibs: { ...HUMAN_BODY, bone: 0x86b04b, boneRear: 0x5f8a36 } },
   tank: { look: fixed(ogreLook()), club: 'twoHanded', gibs: { ...HUMAN_BODY, bone: 0xb59a6a, boneRear: 0x8f784f } },
+  troll: { look: fixed(trollLook()), club: 'twoHanded', gibs: { ...HUMAN_BODY, bone: 0x7f8f74, boneRear: 0x5d6b55 } },
   archer: { look: fixed(banditArcherLook()), gibs: { ...HUMAN_BODY, bone: 0xd2a07a, boneRear: 0x9a3a32 } },
   kamikaze: { look: sapperLook, gibs: { ...HUMAN_BODY, bone: 0xe0b48c, boneRear: 0xc0392b } },
   zombie: { look: zombieLook, gibs: { ...ZOMBIE_BODY, bone: 0x9fb38a, boneRear: 0x5b6b7a } },

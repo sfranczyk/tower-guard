@@ -10,11 +10,12 @@ import {
   GROUND_Y,
   PRIEST_ESCAPE_BEYOND,
   PRIEST_POST_SLACK,
+  REGEN,
   SHOW_HITBOX_DEBUG,
   WORLD_WIDTH,
 } from '../config';
 import { enemyDamage, rollDamage } from '../data/enemies';
-import { enemyArchetype, enemyTraits } from '../data/enemyKinds';
+import { enemyArchetype, enemyRegenerates, enemyTraits } from '../data/enemyKinds';
 import { bowSpeed } from '../data/projectiles';
 import Arrow from '../objects/Arrow';
 import type Bowman from '../objects/bowman/Bowman';
@@ -26,6 +27,7 @@ import type { EnemyType, Vec2 } from '../types';
 import { solveLaunchAngle } from './ballistics';
 import { flamesTouch } from './burning';
 import { planHeals, priestPost } from './healing';
+import { REGEN_START, regenStep, type RegenState } from './regeneration';
 import type { BowmanHit } from './bowmanDeath';
 import { BOWMAN_CHEST, TOWER_HALF_WIDTH, bowmanBox, foeHitBoxes, type Foe } from './combatGeometry';
 import type { EffectsSystem } from './EffectsSystem';
@@ -71,6 +73,8 @@ export interface EnemyAIEvents {
 export class EnemyAI {
   /** Cached aim per enemy archer. */
   private readonly archerAim = new Map<Foe, { angle: number; ageMs: number }>();
+  /** Regeneration clock per troll. */
+  private readonly regen = new WeakMap<Enemy, RegenState>();
 
   public constructor(
     private readonly world: EnemyAIWorld,
@@ -84,6 +88,9 @@ export class EnemyAI {
       enemy.updateAnimation(deltaMs, false);
       this.drawDebugHitboxes(enemy);
       return;
+    }
+    if (!(enemy instanceof DragonEnemy) && enemyRegenerates(enemy.kind)) {
+      this.regenerate(enemy, deltaMs);
     }
     if (enemy instanceof DragonEnemy) {
       this.updateDragon(enemy, deltaMs);
@@ -160,6 +167,16 @@ export class EnemyAI {
     }
 
     enemy.clearHitTint();
+  }
+
+  /** A troll's wounds close unless it burns (systems/regeneration.ts); each step reaches the guest as a heal event. */
+  private regenerate(enemy: Enemy, deltaMs: number): void {
+    const { afflictions } = enemy;
+    const step = regenStep(this.regen.get(enemy) ?? REGEN_START, deltaMs, { burning: afflictions.isBurning, paused: afflictions.isFrozen }, REGEN);
+    this.regen.set(enemy, step.state);
+    if (step.heal > 0 && enemy.missingHealth > 0) {
+      enemy.heal(step.heal);
+    }
   }
 
   /**

@@ -194,6 +194,8 @@ export interface EnemyKind {
   armor?: number;
   /** A rider: what it fights on as, thrown off its horse (EnemyArchetype `rides`); `stats.health` is then the rider's. */
   unhorsed?: EnemyType;
+  /** Gets its health back over time unless burning (REGEN in config.ts, systems/regeneration.ts). */
+  regenerates?: boolean;
   /** A rider's horse: its own health (data/enemies `mountedDamage` says which of them a hit hurts). */
   mount?: { health: number };
 }
@@ -220,6 +222,12 @@ export const ENEMY_KINDS: Readonly<Record<EnemyType, EnemyKind>> = {
   tank: {
     label: 'Ogre brute', archetype: 'heavy', race: 'ogre', magical: false, arrival: 0.3,
     stats: { health: 110, speed: ENEMY_SPEED * 0.6 }, damage: { melee: [14, 22] }, keepDamage: { melee: 2 }, build: { size: 1.5, strikeReach: 85 },
+  },
+  // A troll: taller and slower than the brute, with long arms and a stone club. Its wounds close (REGEN): set it alight
+  // to stop that, then finish it while it burns.
+  troll: {
+    label: 'Troll', archetype: 'heavy', race: 'ogre', magical: false, arrival: 0.4, regenerates: true,
+    stats: { health: 130, speed: ENEMY_SPEED * 0.5 }, damage: { melee: [16, 24] }, keepDamage: { melee: 2 }, build: { size: 1.6, strikeReach: 90 },
   },
   // Fragile, keeps its distance and shoots.
   archer: {
@@ -297,6 +305,9 @@ export const enemyTypesOf = (group: EnemyGroup): readonly EnemyType[] => ENEMY_T
 
 /** How heavy it is (a man 1.2, VORTEX_MASS.reference; race traits with the variant's own). */
 export const enemyMass = (type: EnemyType): number => enemyTraits(type).mass;
+
+/** Whether its wounds close by themselves (trolls). */
+export const enemyRegenerates = (type: EnemyType): boolean => ENEMY_KINDS[type].regenerates ?? false;
 
 /** The share of an arrow's body hit that gets through its armour (1 = none). */
 export const enemyArmor = (type: EnemyType): number => ENEMY_KINDS[type].armor ?? 1;

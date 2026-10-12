@@ -61,3 +61,7 @@ open the one you need:
   outright kill, horse headshot, blast, lightning or ice → drop, else lie down; `Mount.die`) and throws the rider
   (`Enemy.throwOff`, `RIDER_OFF_FORCE`; `riderPending` keeps the level going). A vortex arrow in the rider
   (`Enemy.unseat`, `ArrowMagic.unseat`) lifts him out of the saddle and the horse bolts (`slowByWind` in reach).
+- **Troll** (`troll`: heavy, ogre, 1.6× tall, stone on a branch, `trollLook` in `rendering/designs/heavySkins.ts`):
+  `regenerates` (`enemyRegenerates`): `EnemyAI.regenerate` runs pure `regenStep` (`systems/regeneration.ts`, `REGEN`
+  tunable) and heals in steps; burning stops it until `afterBurnMs` after the fire, frozen holds it. Each step is a
+  co-op `heal` event (`Enemy.heal`).

@@ -15,7 +15,7 @@ import { RUN_STRIDE_PER_RADIAN } from '../runCycle';
 import type { AttackStyle } from '../attackSwing';
 import { archerBody, attackBody, castBody, runBody, walkBody, withClub, type BodyPose } from './bodyPoses';
 import { banditArcherLook, goblinLook, raiderLook, sapperLook } from './enemySkins';
-import { dragonArcherLook, dragonKnightLook, drawDragonWithRider, ogreLook, zombieLook } from './heavySkins';
+import { dragonArcherLook, dragonKnightLook, drawDragonWithRider, ogreLook, trollLook, zombieLook } from './heavySkins';
 import { ENEMY_DESIGNS } from './ideas';
 import { blackKnightLook, darkPriestLook, hammerKnightLook } from './knightSkins';
 import { drawMountedKnight } from './warhorse';
@@ -171,6 +171,7 @@ const runPhase = (timeMs: number, speed: number): number => (timeMs * speed) / R
 const FIGHTER_SPEED = ENEMY_SPEED / 1000;
 const RUNNER_SPEED = (ENEMY_SPEED * 2.1) / 1000;
 const BRUTE_SPEED = (ENEMY_SPEED * 0.6) / 1000;
+const TROLL_SPEED = (ENEMY_SPEED * 0.5) / 1000;
 const ARCHER_SPEED = (ENEMY_SPEED * 0.9) / 1000;
 const KAMIKAZE_SPEED = (ENEMY_SPEED * 2) / 1000;
 const ZOMBIE_SPEED = (ENEMY_SPEED * 0.45) / 1000;
@@ -250,6 +251,21 @@ const ENEMIES: DesignEntry[] = [
       cheering(fixed(ogreLook()), 'cheerFist', true),
       blownApart('tank'),
       now((t) => ({ phase: walkPhase(t, BRUTE_SPEED), armed: true, attackStyle: 'twoHanded' }), BRUTE_SPEED),
+    ],
+  },
+  {
+    id: 'troll',
+    name: 'Troll',
+    tagline: 'Slow, tough, its wounds close',
+    description: 'Lanky and hunched, a grey-green hide with moss growing on the back, long arms ending in big hands, a shaggy black mane over a heavy brow, a small yellow eye and a long drooping nose, a bark loincloth, and a rough stone lashed to a crooked branch. Its wounds close unless it burns. Drawn at normal size here; the game draws trolls 1.6 times as tall.',
+    views: [
+      walking(fixed(trollLook()), TROLL_SPEED, 'twoHanded'),
+      swinging('Two-handed chop', fixed(trollLook()), 'twoHanded'),
+      knockdown(fixed(trollLook())),
+      falling('Death', fixed(trollLook()), 'deathCrumple'),
+      cheering(fixed(trollLook()), 'cheerFist', true),
+      blownApart('troll'),
+      now((t) => ({ phase: walkPhase(t, TROLL_SPEED), armed: true, attackStyle: 'twoHanded' }), TROLL_SPEED),
     ],
   },
   {
