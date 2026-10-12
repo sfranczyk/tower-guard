@@ -328,6 +328,11 @@ export class GameScene extends Scene {
 
     ui.handlers.toggleOptions = () => this.toggleOptions();
     ui.handlers.selectProjectile = (type) => this.localInput?.queueProjectile(type);
+    ui.handlers.pauseResume = () => {
+      if (this.paused) {
+        this.togglePause();
+      }
+    };
     ui.handlers.pauseMenu = () => {
       // Leaving a co-op battle leaves the room (the partner is told).
       leaveCoop(this.ctx);
@@ -335,6 +340,7 @@ export class GameScene extends Scene {
     };
     this.onExit(() => {
       ui.handlers.toggleOptions = undefined;
+      ui.handlers.pauseResume = undefined;
       ui.handlers.pauseMenu = undefined;
       ui.handlers.selectProjectile = undefined;
     });

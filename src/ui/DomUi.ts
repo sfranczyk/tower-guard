@@ -56,7 +56,8 @@ export interface UiHandlers {
   /** Animation lab: leave the zoomed view and return to the list. */
   labBack?: () => void;
   toggleOptions?: () => void;
-  /** The pause dialog's "Main menu" button. */
+  /** The pause dialog's "Resume" and "Main menu" buttons. */
+  pauseResume?: () => void;
   pauseMenu?: () => void;
   selectProjectile?: (type: ProjectileType) => void;
   /** `level`: the level being edited (its battleground is shown behind the form). */
@@ -198,6 +199,7 @@ export class DomUi {
     this.onClick('[data-options]', () => this.handlers.toggleOptions?.());
     this.onClick('[data-close-options]', () => this.handlers.toggleOptions?.());
     this.endButton.addEventListener('click', () => this.onEndButton?.());
+    this.onClick('[data-pause-resume]', () => this.handlers.pauseResume?.());
     this.onClick('[data-pause-menu]', () => this.handlers.pauseMenu?.());
     this.weaponsRoot.addEventListener('click', (event) => {
       const button = (event.target as HTMLElement).closest<HTMLButtonElement>('[data-projectile]');
@@ -345,8 +347,7 @@ export class DomUi {
   public showPause(pause: { byPartner: boolean; coop: boolean } | undefined): void {
     this.pauseScreen.hidden = !pause;
     if (pause) {
-      const who = pause.byPartner ? 'Your partner paused the battle. ' : pause.coop ? 'Paused for both players. ' : '';
-      this.pauseCopy.textContent = `${who}Press Esc to resume.`;
+      this.pauseCopy.textContent = pause.byPartner ? 'Your partner paused the battle.' : pause.coop ? 'Paused for both players.' : 'The battle waits for you.';
     }
   }
 

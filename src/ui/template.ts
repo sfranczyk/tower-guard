@@ -32,8 +32,11 @@ export const OVERLAY_TEMPLATE = `
       <section class="screen end-screen" data-pause hidden>
         <div class="end-card">
           <h2>Paused</h2>
-          <p data-pause-copy>Press Esc to resume.</p>
-          <button class="secondary-button" data-pause-menu>Main menu</button>
+          <p data-pause-copy>The battle waits for you.</p>
+          <div class="pause-actions">
+            <button class="primary-button" data-pause-resume>Resume <span class="key-hint">Esc</span></button>
+            <button class="secondary-button" data-pause-menu>Main menu</button>
+          </div>
         </div>
       </section>
       <div class="drawer" data-drawer hidden>
