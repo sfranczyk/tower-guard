@@ -227,6 +227,24 @@ export const REGEN = tunable('REGEN', 'Troll regeneration', {
   afterBurnMs: 1500,
 });
 /**
+ * Goblin shaman (systems/shamanBuffs.ts): keeps back like the priest and every intervalMs (when there's anyone to help)
+ * casts (PRIEST_CAST_MS), then buffs up to perCast others within radius, nearest first, for durationMs: haste (walk × haste),
+ * stone skin on heavies (damage × stoneskinDamage, no pin, no knockback), a quicker draw for archers (draw and pause ×
+ * drawPace), a bigger bomb for kamikazes (blast × blastPower, walk × kamikazeHaste); the undead get undeadHeal health.
+ */
+export const SHAMAN = tunable('SHAMAN', 'Goblin shaman', {
+  intervalMs: 3500,
+  radius: 180,
+  perCast: 3,
+  durationMs: 7000,
+  haste: 1.4,
+  kamikazeHaste: 1.15,
+  stoneskinDamage: 0.65,
+  drawPace: 0.6,
+  blastPower: 1.6,
+  undeadHeal: 12,
+});
+/**
  * Enemy attacks: the pause between club swings (intervalMs) and how long a swing takes (animationMs); enemy archers
  * stop and shoot from archerRange, draw for archerDrawMs, wait archerCooldownMs between shots, aim error archerSpread.
  */

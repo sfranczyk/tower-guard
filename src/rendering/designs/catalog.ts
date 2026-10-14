@@ -15,6 +15,7 @@ import { RUN_STRIDE_PER_RADIAN } from '../runCycle';
 import type { AttackStyle } from '../attackSwing';
 import { archerBody, attackBody, castBody, runBody, walkBody, withClub, type BodyPose } from './bodyPoses';
 import { banditArcherLook, goblinLook, raiderLook, sapperLook } from './enemySkins';
+import { shamanLook } from './shamanSkin';
 import { dragonArcherLook, dragonKnightLook, drawDragonWithRider, ogreLook, trollLook, zombieLook } from './heavySkins';
 import { ENEMY_DESIGNS } from './ideas';
 import { blackKnightLook, darkPriestLook, hammerKnightLook } from './knightSkins';
@@ -178,6 +179,7 @@ const ZOMBIE_SPEED = (ENEMY_SPEED * 0.45) / 1000;
 const KNIGHT_SPEED = (ENEMY_SPEED * 0.9) / 1000;
 const HAMMER_KNIGHT_SPEED = (ENEMY_SPEED * 0.7) / 1000;
 const PRIEST_SPEED = ENEMY_SPEED / 1000;
+const SHAMAN_SPEED = (ENEMY_SPEED * 1.1) / 1000;
 /** The priest's heal: the scepter raised, held, lowered, then a pause. */
 const CAST_LOOP_MS = 1500;
 const CAST_MS = 900;
@@ -361,6 +363,26 @@ const ENEMIES: DesignEntry[] = [
       falling('Death', darkPriestLook, 'death'),
       cheering(darkPriestLook, 'cheerWave', true),
       blownApart('priest'),
+    ],
+  },
+  {
+    id: 'shaman',
+    name: 'Goblin shaman',
+    tagline: 'Strengthens the others, each in its own way',
+    description: 'A goblin with white war paint, a fur cape, a necklace of teeth and a bone mask under a crest of feathers; a crooked staff with a horned skull and a green flame. It never attacks: it follows the soldiers and casts on those around it: haste on the soldiers, stone skin on the heavies, a quicker draw for archers, a bigger bomb (and a little haste) for kamikazes, and it mends the undead, which the priest can\'t.',
+    views: [
+      {
+        label: 'Cast',
+        draw: (g, t) => {
+          const progress = Math.min(1, (t % CAST_LOOP_MS) / CAST_MS);
+          g.clear();
+          drawHumanoid(g, castBody(progress), shamanLook(t, Math.sin(Math.PI * progress)));
+        },
+      },
+      walking(shamanLook, SHAMAN_SPEED / GOBLIN_SIZE, 'overhead'),
+      falling('Death', shamanLook, 'deathCrumple'),
+      cheering(shamanLook, 'cheerJump', true),
+      blownApart('shaman'),
     ],
   },
   {

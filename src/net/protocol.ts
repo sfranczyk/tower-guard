@@ -94,6 +94,8 @@ export interface EnemySnap {
   mana?: number;
   /** The priest ran dry (no casting until it refills; its bar greys). */
   drained?: true;
+  /** A shaman's lasting spell: [index in LASTING_BUFFS, ms left]. */
+  bf?: [number, number];
 }
 
 /** A dragon: position, the archer rider's bow, and the fire dragon's breath (ms into it) and aim. */

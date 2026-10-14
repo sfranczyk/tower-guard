@@ -1,5 +1,5 @@
 import { Graphics, type Container } from 'pixi.js';
-import { EXPLOSION_RADIUS, FIRE_DRAGON_BLAST_POWER, LIGHTNING_RADIUS, PRIEST_HEAL_RADIUS } from '../config';
+import { EXPLOSION_RADIUS, FIRE_DRAGON_BLAST_POWER, LIGHTNING_RADIUS, PRIEST_HEAL_RADIUS, SHAMAN } from '../config';
 import { HUMAN_BODY, type BodyColors } from '../rendering/bodyColors';
 import type { ProjectileType, Vec2 } from '../types';
 import { MagicVisuals } from './magicVisuals';
@@ -8,7 +8,7 @@ import { groundAt } from './terrain';
 /** Effects a co-op host replays on the guest's screen. */
 export type EffectKind =
   | 'blood' | 'greenBlood' | 'impact' | 'explosion' | 'dragonBlast' | 'lightning'
-  | 'fire' | 'frost' | 'shatter' | 'firePatch' | 'vortex' | 'vortexFade' | 'heal' | 'healPulse';
+  | 'fire' | 'frost' | 'shatter' | 'firePatch' | 'vortex' | 'vortexFade' | 'heal' | 'healPulse' | 'buffPulse';
 
 type BloodParticle = {
   sprite: Graphics;
@@ -165,6 +165,23 @@ export class EffectsSystem {
     for (let index = 0; index < 8; index += 1) {
       const spark = new Graphics().circle(0, 0, random(1, 1.8)).fill({ color: pick([0xff3a48, 0xffb3b8, 0xe8323f]) });
       this.spawn(spark, orb, 5, { velocity: burst(-Math.PI, Math.PI, 40, 110), lifeMs: random(300, 550), gravity: 60, drag: 2.5, grow: 0 });
+    }
+  }
+
+  /** A goblin shaman's spell going out: a green ring within its reach and a flare at the staff (`point`: its feet). */
+  public buffPulse(point: Vec2): void {
+    this.onEffect?.('buffPulse', point);
+    const radius = SHAMAN.radius;
+    const ring = new Graphics()
+      .ellipse(0, 0, radius * 0.85, radius * 0.17).stroke({ width: 2, color: 0x5fd34a })
+      .ellipse(0, 0, radius * 0.85, radius * 0.17).fill({ color: 0x5fd34a, alpha: 0.1 });
+    this.spawn(ring, { x: point.x, y: groundAt(point.x) }, 0, { velocity: { x: 0, y: 0 }, lifeMs: 650, gravity: 0, drag: 0, grow: 0.18, startAlpha: 0.7 });
+    const flame = { x: point.x, y: point.y - 56 };
+    const flash = new Graphics().circle(0, 0, 5).fill({ color: 0x9cff8a });
+    this.spawn(flash, flame, 5, { velocity: { x: 0, y: 0 }, lifeMs: 320, gravity: 0, drag: 0, grow: 0.9, startAlpha: 0.7 });
+    for (let index = 0; index < 8; index += 1) {
+      const spark = new Graphics().circle(0, 0, random(1, 1.8)).fill({ color: pick([0x3fcf3a, 0xd8ffd0, 0x7cff6a]) });
+      this.spawn(spark, flame, 5, { velocity: burst(-Math.PI, Math.PI, 40, 110), lifeMs: random(300, 550), gravity: -20, drag: 2.5, grow: 0 });
     }
   }
 

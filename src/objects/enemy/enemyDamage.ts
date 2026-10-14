@@ -79,7 +79,8 @@ export const applyDamage = (enemy: Enemy, amount: number, hit: HitInfo): void =>
     enemy.bars.health.visible = false;
   }
   const reaction = damageReaction(hit.cause, killed, aloft, distance);
-  if (reaction === 'none') {
+  // Stone skin (a shaman's spell): a blast doesn't knock it down.
+  if (reaction === 'none' || (reaction === 'knockdown' && enemy.buff.steady)) {
     return;
   }
   if (reaction === 'stayDown') {

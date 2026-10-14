@@ -7,7 +7,7 @@ import { ARCHETYPES, ENEMY_GROUP_IDS, ENEMY_KINDS, ENEMY_TYPES, RACES, enemyArch
 
 describe('ENEMY_KINDS', () => {
   it('lists every enemy once, in the setup order', () => {
-    expect(ENEMY_TYPES).toEqual(['basic', 'fast', 'tank', 'troll', 'archer', 'dragon', 'fireDragon', 'kamikaze', 'zombie', 'knight', 'hammerKnight', 'horseKnight', 'priest']);
+    expect(ENEMY_TYPES).toEqual(['basic', 'fast', 'tank', 'troll', 'archer', 'dragon', 'fireDragon', 'kamikaze', 'zombie', 'knight', 'hammerKnight', 'horseKnight', 'priest', 'shaman']);
   });
 
   it('gives each enemy its archetype and race', () => {
@@ -24,20 +24,21 @@ describe('ENEMY_KINDS', () => {
     expect(of('hammerKnight')).toEqual(['heavy', 'human']);
     expect(of('priest')).toEqual(['healer', 'human']);
     expect(of('horseKnight')).toEqual(['cavalry', 'human']);
+    expect(of('shaman')).toEqual(['shaman', 'goblin']);
   });
 
   it('sorts the enemies into groups by race', () => {
     expect(Object.fromEntries(ENEMY_GROUP_IDS.map((group) => [group, enemyTypesOf(group)]))).toEqual({
       humans: ['basic', 'archer', 'kamikaze', 'knight', 'hammerKnight', 'horseKnight', 'priest'],
       mightyHumans: ['dragon', 'fireDragon'],
-      nonHumans: ['fast', 'tank', 'troll'],
+      nonHumans: ['fast', 'tank', 'troll', 'shaman'],
       creatures: ['zombie'],
     });
   });
 
   it('weighs each enemy (a fighter 1.2): goblins lightest, then the undead, knights heavier, ogres, then horse and rider heaviest on the ground', () => {
     expect(Object.fromEntries(ENEMY_TYPES.filter((type) => !isFlyingType(type)).map((type) => [type, enemyMass(type)]))).toEqual({
-      fast: 0.8, zombie: 1, priest: 1.2, archer: 1.2, basic: 1.2, kamikaze: 1.4, knight: 1.9, hammerKnight: 2.5, tank: 4.2, troll: 4.2, horseKnight: 6,
+      fast: 0.8, shaman: 0.8, zombie: 1, priest: 1.2, archer: 1.2, basic: 1.2, kamikaze: 1.4, knight: 1.9, hammerKnight: 2.5, tank: 4.2, troll: 4.2, horseKnight: 6,
     });
   });
 
@@ -54,7 +55,7 @@ describe('ENEMY_KINDS', () => {
         expect(magical).toBe(true);
       }
     });
-    expect(ENEMY_TYPES.filter((type) => ENEMY_KINDS[type].magical)).toEqual(['dragon', 'fireDragon', 'priest']);
+    expect(ENEMY_TYPES.filter((type) => ENEMY_KINDS[type].magical)).toEqual(['dragon', 'fireDragon', 'priest', 'shaman']);
   });
 
   it('flies exactly the dragons', () => {
@@ -63,8 +64,9 @@ describe('ENEMY_KINDS', () => {
   });
 
   it('lets only clubbers carry a club (sword, hammer and scepter too), only kamikazes detonate and only priests heal', () => {
-    expect(ENEMY_TYPES.filter((type) => enemyArchetype(type).club)).toEqual(['basic', 'fast', 'tank', 'troll', 'knight', 'hammerKnight', 'priest']);
+    expect(ENEMY_TYPES.filter((type) => enemyArchetype(type).club)).toEqual(['basic', 'fast', 'tank', 'troll', 'knight', 'hammerKnight', 'priest', 'shaman']);
     expect(ENEMY_TYPES.filter((type) => enemyArchetype(type).heals)).toEqual(['priest']);
+    expect(ENEMY_TYPES.filter((type) => enemyArchetype(type).buffs)).toEqual(['shaman']);
     expect(ENEMY_TYPES.filter((type) => enemyArchetype(type).detonates)).toEqual(['kamikaze']);
     expect(ENEMY_TYPES.filter((type) => enemyArchetype(type).breathesFire)).toEqual(['fireDragon']);
   });

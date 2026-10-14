@@ -22,8 +22,11 @@ export class EnemyBow {
   public aimAngle = Math.PI;
   private cooldownMs = 0;
 
-  /** One frame of aiming at `angle` (already slowed by the archer's afflictions): true on the frame it shoots. */
-  public draw(angle: number, deltaMs: number): boolean {
+  /**
+   * One frame of aiming at `angle` (already slowed by the archer's afflictions): true on the frame it shoots. `pace`
+   * scales the draw and the pause after it (a shaman's quick draw < 1).
+   */
+  public draw(angle: number, deltaMs: number, pace = 1): boolean {
     this.aimAngle = angle;
     this.cooldownMs = Math.max(0, this.cooldownMs - deltaMs);
     this.ready = Math.min(1, this.ready + deltaMs / BOW_RAISE_MS);
@@ -31,12 +34,12 @@ export class EnemyBow {
       this.tension = Math.max(0, this.tension - deltaMs / EASE_OFF_MS);
       return false;
     }
-    this.tension = Math.min(1, this.tension + deltaMs / ENEMY_ATTACK.archerDrawMs);
+    this.tension = Math.min(1, this.tension + deltaMs / (ENEMY_ATTACK.archerDrawMs * pace));
     if (this.tension < 1) {
       return false;
     }
     this.tension = 0;
-    this.cooldownMs = ENEMY_ATTACK.archerCooldownMs;
+    this.cooldownMs = ENEMY_ATTACK.archerCooldownMs * pace;
     return true;
   }
 

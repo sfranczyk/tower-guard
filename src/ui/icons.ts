@@ -146,6 +146,13 @@ export const ICON_ENEMIES = {
     <path d="M7.5 11h7.5l3 14H4.5z" fill="#2b1d2e" stroke="none"/><path d="M11.5 11.5l1 13.5" stroke="#9b1f2a" stroke-width="1.4"/>
     <path d="M14 13.5l4.5-1.5" stroke="#2b1d2e" stroke-width="2.4"/><path d="M19 14.5V4.5" stroke="#3a2a20" stroke-width="1.6"/>
     <circle cx="19" cy="4" r="2.3" fill="#c4182a" stroke="none"/><path d="M24 9v5M21.5 11.5h5" stroke="#d8333f" stroke-width="1.7"/>`, '#2b1d2e'),
+  // Goblin shaman: big green head under a crest of feathers, a bone mask, a staff with a green flame.
+  shaman: figure(`<path d="M8 6.5 4 1.5M10 5.5 9.5.8M12 5.8 14.5 1.5" stroke-width="1.6" stroke="#c0392b"/><path d="M10 5.5 9.5.8" stroke="#2e86c1" stroke-width="1.6"/>
+    <circle cx="10" cy="9" r="4.2" fill="#86b04b" stroke="none"/><path d="M5.5 7.5 2.5 6M14.5 7.5l3-1.5" stroke="#86b04b" stroke-width="1.6"/>
+    <path d="M8.5 8h4.5v4l-2.2 1.2-2.3-1.2z" fill="#e8e0cc" stroke="none"/><circle cx="11.5" cy="9.6" r=".8" fill="#3fcf3a" stroke="none"/>
+    <path d="M10 13v6M10 19l-3.5 6M10 19l3.5 6M10 15l7 -1" stroke="#86b04b" stroke-width="2.4"/><path d="M6 13h8l-1 4H7z" fill="#6b4a32" stroke="none"/>
+    <path d="M18.5 25 19.5 6.5" stroke="#5a3a20" stroke-width="1.6"/><circle cx="19.6" cy="5.6" r="1.6" fill="#e8e0cc" stroke="none"/>
+    <ellipse cx="19.8" cy="2.6" rx="1.6" ry="2.3" fill="#3fcf3a" stroke="none"/>`, '#5f8a36'),
   // Dragon archer: a dark dragon, its rider aiming a bow ahead.
   dragon: dragon('#3b2a22', '#6a5242', '#9a8068', `<path d="M14.2 11.6 17.4 10.6"/><path d="M17 6.6Q19.6 10.2 17 13.8" stroke="#8a6238" stroke-width="1.2"/>`),
   // Fire dragon: red, breathing a flame; its rider holds the reins with both hands.

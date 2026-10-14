@@ -4,7 +4,7 @@ import { WaveDirector, groupByKind, planWaves } from './waveDirector';
 
 const last = <T>(items: readonly T[]): T => items[items.length - 1];
 
-const level = { basic: 6, fast: 4, tank: 3, troll: 0, archer: 3, dragon: 1, fireDragon: 1, kamikaze: 2, zombie: 2, knight: 2, hammerKnight: 1, horseKnight: 1, priest: 1 };
+const level = { basic: 6, fast: 4, tank: 3, troll: 0, archer: 3, dragon: 1, fireDragon: 1, kamikaze: 2, zombie: 2, knight: 2, hammerKnight: 1, horseKnight: 1, priest: 1, shaman: 0 };
 const total = 27;
 
 describe('wave waves', () => {
@@ -13,7 +13,7 @@ describe('wave waves', () => {
     expect(waves.flat()).toHaveLength(total);
     expect(waves[0]).toHaveLength(WAVES.firstSize);
     waves.forEach((wave) => expect(wave.length).toBeLessThanOrEqual(WAVES.maxSize + 1));
-    (['basic', 'fast', 'tank', 'troll', 'archer', 'dragon', 'fireDragon', 'kamikaze', 'zombie', 'knight', 'hammerKnight', 'horseKnight', 'priest'] as const).forEach((type) =>
+    (['basic', 'fast', 'tank', 'troll', 'archer', 'dragon', 'fireDragon', 'kamikaze', 'zombie', 'knight', 'hammerKnight', 'horseKnight', 'priest', 'shaman'] as const).forEach((type) =>
       expect(waves.flat().filter((t) => t === type)).toHaveLength(level[type]));
   });
 
@@ -26,20 +26,20 @@ describe('wave waves', () => {
 
   it('grows by WAVES.sizeStep up to WAVES.maxSize, the rest in the last wave', () => {
     const sizes = (basic: number): number[] =>
-      planWaves({ basic, fast: 0, tank: 0, troll: 0, archer: 0, dragon: 0, fireDragon: 0, kamikaze: 0, zombie: 0, knight: 0, hammerKnight: 0, horseKnight: 0, priest: 0 }).map((wave) => wave.length);
+      planWaves({ basic, fast: 0, tank: 0, troll: 0, archer: 0, dragon: 0, fireDragon: 0, kamikaze: 0, zombie: 0, knight: 0, hammerKnight: 0, horseKnight: 0, priest: 0, shaman: 0 }).map((wave) => wave.length);
     expect(sizes(30)).toEqual([3, 5, 7, 9, 6]);
     expect(sizes(50)).toEqual([3, 5, 7, 9, 10, 10, 6]);
   });
 
   it('scales every wave size by the difficulty, keeping the number of waves for scaled counts', () => {
-    const only = (basic: number) => ({ basic, fast: 0, tank: 0, troll: 0, archer: 0, dragon: 0, fireDragon: 0, kamikaze: 0, zombie: 0, knight: 0, hammerKnight: 0, horseKnight: 0, priest: 0 });
+    const only = (basic: number) => ({ basic, fast: 0, tank: 0, troll: 0, archer: 0, dragon: 0, fireDragon: 0, kamikaze: 0, zombie: 0, knight: 0, hammerKnight: 0, horseKnight: 0, priest: 0, shaman: 0 });
     expect(planWaves(only(60), 2).map((wave) => wave.length)).toEqual([6, 10, 14, 18, 12]);
     expect(planWaves(only(60), 2)).toHaveLength(planWaves(only(30)).length);
   });
 
   it('never leaves a lone enemy as the last wave', () => {
-    expect(last(planWaves({ basic: 6, fast: 0, tank: 0, troll: 0, archer: 0, dragon: 0, fireDragon: 0, kamikaze: 0, zombie: 0, knight: 0, hammerKnight: 0, horseKnight: 0, priest: 0 })).length).toBeGreaterThan(1);
-    expect(planWaves({ basic: 1, fast: 0, tank: 0, troll: 0, archer: 0, dragon: 0, fireDragon: 0, kamikaze: 0, zombie: 0, knight: 0, hammerKnight: 0, horseKnight: 0, priest: 0 })).toEqual([['basic']]);
+    expect(last(planWaves({ basic: 6, fast: 0, tank: 0, troll: 0, archer: 0, dragon: 0, fireDragon: 0, kamikaze: 0, zombie: 0, knight: 0, hammerKnight: 0, horseKnight: 0, priest: 0, shaman: 0 })).length).toBeGreaterThan(1);
+    expect(planWaves({ basic: 1, fast: 0, tank: 0, troll: 0, archer: 0, dragon: 0, fireDragon: 0, kamikaze: 0, zombie: 0, knight: 0, hammerKnight: 0, horseKnight: 0, priest: 0, shaman: 0 })).toEqual([['basic']]);
   });
 });
 

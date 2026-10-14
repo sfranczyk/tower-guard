@@ -4,6 +4,7 @@ import { getArcherRig, toArcherLocalAngle } from '../../rendering/archer';
 import type { AttackStyle } from '../../rendering/attackSwing';
 import { BodyMotion } from '../../systems/bodyMotion';
 import { ManaPool } from '../../systems/healing';
+import { ActiveBuff } from '../../systems/shamanBuffs';
 import type { BodyColors } from '../../rendering/bodyColors';
 import { enemyGibColors } from '../../rendering/enemyBody';
 import { fromBodyAnchor, spriteToWorld, toBodyAnchor, type BodyAnchor } from '../../systems/bodyAnchor';
@@ -17,6 +18,7 @@ import type { Bounds, EnemyType, Vec2 } from '../../types';
 import { AfflictionLayer } from '../AfflictionLayer';
 import { EnemyActions } from './enemyActions';
 import { EnemyBars } from './EnemyBars';
+import { BuffAura } from './BuffAura';
 import { EnemyBow } from './EnemyBow';
 import { EnemyFigure } from './EnemyFigure';
 import { bodyBounds, headBounds, type EnemyShape } from './enemyHitShape';
@@ -65,6 +67,9 @@ export default class Enemy extends Container {
   public readonly afflictions: AfflictionLayer;
   /** The priest's mana (healers only): refills fast, spent on heals (EnemyAI); drawn under the health bar. */
   public readonly mana?: ManaPool;
+  /** A goblin shaman's lasting spell on it (haste, stone skin, quick draw, bigger bomb; systems/shamanBuffs.ts). */
+  public readonly buff = new ActiveBuff();
+  private readonly buffAura = new BuffAura();
   /** Walked off the field (a priest left alone, `escape`): no longer alive for the battle. */
   private escaped = false;
   /** Co-op host: hears about every hit, swing, heal and spell, to replay them on the guest's screen. */
@@ -97,7 +102,7 @@ export default class Enemy extends Container {
     }
     this.figure.drawPlaceholder();
     this.afflictions = new AfflictionLayer(kind);
-    this.addChild(this.figure.body, this.afflictions.art);
+    this.addChild(this.buffAura.art, this.figure.body, this.afflictions.art);
     this.bars = new EnemyBars(this.look.size, this.rider !== undefined, enemyArchetype(kind).heals);
     this.addChild(this.bars.health);
     if (enemyArchetype(kind).heals) {
@@ -175,7 +180,7 @@ export default class Enemy extends Container {
     }
     this.halt();
     this.figure.face(Math.cos(angle) < 0 ? -1 : 1);
-    return this.bow.draw(angle, deltaMs);
+    return this.bow.draw(angle, deltaMs, this.buff.drawPace);
   }
 
   /** Archer: lower the bow (walking, knocked down, no target). */
@@ -190,9 +195,14 @@ export default class Enemy extends Container {
     return spriteToWorld(nock, this.figure.transform());
   }
 
-  /** Applies damage and plays the reaction (enemyDamage.applyDamage); returns the health left. */
-  public takeDamage(amount: number, hit: HitInfo = { cause: 'arrow', fromX: this.x - 1 }): number {
+  /**
+   * Applies damage and plays the reaction (enemyDamage.applyDamage); returns the health left. `asSent`: the co-op guest's
+   * copy of a hit the host already scaled.
+   */
+  public takeDamage(amount: number, hit: HitInfo = { cause: 'arrow', fromX: this.x - 1 }, asSent = false): number {
     if (this.isAlive()) {
+      // Stone skin (a shaman's spell) takes the edge off every hit.
+      amount *= asSent ? 1 : this.buff.damageFactor;
       this.netHooks?.damaged(amount, hit);
       applyDamage(this, amount, hit);
     }
@@ -326,7 +336,9 @@ export default class Enemy extends Container {
 
   /** Pins it to the ground for `durationMs` (enemyMotion). */
   public pin(durationMs: number): void {
-    pin(this, durationMs);
+    if (!this.buff.steady) {
+      pin(this, durationMs);
+    }
   }
 
   /** Held by a vortex this frame at `x`, lifted `lift` px and turned `lean` (enemyMotion). */
@@ -360,6 +372,8 @@ export default class Enemy extends Container {
 
   /** Plays and draws the body (EnemyFigure) at the afflictions' pace. */
   public updateAnimation(deltaMs: number, moving: boolean): void {
+    this.buff.update(this.isAlive() ? deltaMs : Number.MAX_SAFE_INTEGER);
+    this.buffAura.draw(this.buff.kind, this.buff.leftMs, deltaMs, !this.figure.fall && !this.motion.isThrown);
     this.figure.update(deltaMs, moving);
   }
 

@@ -28,6 +28,7 @@ import { solveLaunchAngle } from './ballistics';
 import { flamesTouch } from './burning';
 import { planHeals, priestPost } from './healing';
 import { REGEN_START, regenStep, type RegenState } from './regeneration';
+import { ShamanSpells } from './ShamanSpells';
 import type { BowmanHit } from './bowmanDeath';
 import { BOWMAN_CHEST, TOWER_HALF_WIDTH, bowmanBox, foeHitBoxes, type Foe } from './combatGeometry';
 import type { EffectsSystem } from './EffectsSystem';
@@ -75,12 +76,15 @@ export class EnemyAI {
   private readonly archerAim = new Map<Foe, { angle: number; ageMs: number }>();
   /** Regeneration clock per troll. */
   private readonly regen = new WeakMap<Enemy, RegenState>();
+  private readonly shamanSpells: ShamanSpells;
 
   public constructor(
     private readonly world: EnemyAIWorld,
     private readonly events: EnemyAIEvents,
     private readonly actions: { detonate(kamikaze: Enemy): void },
-  ) {}
+  ) {
+    this.shamanSpells = new ShamanSpells(world);
+  }
 
   /** One living enemy's frame. */
   public update(enemy: Foe, deltaMs: number): void {
@@ -102,7 +106,7 @@ export class EnemyAI {
       this.drawDebugHitboxes(enemy);
       return;
     }
-    if (enemyArchetype(enemy.kind).heals) {
+    if (enemyArchetype(enemy.kind).heals || enemyArchetype(enemy.kind).buffs) {
       this.updatePriest(enemy, deltaMs);
       this.drawDebugHitboxes(enemy);
       return;
@@ -183,13 +187,15 @@ export class EnemyAI {
    * Priest: never attacks. It walks behind the front soldier on its side of the bowman (or the keep while everyone
    * hides), dashes past the bowman to the soldiers beyond him when none are left on its side and, with no soldier left,
    * retreats to the enemy keep (systems/healing.ts); meanwhile it heals. Once only priests are left and no more are to
-   * come, it walks off the field's right edge and has escaped (counts as defeated).
+   * come, it walks off the field's right edge and has escaped (counts as defeated). The goblin shaman moves the same
+   * way and casts its spells instead (ShamanSpells).
    */
   private updatePriest(priest: Enemy, deltaMs: number): void {
+    const { heals } = enemyArchetype(priest.kind);
     priest.updateMana(deltaMs);
     const bowman = nearestExposedBowman(this.world.bowmen, priest.x);
     priest.target = bowman ? 'bowman' : 'tower';
-    const others = this.world.enemies.filter((other) => other !== priest && other.isAlive() && !enemyArchetype(other.kind).heals);
+    const others = this.world.enemies.filter((other) => other !== priest && other.isAlive() && !enemyArchetype(other.kind).heals && !enemyArchetype(other.kind).buffs);
     const soldiers = others.filter((other) => !(other instanceof DragonEnemy)).map((other) => other.x);
     const escaping = others.length === 0 && !this.world.reinforcementsDue();
     const escapeX = WORLD_WIDTH + PRIEST_ESCAPE_BEYOND;
@@ -204,8 +210,10 @@ export class EnemyAI {
     if (priest.isDown || priest.afflictions.isFrozen || priest.afflictions.inVortex) {
       // Knocked down, thrown, frozen or in a vortex: a cast under way is lost (its mana too).
       priest.actions.interrupt();
-    } else {
+    } else if (heals) {
       this.castHeal(priest);
+    } else {
+      this.shamanSpells.update(priest, deltaMs);
     }
     priest.clearHitTint();
   }

@@ -21,7 +21,7 @@ import type { EnemyType } from '../types';
  * variant (an orc kamikaze, an elf archer) is one entry here plus its look and icon.
  */
 
-export type EnemyArchetype = 'fighter' | 'runner' | 'heavy' | 'archer' | 'kamikaze' | 'grabber' | 'skyArcher' | 'fireBreather' | 'healer' | 'cavalry';
+export type EnemyArchetype = 'fighter' | 'runner' | 'heavy' | 'archer' | 'kamikaze' | 'grabber' | 'skyArcher' | 'fireBreather' | 'healer' | 'cavalry' | 'shaman';
 
 export type EnemyRace = 'human' | 'goblin' | 'ogre' | 'undead' | 'dragon';
 
@@ -75,6 +75,8 @@ export interface ArchetypeInfo {
   breathesFire: boolean;
   /** Keeps back from the bowman and heals the wounded around it with its mana (EnemyAI, systems/healing.ts). */
   heals: boolean;
+  /** Keeps back like a healer and casts buffs on the others around it, each by its kind (EnemyAI, systems/shamanBuffs.ts). */
+  buffs: boolean;
   /**
    * Rides a horse (rendering/horseRider.ts, designs/warhorse.ts): gallops in and strikes with a lance from the saddle;
    * killed, it is thrown off and fights on foot as its kind's `unhorsed` while the horse bolts.
@@ -84,7 +86,7 @@ export interface ArchetypeInfo {
 
 /** An unarmed walker that does none of the special things (the archetypes below say what they add). */
 const ON_FOOT: ArchetypeInfo = {
-  attackStyle: 'overhead', runs: false, club: false, shoots: false, detonates: false, flies: false, breathesFire: false, heals: false, rides: false,
+  attackStyle: 'overhead', runs: false, club: false, shoots: false, detonates: false, flies: false, breathesFire: false, heals: false, buffs: false, rides: false,
 };
 
 export const ARCHETYPES: Readonly<Record<EnemyArchetype, ArchetypeInfo>> = {
@@ -105,6 +107,8 @@ export const ARCHETYPES: Readonly<Record<EnemyArchetype, ArchetypeInfo>> = {
   healer: { ...ON_FOOT, club: true, heals: true },
   // On horseback: gallops in and thrusts its lance (timed like the sword thrust) from the saddle.
   cavalry: { ...ON_FOOT, attackStyle: 'thrust', runs: true, rides: true },
+  // Follows the soldiers like the healer and casts buffs on them; never attacks (its staff is drawn as the club).
+  shaman: { ...ON_FOOT, club: true, buffs: true },
 };
 
 /** How the arrows' effects take to an enemy (races set them; a variant can override any). */
@@ -286,6 +290,12 @@ export const ENEMY_KINDS: Readonly<Record<EnemyType, EnemyKind>> = {
   priest: {
     label: 'Dark priest', archetype: 'healer', race: 'human', magical: true, arrival: 0.15,
     stats: { health: 30, speed: ENEMY_SPEED }, damage: { melee: [0, 0] }, build: { size: 1, strikeReach: 0 },
+  },
+  // Small and quick, never attacks: hastens the soldiers, hardens the heavies, speeds the archers' draw, makes the
+  // kamikazes' bombs bigger and mends the undead (systems/shamanBuffs.ts).
+  shaman: {
+    label: 'Goblin shaman', archetype: 'shaman', race: 'goblin', magical: true, arrival: 0.25,
+    stats: { health: 35, speed: ENEMY_SPEED * 1.1 }, damage: { melee: [0, 0] }, build: { size: 0.9, strikeReach: 0 },
   },
 };
 

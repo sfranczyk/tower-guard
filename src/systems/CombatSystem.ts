@@ -170,23 +170,25 @@ export class CombatSystem {
     const { bowmen, playerTower, effects } = this.world;
     const body = kamikaze.getPhysicsBounds();
     const point = { x: body.x + body.width / 2, y: body.y + body.height / 2 };
+    // A shaman's spell makes the bomb bigger: further reach, more damage.
+    const power = kamikaze.buff.blastPower;
     kamikaze.takeDamage(Number.MAX_SAFE_INTEGER, { cause: 'blast', fromX: point.x, point });
     // The bowmen take the kamikaze's own blast below, not the arrows' splash.
-    this.explode(point, this.world.enemies.filter((enemy) => enemy.isAlive()), kamikaze, 1, false, false);
-    const reach = EXPLOSION_RADIUS * KAMIKAZE_REACH;
+    this.explode(point, this.world.enemies.filter((enemy) => enemy.isAlive()), kamikaze, power, false, false);
+    const reach = EXPLOSION_RADIUS * KAMIKAZE_REACH * power;
     bowmen.filter((bowman) => !bowman.isInTower && !bowman.isDead).forEach((bowman) => {
       const bowmanDistance = Math.hypot(bowman.x - point.x, bowman.y - BOWMAN_CHEST - point.y);
       if (bowmanDistance > reach) {
         return;
       }
-      this.events.bowmanDamaged(bowman, rollDamage(enemyDamage('kamikaze', 'melee', 'bowman')), { cause: 'blast', fromX: point.x });
+      this.events.bowmanDamaged(bowman, rollDamage(enemyDamage('kamikaze', 'melee', 'bowman')) * power, { cause: 'blast', fromX: point.x });
       effects.bloodBurst({ x: bowman.x, y: bowman.y - BOWMAN_CHEST });
       // Thrown away from the blast, harder the closer he stood.
       const { minStrength } = BOWMAN_KNOCKBACK;
       bowman.knockBack(point.x, minStrength + (1 - minStrength) * (1 - bowmanDistance / reach));
     });
     if (point.x - (playerTower.x + TOWER_HALF_WIDTH) <= reach) {
-      playerTower.takeDamage(rollDamage(enemyDamage('kamikaze', 'melee', 'keep')), { x: playerTower.x + TOWER_HALF_WIDTH - 4, y: point.y });
+      playerTower.takeDamage(rollDamage(enemyDamage('kamikaze', 'melee', 'keep')) * power, { x: playerTower.x + TOWER_HALF_WIDTH - 4, y: point.y });
     }
   }
 

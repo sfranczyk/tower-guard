@@ -381,7 +381,8 @@ export class ArrowHits {
     } else if (explosive && enemyArchetype(enemy.kind).detonates && !enemy.isAlive()) {
       // A kamikaze killed by a direct explosive hit sets its bomb off: a twice-as-big blast where it stood.
       const body = enemy.getPhysicsBounds();
-      this.actions.explode({ x: body.x + body.width / 2, y: body.y + body.height / 2 }, activeEnemies, enemy, KAMIKAZE_BLAST_POWER);
+      const power = KAMIKAZE_BLAST_POWER * (enemy instanceof DragonEnemy ? 1 : enemy.buff.blastPower);
+      this.actions.explode({ x: body.x + body.width / 2, y: body.y + body.height / 2 }, activeEnemies, enemy, power);
       arrow.deactivate();
     } else if (explosive) {
       this.actions.explode(impactPoint, activeEnemies, enemy);
@@ -391,7 +392,7 @@ export class ArrowHits {
       if (arrow.impacts >= PIERCING_MAX_IMPACTS) {
         arrow.deactivate();
       }
-    } else if (arrow.type === 'pinning' && enemy.isAlive() && !(enemy instanceof DragonEnemy) && pinDurationMs(enemy.kind) > 0) {
+    } else if (arrow.type === 'pinning' && enemy.isAlive() && !(enemy instanceof DragonEnemy) && pinDurationMs(enemy.kind) > 0 && !enemy.buff.steady) {
       // Through the rear foot into the ground: the enemy is held there for a while, struggling.
       enemy.pin(pinDurationMs(enemy.kind));
       const heading = Math.atan2(arrow.velocityVector.y, arrow.velocityVector.x);

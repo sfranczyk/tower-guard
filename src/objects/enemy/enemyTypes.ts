@@ -62,4 +62,6 @@ export interface EnemyNet {
   drained?: true;
   /** A mounted knight's lame horse: time left (ms). */
   lame?: number;
+  /** A shaman's lasting spell: [index in LASTING_BUFFS, ms left]. */
+  bf?: [number, number];
 }

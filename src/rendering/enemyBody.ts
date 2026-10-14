@@ -9,6 +9,7 @@ import { archerBody, attackBody, castBody, runBody, standBody, walkBody, withClu
 import { banditArcherLook, goblinLook, raiderLook, sapperLook } from './designs/enemySkins';
 import { ogreLook, trollLook, zombieLook } from './designs/heavySkins';
 import { blackKnightLook, darkPriestLook, hammerKnightLook } from './designs/knightSkins';
+import { shamanLook } from './designs/shamanSkin';
 import { drawHumanoid, type HumanoidLook } from './designs/skinKit';
 import { drawLookGibs } from './designs/lookGibs';
 import type { GibSimulation } from './stickmanGibs';
@@ -18,7 +19,7 @@ import { drawMountedKnight } from './designs/warhorse';
 /**
  * Enemies drawn in their looks (rendering/designs) over the same poses drawStickman uses, so movement,
  * swings, falls and hitboxes are unchanged: fighter = raider, runner = goblin, archer = hooded bandit,
- * brute = ogre, troll, kamikaze = sapper, zombie = rotting peasant; the black knight, hammer knight and dark priest as they are;
+ * brute = ogre, troll, kamikaze = sapper, zombie = rotting peasant; the black knight, hammer knight and dark priest as they are, the goblin shaman;
  * the mounted knight is the black knight on a warhorse (designs/warhorse.ts) in the 'mounted' state.
  */
 
@@ -47,6 +48,7 @@ const LOOKS: Readonly<Record<GroundEnemy, EnemyBodyLook>> = {
   hammerKnight: { look: hammerKnightLook, club: 'twoHanded', gibs: { ...HUMAN_BODY, bone: 0x2a2c33, boneRear: 0x18191e } },
   horseKnight: { look: blackKnightLook, gibs: { ...HUMAN_BODY, bone: 0x2a2c33, boneRear: 0x18191e } },
   priest: { look: darkPriestLook, club: 'overhead', gibs: { ...HUMAN_BODY, bone: 0x2b1d2e, boneRear: 0xcfc4b0 } },
+  shaman: { look: shamanLook, club: 'overhead', gibs: { ...HUMAN_BODY, bone: 0x86b04b, boneRear: 0x6b4a32 } },
 };
 
 const lookOf = (kind: EnemyType): EnemyBodyLook => LOOKS[kind as GroundEnemy] ?? LOOKS.basic;

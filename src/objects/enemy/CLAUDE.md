@@ -65,3 +65,9 @@ open the one you need:
   `regenerates` (`enemyRegenerates`): `EnemyAI.regenerate` runs pure `regenStep` (`systems/regeneration.ts`, `REGEN`
   tunable) and heals in steps; burning stops it until `afterBurnMs` after the fire, frozen holds it. Each step is a
   co-op `heal` event (`Enemy.heal`).
+- **Goblin shaman** (`shaman`, archetype `shaman` = `buffs`, magical, `rendering/designs/shamanSkin.ts`): moves like
+  the priest (`EnemyAI.updatePriest`), no mana; `systems/ShamanSpells.ts` casts every `SHAMAN.intervalMs` (`?tune`) on up
+  to `perCast` within `radius`: `shamanBuffFor` (pure, `systems/shamanBuffs.ts`) by archetype: haste, `stoneskin`
+  (heavy: damage × `stoneskinDamage` in `Enemy.takeDamage`, no pin, no knockdown), `quickDraw` (`EnemyBow.draw` pace),
+  `blast` (kamikaze: small haste, `CombatSystem.detonate` power), `mend` (undead: `undeadHeal` at once). Lasting ones
+  live in `Enemy.buff` (`ActiveBuff`), drawn by `BuffAura.ts`.

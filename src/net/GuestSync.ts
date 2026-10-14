@@ -142,7 +142,7 @@ export class GuestSync {
       case 'hit': {
         const enemy = this.enemyById.get(event.id);
         enemy?.applyHitReaction(0);
-        enemy?.takeDamage(event.amount, event.hit);
+        enemy?.takeDamage(event.amount, event.hit, true);
         break;
       }
       case 'attack': {
@@ -212,6 +212,8 @@ export class GuestSync {
           effects.healCrosses(point);
         } else if (event.kind === 'healPulse') {
           effects.healPulse(point);
+        } else if (event.kind === 'buffPulse') {
+          effects.buffPulse(point);
         } else if (event.kind === 'vortex') {
           effects.vortex(point);
         } else {
