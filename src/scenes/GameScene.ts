@@ -99,7 +99,8 @@ export class GameScene extends Scene {
     // Windy maps roll a fresh wind for every level (direction and strength); a co-op guest takes the host's.
     const strongest = this.battleground.wind ?? 0;
     this.wind = this.role === 'guest' ? ctx.session.net!.wind : Math.round((Math.random() * 2 - 1) * strongest);
-    const difficulty = this.role === 'guest' ? ctx.session.net!.difficulty : ctx.session.difficulty;
+    // Part of the battle setup (in co-op the host's sandbox), so it holds for the whole run.
+    const { difficulty } = sandbox;
     this.foes = new BattleEnemies(this.level, {
       world: this.world,
       list: this.enemies,

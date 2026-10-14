@@ -2,13 +2,15 @@ import { DIFFICULTY_SCALE, WAVES } from '../config';
 import type { LevelEnemyCounts } from './sandbox';
 
 /**
- * The run's difficulty level (settings drawer; in co-op the host's). It scales how many enemies each wave brings:
+ * The run's difficulty level (battle setup, `SandboxSettings.difficulty`; in co-op the host's). It scales how many enemies each wave brings:
  * the level's enemy counts and the wave sizes grow by the same factor, so a level keeps its number of waves.
  */
 export type DifficultyLevel = 'easy' | 'medium' | 'hard';
 
 export const DIFFICULTY_LEVELS: readonly DifficultyLevel[] = ['easy', 'medium', 'hard'];
-export const DEFAULT_DIFFICULTY: DifficultyLevel = 'easy';
+export const DEFAULT_DIFFICULTY: DifficultyLevel = 'medium';
+
+export const DIFFICULTY_LABELS: Readonly<Record<DifficultyLevel, string>> = { easy: 'Easy', medium: 'Medium', hard: 'Hard' };
 
 export const isDifficultyLevel = (value: unknown): value is DifficultyLevel =>
   DIFFICULTY_LEVELS.includes(value as DifficultyLevel);

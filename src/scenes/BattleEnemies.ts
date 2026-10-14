@@ -21,7 +21,7 @@ export interface BattleEnemiesDeps {
   list: Foe[];
   /** A co-op guest runs no waves of its own: the host's enemies arrive as events. */
   guest: boolean;
-  /** How many times bigger each wave is than the sandbox's counts (the difficulty level, the host's in co-op). */
+  /** How many times bigger each wave is than the sandbox's counts (the battle setup's difficulty level). */
   waveScale: number;
   /** How a wave's enemies come out (one by one, or in groups on medium and hard). */
   wavePacing: WavePacing;

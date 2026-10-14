@@ -1,3 +1,4 @@
+import { DIFFICULTY_LABELS, DIFFICULTY_LEVELS, isDifficultyLevel } from '../data/difficulty';
 import { BATTLEGROUNDS, BATTLEGROUND_IDS, type BattlegroundId } from '../data/battlegrounds';
 import { ENEMY_GROUPS, ENEMY_GROUP_IDS, enemyTypesOf } from '../data/enemyKinds';
 import {
@@ -96,6 +97,9 @@ export class SandboxForm {
         <div class="sandbox-health">
           <label class="health-field" title="Bowman health">${ICON_BOWMAN}<span>Bowman</span>${numberInput('data-bowman-health', settings.bowmanHealth, HEALTH_LIMITS.bowman)}</label>
           <label class="health-field" title="Keep health">${ICON_KEEP}<span>Keep</span>${numberInput('data-keep-health', settings.keepHealth, HEALTH_LIMITS.keep)}</label>
+          <div class="health-field" title="How many enemies each wave brings (fixed for the battle)"><span>Difficulty</span><div class="segmented" role="radiogroup" aria-label="Difficulty">
+            ${DIFFICULTY_LEVELS.map((level) => `<button type="button" class="chip-button${level === settings.difficulty ? ' active' : ''}" role="radio" aria-checked="${level === settings.difficulty}" data-difficulty="${level}">${DIFFICULTY_LABELS[level]}</button>`).join('')}
+          </div></div>
         </div>
       </div>
       <div class="panel-body">
@@ -157,6 +161,7 @@ export class SandboxForm {
     const map = target.closest<HTMLElement>('[data-map]');
     const step = target.closest<HTMLButtonElement>('[data-step]');
     const page = target.closest<HTMLElement>('[data-page]');
+    const difficulty = target.closest<HTMLElement>('[data-difficulty]')?.dataset.difficulty;
     // (The quiver's own clicks are editQuiverIn's.)
     if (page) {
       this.page = page.dataset.page as SandboxPage;
@@ -174,6 +179,8 @@ export class SandboxForm {
       const [removed] = levels.splice(this.selected, 1);
       levels.push(removed);
       this.update({ ...settings, levels, levelCount: settings.levelCount - 1 }, Math.max(0, this.selected - 1));
+    } else if (isDifficultyLevel(difficulty)) {
+      this.update({ ...settings, difficulty }, this.selected);
     } else if (map) {
       this.update(this.withLevel(settings, { battleground: map.dataset.map as BattlegroundId }), this.selected);
     } else if (step) {

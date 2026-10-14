@@ -43,7 +43,7 @@ export const startBattleSync = (setup: BattleSyncSetup): { hostSync?: HostSync; 
     const hostSync = new HostSync(net.transport, { players: players.list, enemies, playerTower, enemyTower }, players.list[1].input as ManualInput);
     hostSync.watch(setup.effects);
     const { sandbox, run } = ctx.session;
-    net.transport.send({ t: 'start', sandbox, run, wind: setup.wind, difficulty: ctx.session.difficulty });
+    net.transport.send({ t: 'start', sandbox, run, wind: setup.wind });
     return { hostSync };
   }
   const guestSync = new GuestSync(net.transport, {
@@ -73,7 +73,6 @@ const restartAsGuest = (ctx: GameContext, message: Extract<NetMessage, { t: 'sta
   session.run = message.run;
   if (session.net) {
     session.net.wind = message.wind;
-    session.net.difficulty = message.difficulty;
   }
   ctx.goTo('game');
 };

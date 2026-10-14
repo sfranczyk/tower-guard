@@ -1,7 +1,6 @@
 import type { SoundId } from '../audio/SoundManager';
 import type { RunState } from '../core/Scene';
 import type { Loadout } from '../data/loadout';
-import type { DifficultyLevel } from '../data/difficulty';
 import type { SandboxSettings } from '../data/sandbox';
 import type { AimInput } from '../managers/InputManager';
 import type { HitInfo, RiderOff, ThrowNet } from '../objects/enemy/Enemy';
@@ -171,7 +170,7 @@ export type NetMessage =
   /** Host → guest: connected, waiting in the lobby. */
   | { t: 'welcome' }
   /** Host → guest: a level starts with this setup (the guest builds the same battlefield). */
-  | { t: 'start'; sandbox: SandboxSettings; run: RunState; wind: number; difficulty: DifficultyLevel }
+  | { t: 'start'; sandbox: SandboxSettings; run: RunState; wind: number }
   | { t: 'frame'; snap: Snapshot; events: GameEvent[] }
   | { t: 'end'; info: EndInfo }
   /** Host → guest: the host went back to the battle setup. */

@@ -1,3 +1,4 @@
+import { DEFAULT_DIFFICULTY, isDifficultyLevel, type DifficultyLevel } from './difficulty';
 import { BATTLEGROUND_IDS, type BattlegroundId } from './battlegrounds';
 import type { EnemyType } from '../types';
 import { ENEMY_KINDS, ENEMY_TYPES } from './enemyKinds';
@@ -37,6 +38,8 @@ export interface SandboxSettings {
   keepHealth: number;
   /** The arrow in each weapon slot (keys 1–5); in co-op the host's (the guest picks their own, net/coopLink.ts). */
   loadout: Loadout;
+  /** How many enemies each wave brings and how they come out (data/difficulty.ts); fixed for the run. */
+  difficulty: DifficultyLevel;
 }
 
 /** Default levels get a little harder each time and alternate battlegrounds. */
@@ -57,6 +60,7 @@ export const createDefaultSandbox = (): SandboxSettings => ({
   bowmanHealth: 100,
   keepHealth: 2000,
   loadout: [...DEFAULT_LOADOUT],
+  difficulty: DEFAULT_DIFFICULTY,
 });
 
 const clampInt = (value: unknown, min: number, max: number, fallback: number): number => {
@@ -95,6 +99,7 @@ export const normalizeSandbox = (input: (Partial<SandboxSettings> & LegacySandbo
     bowmanHealth: clampInt(input.bowmanHealth, HEALTH_LIMITS.bowman.min, HEALTH_LIMITS.bowman.max, defaults.bowmanHealth),
     keepHealth: clampInt(input.keepHealth, HEALTH_LIMITS.keep.min, HEALTH_LIMITS.keep.max, defaults.keepHealth),
     loadout: normalizeLoadout(input.loadout),
+    difficulty: isDifficultyLevel(input.difficulty) ? input.difficulty : defaults.difficulty,
   };
 };
 

@@ -42,9 +42,6 @@ export const OVERLAY_TEMPLATE = `
       <div class="drawer" data-drawer hidden>
         <div class="drawer-header"><h2>Settings</h2><button class="round-button" data-close-options aria-label="Close settings">×</button></div>
         <div class="drawer-body">
-        <div class="field toggle-field" title="How many enemies each wave brings (from the next level on; in co-op the host's)"><span>Difficulty</span><div class="segmented" data-difficulty role="radiogroup" aria-label="Difficulty">
-          <button class="chip-button" data-difficulty-level="easy" role="radio">Easy</button><button class="chip-button" data-difficulty-level="medium" role="radio">Medium</button><button class="chip-button" data-difficulty-level="hard" role="radio">Hard</button>
-        </div></div>
         <label class="field toggle-field"><span>Trajectory preview</span><input data-trajectory type="checkbox"></label>
         <label class="field toggle-field"><span>Aim circle at cursor</span><input data-cursor-circle type="checkbox"></label>
         <label class="field toggle-field" title="Your arrows, their blasts, fire, frost, vortices and pins hit bowmen too"><span>Friendly fire</span><input data-friendly-fire type="checkbox" checked></label>

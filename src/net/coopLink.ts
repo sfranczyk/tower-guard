@@ -1,6 +1,5 @@
 import type { GameContext, GameSession } from '../core/Scene';
 import { getUrlParam } from '../core/urlState';
-import { DEFAULT_DIFFICULTY } from '../data/difficulty';
 import { normalizeLoadout, type Loadout } from '../data/loadout';
 import type { NetMessage } from './protocol';
 import type { Transport, TransportMode } from './Transport';
@@ -71,7 +70,7 @@ export const linkUp = (ctx: GameContext, role: 'host' | 'guest', code: string, r
     onPartnerLoadout?.();
     return true;
   });
-  session.net = { role, code, transport, wind: 0, difficulty: DEFAULT_DIFFICULTY, loadouts };
+  session.net = { role, code, transport, wind: 0, loadouts };
   session.playerCount = 2;
   raw.onClose(() => {
     if (session.net?.transport !== transport) {
