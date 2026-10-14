@@ -1,5 +1,5 @@
 import { Graphics, type Container } from 'pixi.js';
-import { GAME_WIDTH, MAX_VIEW_WIDTH, SNOW_FLAKES, SNOW_SPEED } from '../config';
+import { GAME_WIDTH, MAX_VIEW_WIDTH, SNOW_FLAKES, SNOW_SPEED, VIEW_TOP } from '../config';
 import { groundAt } from '../systems/terrain';
 
 type Flake = { x: number; y: number; radius: number; speed: number; sway: number; phase: number };
@@ -18,8 +18,10 @@ export class Snow {
   /** `drift` is the sideways speed (px/s) the wind gives the flakes. */
   public constructor(container: Container, private readonly drift: number) {
     this.graphics.zIndex = 90;
+    // Flake y is world y (like the ground), so the layer sits as far down as the scenery (see VIEW_TOP).
+    this.graphics.y = -VIEW_TOP;
     container.addChild(this.graphics);
-    this.flakes = Array.from({ length: Math.round(SNOW_FLAKES * MAX_VIEW_WIDTH / GAME_WIDTH) }, () => Snow.newFlake(random(-20, 480)));
+    this.flakes = Array.from({ length: Math.round(SNOW_FLAKES * MAX_VIEW_WIDTH / GAME_WIDTH) }, () => Snow.newFlake(random(VIEW_TOP - 20, 480)));
   }
 
   public update(deltaMs: number, cameraX: number): void {
@@ -31,7 +33,7 @@ export class Snow {
       flake.y += flake.speed * deltaSeconds;
       flake.x += (this.drift + Math.sin(flake.phase) * flake.sway) * deltaSeconds - pan;
       if (flake.y >= groundAt(flake.x + cameraX)) {
-        this.flakes[index] = Snow.newFlake(random(-30, -5));
+        this.flakes[index] = Snow.newFlake(random(VIEW_TOP - 30, VIEW_TOP - 5));
       } else if (flake.x > MAX_VIEW_WIDTH + 10) {
         flake.x -= MAX_VIEW_WIDTH + 20;
       } else if (flake.x < -10) {

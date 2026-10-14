@@ -1,5 +1,5 @@
 import { Graphics, type Container } from 'pixi.js';
-import { GAME_WIDTH, GROUND_Y, MAX_VIEW_WIDTH, RAIN_ALPHA, RAIN_DROPS, RAIN_SLANT, RAIN_SPEED } from '../config';
+import { GAME_WIDTH, GROUND_Y, MAX_VIEW_WIDTH, RAIN_ALPHA, RAIN_DROPS, RAIN_SLANT, RAIN_SPEED, VIEW_TOP } from '../config';
 import { groundAt } from '../systems/terrain';
 
 type Drop = { x: number; y: number; length: number; speed: number };
@@ -20,8 +20,10 @@ export class Rain {
 
   public constructor(container: Container) {
     this.graphics.zIndex = 90;
+    // Drop y is world y (like the ground), so the layer sits as far down as the scenery (see VIEW_TOP).
+    this.graphics.y = -VIEW_TOP;
     container.addChild(this.graphics);
-    this.drops = Array.from({ length: Math.round(RAIN_DROPS * MAX_VIEW_WIDTH / GAME_WIDTH) }, () => Rain.newDrop(random(-40, GROUND_Y)));
+    this.drops = Array.from({ length: Math.round(RAIN_DROPS * MAX_VIEW_WIDTH / GAME_WIDTH) }, () => Rain.newDrop(random(VIEW_TOP - 40, GROUND_Y)));
   }
 
   public update(deltaMs: number, cameraX: number): void {
@@ -36,7 +38,7 @@ export class Rain {
         if (Math.random() < 0.5) {
           this.splashes.push({ x: drop.x, y: ground, ageMs: 0 });
         }
-        this.drops[index] = Rain.newDrop(random(-60, -10));
+        this.drops[index] = Rain.newDrop(random(VIEW_TOP - 60, VIEW_TOP - 10));
       } else if (drop.x > MAX_VIEW_WIDTH + 20) {
         drop.x -= MAX_VIEW_WIDTH + 40;
       } else if (drop.x < -20) {
