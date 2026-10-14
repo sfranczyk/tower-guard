@@ -1,4 +1,4 @@
-import { DIFFICULTY_SCALE } from '../config';
+import { DIFFICULTY_SCALE, WAVES } from '../config';
 import type { LevelEnemyCounts } from './sandbox';
 
 /**
@@ -15,6 +15,22 @@ export const isDifficultyLevel = (value: unknown): value is DifficultyLevel =>
 
 /** How much bigger every wave is (easy = 1, the sandbox's counts as set). */
 export const waveScale = (level: DifficultyLevel): number => (level === 'easy' ? 1 : DIFFICULTY_SCALE[level]);
+
+/** How a wave's enemies come out: `groupSize` at a time, `spawnIntervalMs` apart in a group, `groupGapMs` between. */
+export interface WavePacing {
+  groupSize: number;
+  spawnIntervalMs: number;
+  groupGapMs: number;
+}
+
+/** Easy: one by one; medium and hard: in groups. */
+export const wavePacing = (level: DifficultyLevel): WavePacing => (level === 'easy'
+  ? { groupSize: 1, spawnIntervalMs: WAVES.spawnIntervalMs, groupGapMs: WAVES.spawnIntervalMs }
+  : {
+    groupSize: Math.max(1, Math.round(DIFFICULTY_SCALE.groupSize)),
+    spawnIntervalMs: DIFFICULTY_SCALE.groupSpawnIntervalMs,
+    groupGapMs: DIFFICULTY_SCALE.groupGapMs,
+  });
 
 /** The level's enemies at this scale; a type present stays present. */
 export const scaleEnemyCounts = (enemies: LevelEnemyCounts, scale: number): LevelEnemyCounts =>

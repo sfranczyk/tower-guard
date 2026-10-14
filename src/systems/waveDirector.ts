@@ -1,5 +1,6 @@
 import { WAVES } from '../config';
 import { ENEMY_KINDS, ENEMY_TYPES } from '../data/enemyKinds';
+import type { WavePacing } from '../data/difficulty';
 import type { LevelEnemyCounts } from '../data/sandbox';
 import type { EnemyType } from '../types';
 
@@ -36,6 +37,13 @@ export const planWaves = (enemies: LevelEnemyCounts, scale = 1): EnemyType[][] =
   return waves;
 };
 
+/** A wave reordered so each kind comes together (in order of arrival), for groups of similar enemies. */
+export const groupByKind = (wave: readonly EnemyType[]): EnemyType[] =>
+  [...wave].sort((a, b) => TYPES.indexOf(a) - TYPES.indexOf(b));
+
+/** Easy's pacing: one by one, WAVES.spawnIntervalMs apart. */
+const ONE_BY_ONE = (): WavePacing => ({ groupSize: 1, spawnIntervalMs: WAVES.spawnIntervalMs, groupGapMs: WAVES.spawnIntervalMs });
+
 export class WaveDirector {
   private readonly waves: EnemyType[][];
   private waveIndex = 0;
@@ -45,8 +53,10 @@ export class WaveDirector {
   private timerMs: number;
   private waitingForWave = false;
 
-  public constructor(enemies: LevelEnemyCounts, scale = 1) {
-    this.waves = planWaves(enemies, scale);
+  /** `scale`: wave sizes (the difficulty's); `pacing`: how a wave's enemies come out (in groups, kinds together). */
+  public constructor(enemies: LevelEnemyCounts, scale = 1, private readonly pacing: WavePacing = ONE_BY_ONE()) {
+    const waves = planWaves(enemies, scale);
+    this.waves = pacing.groupSize > 1 ? waves.map(groupByKind) : waves;
     this.timerMs = WAVES.startDelayMs;
   }
 
@@ -75,7 +85,8 @@ export class WaveDirector {
     while (this.timerMs <= 0 && this.spawnIndex < wave.length) {
       spawned.push(wave[this.spawnIndex]);
       this.spawnIndex += 1;
-      this.timerMs += WAVES.spawnIntervalMs;
+      const groupDone = this.spawnIndex % this.pacing.groupSize === 0;
+      this.timerMs += groupDone ? this.pacing.groupGapMs : this.pacing.spawnIntervalMs;
     }
     if (this.spawnIndex >= wave.length) {
       this.waveIndex += 1;

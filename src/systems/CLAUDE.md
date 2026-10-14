@@ -13,7 +13,8 @@ stuck or gone arrows hit. Targeting: nearest bowman out in the open, else the ke
 so it pauses with the game) releases the first after `WAVES.startDelayMs`, a wave's enemies `WAVES.spawnIntervalMs`
 apart, and the next once at most `WAVES.releaseAlive` stand and `WAVES.minGapMs` passed, or after `WAVES.maxGapMs`.
 Difficulty (`session.difficulty`, settings drawer; co-op: the host's, sent in `start`): `data/difficulty.ts`
-`waveScale` (easy 1, `DIFFICULTY_SCALE.medium/hard`) multiplies the level's counts and every wave size (`BattleEnemies`).
+`waveScale` (easy 1, `DIFFICULTY_SCALE.medium/hard`) multiplies the level's counts and every wave size (`BattleEnemies`); `wavePacing`: medium/hard send a wave in
+groups of `DIFFICULTY_SCALE.groupSize` (kinds together, `groupByKind`), `groupSpawnIntervalMs` apart, `groupGapMs` between.
 
 ## Arrow flight (`ballistics.ts`)
 Gravity + quadratic drag `ARROWS.drag`, wind in `FlightParams`. The trajectory preview, the aim camera and enemy archer

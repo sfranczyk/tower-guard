@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { WAVES } from '../config';
-import { WaveDirector, planWaves } from './waveDirector';
+import { WaveDirector, groupByKind, planWaves } from './waveDirector';
 
 const last = <T>(items: readonly T[]): T => items[items.length - 1];
 
@@ -44,8 +44,7 @@ describe('wave waves', () => {
 });
 
 describe('wave director', () => {
-  const run = (alive: () => number, stepMs = 100, untilMs = 120000) => {
-    const director = new WaveDirector(level);
+  const run = (alive: () => number, stepMs = 100, untilMs = 120000, director = new WaveDirector(level)) => {
     const spawns: number[] = [];
     for (let time = stepMs; time <= untilMs && !director.finished; time += stepMs) {
       director.update(stepMs, alive()).forEach(() => spawns.push(time));
@@ -69,5 +68,21 @@ describe('wave director', () => {
     const quick = run(() => 0);
     expect(quick.spawns[WAVES.firstSize] - quick.spawns[WAVES.firstSize - 1]).toBe(WAVES.minGapMs);
     expect(last(quick.spawns)).toBeLessThan(last(stubborn.spawns));
+  });
+
+  it('sends a wave in groups: close together inside a group, a longer gap between groups', () => {
+    const pacing = { groupSize: 2, spawnIntervalMs: 300, groupGapMs: 1500 };
+    const big = { ...level, basic: 12 };
+    const { spawns } = run(() => 99, 100, 120000, new WaveDirector(big, 2, pacing));
+    expect(spawns[1] - spawns[0]).toBe(300);
+    expect(spawns[2] - spawns[1]).toBe(1500);
+    expect(spawns[3] - spawns[2]).toBe(300);
+  });
+
+  it('puts the same kinds of a wave together', () => {
+    const grouped = groupByKind(['basic', 'archer', 'basic', 'fast', 'archer', 'fast']);
+    expect(grouped).toHaveLength(6);
+    // Each kind is one unbroken run.
+    expect(grouped.filter((type, index) => type !== grouped[index - 1])).toHaveLength(3);
   });
 });

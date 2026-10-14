@@ -15,7 +15,7 @@ import { spatialMix } from '../audio/spatial';
 import { Scene, type GameContext } from '../core/Scene';
 import { viewWidth } from '../core/viewport';
 import { BATTLEGROUNDS, aimColorsOf, type Battleground } from '../data/battlegrounds';
-import { waveScale } from '../data/difficulty';
+import { wavePacing, waveScale } from '../data/difficulty';
 import type { LevelSetup } from '../data/sandbox';
 import InputManager from '../managers/InputManager';
 import { LocalInput, ManualInput, RecordingInput } from '../input/PlayerInput';
@@ -99,11 +99,13 @@ export class GameScene extends Scene {
     // Windy maps roll a fresh wind for every level (direction and strength); a co-op guest takes the host's.
     const strongest = this.battleground.wind ?? 0;
     this.wind = this.role === 'guest' ? ctx.session.net!.wind : Math.round((Math.random() * 2 - 1) * strongest);
+    const difficulty = this.role === 'guest' ? ctx.session.net!.difficulty : ctx.session.difficulty;
     this.foes = new BattleEnemies(this.level, {
       world: this.world,
       list: this.enemies,
       guest: this.role === 'guest',
-      waveScale: waveScale(this.role === 'guest' ? ctx.session.net!.difficulty : ctx.session.difficulty),
+      waveScale: waveScale(difficulty),
+      wavePacing: wavePacing(difficulty),
       hostSync: () => this.hostSync,
     });
     this.shots = new BattleArrows({

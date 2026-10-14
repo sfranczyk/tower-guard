@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { DIFFICULTY_SCALE } from '../config';
-import { isDifficultyLevel, scaleEnemyCounts, waveScale } from './difficulty';
+import { WAVES } from '../config';
+import { isDifficultyLevel, scaleEnemyCounts, wavePacing, waveScale } from './difficulty';
 import { levelEnemyTotal } from './sandbox';
 
 const level = { basic: 4, fast: 3, tank: 1, troll: 0, archer: 2, dragon: 0, fireDragon: 0, kamikaze: 1, zombie: 2, knight: 1, hammerKnight: 0, horseKnight: 0, priest: 0 };
@@ -18,6 +19,12 @@ describe('difficulty', () => {
     const scaled = scaleEnemyCounts(level, 0.2);
     expect(scaled.troll).toBe(0);
     expect(scaled.tank).toBe(1);
+  });
+
+  it('sends easy one by one and medium and hard in groups', () => {
+    expect(wavePacing('easy')).toEqual({ groupSize: 1, spawnIntervalMs: WAVES.spawnIntervalMs, groupGapMs: WAVES.spawnIntervalMs });
+    expect(wavePacing('hard').groupSize).toBe(DIFFICULTY_SCALE.groupSize);
+    expect(wavePacing('medium').spawnIntervalMs).toBe(DIFFICULTY_SCALE.groupSpawnIntervalMs);
   });
 
   it('recognises the level names', () => {
