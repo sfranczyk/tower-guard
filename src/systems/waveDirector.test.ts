@@ -31,6 +31,12 @@ describe('wave waves', () => {
     expect(sizes(50)).toEqual([3, 5, 7, 9, 10, 10, 6]);
   });
 
+  it('scales every wave size by the difficulty, keeping the number of waves for scaled counts', () => {
+    const only = (basic: number) => ({ basic, fast: 0, tank: 0, troll: 0, archer: 0, dragon: 0, fireDragon: 0, kamikaze: 0, zombie: 0, knight: 0, hammerKnight: 0, horseKnight: 0, priest: 0 });
+    expect(planWaves(only(60), 2).map((wave) => wave.length)).toEqual([6, 10, 14, 18, 12]);
+    expect(planWaves(only(60), 2)).toHaveLength(planWaves(only(30)).length);
+  });
+
   it('never leaves a lone enemy as the last wave', () => {
     expect(last(planWaves({ basic: 6, fast: 0, tank: 0, troll: 0, archer: 0, dragon: 0, fireDragon: 0, kamikaze: 0, zombie: 0, knight: 0, hammerKnight: 0, horseKnight: 0, priest: 0 })).length).toBeGreaterThan(1);
     expect(planWaves({ basic: 1, fast: 0, tank: 0, troll: 0, archer: 0, dragon: 0, fireDragon: 0, kamikaze: 0, zombie: 0, knight: 0, hammerKnight: 0, horseKnight: 0, priest: 0 })).toEqual([['basic']]);

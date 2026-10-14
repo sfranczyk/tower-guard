@@ -1,5 +1,6 @@
 import type { Container } from 'pixi.js';
 import { WORLD_WIDTH } from '../config';
+import { scaleEnemyCounts } from '../data/difficulty';
 import { getEnemyStats } from '../data/enemies';
 import { ENEMY_KINDS, isFlyingType } from '../data/enemyKinds';
 import { levelEnemyTotal, type LevelSetup } from '../data/sandbox';
@@ -20,6 +21,8 @@ export interface BattleEnemiesDeps {
   list: Foe[];
   /** A co-op guest runs no waves of its own: the host's enemies arrive as events. */
   guest: boolean;
+  /** How many times bigger each wave is than the sandbox's counts (the difficulty level, the host's in co-op). */
+  waveScale: number;
   hostSync(): HostSync | undefined;
 }
 
@@ -33,9 +36,10 @@ export class BattleEnemies {
   private director?: WaveDirector;
 
   public constructor(level: LevelSetup, private readonly deps: BattleEnemiesDeps) {
-    this.total = levelEnemyTotal(level.enemies);
+    const enemies = scaleEnemyCounts(level.enemies, deps.waveScale);
+    this.total = levelEnemyTotal(enemies);
     if (!deps.guest) {
-      this.director = new WaveDirector(level.enemies);
+      this.director = new WaveDirector(enemies, deps.waveScale);
     }
   }
 

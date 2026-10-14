@@ -76,6 +76,8 @@ export interface UiHandlers {
   friendlyFireChange?: (enabled: boolean) => void;
   /** Number of shots that keep their trail (0..3) picked in the settings drawer. */
   arrowTrailsChange?: (count: number) => void;
+  /** A difficulty level ('easy' | 'medium' | 'hard') picked in the settings drawer. */
+  difficultyChange?: (level: string) => void;
   /** A music or effects toggle/volume (0..1) changed in the settings drawer. */
   audioChange?: (changes: Partial<AudioSettings>) => void;
   soundLabPlay?: (id: SoundId, variant?: number) => void;
@@ -122,6 +124,7 @@ export class DomUi {
   private readonly cursorCircleInput: HTMLInputElement;
   private readonly friendlyFireInput: HTMLInputElement;
   private readonly trailButtons: HTMLButtonElement[];
+  private readonly difficultyButtons: HTMLButtonElement[];
   private readonly soundInput: HTMLInputElement;
   private readonly volumeInput: HTMLInputElement;
   private readonly musicInput: HTMLInputElement;
@@ -181,6 +184,7 @@ export class DomUi {
     this.cursorCircleInput = this.query<HTMLInputElement>('[data-cursor-circle]');
     this.friendlyFireInput = this.query<HTMLInputElement>('[data-friendly-fire]');
     this.trailButtons = Array.from(this.host.querySelectorAll<HTMLButtonElement>('[data-trail-count]'));
+    this.difficultyButtons = Array.from(this.host.querySelectorAll<HTMLButtonElement>('[data-difficulty-level]'));
     this.soundInput = this.query<HTMLInputElement>('[data-sound]');
     this.volumeInput = this.query<HTMLInputElement>('[data-volume]');
     this.musicInput = this.query<HTMLInputElement>('[data-music]');
@@ -215,6 +219,10 @@ export class DomUi {
     this.trailButtons.forEach((button) => button.addEventListener('click', () => {
       this.handlers.arrowTrailsChange?.(Number(button.dataset.trailCount));
       // Drop focus so Space (shrapnel burst) doesn't press it again.
+      button.blur();
+    }));
+    this.difficultyButtons.forEach((button) => button.addEventListener('click', () => {
+      this.handlers.difficultyChange?.(button.dataset.difficultyLevel ?? '');
       button.blur();
     }));
     const audioChange = (changes: Partial<AudioSettings>): void => this.handlers.audioChange?.(changes);
@@ -316,6 +324,14 @@ export class DomUi {
   public setArrowTrailsOption(count: number): void {
     this.trailButtons.forEach((button) => {
       const active = Number(button.dataset.trailCount) === count;
+      button.classList.toggle('active', active);
+      button.setAttribute('aria-checked', `${active}`);
+    });
+  }
+
+  public setDifficultyOption(level: string): void {
+    this.difficultyButtons.forEach((button) => {
+      const active = button.dataset.difficultyLevel === level;
       button.classList.toggle('active', active);
       button.setAttribute('aria-checked', `${active}`);
     });

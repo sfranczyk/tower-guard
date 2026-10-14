@@ -9,6 +9,7 @@ import { MenuScene } from '../scenes/MenuScene';
 import { SandboxScene } from '../scenes/SandboxScene';
 import { SoundLabScene } from '../scenes/SoundLabScene';
 import { DEFAULT_ARROW_TRAILS, ENEMY_KEEP_HEALTH, MAX_ARROW_TRAILS } from '../config';
+import { DEFAULT_DIFFICULTY, isDifficultyLevel } from '../data/difficulty';
 import { loadSandbox } from './sandboxStorage';
 import { newRun, type GameContext, type GameTextures, type Scene, type SceneName } from './Scene';
 import { COOP_PARAM, DESIGN_LAB_PARAM, LAB_PARAM, SOUND_LAB_PARAM, TUNE_PARAM, getUrlParam, setUrlParam } from './urlState';
@@ -40,6 +41,7 @@ export class SceneManager {
         showCursorCircle: false,
         friendlyFire: true,
         arrowTrails: DEFAULT_ARROW_TRAILS,
+        difficulty: DEFAULT_DIFFICULTY,
       },
       goTo: (scene) => this.goTo(scene),
     };
@@ -67,6 +69,13 @@ export class SceneManager {
     ui.handlers.arrowTrailsChange = (count) => {
       this.ctx.session.arrowTrails = Math.max(0, Math.min(MAX_ARROW_TRAILS, Math.round(count)));
       ui.setArrowTrailsOption(this.ctx.session.arrowTrails);
+    ui.setDifficultyOption(this.ctx.session.difficulty);
+    };
+    ui.handlers.difficultyChange = (level) => {
+      if (isDifficultyLevel(level)) {
+        this.ctx.session.difficulty = level;
+      }
+      ui.setDifficultyOption(this.ctx.session.difficulty);
     };
     ui.handlers.audioChange = (changes) => sound.updateSettings(changes);
     ui.setTrajectoryOption(this.ctx.session.showTrajectory);

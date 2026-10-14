@@ -320,6 +320,15 @@ export const WAVES = tunable('WAVES', 'Waves', {
   maxSize: 10,
 });
 
+/**
+ * Difficulty levels (settings drawer, data/difficulty.ts): how many times more enemies each wave brings than on easy
+ * (the sandbox's counts and the WAVES sizes both scale, so a level keeps its number of waves).
+ */
+export const DIFFICULTY_SCALE = tunable('DIFFICULTY_SCALE', 'Difficulty', {
+  medium: 1.5,
+  hard: 2,
+});
+
 /** Sound effects: default effects volume (0..1) and the base volume of each sound. */
 export const SOUND_DEFAULT_VOLUME = 0.7;
 export const SOUND_VOLUMES = { bowShot: 0.7, arrowFlesh: 0.8, groan: 0.75, explosion: 1, thunder: 1, shrapnelBurst: 0.6 } as const;

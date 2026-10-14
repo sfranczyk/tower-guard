@@ -15,6 +15,7 @@ import { spatialMix } from '../audio/spatial';
 import { Scene, type GameContext } from '../core/Scene';
 import { viewWidth } from '../core/viewport';
 import { BATTLEGROUNDS, aimColorsOf, type Battleground } from '../data/battlegrounds';
+import { waveScale } from '../data/difficulty';
 import type { LevelSetup } from '../data/sandbox';
 import InputManager from '../managers/InputManager';
 import { LocalInput, ManualInput, RecordingInput } from '../input/PlayerInput';
@@ -102,6 +103,7 @@ export class GameScene extends Scene {
       world: this.world,
       list: this.enemies,
       guest: this.role === 'guest',
+      waveScale: waveScale(this.role === 'guest' ? ctx.session.net!.difficulty : ctx.session.difficulty),
       hostSync: () => this.hostSync,
     });
     this.shots = new BattleArrows({

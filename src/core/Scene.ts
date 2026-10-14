@@ -1,4 +1,5 @@
 import type { Application, Container, Texture } from 'pixi.js';
+import type { DifficultyLevel } from '../data/difficulty';
 import type { Loadout } from '../data/loadout';
 import type { SandboxSettings } from '../data/sandbox';
 import type { ProjectileType } from '../types';
@@ -15,6 +16,8 @@ export interface NetLink {
   transport: Transport;
   /** Guest: the wind of the level the host started (the host rolls it). */
   wind: number;
+  /** Guest: the host's difficulty level (it sizes the waves the host sends). */
+  difficulty: DifficultyLevel;
   /**
    * Each player's quiver, by player index (0 the host, 1 the guest): each picks their own (the host on the battle
    * setup's Quiver page, the guest in the lobby) and sends it on every change; undefined until it arrives.
@@ -64,6 +67,8 @@ export interface GameSession {
    * enemies. In co-op the host's setting counts.
    */
   friendlyFire: boolean;
+  /** Difficulty level (settings drawer, easy by default): how many enemies each wave brings, from the next level on. */
+  difficulty: DifficultyLevel;
   /** How many of the latest shots keep their trail (settings drawer, 0 = none, up to MAX_ARROW_TRAILS). */
   arrowTrails: number;
 }

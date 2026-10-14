@@ -137,6 +137,7 @@ export class CoopScene extends Scene {
         session.run = message.run;
         if (session.net) {
           session.net.wind = message.wind;
+          session.net.difficulty = message.difficulty;
         }
         this.ctx.goTo('game');
       }
