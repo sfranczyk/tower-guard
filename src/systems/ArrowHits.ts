@@ -14,7 +14,7 @@ import {
   SHRAPNEL_FRAGMENT_DAMAGE,
 } from '../config';
 import type { SoundId } from '../audio/SoundManager';
-import { enemyDamage, explosionDamage, legHitLames, pinDurationMs, rollDamage, type DamageTarget, type MountPart } from '../data/enemies';
+import { enemyDamage, explosionDamage, legHitLames, pinDurationMs, rollArrowDamage, rollDamage, type DamageTarget, type MountPart } from '../data/enemies';
 import { enemyArchetype, enemyArmor } from '../data/enemyKinds';
 import type Arrow from '../objects/Arrow';
 import type Bowman from '../objects/bowman/Bowman';
@@ -29,7 +29,7 @@ import { segmentHitTime } from './collision';
 import { bowmanBox, foeHitBoxes, pointAlong, type Foe } from './combatGeometry';
 import type { EffectsSystem } from './EffectsSystem';
 
-/** Damage of the fire and frost arrows' hit, × ARROWS.damage (their effect does the rest; a vortex arrow does none). */
+/** Damage of the fire and frost arrows' hit, × a normal arrow's (`rollArrowDamage`) (their effect does the rest; a vortex arrow does none). */
 const MAGIC_HIT_DAMAGE: Partial<Record<ProjectileType, number>> = { fire: FIRE_ARROW_DAMAGE, frost: FROST_ARROW_DAMAGE };
 const PIERCING_MAX_IMPACTS = 5;
 /** A pinning arrow's centre sits this far back from where its tip goes into the ground (the sprite is ~36 px long). */
@@ -224,10 +224,10 @@ export class ArrowHits {
     if (arrow.type === 'pinning') {
       return rollDamage(PIN_DAMAGE);
     }
-    const baseDamage = arrow.type === 'piercing'
-      ? ARROWS.damage * Math.pow(ARROWS.piercingMultiplier, arrow.impacts)
-      : arrow.type === 'fragment' ? ARROWS.damage * SHRAPNEL_FRAGMENT_DAMAGE : ARROWS.damage * (MAGIC_HIT_DAMAGE[arrow.type] ?? 1);
-    return headshot ? baseDamage * ARROWS.headshotMultiplier : baseDamage;
+    const factor = arrow.type === 'piercing'
+      ? Math.pow(ARROWS.piercingMultiplier, arrow.impacts)
+      : arrow.type === 'fragment' ? SHRAPNEL_FRAGMENT_DAMAGE : MAGIC_HIT_DAMAGE[arrow.type] ?? 1;
+    return rollArrowDamage(headshot) * factor;
   }
 
   /**

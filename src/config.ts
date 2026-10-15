@@ -51,8 +51,9 @@ export const ARROW_RELEASE_Y = 0;
 /**
  * The player's arrows (tunable, `?tune`): launch speed (baseSpeed + power × forceSpeed) × speedFactor, gravity, and
  * quadratic air drag k (a = −k·|v|·v; 0.0005 makes a full-power shot lose ~30% speed in its first second, terminal
- * fall speed √(gravity / k) ≈ 1180 px/s; keep it small or arrows float). A normal hit deals `damage`, a headshot
- * × headshotMultiplier, a piercing arrow × piercingMultiplier for each body it went through before.
+ * fall speed √(gravity / k) ≈ 1180 px/s; keep it small or arrows float). A normal hit deals a random damageMin..damageMax,
+ * a headshot a random value from the upper half of that range × headshotMultiplier, a piercing arrow × piercingMultiplier
+ * for each body it went through before (data/enemies `rollArrowDamage`).
  */
 export const ARROWS = tunable('ARROWS', 'Arrows', {
   baseSpeed: 180,
@@ -60,8 +61,9 @@ export const ARROWS = tunable('ARROWS', 'Arrows', {
   speedFactor: 1.6,
   gravity: 700,
   drag: 0.0005,
-  damage: 20,
-  headshotMultiplier: 1.25,
+  damageMin: 10,
+  damageMax: 20,
+  headshotMultiplier: 1.5,
   piercingMultiplier: 0.62,
 }, { meta: { headshotMultiplier: { min: 1, max: 3 }, piercingMultiplier: { max: 1 } } });
 
@@ -121,7 +123,7 @@ export const PRIEST_CAST_MS = 1000;
 export const EXPLOSION_DAMAGE = { centre: 35, edge: 10 } as const;
 /**
  * Shrapnel arrow: Space in flight bursts it into SHRAPNEL_FRAGMENTS small arrows fanned SHRAPNEL_SPREAD
- * radians apart around its heading, each dealing SHRAPNEL_FRAGMENT_DAMAGE × ARROWS.damage.
+ * radians apart around its heading, each dealing SHRAPNEL_FRAGMENT_DAMAGE × a normal arrow's hit.
  */
 export const SHRAPNEL_FRAGMENTS = 3;
 export const SHRAPNEL_SPREAD = 0.16;
@@ -144,7 +146,7 @@ export const PIN_DURATION_ZOMBIE_MS = 20000;
 export const PIN_DAMAGE: readonly [number, number] = [0, 4];
 export const ENEMY_TOWER_DAMAGE = 16;
 /**
- * Fire arrow (systems/afflictions.ts, systems/ArrowMagic.ts): hits for FIRE_ARROW_DAMAGE × ARROWS.damage and
+ * Fire arrow (systems/afflictions.ts, systems/ArrowMagic.ts): hits for FIRE_ARROW_DAMAGE × a normal arrow's hit and
  * sets the enemy alight for ENEMY_BURN_MS (zombies × ENEMY_BURN_ZOMBIE_FACTOR; the fire dragon doesn't burn),
  * ENEMY_BURN_DPS dealt every BURN_TICK_MS. Each tick a burning enemy may set others within FIRE_SPREAD_RADIUS
  * alight (FIRE_SPREAD_CHANCE). In the ground it leaves a fire FIRE_PATCH_RADIUS wide for FIRE_PATCH_MS.
@@ -159,7 +161,7 @@ export const FIRE_SPREAD_CHANCE = 0.12;
 export const FIRE_PATCH_MS = 3500;
 export const FIRE_PATCH_RADIUS = 28;
 /**
- * Frost arrow: hits for FROST_ARROW_DAMAGE × ARROWS.damage and chills for FROST_CHILL_MS (everything it does
+ * Frost arrow: hits for FROST_ARROW_DAMAGE × a normal arrow's hit and chills for FROST_CHILL_MS (everything it does
  * runs at FROST_SLOW speed). The FROST_FREEZE_HITS-th hit in a row (while still chilled), or a headshot, freezes it solid for
  * FROST_FREEZE_MS (brutes FROST_FREEZE_BRUTE_MS; dragons are only chilled). Frozen enemies killed, or caught in
  * an explosion, shatter. Fire thaws them.

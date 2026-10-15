@@ -1,4 +1,4 @@
-import { EXPLOSION_DAMAGE, HORSE_LEG, HORSE_LEG_LAME_CHANCE, KNOCKBACK_PUSH_MAX, SPLASH_GIB_CHANCE } from '../config';
+import { ARROWS, EXPLOSION_DAMAGE, HORSE_LEG, HORSE_LEG_LAME_CHANCE, KNOCKBACK_PUSH_MAX, SPLASH_GIB_CHANCE } from '../config';
 import type { AttackStyle } from '../rendering/attackSwing';
 import type { HorseDeathKind } from '../rendering/horseDeath';
 import type { WalkStyle } from '../rendering/walkCycle';
@@ -27,6 +27,19 @@ export const pinDurationMs = (type: EnemyType): number => enemyTraits(type).pinM
 
 /** A random hit within `range` (`roll` 0..1, passed in so tests can pin it). */
 export const rollDamage = ([min, max]: DamageRange, roll = Math.random()): number => Math.round(min + (max - min) * roll);
+
+/**
+ * A normal arrow's hit (ARROWS, tunable): damageMin..damageMax on the body; a headshot rolls the upper half of that
+ * range and × headshotMultiplier. Other arrows scale this (piercing, fragments, fire, frost).
+ */
+export const rollArrowDamage = (headshot: boolean, roll = Math.random()): number => {
+  const { damageMin, damageMax, headshotMultiplier } = ARROWS;
+  if (!headshot) {
+    return damageMin + (damageMax - damageMin) * roll;
+  }
+  const middle = (damageMin + damageMax) / 2;
+  return (middle + (damageMax - middle) * roll) * headshotMultiplier;
+};
 
 /** Stats for an enemy type (as tuned, data/enemyTuning.ts) scaled by the level's difficulty multiplier. */
 export const getEnemyStats = (type: EnemyType, difficulty: number): EnemyStats => ({

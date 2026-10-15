@@ -20,6 +20,8 @@ groups of `DIFFICULTY_SCALE.groupSize` (kinds together, `groupByKind`), `groupSp
 Gravity + quadratic drag `ARROWS.drag`, wind in `FlightParams`. The trajectory preview, the aim camera and enemy archer
 aim (`solveLaunchAngle`, cached ~250 ms) simulate with the same functions: any flight change goes here. Enemy archers
 shoot at the plain `bowSpeed`. Per-type mass/drag/speed in `data/projectiles.ts`.
+- Hit damage: `rollArrowDamage` (data/enemies): `ARROWS.damageMin..damageMax` on the body, a headshot the upper half
+  × `headshotMultiplier`; piercing, fragments, fire and frost scale it. Enemy health is planned in arrows (`ENEMY_KINDS`).
 - Shrapnel (Space in flight): `SHRAPNEL_FRAGMENTS` `'fragment'` arrows (`shrapnelBurst`, pure),
   `SHRAPNEL_FRAGMENT_DAMAGE` each; `GameScene.burstShrapnel` swaps them in.
 - Pinning: `PIN_DAMAGE` 0–4 (no headshot bonus), sticks through the foot into the ground, `PIN_DURATION_MS` 20 s

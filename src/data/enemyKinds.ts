@@ -205,12 +205,13 @@ export interface EnemyKind {
 }
 
 /**
- * The enemies, in the battle setup's order. Health is against a normal arrow's 20 (headshot ×1.25 = 25, an explosive
- * arrow only its blast, 35 at the centre down to 10 at the edge): fighters take two arrows, runners and archers drop to
- * one headshot (two body hits), brutes about six, dragons about nine. Kamikazes die to any normal arrow (they must be
- * stopped before they reach you); zombies shamble but take three. Runners nick, fighters hit, brutes smash; the dragon
- * rider's arrows hit hardest. Archers' arrows barely scratch the keep's stone, brutes smash it and a kamikaze's bomb is
- * made for walls.
+ * The enemies, in the battle setup's order. Health is planned in arrows (a normal arrow's body hit deals 10–20, a
+ * headshot 22.5–30, an explosive arrow only its blast, 35 at the centre down to 10 at the edge): kamikazes die to any
+ * arrow (they must be stopped before they reach you), runners, archers and priests to two body hits or one headshot,
+ * fighters and shamans to three (or two headshots), zombies to five (three), brutes six or seven (four), dragons nine or
+ * ten (six); knights' plate makes body hits near useless (nine and thirteen; two and three headshots). Runners nick,
+ * fighters hit, brutes smash; the dragon rider's arrows hit hardest. Archers' arrows barely scratch the keep's stone,
+ * brutes smash it and a kamikaze's bomb is made for walls.
  */
 export const ENEMY_KINDS: Readonly<Record<EnemyType, EnemyKind>> = {
   basic: {
@@ -220,59 +221,59 @@ export const ENEMY_KINDS: Readonly<Record<EnemyType, EnemyKind>> = {
   // Goblins, three quarters of a man's height.
   fast: {
     label: 'Goblin runner', archetype: 'runner', race: 'goblin', magical: false, arrival: 0.05,
-    stats: { health: 22, speed: ENEMY_SPEED * 2.1 }, damage: { melee: [3, 6] }, build: { size: 0.75, strikeReach: 45 },
+    stats: { health: 21, speed: ENEMY_SPEED * 2.1 }, damage: { melee: [3, 6] }, build: { size: 0.75, strikeReach: 45 },
   },
   // Ogres stand half again as tall: their long club is hard to step away from.
   tank: {
     label: 'Ogre brute', archetype: 'heavy', race: 'ogre', magical: false, arrival: 0.3,
-    stats: { health: 110, speed: ENEMY_SPEED * 0.6 }, damage: { melee: [14, 22] }, keepDamage: { melee: 2 }, build: { size: 1.5, strikeReach: 85 },
+    stats: { health: 90, speed: ENEMY_SPEED * 0.6 }, damage: { melee: [14, 22] }, keepDamage: { melee: 2 }, build: { size: 1.5, strikeReach: 85 },
   },
   // A troll: taller and slower than the brute, with long arms and a stone club. Its wounds close (REGEN): set it alight
   // to stop that, then finish it while it burns.
   troll: {
     label: 'Troll', archetype: 'heavy', race: 'ogre', magical: false, arrival: 0.4, regenerates: true,
-    stats: { health: 130, speed: ENEMY_SPEED * 0.5 }, damage: { melee: [16, 24] }, keepDamage: { melee: 2 }, build: { size: 1.6, strikeReach: 90 },
+    stats: { health: 105, speed: ENEMY_SPEED * 0.5 }, damage: { melee: [16, 24] }, keepDamage: { melee: 2 }, build: { size: 1.6, strikeReach: 90 },
   },
   // Fragile, keeps its distance and shoots.
   archer: {
     label: 'Archer', archetype: 'archer', race: 'human', magical: false, arrival: 0.15,
-    stats: { health: 24, speed: ENEMY_SPEED * 0.9 }, damage: { melee: [3, 5], arrow: [7, 10] }, keepDamage: { arrow: 0.5 },
+    stats: { health: 22, speed: ENEMY_SPEED * 0.9 }, damage: { melee: [3, 5], arrow: [7, 10] }, keepDamage: { arrow: 0.5 },
     build: { size: 1, strikeReach: 55 },
   },
   // Flying archer mount: tough, flies in steadily (speed is its horizontal flight speed). Never melees.
   dragon: {
     label: 'Dragon archer', archetype: 'skyArcher', race: 'dragon', magical: true, arrival: 0.35,
-    stats: { health: 170, speed: ENEMY_SPEED * 1.2 }, damage: { melee: [0, 0], arrow: [12, 16] }, build: { size: 1, strikeReach: 0 },
+    stats: { health: 135, speed: ENEMY_SPEED * 1.2 }, damage: { melee: [0, 0], arrow: [12, 16] }, build: { size: 1, strikeReach: 0 },
   },
   // Flies in lower and closer to breathe fire. No hits of its own: its fire sets the bowman alight (BURN_* in config.ts).
   fireDragon: {
     label: 'Fire dragon', archetype: 'fireBreather', race: 'dragon', magical: true, arrival: 0.4,
-    stats: { health: 170, speed: ENEMY_SPEED * 1.2 }, damage: { melee: [0, 0] }, build: { size: 1, strikeReach: 0 },
+    stats: { health: 135, speed: ENEMY_SPEED * 1.2 }, damage: { melee: [0, 0] }, build: { size: 1, strikeReach: 0 },
     traits: { burnFactor: 0 },
   },
   // Sprints at the bowman with a bomb and blows up on contact.
   kamikaze: {
     label: 'Kamikaze', archetype: 'kamikaze', race: 'human', magical: false, arrival: 0.25,
-    stats: { health: 18, speed: ENEMY_SPEED * 2 }, damage: { melee: [24, 32] }, keepDamage: { melee: 8 }, build: { size: 1, strikeReach: 0 },
+    stats: { health: 10, speed: ENEMY_SPEED * 2 }, damage: { melee: [24, 32] }, keepDamage: { melee: 8 }, build: { size: 1, strikeReach: 0 },
     traits: { mass: 1.4 },
   },
   // Slow, arms out, hard to put down. Its shuffle is the march with the feet dragged.
   zombie: {
     label: 'Zombie', archetype: 'grabber', race: 'undead', magical: false, arrival: 0.1,
-    stats: { health: 60, speed: ENEMY_SPEED * 0.45 }, damage: { melee: [8, 12] }, build: { size: 1, strikeReach: 50, stepMs: 240, walkStyle: 'march' },
+    stats: { health: 65, speed: ENEMY_SPEED * 0.45 }, damage: { melee: [8, 12] }, build: { size: 1, strikeReach: 50, stepMs: 240, walkStyle: 'march' },
   },
   // Black plate (the knights march, rendering/walkCycle): body hits barely dent it (KNIGHT_ARMOR), so aim for the visor or use piercing arrows. A sword: it cuts
   // down, cuts up from below or thrusts.
   knight: {
     label: 'Black knight', archetype: 'fighter', race: 'human', magical: false, arrival: 0.2, armor: KNIGHT_ARMOR,
     attackStyles: ['overhead', 'swordRise', 'thrust'],
-    stats: { health: 50, speed: ENEMY_SPEED * 0.9 }, damage: { melee: [9, 14] }, build: { size: 1, strikeReach: 60, walkStyle: 'march' },
+    stats: { health: 45, speed: ENEMY_SPEED * 0.9 }, damage: { melee: [9, 14] }, build: { size: 1, strikeReach: 60, walkStyle: 'march' },
     traits: { mass: 1.9 },
   },
   // A head taller, in the same black plate, with a war hammer in both hands.
   hammerKnight: {
     label: 'Hammer knight', archetype: 'heavy', race: 'human', magical: false, arrival: 0.35, armor: KNIGHT_ARMOR,
-    stats: { health: 80, speed: ENEMY_SPEED * 0.7 }, damage: { melee: [16, 24] }, keepDamage: { melee: 2 }, build: { size: 1.1, strikeReach: 75, walkStyle: 'march' },
+    stats: { health: 67, speed: ENEMY_SPEED * 0.7 }, damage: { melee: [16, 24] }, keepDamage: { melee: 2 }, build: { size: 1.1, strikeReach: 75, walkStyle: 'march' },
     traits: { mass: 2.5 },
   },
   // The black knight on a black warhorse (drawn 1.15× so the horse stands tall): gallops in and strikes with a lance from beyond a sword's reach. Rider
@@ -280,8 +281,8 @@ export const ENEMY_KINDS: Readonly<Record<EnemyType, EnemyKind>> = {
   // thrown off and fights on foot with the health he has left; the rider killed (or pulled out of the saddle by a vortex), the horse bolts.
   horseKnight: {
     label: 'Mounted knight', archetype: 'cavalry', race: 'human', magical: false, arrival: 0.45, unhorsed: 'knight', armor: KNIGHT_ARMOR,
-    mount: { health: 70 },
-    stats: { health: 50, speed: ENEMY_SPEED * 2 }, damage: { melee: [14, 20] }, keepDamage: { melee: 1.5 },
+    mount: { health: 60 },
+    stats: { health: 45, speed: ENEMY_SPEED * 2 }, damage: { melee: [14, 20] }, keepDamage: { melee: 1.5 },
     build: { size: 1.15, strikeReach: 64, reach: { bowman: 42, keep: 82 } },
     // Horse and rider: no vortex lifts them off the ground, no pin holds a horse, the ice holds them briefly.
     traits: { mass: 6, freezeMs: FROST_FREEZE_BRUTE_MS, pinMs: 0 },
@@ -289,7 +290,7 @@ export const ENEMY_KINDS: Readonly<Record<EnemyType, EnemyKind>> = {
   // Frail and never attacks, but it keeps the others standing: kill it first.
   priest: {
     label: 'Dark priest', archetype: 'healer', race: 'human', magical: true, arrival: 0.15,
-    stats: { health: 30, speed: ENEMY_SPEED }, damage: { melee: [0, 0] }, build: { size: 1, strikeReach: 0 },
+    stats: { health: 22, speed: ENEMY_SPEED }, damage: { melee: [0, 0] }, build: { size: 1, strikeReach: 0 },
   },
   // Small and quick, never attacks: hastens the soldiers, hardens the heavies, speeds the archers' draw, makes the
   // kamikazes' bombs bigger and mends the undead (systems/shamanBuffs.ts).
