@@ -35,7 +35,7 @@ pure): burning (`BURN_TICK_MS`, cause `'burn'`, spreads), chilled (`timeScale`),
 blast shatters it, cause `'shatter'`). Fire thaws, frost puts fire out; the fire dragon doesn't burn, dragons are only
 chilled. A fire arrow in the ground leaves a fire patch.
 Vortex (`vortex.ts`, pure): pulls ground enemies in, lifts them (`Enemy.holdInVortex`, flailing) and throws them
-(`Enemy.throwInAir`, `flight.ts`); landing = knockback + `onLanded` fall damage (cause `'fall'`; kamikaze goes off,
+(`Enemy.throwInAir`, `flight.ts`); landing = knockback + `onLanded` fall damage (cause `'fall'`; a kamikaze the fall would kill goes off,
 frozen shatters). A direct hit levitates (`levitateHeight`, drops with `VORTEX.levitateFall`, `VORTEX.levitateBoost`
 per further arrow). It all goes by **mass** (`enemyMass`; goblin 0.8, zombie 1, fighter/archer/priest 1.2 =
 `VORTEX_MASS.reference`, bowman `BOWMAN_MASS` 1.3, kamikaze 1.4, black knight 1.9, hammer knight 2.5, ogre 4.2): pace

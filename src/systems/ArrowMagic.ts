@@ -72,7 +72,7 @@ const BOOST_RATE = 3;
 const SADDLE_LIFT = 22;
 
 export interface ArrowMagicHooks {
-  /** A kamikaze thrown by a vortex goes off where it lands (CombatSystem.detonate). */
+  /** A kamikaze killed by its landing from a vortex goes off where it lands (CombatSystem.detonate). */
   detonate(kamikaze: Enemy): void;
   /** Kills a frozen enemy by shattering it (CombatSystem.shatter). */
   shatter(enemy: Enemy, fromX: number): void;
@@ -329,7 +329,7 @@ export class ArrowMagic {
   }
 
   /**
-   * A thrown enemy hits the ground: a kamikaze goes off, a frozen one shatters, the rest take the fall's damage. A
+   * A thrown enemy hits the ground: a kamikaze the fall would kill goes off, a frozen one shatters, the rest take the fall's damage. A
    * bowman takes the fall too (frozen, his ice breaks first).
    */
   private landed(enemy: Walker, impactSpeed: number, damageScale: number): void {
@@ -351,12 +351,13 @@ export class ArrowMagic {
       }
       return;
     }
-    if (enemyArchetype(enemy.kind).detonates) {
+    const damage = fallDamage(impactSpeed) * damageScale;
+    if (enemyArchetype(enemy.kind).detonates && damage * enemy.buff.damageFactor >= enemy.vitals.health) {
+      // A landing hard enough to kill a kamikaze sets its bomb off; a softer one only hurts it.
       this.hooks.detonate(enemy);
     } else if (enemy.afflictions.isFrozen) {
       this.hooks.shatter(enemy, enemy.x);
     } else {
-      const damage = fallDamage(impactSpeed) * damageScale;
       if (damage > 0) {
         enemy.takeDamage(damage, { cause: 'fall', fromX: enemy.x });
       }
