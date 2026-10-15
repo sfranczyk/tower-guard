@@ -15,7 +15,7 @@ import { spatialMix } from '../audio/spatial';
 import { Scene, type GameContext } from '../core/Scene';
 import { viewWidth } from '../core/viewport';
 import { BATTLEGROUNDS, aimColorsOf, type Battleground } from '../data/battlegrounds';
-import { wavePacing, waveScale } from '../data/difficulty';
+import { enemyEdge, wavePacing } from '../data/difficulty';
 import type { LevelSetup } from '../data/sandbox';
 import InputManager from '../managers/InputManager';
 import { LocalInput, ManualInput, RecordingInput } from '../input/PlayerInput';
@@ -105,7 +105,6 @@ export class GameScene extends Scene {
       world: this.world,
       list: this.enemies,
       guest: this.role === 'guest',
-      waveScale: waveScale(difficulty),
       wavePacing: wavePacing(difficulty),
       hostSync: () => this.hostSync,
     });
@@ -186,6 +185,7 @@ export class GameScene extends Scene {
         wind: this.wind,
         friendlyFire: () => this.ctx.session.friendlyFire,
         reinforcementsDue: () => this.foes.reinforcementsDue,
+        enemyEdge: enemyEdge(this.ctx.session.sandbox.difficulty),
       },
       {
         bowmanDamaged: (bowman, amount, hit) => {

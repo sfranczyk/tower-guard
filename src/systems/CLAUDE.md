@@ -12,8 +12,9 @@ stuck or gone arrows hit. Targeting: nearest bowman out in the open, else the ke
 `WAVES.firstSize` is light) in waves growing by `WAVES.sizeStep` to `WAVES.maxSize`; `WaveDirector.update` (every frame,
 so it pauses with the game) releases the first after `WAVES.startDelayMs`, a wave's enemies `WAVES.spawnIntervalMs`
 apart, and the next once at most `WAVES.releaseAlive` stand and `WAVES.minGapMs` passed, or after `WAVES.maxGapMs`.
-Difficulty (`SandboxSettings.difficulty`, battle setup, medium by default; co-op: the host's sandbox): `data/difficulty.ts`
-`waveScale` (easy 1, `DIFFICULTY_SCALE.medium/hard`) multiplies the level's counts and every wave size (`BattleEnemies`); `wavePacing`: medium/hard send a wave in
+Difficulty (`SandboxSettings.difficulty`, battle setup, medium by default; co-op: the host's sandbox) never changes the
+enemy counts. `data/difficulty.ts` `enemyEdge` (`CombatWorld.enemyEdge`; easy 1, `DIFFICULTY_SCALE.*Damage/*Spread`):
+every enemy hit on bowmen and keep × `damage` (melee, arrows, kamikaze, dragon burn), archer aim error × `aimSpread`; `wavePacing`: medium/hard send a wave in
 groups of `DIFFICULTY_SCALE.groupSize` (kinds together, `groupByKind`), `groupSpawnIntervalMs` apart, `groupGapMs` between.
 
 ## Arrow flight (`ballistics.ts`)

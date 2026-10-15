@@ -1,24 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { DIFFICULTY_SCALE } from '../config';
 import { WAVES } from '../config';
-import { isDifficultyLevel, scaleEnemyCounts, wavePacing, waveScale } from './difficulty';
-import { levelEnemyTotal } from './sandbox';
-
-const level = { basic: 4, fast: 3, tank: 1, troll: 0, archer: 2, dragon: 0, fireDragon: 0, kamikaze: 1, goblinKamikaze: 0, zombie: 2, knight: 1, hammerKnight: 0, horseKnight: 0, priest: 0, shaman: 0 };
+import { enemyEdge, isDifficultyLevel, wavePacing } from './difficulty';
 
 describe('difficulty', () => {
-  it('easy keeps the counts, harder levels grow them', () => {
-    expect(waveScale('easy')).toBe(1);
-    expect(scaleEnemyCounts(level, waveScale('easy'))).toEqual(level);
-    expect(waveScale('medium')).toBe(DIFFICULTY_SCALE.medium);
-    expect(waveScale('hard')).toBeGreaterThan(waveScale('medium'));
-    expect(levelEnemyTotal(scaleEnemyCounts(level, 2))).toBe(2 * levelEnemyTotal(level));
-  });
-
-  it('keeps absent types absent and present ones at least one', () => {
-    const scaled = scaleEnemyCounts(level, 0.2);
-    expect(scaled.troll).toBe(0);
-    expect(scaled.tank).toBe(1);
+  it('easy leaves the enemies as tuned, harder levels hit harder and aim better', () => {
+    expect(enemyEdge('easy')).toEqual({ damage: 1, aimSpread: 1 });
+    expect(enemyEdge('medium')).toEqual({ damage: DIFFICULTY_SCALE.mediumDamage, aimSpread: DIFFICULTY_SCALE.mediumSpread });
+    expect(enemyEdge('hard').damage).toBeGreaterThan(enemyEdge('medium').damage);
+    expect(enemyEdge('hard').aimSpread).toBeLessThan(enemyEdge('medium').aimSpread);
   });
 
   it('sends easy one by one and medium and hard in groups', () => {

@@ -1,9 +1,9 @@
 import { DIFFICULTY_SCALE, WAVES } from '../config';
-import type { LevelEnemyCounts } from './sandbox';
 
 /**
- * The run's difficulty level (battle setup, `SandboxSettings.difficulty`; in co-op the host's). It scales how many enemies each wave brings:
- * the level's enemy counts and the wave sizes grow by the same factor, so a level keeps its number of waves.
+ * The run's difficulty level (battle setup, `SandboxSettings.difficulty`; in co-op the host's). It never changes how many
+ * enemies come (always the sandbox's counts): it makes their hits hurt more, their archers aim better and the waves
+ * come in groups.
  */
 export type DifficultyLevel = 'easy' | 'medium' | 'hard';
 
@@ -15,8 +15,16 @@ export const DIFFICULTY_LABELS: Readonly<Record<DifficultyLevel, string>> = { ea
 export const isDifficultyLevel = (value: unknown): value is DifficultyLevel =>
   DIFFICULTY_LEVELS.includes(value as DifficultyLevel);
 
-/** How much bigger every wave is (easy = 1, the sandbox's counts as set). */
-export const waveScale = (level: DifficultyLevel): number => (level === 'easy' ? 1 : DIFFICULTY_SCALE[level]);
+/** How hard the enemies are: `damage` multiplies every hit on the bowmen and the keep, `aimSpread` the archers' aim error. */
+export interface EnemyEdge {
+  damage: number;
+  aimSpread: number;
+}
+
+/** Easy: as tuned; medium and hard: DIFFICULTY_SCALE. */
+export const enemyEdge = (level: DifficultyLevel): EnemyEdge => (level === 'easy'
+  ? { damage: 1, aimSpread: 1 }
+  : { damage: DIFFICULTY_SCALE[`${level}Damage`], aimSpread: DIFFICULTY_SCALE[`${level}Spread`] });
 
 /** How a wave's enemies come out: `groupSize` at a time, `spawnIntervalMs` apart in a group, `groupGapMs` between. */
 export interface WavePacing {
@@ -33,8 +41,3 @@ export const wavePacing = (level: DifficultyLevel): WavePacing => (level === 'ea
     spawnIntervalMs: DIFFICULTY_SCALE.groupSpawnIntervalMs,
     groupGapMs: DIFFICULTY_SCALE.groupGapMs,
   });
-
-/** The level's enemies at this scale; a type present stays present. */
-export const scaleEnemyCounts = (enemies: LevelEnemyCounts, scale: number): LevelEnemyCounts =>
-  Object.fromEntries(Object.entries(enemies).map(([type, count]) =>
-    [type, count > 0 ? Math.max(1, Math.round(count * scale)) : 0])) as LevelEnemyCounts;

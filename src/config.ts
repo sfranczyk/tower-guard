@@ -341,14 +341,17 @@ export const WAVES = tunable('WAVES', 'Waves', {
 });
 
 /**
- * Difficulty levels (settings drawer, data/difficulty.ts): how many times more enemies each wave brings than on easy
- * (the sandbox's counts and the WAVES sizes both scale, so a level keeps its number of waves). On medium and hard a
+ * Difficulty levels (battle setup, data/difficulty.ts); the enemy counts are always as set. `*Damage`: how many times
+ * harder every enemy hit lands on the bowmen and the keep than on easy; `*Spread`: enemy archers' aim error (dragon
+ * riders' too) as a share of easy's ENEMY_ATTACK.archerSpread. On medium and hard a
  * wave comes in groups of `groupSize` (same kinds together), `groupSpawnIntervalMs` apart inside a group and
  * `groupGapMs` between groups; easy sends them one by one, WAVES.spawnIntervalMs apart.
  */
 export const DIFFICULTY_SCALE = tunable('DIFFICULTY_SCALE', 'Difficulty', {
-  medium: 1.5,
-  hard: 2,
+  mediumDamage: 1.25,
+  hardDamage: 1.5,
+  mediumSpread: 0.7,
+  hardSpread: 0.4,
   groupSize: 5,
   groupSpawnIntervalMs: 300,
   groupGapMs: 1500,

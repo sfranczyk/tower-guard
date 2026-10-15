@@ -14,6 +14,7 @@ import {
   SHRAPNEL_FRAGMENT_DAMAGE,
 } from '../config';
 import type { SoundId } from '../audio/SoundManager';
+import type { EnemyEdge } from '../data/difficulty';
 import { enemyDamage, explosionDamage, legHitLames, pinDurationMs, rollArrowDamage, rollDamage, type DamageTarget, type MountPart } from '../data/enemies';
 import { enemyArchetype, enemyArmor } from '../data/enemyKinds';
 import type Arrow from '../objects/Arrow';
@@ -66,6 +67,8 @@ export interface ArrowHitsWorld {
   readonly arrows: readonly Arrow[];
   readonly effects: EffectsSystem;
   readonly debug: Graphics;
+  /** The difficulty's edge (data/difficulty.ts): enemy hits × `damage`, enemy archers' aim error × `aimSpread`. */
+  readonly enemyEdge: EnemyEdge;
 }
 
 export interface ArrowHitsEvents {
@@ -114,7 +117,7 @@ export class ArrowHits {
       const towerHit = playerTower.hitTime(start, travel);
       if (towerHit !== undefined) {
         const impact = pointAlong(start, travel, towerHit);
-        playerTower.takeDamage(rollDamage(arrowDamage(arrow.shooter, 'keep')), impact);
+        playerTower.takeDamage(rollDamage(arrowDamage(arrow.shooter, 'keep')) * this.world.enemyEdge.damage, impact);
         arrow.stickToWall(impact, WALL_SINK);
       }
       return;
@@ -127,7 +130,7 @@ export class ArrowHits {
       .sort((first, second) => first.time - second.time)[0];
     if (hit) {
       // He falls as if shot from where the arrow came from.
-      this.events.bowmanDamaged(hit.bowman, rollDamage(arrowDamage(arrow.shooter, 'bowman')), { cause: 'arrow', fromX: start.x });
+      this.events.bowmanDamaged(hit.bowman, rollDamage(arrowDamage(arrow.shooter, 'bowman')) * this.world.enemyEdge.damage, { cause: 'arrow', fromX: start.x });
       const point = pointAlong(start, travel, hit.time);
       effects.bloodBurst(point);
       this.events.sound('arrowFlesh', point);

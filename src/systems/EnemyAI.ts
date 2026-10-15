@@ -14,6 +14,7 @@ import {
   SHOW_HITBOX_DEBUG,
   WORLD_WIDTH,
 } from '../config';
+import type { EnemyEdge } from '../data/difficulty';
 import { enemyDamage, rollDamage } from '../data/enemies';
 import { enemyArchetype, enemyRegenerates, enemyTraits } from '../data/enemyKinds';
 import { bowSpeed } from '../data/projectiles';
@@ -56,6 +57,8 @@ export interface EnemyAIWorld {
   readonly wind: number;
   /** More enemies still to come this level (waves not yet released, a rider about to come off his horse). */
   readonly reinforcementsDue: () => boolean;
+  /** The difficulty's edge (data/difficulty.ts): enemy hits × `damage`, enemy archers' aim error × `aimSpread`. */
+  readonly enemyEdge: EnemyEdge;
 }
 
 export interface EnemyAIEvents {
@@ -147,7 +150,7 @@ export class EnemyAI {
         // The keep takes the hit when the club lands, with a chip of stone flying off the wall.
         enemy.playAttackAnimation(() => {
           // Chips fly off the wall where the club lands.
-          playerTower.takeDamage(rollDamage(enemyDamage(enemy.kind, 'melee', 'keep')), { x: playerTower.x + TOWER_HALF_WIDTH - 4, y: enemy.y - 30 * enemy.scale.y });
+          playerTower.takeDamage(rollDamage(enemyDamage(enemy.kind, 'melee', 'keep')) * this.world.enemyEdge.damage, { x: playerTower.x + TOWER_HALF_WIDTH - 4, y: enemy.y - 30 * enemy.scale.y });
         });
       }
       return;
@@ -163,7 +166,7 @@ export class EnemyAI {
         enemy.playAttackAnimation(() => {
           const stillInReach = Math.abs(enemy.x - bowman.x) <= enemy.strikeReach && Math.abs(enemy.y - bowman.y) <= 45 * enemy.size;
           if (stillInReach && !bowman.isInTower && !bowman.isDead) {
-            this.events.bowmanDamaged(bowman, rollDamage(enemyDamage(enemy.kind, 'melee', 'bowman')), { cause: 'melee', fromX: enemy.x });
+            this.events.bowmanDamaged(bowman, rollDamage(enemyDamage(enemy.kind, 'melee', 'bowman')) * this.world.enemyEdge.damage, { cause: 'melee', fromX: enemy.x });
             this.world.effects.bloodBurst({ x: bowman.x, y: bowman.y - 20 });
           }
         });
@@ -288,7 +291,7 @@ export class EnemyAI {
         cached.ageMs += deltaMs;
       }
       if (enemy.aimBow(angle ?? Math.PI, deltaMs)) {
-        const spread = (Math.random() * 2 - 1) * ENEMY_ATTACK.archerSpread;
+        const spread = (Math.random() * 2 - 1) * ENEMY_ATTACK.archerSpread * this.world.enemyEdge.aimSpread;
         this.events.enemyShot(enemy.getBowReleasePoint(), (angle ?? Math.PI) + spread, speed * (0.97 + Math.random() * 0.06), enemy.kind);
       }
     }
@@ -326,7 +329,7 @@ export class EnemyAI {
       }
       if (dragon.aim(angle ?? Math.PI, deltaMs)) {
         // Buffeted by turbulence the rider can't aim well.
-        const spread = (Math.random() * 2 - 1) * ENEMY_ATTACK.archerSpread * (dragon.afflictions.isTurbulent ? DRAGON_TURBULENCE_SPREAD : 1);
+        const spread = (Math.random() * 2 - 1) * ENEMY_ATTACK.archerSpread * this.world.enemyEdge.aimSpread * (dragon.afflictions.isTurbulent ? DRAGON_TURBULENCE_SPREAD : 1);
         this.events.enemyShot(dragon.getBowReleasePoint(), (angle ?? Math.PI) + spread, speed * (0.97 + Math.random() * 0.06), 'dragon');
       }
     }

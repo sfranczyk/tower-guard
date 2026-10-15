@@ -6,9 +6,7 @@ import type { EnemyType } from '../types';
 
 /**
  * Splits a level's enemies into waves and releases them at sensible moments (pure; GameScene calls `update`
- * every frame and spawns what it returns). Waves grow from WAVES.firstSize by WAVES.sizeStep up to WAVES.maxSize (times
- * the difficulty's `scale`); each
- * type is spread through the level, tougher types starting later, so early waves are light.
+ * every frame and spawns what it returns). Waves grow from WAVES.firstSize by WAVES.sizeStep up to WAVES.maxSize; each type is spread through the level, tougher types starting later, so early waves are light.
  */
 
 /** Where in the level (0..1) each type starts to appear (its `arrival`): fighters first, brutes and dragons later. */
@@ -16,8 +14,8 @@ const TYPE_START = (type: EnemyType): number => ENEMY_KINDS[type].arrival;
 /** In order of arrival (ties in a wave go to the earlier one). */
 const TYPES = [...ENEMY_TYPES].sort((a, b) => TYPE_START(a) - TYPE_START(b));
 
-/** Every enemy of the level in spawn order, cut into waves (each `scale` times the WAVES size). */
-export const planWaves = (enemies: LevelEnemyCounts, scale = 1): EnemyType[][] => {
+/** Every enemy of the level in spawn order, cut into waves (WAVES sizes). */
+export const planWaves = (enemies: LevelEnemyCounts): EnemyType[][] => {
   const order = TYPES.flatMap((type) => Array.from({ length: Math.max(0, enemies[type]) }, (_, index) => {
     const start = TYPE_START(type);
     return { type, at: start + (1 - start) * ((index + 0.5) / enemies[type]) };
@@ -26,9 +24,8 @@ export const planWaves = (enemies: LevelEnemyCounts, scale = 1): EnemyType[][] =
     .map(({ type }) => type);
   const waves: EnemyType[][] = [];
   for (let start = 0, size = WAVES.firstSize; start < order.length; size = Math.min(WAVES.maxSize, size + WAVES.sizeStep)) {
-    const scaled = Math.max(1, Math.round(size * scale));
-    waves.push(order.slice(start, start + scaled));
-    start += scaled;
+    waves.push(order.slice(start, start + size));
+    start += size;
   }
   // A lone straggler at the end joins the wave before it.
   if (waves.length > 1 && waves[waves.length - 1].length === 1) {
@@ -53,9 +50,9 @@ export class WaveDirector {
   private timerMs: number;
   private waitingForWave = false;
 
-  /** `scale`: wave sizes (the difficulty's); `pacing`: how a wave's enemies come out (in groups, kinds together). */
-  public constructor(enemies: LevelEnemyCounts, scale = 1, private readonly pacing: WavePacing = ONE_BY_ONE()) {
-    const waves = planWaves(enemies, scale);
+  /** `pacing`: how a wave's enemies come out (in groups on medium and hard, kinds together). */
+  public constructor(enemies: LevelEnemyCounts, private readonly pacing: WavePacing = ONE_BY_ONE()) {
+    const waves = planWaves(enemies);
     this.waves = pacing.groupSize > 1 ? waves.map(groupByKind) : waves;
     this.timerMs = WAVES.startDelayMs;
   }

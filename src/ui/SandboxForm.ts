@@ -97,7 +97,7 @@ export class SandboxForm {
         <div class="sandbox-health">
           <label class="health-field" title="Bowman health">${ICON_BOWMAN}<span>Bowman</span>${numberInput('data-bowman-health', settings.bowmanHealth, HEALTH_LIMITS.bowman)}</label>
           <label class="health-field" title="Keep health">${ICON_KEEP}<span>Keep</span>${numberInput('data-keep-health', settings.keepHealth, HEALTH_LIMITS.keep)}</label>
-          <div class="health-field" title="How many enemies each wave brings (fixed for the battle)"><span>Difficulty</span><div class="segmented" role="radiogroup" aria-label="Difficulty">
+          <div class="health-field" title="How hard enemies hit and how well their archers aim (fixed for the battle)"><span>Difficulty</span><div class="segmented" role="radiogroup" aria-label="Difficulty">
             ${DIFFICULTY_LEVELS.map((level) => `<button type="button" class="chip-button${level === settings.difficulty ? ' active' : ''}" role="radio" aria-checked="${level === settings.difficulty}" data-difficulty="${level}">${DIFFICULTY_LABELS[level]}</button>`).join('')}
           </div></div>
         </div>

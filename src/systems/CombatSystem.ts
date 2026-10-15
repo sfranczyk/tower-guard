@@ -8,6 +8,7 @@ import {
 } from '../config';
 import type { SoundId } from '../audio/SoundManager';
 import type Arrow from '../objects/Arrow';
+import type { EnemyEdge } from '../data/difficulty';
 import { enemyDamage, explosionDamage, rollDamage } from '../data/enemies';
 import { burnDamage } from './burning';
 import type Bowman from '../objects/bowman/Bowman';
@@ -44,6 +45,8 @@ export interface CombatWorld {
   readonly friendlyFire: () => boolean;
   /** More enemies still to come this level (a priest left alone walks off the field only when none are). */
   readonly reinforcementsDue: () => boolean;
+  /** The difficulty's edge (data/difficulty.ts): enemy hits × `damage`, enemy archers' aim error × `aimSpread`. */
+  readonly enemyEdge: EnemyEdge;
 }
 
 export interface CombatEvents {
@@ -99,10 +102,10 @@ export class CombatSystem {
   public update(deltaMs: number, enemiesActive = true): void {
     const activeEnemies = enemiesActive ? this.world.enemies.filter((enemy) => enemy.isAlive()) : [];
     activeEnemies.forEach((enemy) => this.ai.update(enemy, deltaMs));
-    // Burning: steady damage until the burn runs out (each bowman counts it down in his animation).
+    // Burning: steady damage until the burn runs out (each bowman counts it down in his animation); a dragon's fire, so the difficulty's.
     this.world.bowmen
       .filter((bowman) => bowman.isBurning && !bowman.isDead)
-      .forEach((bowman) => this.events.bowmanDamaged(bowman, burnDamage(bowman.burnRemainingMs, deltaMs), { cause: 'burn', fromX: bowman.x }));
+      .forEach((bowman) => this.events.bowmanDamaged(bowman, burnDamage(bowman.burnRemainingMs, deltaMs) * this.world.enemyEdge.damage, { cause: 'burn', fromX: bowman.x }));
     if (SHOW_HITBOX_DEBUG) {
       // Cyan: the keeps' silhouettes that arrows hit.
       [this.world.playerTower, this.world.enemyTower].forEach((tower) => tower.hitParts().forEach((part) => {
@@ -181,14 +184,14 @@ export class CombatSystem {
       if (bowmanDistance > reach) {
         return;
       }
-      this.events.bowmanDamaged(bowman, rollDamage(enemyDamage(kamikaze.kind, 'melee', 'bowman')) * power, { cause: 'blast', fromX: point.x });
+      this.events.bowmanDamaged(bowman, rollDamage(enemyDamage(kamikaze.kind, 'melee', 'bowman')) * power * this.world.enemyEdge.damage, { cause: 'blast', fromX: point.x });
       effects.bloodBurst({ x: bowman.x, y: bowman.y - BOWMAN_CHEST });
       // Thrown away from the blast, harder the closer he stood.
       const { minStrength } = BOWMAN_KNOCKBACK;
       bowman.knockBack(point.x, minStrength + (1 - minStrength) * (1 - bowmanDistance / reach));
     });
     if (point.x - (playerTower.x + TOWER_HALF_WIDTH) <= reach) {
-      playerTower.takeDamage(rollDamage(enemyDamage(kamikaze.kind, 'melee', 'keep')) * power, { x: playerTower.x + TOWER_HALF_WIDTH - 4, y: point.y });
+      playerTower.takeDamage(rollDamage(enemyDamage(kamikaze.kind, 'melee', 'keep')) * power * this.world.enemyEdge.damage, { x: playerTower.x + TOWER_HALF_WIDTH - 4, y: point.y });
     }
   }
 
