@@ -117,6 +117,9 @@ export const ICON_ENEMIES = {
     <rect x="12.2" y="9.2" width="1.8" height="6.4" rx=".6" fill="#d8614f"/><rect x="14.2" y="9.6" width="1.8" height="6" rx=".6" fill="#c8452a"/>
     <rect x="9.8" y="12" width="6.6" height="1.2" fill="#2c3a38"/></g>
     <path d="M14.4 9.6q.6-3.2 4.4-4.2" stroke="#c9b48a" stroke-width="1.1"/>${spark(19.8, 5)}`),
+  // Goblin bomber: small and running, a round bomb with a lit fuse held up in front.
+  goblinKamikaze: figure(`<circle cx="15" cy="7.5" r="2.6"/><path d="M14 10l-2.5 6.5M11.5 16.5l-1.5 4-4 1.5M11.5 16.5l3.5 3v4M13.2 12l-4 2.5M13.2 12l5-2.5"/>
+    <circle cx="21" cy="8.5" r="3.6" fill="#26262c" stroke="none"/><path d="M21 4.9q.5-2 2.6-2.4" stroke="#c9b48a" stroke-width="1.1"/>${spark(23.6, 2.6)}`, '#5f8a36'),
   // Rotting peasant: shuffling, head hung forward, both arms held out.
   zombie: figure(`<circle cx="11.5" cy="7" r="3"/><path d="M10 10l-.5 8M9.5 18l-4 7M9.5 18l3 7M10 12.5l11 .5M10 14l10.5 1.5"/>
     <path d="M21 13l2-.8M20.5 15.5l2 .4" stroke-width="1.4"/><circle cx="13.5" cy="20.5" r="1" fill="#72c43c" stroke="none"/>`, '#5f8a3e'),

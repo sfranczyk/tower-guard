@@ -181,14 +181,14 @@ export class CombatSystem {
       if (bowmanDistance > reach) {
         return;
       }
-      this.events.bowmanDamaged(bowman, rollDamage(enemyDamage('kamikaze', 'melee', 'bowman')) * power, { cause: 'blast', fromX: point.x });
+      this.events.bowmanDamaged(bowman, rollDamage(enemyDamage(kamikaze.kind, 'melee', 'bowman')) * power, { cause: 'blast', fromX: point.x });
       effects.bloodBurst({ x: bowman.x, y: bowman.y - BOWMAN_CHEST });
       // Thrown away from the blast, harder the closer he stood.
       const { minStrength } = BOWMAN_KNOCKBACK;
       bowman.knockBack(point.x, minStrength + (1 - minStrength) * (1 - bowmanDistance / reach));
     });
     if (point.x - (playerTower.x + TOWER_HALF_WIDTH) <= reach) {
-      playerTower.takeDamage(rollDamage(enemyDamage('kamikaze', 'melee', 'keep')) * power, { x: playerTower.x + TOWER_HALF_WIDTH - 4, y: point.y });
+      playerTower.takeDamage(rollDamage(enemyDamage(kamikaze.kind, 'melee', 'keep')) * power, { x: playerTower.x + TOWER_HALF_WIDTH - 4, y: point.y });
     }
   }
 

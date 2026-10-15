@@ -254,8 +254,14 @@ export const ENEMY_KINDS: Readonly<Record<EnemyType, EnemyKind>> = {
   // Sprints at the bowman with a bomb and blows up on contact.
   kamikaze: {
     label: 'Kamikaze', archetype: 'kamikaze', race: 'human', magical: false, arrival: 0.25,
-    stats: { health: 10, speed: ENEMY_SPEED * 2 }, damage: { melee: [24, 32] }, keepDamage: { melee: 8 }, build: { size: 1, strikeReach: 0 },
+    stats: { health: 25, speed: ENEMY_SPEED * 1.8 }, damage: { melee: [24, 32] }, keepDamage: { melee: 8 }, build: { size: 1, strikeReach: 0 },
     traits: { mass: 1.4 },
+  },
+  // The goblin's cheap version: smaller and quicker, one round bomb, a weaker blast; any arrow puts it down.
+  goblinKamikaze: {
+    label: 'Goblin bomber', archetype: 'kamikaze', race: 'goblin', magical: false, arrival: 0.2,
+    stats: { health: 10, speed: ENEMY_SPEED * 2.2 }, damage: { melee: [12, 18] }, keepDamage: { melee: 4 }, build: { size: 0.8, strikeReach: 0 },
+    traits: { mass: 1 },
   },
   // Slow, arms out, hard to put down. Its shuffle is the march with the feet dragged.
   zombie: {

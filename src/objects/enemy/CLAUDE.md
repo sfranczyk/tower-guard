@@ -39,7 +39,8 @@ open the one you need:
   Mana goes at the cast's start, heals land at its end (`EnemyActions.cast(onDone)`); down/thrown/frozen/vortex cuts it
   (`actions.interrupt`). Below `PRIEST_MIN_CAST_MANA` it is drained (`ManaPool.exhausted`, grey bar) until
   `PRIEST_MANA_RECOVER_SHARE` of full. Cast pose `castBody`, `Enemy.castHeal`, state `'cast'`; `EffectsSystem.healPulse` and `healCrosses`.
-- **Kamikaze**: runs in unarmed with a bomb (`pose.bomb`), dies to one arrow. Reaching the bowman (jumping doesn't save
+- **Kamikaze**: runs in unarmed with a bomb (`pose.bomb`): the human sapper takes a headshot or two body hits, the goblin bomber
+  (`goblinKamikaze`: smaller, quicker, weaker blast) dies to one arrow; the blast's damage is the detonating kind's. Reaching the bowman (jumping doesn't save
   him) or the keep, `CombatSystem.detonate` (cause `'blast'`) runs `explode` and hurts the bowman (not in the keep) and
   keep within `KAMIKAZE_REACH` × radius, knocking him down (`Bowman.knockBack`, `BOWMAN_KNOCKBACK`). Killed by a direct
   explosive hit its bomb goes off with `KAMIKAZE_BLAST_POWER` (2); its pieces fly `KAMIKAZE_GIB_FORCE` times harder.

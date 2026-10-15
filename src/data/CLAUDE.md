@@ -13,13 +13,13 @@ All pure and tested. Tuning numbers live in `config.ts`, sandbox defaults in `sa
   A new variant is one entry here plus its look and icon (see the `/new-enemy` skill).
   Each race belongs to a **group** (`ENEMY_GROUPS`: humans, mighty humans = dragon riders, non-humans = goblin/ogre,
   creatures = undead; `enemyGroup`, `enemyTypesOf`): the setup's enemy picker is split by it, story levels build on it.
-  Now: fighter, archer, kamikaze, the three knights, priest = human; runner, shaman = goblin; brute, troll = ogre; zombie = undead; both
+  Now: fighter, archer, kamikaze, the three knights, priest = human; runner, goblin kamikaze, shaman = goblin; brute, troll = ogre; zombie = undead; both
   dragons = dragon. An entry may have `armor` (`enemyArmor`): the share of an arrow's body hit that gets through.
 - **Toughness and damage** (`enemies.ts`): health per type against a 20-damage arrow (headshot
   ×`ARROWS.headshotMultiplier` = 1.25): fighter 35, runner 22, archer 24 (one headshot), brute 110, dragon 170.
   `ENEMY_DAMAGE` gives each type a random range (`rollDamage`) for club swings and, for shooters, their arrows
   (`Arrow.shooter` tells CombatSystem whose arrow hit). The keep (2000 by default) takes the same
-  × `KEEP_DAMAGE_MULTIPLIER` per attack (1, except archer arrows 0.5, brute 2, kamikaze 8); read ranges with
+  × `KEEP_DAMAGE_MULTIPLIER` per attack (1, except archer arrows 0.5, brute 2, kamikaze 8, goblin kamikaze 4); read ranges with
   `enemyDamage(type, attack, target)`. `mountedDamage` shares a hit between rider and horse (see objects/CLAUDE.md).
   Splash gib chance: `splashGibChance` / `blowsApart`, `SPLASH_GIB_CHANCE`.
 - **Enemy looks** (`ENEMY_LOOKS` in `enemies.ts`): size, club swing and gait per type. The walk/run phase advances with

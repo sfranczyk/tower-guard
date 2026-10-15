@@ -5,7 +5,7 @@ import { at, drawBowWith, ellipseIn, headFrame, quiver, shapeIn, torsoFrame, woo
 
 /**
  * New looks for the game's enemies that walk and run, drawn over the game's own poses (BodyPose):
- * fighter → raider, runner → goblin, archer → hooded bandit, kamikaze → sapper.
+ * fighter → raider, runner → goblin, archer → hooded bandit, kamikaze → sapper, goblin kamikaze → goblin bomber.
  */
 
 const xy = (point: Vec2): [number, number] => [point.x, point.y];
@@ -150,14 +150,31 @@ const dynamiteInHand = (timeMs: number, lit: boolean) => (g: Graphics, elbow: Ve
   const fuseEnd = { x: point(16).x + d.y * 2, y: point(16).y - d.x * 2 };
   g.moveTo(...xy(point(12))).quadraticCurveTo(...xy(point(15)), ...xy(fuseEnd)).stroke({ width: 1.3, color: 0xc9b48a, cap: 'round' });
   if (lit) {
-    const flicker = 0.75 + 0.25 * Math.sin(timeMs / 37) * Math.sin(timeMs / 83 + 1);
-    g.circle(fuseEnd.x, fuseEnd.y, 4 * flicker).fill({ color: 0xff7a2a, alpha: 0.75 });
-    g.circle(fuseEnd.x, fuseEnd.y, 2 * flicker).fill({ color: 0xffe27a });
-    for (let i = 0; i < 4; i++) {
-      const a = timeMs / 60 + i * 1.7;
-      const r = 4 + ((timeMs / 7 + i * 13) % 6);
-      g.circle(fuseEnd.x + Math.cos(a) * r, fuseEnd.y + Math.sin(a) * r - 1, 0.8).fill({ color: 0xffd25a });
-    }
+    burningFuse(g, timeMs, fuseEnd);
+  }
+};
+
+/** The flickering flame and sparks at the end of a lit fuse. */
+const burningFuse = (g: Graphics, timeMs: number, end: Vec2): void => {
+  const flicker = 0.75 + 0.25 * Math.sin(timeMs / 37) * Math.sin(timeMs / 83 + 1);
+  g.circle(end.x, end.y, 4 * flicker).fill({ color: 0xff7a2a, alpha: 0.75 });
+  g.circle(end.x, end.y, 2 * flicker).fill({ color: 0xffe27a });
+  for (let i = 0; i < 4; i++) {
+    const a = timeMs / 60 + i * 1.7;
+    const r = 4 + ((timeMs / 7 + i * 13) % 6);
+    g.circle(end.x + Math.cos(a) * r, end.y + Math.sin(a) * r - 1, 0.8).fill({ color: 0xffd25a });
+  }
+};
+
+/** A round black bomb with an iron collar; `fuseTo` is where its lit fuse ends (none if undefined). */
+const roundBomb = (g: Graphics, timeMs: number, center: Vec2, radius: number, fuseTo?: Vec2): void => {
+  g.circle(center.x, center.y, radius).fill({ color: 0x26262c });
+  g.circle(center.x - radius * 0.35, center.y - radius * 0.35, radius * 0.3).fill({ color: 0x5a5a66 });
+  const collar = { x: center.x, y: center.y - radius };
+  limb(g, { x: collar.x, y: collar.y + 1.5 }, { x: collar.x, y: collar.y - 1.5 }, radius * 0.55, radius * 0.55, 0x4a4a52);
+  if (fuseTo) {
+    g.moveTo(collar.x, collar.y - 1.5).quadraticCurveTo(collar.x + 1, fuseTo.y + 1, fuseTo.x, fuseTo.y).stroke({ width: 1.3, color: 0xc9b48a, cap: 'round' });
+    burningFuse(g, timeMs, fuseTo);
   }
 };
 
@@ -213,6 +230,28 @@ export const sapperLook = (timeMs: number): HumanoidLook => {
       g.circle(...xy(at(head, frame, 3, 6.5)), 0.9).fill({ color: 0xffffff });
       shapeIn(g, head, frame, [[-4, 3], [-4, 10], [-8, 9], [-8, 4]], 0x3a1f1a);
       limb(g, at(head, frame, -4.6, 4), at(head, frame, -4.6, 9.5), 1.6, 1.6, 0xf1ead0);
+    },
+  };
+};
+
+/**
+ * Goblin kamikaze: the goblin bomber. The runner goblin without its dagger, a round bomb held up in the near hand with
+ * the fuse lit, and a second, smaller one slung at the hip.
+ */
+export const goblinBomberLook = (timeMs: number): HumanoidLook => {
+  const goblin = goblinLook(timeMs);
+  return {
+    ...goblin,
+    club: undefined,
+    overLegs: (g, pose, frame) => {
+      goblin.overLegs?.(g, pose, frame);
+      limb(g, at(pose.hip, frame, 33, -8), at(pose.hip, frame, 2, 9), 2.2, 2.2, 0x4e3824);
+      roundBomb(g, timeMs, at(pose.hip, frame, -2, 9), 5);
+    },
+    heldNear: (g, elbow, hand) => {
+      const length = Math.hypot(hand.x - elbow.x, hand.y - elbow.y) || 1;
+      const center = { x: hand.x + ((hand.x - elbow.x) / length) * 4, y: hand.y + ((hand.y - elbow.y) / length) * 4 - 2 };
+      roundBomb(g, timeMs, center, 7, { x: center.x + 4, y: center.y - 13 });
     },
   };
 };

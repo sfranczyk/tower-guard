@@ -41,7 +41,11 @@ describe('enemy toughness and damage', () => {
   const worstHead = rollArrowDamage(true, 0);
 
   it('takes a sensible number of arrows per type', () => {
-    expect(getEnemyStats('kamikaze', 1).health).toBeLessThanOrEqual(ARROWS.damageMin);
+    // The goblin bomber falls to any arrow; the human one takes a headshot or two body hits.
+    expect(getEnemyStats('goblinKamikaze', 1).health).toBeLessThanOrEqual(ARROWS.damageMin);
+    expect(getEnemyStats('kamikaze', 1).health).toBeGreaterThan(ARROWS.damageMax);
+    expect(getEnemyStats('kamikaze', 1).health).toBeLessThanOrEqual(rollArrowDamage(true, 1));
+    expect(arrowsToKill('kamikaze', bestBody)).toBe(2);
     (['fast', 'archer', 'priest'] as const).forEach((type) => {
       expect(arrowsToKill(type, bestBody)).toBe(2);
       expect(arrowsToKill(type, worstHead)).toBe(1);

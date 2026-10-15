@@ -7,7 +7,7 @@ import { ARCHETYPES, ENEMY_GROUP_IDS, ENEMY_KINDS, ENEMY_TYPES, RACES, enemyArch
 
 describe('ENEMY_KINDS', () => {
   it('lists every enemy once, in the setup order', () => {
-    expect(ENEMY_TYPES).toEqual(['basic', 'fast', 'tank', 'troll', 'archer', 'dragon', 'fireDragon', 'kamikaze', 'zombie', 'knight', 'hammerKnight', 'horseKnight', 'priest', 'shaman']);
+    expect(ENEMY_TYPES).toEqual(['basic', 'fast', 'tank', 'troll', 'archer', 'dragon', 'fireDragon', 'kamikaze', 'goblinKamikaze', 'zombie', 'knight', 'hammerKnight', 'horseKnight', 'priest', 'shaman']);
   });
 
   it('gives each enemy its archetype and race', () => {
@@ -15,6 +15,7 @@ describe('ENEMY_KINDS', () => {
     expect(of('basic')).toEqual(['fighter', 'human']);
     expect(of('archer')).toEqual(['archer', 'human']);
     expect(of('kamikaze')).toEqual(['kamikaze', 'human']);
+    expect(of('goblinKamikaze')).toEqual(['kamikaze', 'goblin']);
     expect(of('fast')).toEqual(['runner', 'goblin']);
     expect(of('tank')).toEqual(['heavy', 'ogre']);
     expect(of('zombie')).toEqual(['grabber', 'undead']);
@@ -31,14 +32,14 @@ describe('ENEMY_KINDS', () => {
     expect(Object.fromEntries(ENEMY_GROUP_IDS.map((group) => [group, enemyTypesOf(group)]))).toEqual({
       humans: ['basic', 'archer', 'kamikaze', 'knight', 'hammerKnight', 'horseKnight', 'priest'],
       mightyHumans: ['dragon', 'fireDragon'],
-      nonHumans: ['fast', 'tank', 'troll', 'shaman'],
+      nonHumans: ['fast', 'tank', 'troll', 'goblinKamikaze', 'shaman'],
       creatures: ['zombie'],
     });
   });
 
   it('weighs each enemy (a fighter 1.2): goblins lightest, then the undead, knights heavier, ogres, then horse and rider heaviest on the ground', () => {
     expect(Object.fromEntries(ENEMY_TYPES.filter((type) => !isFlyingType(type)).map((type) => [type, enemyMass(type)]))).toEqual({
-      fast: 0.8, shaman: 0.8, zombie: 1, priest: 1.2, archer: 1.2, basic: 1.2, kamikaze: 1.4, knight: 1.9, hammerKnight: 2.5, tank: 4.2, troll: 4.2, horseKnight: 6,
+      fast: 0.8, shaman: 0.8, zombie: 1, goblinKamikaze: 1, priest: 1.2, archer: 1.2, basic: 1.2, kamikaze: 1.4, knight: 1.9, hammerKnight: 2.5, tank: 4.2, troll: 4.2, horseKnight: 6,
     });
   });
 
@@ -67,7 +68,7 @@ describe('ENEMY_KINDS', () => {
     expect(ENEMY_TYPES.filter((type) => enemyArchetype(type).club)).toEqual(['basic', 'fast', 'tank', 'troll', 'knight', 'hammerKnight', 'priest', 'shaman']);
     expect(ENEMY_TYPES.filter((type) => enemyArchetype(type).heals)).toEqual(['priest']);
     expect(ENEMY_TYPES.filter((type) => enemyArchetype(type).buffs)).toEqual(['shaman']);
-    expect(ENEMY_TYPES.filter((type) => enemyArchetype(type).detonates)).toEqual(['kamikaze']);
+    expect(ENEMY_TYPES.filter((type) => enemyArchetype(type).detonates)).toEqual(['kamikaze', 'goblinKamikaze']);
     expect(ENEMY_TYPES.filter((type) => enemyArchetype(type).breathesFire)).toEqual(['fireDragon']);
   });
 

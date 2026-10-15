@@ -6,7 +6,7 @@ import { HUMAN_BODY, ZOMBIE_BODY } from './bodyColors';
 import type { AttackStyle } from './attackSwing';
 import type { JointPose } from './stickmanPose';
 import { archerBody, attackBody, castBody, runBody, standBody, walkBody, withClub, type BodyPose } from './designs/bodyPoses';
-import { banditArcherLook, goblinLook, raiderLook, sapperLook } from './designs/enemySkins';
+import { banditArcherLook, goblinBomberLook, goblinLook, raiderLook, sapperLook } from './designs/enemySkins';
 import { ogreLook, trollLook, zombieLook } from './designs/heavySkins';
 import { blackKnightLook, darkPriestLook, hammerKnightLook } from './designs/knightSkins';
 import { shamanLook } from './designs/shamanSkin';
@@ -19,7 +19,7 @@ import { drawMountedKnight } from './designs/warhorse';
 /**
  * Enemies drawn in their looks (rendering/designs) over the same poses drawStickman uses, so movement,
  * swings, falls and hitboxes are unchanged: fighter = raider, runner = goblin, archer = hooded bandit,
- * brute = ogre, troll, kamikaze = sapper, zombie = rotting peasant; the black knight, hammer knight and dark priest as they are, the goblin shaman;
+ * brute = ogre, troll, kamikaze = sapper, goblin kamikaze = goblin bomber, zombie = rotting peasant; the black knight, hammer knight and dark priest as they are, the goblin shaman;
  * the mounted knight is the black knight on a warhorse (designs/warhorse.ts) in the 'mounted' state.
  */
 
@@ -43,6 +43,7 @@ const LOOKS: Readonly<Record<GroundEnemy, EnemyBodyLook>> = {
   troll: { look: fixed(trollLook()), club: 'twoHanded', gibs: { ...HUMAN_BODY, bone: 0x7f8f74, boneRear: 0x5d6b55 } },
   archer: { look: fixed(banditArcherLook()), gibs: { ...HUMAN_BODY, bone: 0xd2a07a, boneRear: 0x9a3a32 } },
   kamikaze: { look: sapperLook, gibs: { ...HUMAN_BODY, bone: 0xe0b48c, boneRear: 0xc0392b } },
+  goblinKamikaze: { look: goblinBomberLook, gibs: { ...HUMAN_BODY, bone: 0x86b04b, boneRear: 0x26262c } },
   zombie: { look: zombieLook, gibs: { ...ZOMBIE_BODY, bone: 0x9fb38a, boneRear: 0x5b6b7a } },
   knight: { look: blackKnightLook, club: 'overhead', gibs: { ...HUMAN_BODY, bone: 0x2a2c33, boneRear: 0x18191e } },
   hammerKnight: { look: hammerKnightLook, club: 'twoHanded', gibs: { ...HUMAN_BODY, bone: 0x2a2c33, boneRear: 0x18191e } },

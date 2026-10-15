@@ -7,7 +7,7 @@ describe('shamanBuffFor', () => {
   it('hastens the soldiers, hardens the heavies, quickens archers, arms kamikazes, mends the undead, skips flyers and casters', () => {
     expect(Object.fromEntries(ENEMY_TYPES.map((type) => [type, shamanBuffFor(ENEMY_KINDS[type].archetype, enemyTraits(type))]))).toEqual({
       basic: 'haste', fast: 'haste', tank: 'stoneskin', troll: 'stoneskin', archer: 'quickDraw', dragon: undefined,
-      fireDragon: undefined, kamikaze: 'blast', zombie: 'mend', knight: 'haste', hammerKnight: 'stoneskin',
+      fireDragon: undefined, kamikaze: 'blast', goblinKamikaze: 'blast', zombie: 'mend', knight: 'haste', hammerKnight: 'stoneskin',
       horseKnight: 'haste', priest: undefined, shaman: undefined,
     });
   });

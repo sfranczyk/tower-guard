@@ -4,7 +4,7 @@ import { WAVES } from '../config';
 import { isDifficultyLevel, scaleEnemyCounts, wavePacing, waveScale } from './difficulty';
 import { levelEnemyTotal } from './sandbox';
 
-const level = { basic: 4, fast: 3, tank: 1, troll: 0, archer: 2, dragon: 0, fireDragon: 0, kamikaze: 1, zombie: 2, knight: 1, hammerKnight: 0, horseKnight: 0, priest: 0, shaman: 0 };
+const level = { basic: 4, fast: 3, tank: 1, troll: 0, archer: 2, dragon: 0, fireDragon: 0, kamikaze: 1, goblinKamikaze: 0, zombie: 2, knight: 1, hammerKnight: 0, horseKnight: 0, priest: 0, shaman: 0 };
 
 describe('difficulty', () => {
   it('easy keeps the counts, harder levels grow them', () => {

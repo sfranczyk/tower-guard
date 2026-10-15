@@ -14,7 +14,7 @@ import type { JointPose } from '../stickmanPose';
 import { RUN_STRIDE_PER_RADIAN } from '../runCycle';
 import type { AttackStyle } from '../attackSwing';
 import { archerBody, attackBody, castBody, runBody, walkBody, withClub, type BodyPose } from './bodyPoses';
-import { banditArcherLook, goblinLook, raiderLook, sapperLook } from './enemySkins';
+import { banditArcherLook, goblinBomberLook, goblinLook, raiderLook, sapperLook } from './enemySkins';
 import { shamanLook } from './shamanSkin';
 import { dragonArcherLook, dragonKnightLook, drawDragonWithRider, ogreLook, trollLook, zombieLook } from './heavySkins';
 import { ENEMY_DESIGNS } from './ideas';
@@ -174,7 +174,10 @@ const RUNNER_SPEED = (ENEMY_SPEED * 2.1) / 1000;
 const BRUTE_SPEED = (ENEMY_SPEED * 0.6) / 1000;
 const TROLL_SPEED = (ENEMY_SPEED * 0.5) / 1000;
 const ARCHER_SPEED = (ENEMY_SPEED * 0.9) / 1000;
-const KAMIKAZE_SPEED = (ENEMY_SPEED * 2) / 1000;
+const KAMIKAZE_SPEED = (ENEMY_SPEED * 1.8) / 1000;
+const GOBLIN_KAMIKAZE_SPEED = (ENEMY_SPEED * 2.2) / 1000;
+/** The goblin bomber is drawn at 0.8 of the player's height. */
+const GOBLIN_BOMBER_SIZE = 0.8;
 const ZOMBIE_SPEED = (ENEMY_SPEED * 0.45) / 1000;
 const KNIGHT_SPEED = (ENEMY_SPEED * 0.9) / 1000;
 const HAMMER_KNIGHT_SPEED = (ENEMY_SPEED * 0.7) / 1000;
@@ -282,6 +285,22 @@ const ENEMIES: DesignEntry[] = [
       pinned(sapperLook),
       blownApart('kamikaze'),
       now((t) => ({ phase: runPhase(t, KAMIKAZE_SPEED), running: true, bomb: true }), KAMIKAZE_SPEED),
+    ],
+  },
+  {
+    id: 'goblinKamikaze',
+    name: 'Goblin kamikaze → Goblin bomber',
+    tagline: 'Quick, fragile, a smaller blast',
+    description: 'The runner goblin without its dagger: a round black bomb held up in the near hand with the fuse spitting sparks, and a smaller one slung at the hip on a strap. Smaller and quicker than the sapper, any arrow puts it down, and its blast is weaker. Drawn at the game\'s size, 0.8 of the player.',
+    views: [
+      ...[
+        running(goblinBomberLook, GOBLIN_KAMIKAZE_SPEED / GOBLIN_BOMBER_SIZE),
+        knockdown(goblinBomberLook),
+        cheering(goblinBomberLook, 'cheerJump'),
+        pinned(goblinBomberLook),
+      ].map((view) => ({ ...view, scale: GOBLIN_BOMBER_SIZE })),
+      blownApart('goblinKamikaze'),
+      now((t) => ({ phase: runPhase(t, GOBLIN_KAMIKAZE_SPEED), running: true, bomb: true }), GOBLIN_KAMIKAZE_SPEED),
     ],
   },
   {
