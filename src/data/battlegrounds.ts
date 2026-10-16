@@ -18,7 +18,7 @@ export interface AimColors {
   trajectory: number;
   trailGlow: number;
   trailCore: number;
-  /** Optional dark outline under the aim lines, circles and path dots, for busy or pale backgrounds. */
+  /** Optional outline under the aim lines, circles and path dots, in a colour opposite the aim's lightness (dark aim: pale halo). */
   halo?: number;
 }
 
@@ -85,7 +85,7 @@ const PLAYER_COLORS: Readonly<Record<BattlegroundId, ArmorPalette>> = {
     limb: 0xd08a2c, limbRear: 0xa06820, outline: 0x24180c, plate: 0xd6dce3, plateLight: 0xffffff,
     gold: 0xffd75a, leather: 0x8a5a33, face: 0x3a2610, bow: 0xe9c48a, bowString: 0xf6e7c8,
   },
-  // Rust-orange cloth and dark steel against the snow, pale sky and grey-blue rock.
+  // Rust-orange cloth and dark steel against the snow, pale sky and grey-blue rock (the navy aim stays clear of him).
   frostpeakPass: {
     limb: 0xb8432a, limbRear: 0x8b3220, outline: 0x1d1820, plate: 0x566074, plateLight: 0x8790a4,
     gold: 0xf2b632, leather: 0x4e3426, face: 0x2b1a14, bow: 0x2b1d17, bowString: 0x4a3a33,
@@ -168,28 +168,32 @@ export const BATTLEGROUNDS: Readonly<Record<BattlegroundId, Battleground>> = {
     id: 'frostpeakPass',
     player: PLAYER_COLORS.frostpeakPass,
     name: 'Frostpeak Pass',
-    // Cold, bright winter sky over snow-capped peaks; it snows and the wind pushes arrows aside.
-    sky: [0x8fa9c4, 0xa9bfd4, 0xc4d4e2, 0xdde6ee],
-    sun: { x: 860, y: 110, radius: 46, color: 0xf4f1e6 },
+    // Cold, bright winter sky over snow-capped peaks; it snows and the wind pushes arrows aside. The planes step
+    // down in lightness (sky, far peaks, near slopes, pines darkest) and the snowfield is pale, so a dark aim
+    // stands out everywhere; a faint warm tint at the horizon and sun keeps it from being all grey-blue.
+    sky: [0x7d9dc0, 0x9ab3cf, 0xbac9da, 0xd9dde2, 0xe8e2d8],
+    sun: { x: 860, y: 110, radius: 46, color: 0xfff1d6 },
     weather: 'snow',
     cloudColor: 0xe9eef3,
     cloudAlpha: 0.85,
-    hills: [0x6b7a90, 0x55627a],
+    hills: [0x8295b2, 0x4e5d76],
     hillShape: 'mountains',
     trees: { style: 'snowPine', colors: [0x2f4a44, 0x3a5a52, 0x263d38], trunk: 0x4a3b30 },
-    ground: { fill: 0x8b9479, edge: 0xeef3f5, tufts: 0xdfe7ea },
+    ground: { fill: 0xdde5ec, edge: 0xf4f7fa, tufts: 0x9fb0c2 },
     // A rough mountain pass: high, close-set rises and dips (flat only at the keeps).
     terrainAmplitude: 26,
     terrainWaviness: 1.5,
     wind: 150,
-    // Gold vanishes against snow, grey-blue rock and the pale sky: vivid crimson outlined in dark navy.
+    // Red or gold has the same lightness as the grey-blue rock (it shimmers, no clear edge): deep navy instead,
+    // much darker than sky, peaks and snow, dark violet for the previous shot. A pale halo keeps the lines
+    // visible over the dark pines and near slopes.
     aimColors: {
-      aim: 0xff1f45,
-      previousShot: 0x2b6fd6,
-      trajectory: 0xff1f45,
-      trailGlow: 0xff5a6e,
-      trailCore: 0x9a0f24,
-      halo: 0x141c2b,
+      aim: 0x1b2a6b,
+      previousShot: 0x6a1f8f,
+      trajectory: 0x1b2a6b,
+      trailGlow: 0x4a5fc4,
+      trailCore: 0x101a4a,
+      halo: 0xeef3f7,
     },
     ui: { accent: '#5b6f8c', backdrop: '#1c2533' },
   },

@@ -30,6 +30,19 @@ export const BACKDROP_WIDTH = 1200;
 /** Landscape (sky, hills, trees, ground) is drawn this far beyond both ends, for views wider than the backdrop. */
 export const SCENERY_MARGIN = Math.max(0, Math.ceil((MAX_VIEW_WIDTH - BACKDROP_WIDTH) / 2)) + 40;
 export const CAMERA_ZOOM = 1;
+/**
+ * Valley mist of the mountain maps (rendering/landscape.ts): clear at `*Top`, thickening down to `*Alpha` at `*Bottom`
+ * (world y), once over the far peaks' feet (the near slopes cover its lower end) and once over the near slopes'
+ * feet behind the pines. Read when a level's background is drawn (start the level again to see a change).
+ */
+export const MOUNTAIN_MIST = tunable('MOUNTAIN_MIST', 'Mountain mist', {
+  farTop: 220,
+  farBottom: 380,
+  farAlpha: 0.55,
+  nearTop: 395,
+  nearBottom: 480,
+  nearAlpha: 0.4,
+}, { meta: { farAlpha: { max: 1 }, nearAlpha: { max: 1 } } });
 
 export const GROUND_Y = 490;
 /** The ground surface waves up and down by this much around GROUND_Y (see systems/terrain.ts). */

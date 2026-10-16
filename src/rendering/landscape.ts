@@ -1,10 +1,10 @@
 import { Graphics } from 'pixi.js';
-import { BACKDROP_WIDTH, VIEW_BOTTOM, WORLD_WIDTH } from '../config';
+import { BACKDROP_WIDTH, MOUNTAIN_MIST, VIEW_BOTTOM, WORLD_WIDTH } from '../config';
 import type { Battleground } from '../data/battlegrounds';
 import { groundAt } from '../systems/terrain';
 
 /** Far and near hills (or lower, smoother dunes) between the sky and the ground, one BACKDROP_WIDTH stretch (Background repeats it). */
-export const drawHills = ({ hills: [far, near], hillShape }: Battleground): Graphics => {
+export const drawHills = ({ hills: [far, near], hillShape, sky }: Battleground): Graphics => {
   const hills = new Graphics();
   if (hillShape === 'dunes') {
     hills.moveTo(0, 405).bezierCurveTo(160, 360, 300, 372, 430, 392)
@@ -16,7 +16,7 @@ export const drawHills = ({ hills: [far, near], hillShape }: Battleground): Grap
       .bezierCurveTo(1000, 438, 1110, 452, BACKDROP_WIDTH, 436)
       .lineTo(BACKDROP_WIDTH, VIEW_BOTTOM).lineTo(0, VIEW_BOTTOM).closePath().fill({ color: near });
   } else if (hillShape === 'mountains') {
-    drawMountains(hills, far, near);
+    drawMountains(hills, far, near, sky[sky.length - 1]);
   } else {
     hills.moveTo(0, 360).bezierCurveTo(180, 250, 310, 340, 480, 275)
       .bezierCurveTo(650, 215, 820, 330, BACKDROP_WIDTH, 245)
@@ -33,19 +33,31 @@ export const drawHills = ({ hills: [far, near], hillShape }: Battleground): Grap
 const PEAKS: ReadonlyArray<[number, number]> = [[60, 210], [230, 150], [400, 225], [560, 135], [730, 205], [900, 160], [1060, 215], [1190, 175]];
 const VALLEY_Y = 300;
 const SNOW = 0xf2f5f8;
-const MIST = 0xeef3f7;
+/** The far peaks' snow caps: a touch darker than the pines' snow, so they don't glare against the grey rock. */
+const PEAK_SNOW = 0xdfe6ee;
+/** Mist is the horizon's colour, cooled towards white. */
+const MIST_TINT = 0xeef3f7;
 
-/** A soft mist band: thin strips whose opacity rises to `alpha` in the middle and fades out at the edges. */
-const drawMist = (g: Graphics, top: number, height: number, alpha: number): void => {
-  const strips = 8;
+/** Mid-point of two colours. */
+const blend = (a: number, b: number): number =>
+  [16, 8, 0].reduce((sum, shift) => sum + ((((a >> shift) & 255) + ((b >> shift) & 255)) >> 1 << shift), 0);
+
+/**
+ * Valley mist: thin strips from clear at `top` thickening to `alpha` at `bottom`, so it gathers in the dips and at the
+ * feet of whatever is drawn under it and leaves the summits clear; below `bottom` it stays at `alpha` (no hard edge where the ground dips).
+ */
+const drawMist = (g: Graphics, top: number, bottom: number, alpha: number, color: number): void => {
+  const strips = 24;
+  const height = (bottom - top) / strips;
   for (let index = 0; index < strips; index += 1) {
     const t = (index + 0.5) / strips;
-    g.rect(0, top + (index * height) / strips, BACKDROP_WIDTH, height / strips + 0.5).fill({ color: MIST, alpha: alpha * Math.sin(Math.PI * t) });
+    g.rect(0, top + index * height, BACKDROP_WIDTH, height + 0.5).fill({ color, alpha: alpha * t * t });
   }
+  g.rect(0, bottom, BACKDROP_WIDTH, VIEW_BOTTOM - bottom).fill({ color, alpha });
 };
 
-/** Snow-capped far peaks, mist, then lower rocky slopes in front with a second mist band. */
-const drawMountains = (g: Graphics, far: number, near: number): void => {
+/** Snow-capped far peaks with mist in their valleys, then darker rocky slopes in front, misty at their feet. */
+const drawMountains = (g: Graphics, far: number, near: number, horizon: number): void => {
   const range: number[] = [0, VALLEY_Y];
   PEAKS.forEach(([x, top], index) => {
     const next = PEAKS[index + 1];
@@ -61,14 +73,15 @@ const drawMountains = (g: Graphics, far: number, near: number): void => {
     const depth = (VALLEY_Y - top) * 0.34;
     const half = depth * 0.95;
     g.poly([x, top, x + half, top + depth, x + half * 0.45, top + depth * 0.78, x + half * 0.1, top + depth, x - half * 0.3, top + depth * 0.8, x - half, top + depth])
-      .fill({ color: SNOW });
+      .fill({ color: PEAK_SNOW });
   });
-  drawMist(g, 280, 44, 0.22);
+  const mist = blend(horizon, MIST_TINT);
+  drawMist(g, MOUNTAIN_MIST.farTop, MOUNTAIN_MIST.farBottom, MOUNTAIN_MIST.farAlpha, mist);
   g.moveTo(0, 392).bezierCurveTo(150, 350, 280, 372, 420, 356)
     .bezierCurveTo(600, 334, 720, 384, 880, 362)
     .bezierCurveTo(1010, 346, 1120, 370, BACKDROP_WIDTH, 358)
     .lineTo(BACKDROP_WIDTH, VIEW_BOTTOM).lineTo(0, VIEW_BOTTOM).closePath().fill({ color: near });
-  drawMist(g, 404, 50, 0.16);
+  drawMist(g, MOUNTAIN_MIST.nearTop, MOUNTAIN_MIST.nearBottom, MOUNTAIN_MIST.nearAlpha, mist);
 };
 
 /** Saguaro: a rounded trunk with one or two arms bending upwards. */
