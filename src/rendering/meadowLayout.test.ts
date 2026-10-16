@@ -27,7 +27,7 @@ describe('layoutMeadow', () => {
 
   it('mixes all species and spaces the front row unevenly', () => {
     const front = layout.trees.filter((tree) => !tree.far);
-    expect(new Set(front.map((tree) => tree.kind)).size).toBe(4);
+    expect(new Set(front.map((tree) => tree.kind)).size).toBe(3);
     const gaps = front.slice(1).map((tree, index) => tree.x - front[index].x);
     expect(Math.min(...gaps)).toBeLessThan(MEADOW.gapMin);
     expect(Math.max(...gaps)).toBeGreaterThan(MEADOW.gapMax);

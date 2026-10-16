@@ -78,15 +78,15 @@ export const MOUNTAIN_MIST = tunable('MOUNTAIN_MIST', 'Mountain mist', {
  * background is drawn.
  */
 export const MEADOW = tunable('MEADOW', 'Meadow scenery', {
-  gapMin: 55,
-  gapMax: 125,
-  clumpChance: 0.25,
+  gapMin: 85,
+  gapMax: 170,
+  clumpChance: 0.15,
   clearingChance: 0.12,
-  farGapMin: 38,
-  farGapMax: 95,
+  farGapMin: 70,
+  farGapMax: 160,
   farScale: 0.62,
   farHaze: 0.45,
-  flowers: 4,
+  flowers: 1.2,
   rockEvery: 380,
 }, { meta: { clumpChance: { max: 1 }, clearingChance: { max: 1 }, farScale: { max: 1, step: 0.01 }, farHaze: { max: 1 } } });
 

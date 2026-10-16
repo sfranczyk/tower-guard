@@ -44,7 +44,7 @@ export interface Battleground {
   hills: readonly [number, number];
   /** dunes are lower and smoother than hills; mountains are snow-capped peaks with rocky slopes in front. */
   hillShape: 'hills' | 'dunes' | 'mountains';
-  /** meadow: a seeded mix of oaks, poplars, birches and bushes in two rows, with rocks, a fence and a haystack. */
+  /** meadow: a seeded mix of oaks, poplars and bushes in two rows, with rocks, a fence and a haystack. */
   trees: { style: 'round' | 'pine' | 'cactus' | 'snowPine' | 'meadow'; colors: readonly [number, number, number]; trunk: number };
   /** Height of the ground waves (default TERRAIN_AMPLITUDE). */
   terrainAmplitude?: number;
