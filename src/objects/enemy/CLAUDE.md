@@ -64,7 +64,7 @@ open the one you need:
   (`Enemy.unseat`, `ArrowMagic.unseat`) lifts him out of the saddle and the horse bolts (`slowByWind` in reach).
 - **Troll** (`troll`: heavy, ogre, 1.6× tall, stone on a branch, `trollLook` in `rendering/designs/heavySkins.ts`):
   `regenerates` (`enemyRegenerates`): `EnemyAI.regenerate` runs pure `regenStep` (`systems/regeneration.ts`, `REGEN`
-  tunable) and heals in steps; burning stops it until `afterBurnMs` after the fire, frozen holds it. Each step is a
+  tunable) and heals in steps; being set alight stops it for `afterFireMs` (and while it burns), frozen holds it. Each step is a
   co-op `heal` event (`Enemy.heal`).
 - **Goblin shaman** (`shaman`, archetype `shaman` = `buffs`, magical, `rendering/designs/shamanSkin.ts`): moves like
   the priest (`EnemyAI.updatePriest`), no mana; `systems/ShamanSpells.ts` casts every `SHAMAN.intervalMs` (`?tune`) on up

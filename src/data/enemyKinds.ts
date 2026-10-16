@@ -1,5 +1,6 @@
 import {
   ENEMY_BURN_ZOMBIE_FACTOR,
+  TROLL_BURN_FACTOR,
   ENEMY_SPEED,
   KNIGHT_ARMOR,
   FROST_FREEZE_BRUTE_MS,
@@ -233,6 +234,7 @@ export const ENEMY_KINDS: Readonly<Record<EnemyType, EnemyKind>> = {
   troll: {
     label: 'Troll', archetype: 'heavy', race: 'ogre', magical: false, arrival: 0.4, regenerates: true,
     stats: { health: 105, speed: ENEMY_SPEED * 0.5 }, damage: { melee: [16, 24] }, keepDamage: { melee: 2 }, build: { size: 1.6, strikeReach: 90 },
+    traits: { burnFactor: TROLL_BURN_FACTOR },
   },
   // Fragile, keeps its distance and shoots.
   archer: {

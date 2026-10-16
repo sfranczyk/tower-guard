@@ -147,13 +147,15 @@ export const PIN_DAMAGE: readonly [number, number] = [0, 4];
 export const ENEMY_TOWER_DAMAGE = 16;
 /**
  * Fire arrow (systems/afflictions.ts, systems/ArrowMagic.ts): hits for FIRE_ARROW_DAMAGE × a normal arrow's hit and
- * sets the enemy alight for ENEMY_BURN_MS (zombies × ENEMY_BURN_ZOMBIE_FACTOR; the fire dragon doesn't burn),
+ * sets the enemy alight for ENEMY_BURN_MS (zombies × ENEMY_BURN_ZOMBIE_FACTOR, trolls × TROLL_BURN_FACTOR; the fire
+ * dragon doesn't burn),
  * ENEMY_BURN_DPS dealt every BURN_TICK_MS. Each tick a burning enemy may set others within FIRE_SPREAD_RADIUS
  * alight (FIRE_SPREAD_CHANCE). In the ground it leaves a fire FIRE_PATCH_RADIUS wide for FIRE_PATCH_MS.
  */
 export const FIRE_ARROW_DAMAGE = 0.3;
-export const ENEMY_BURN_MS = 4000;
+export const ENEMY_BURN_MS = 6000;
 export const ENEMY_BURN_ZOMBIE_FACTOR = 1.5;
+export const TROLL_BURN_FACTOR = 1.2;
 export const ENEMY_BURN_DPS = 5;
 export const BURN_TICK_MS = 250;
 export const FIRE_SPREAD_RADIUS = 32;
@@ -221,12 +223,13 @@ export const DRAGON_TURBULENCE_SPREAD = 4;
 export const DRAGON_BUFFET = { x: 14, y: 20, tilt: 0.16 } as const;
 /**
  * Regeneration (trolls, `regenerates` in data/enemyKinds): perSecond health back, in steps every tickMs (each step is
- * a co-op heal event). Burning stops it, and it starts again only afterBurnMs after the fire is out; frozen, it waits.
+ * a co-op heal event). Being set alight (a re-hit too) stops it for afterFireMs from then, and for as long as it burns;
+ * frozen, it waits.
  */
 export const REGEN = tunable('REGEN', 'Troll regeneration', {
   perSecond: 6,
   tickMs: 500,
-  afterBurnMs: 1500,
+  afterFireMs: 12000,
 });
 /**
  * Goblin shaman (systems/shamanBuffs.ts): keeps back like the priest and every intervalMs (when there's anyone to help)
