@@ -96,10 +96,7 @@ export const MEADOW = tunable('MEADOW', 'Meadow scenery', {
  */
 export const MEADOW_TREES = tunable('MEADOW_TREES', 'Meadow trees', {
   current: 4,
-  wide: 1,
-  leaning: 1.5,
   forked: 1,
-  young: 1,
   undergrowth: 1,
   clump: 1,
 });
