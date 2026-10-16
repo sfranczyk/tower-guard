@@ -12,7 +12,7 @@ const round2 = (value: number): number => Math.round(value * 100) / 100;
 
 /**
  * A dragon's flight (DragonEnemy's part, no Pixi): its hovers and flights between them (systems/dragonManoeuvre.ts),
- * the side of its target it keeps to and its turn, turbulence and hit jolts on top, and the wing beat's clock.
+ * the fire dragon's strafing runs, the side of its target it keeps to and its turn, turbulence and hit jolts on top, and the wing beat's clock.
  */
 export class DragonMotion {
   /** The side of its target it hovers on (1: to the right, facing left), and its facing mid-turn (−1 left … 1 right). */
@@ -57,25 +57,50 @@ export class DragonMotion {
    * One frame of flight (host): moves `pos` towards its hover point in front of `targetX`, or on to the next one,
    * then the turbulence and any hit jolt on top. Celebrating it keeps its side; busy (`hold`) it doesn't set off.
    */
-  public fly(pos: Vec2, input: { targetX: number; timeMs: number; deltaMs: number; followSpeed: number; turbulence: number; cheering: boolean; hold: boolean }): void {
+  public fly(pos: Vec2, input: {
+    targetX: number; timeMs: number; deltaMs: number; followSpeed: number; turbulence: number; cheering: boolean; hold: boolean;
+    strafe?: { reach: number; altitude: number };
+  }): void {
     const { manoeuvre } = this;
     pos.x -= this.offset.x;
     pos.y -= this.offset.y;
-    if (!input.cheering) {
+    // On a strafing run it keeps the side it started from, even once its target is behind it.
+    if (manoeuvre.strafe) {
+      this.side = manoeuvre.strafe.side;
+    } else if (!input.cheering) {
       this.side = nextHoverSide(pos.x, input.targetX, this.side, manoeuvre.offset);
     }
     stepManoeuvre(manoeuvre, pos, {
       targetX: input.targetX, side: this.side, timeMs: input.timeMs, deltaMs: input.deltaMs, followSpeed: input.followSpeed,
-      ranges: this.look.hovers, hold: input.hold, rng: Math.random,
+      ranges: this.look.hovers, hold: input.hold, strafe: input.strafe, turning: this.isTurning, rng: Math.random,
     });
+    if (manoeuvre.strafe) {
+      this.side = manoeuvre.strafe.side;
+    }
     const gust = buffetOffset(input.timeMs, input.turbulence);
     this.offset = { x: gust.x + manoeuvre.jolt.x, y: gust.y + manoeuvre.jolt.y };
     pos.x += this.offset.x;
     pos.y += this.offset.y;
   }
 
+  /** On a strafing run (the fire dragon): it breathes only when the run lights the fire. */
+  public get isStrafing(): boolean {
+    return this.manoeuvre.strafe !== undefined;
+  }
+
+  /** True once when a strafing run is to light the fire (it has just reared its head at its start). */
+  public takeStrafeIgnite(): boolean {
+    const { strafe } = this.manoeuvre;
+    if (!strafe?.ignite) {
+      return false;
+    }
+    strafe.ignite = false;
+    return true;
+  }
+
   /** The enemies won: it stays where it hovers. */
   public stay(): void {
+    this.manoeuvre.strafe = undefined;
     this.manoeuvre.phase = 'hover';
     this.manoeuvre.hoverLeftMs = Infinity;
   }

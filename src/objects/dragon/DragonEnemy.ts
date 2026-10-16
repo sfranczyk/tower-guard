@@ -1,5 +1,5 @@
 import { Container, Graphics } from 'pixi.js';
-import { DRAGON_SCALE } from '../../config';
+import { DRAGON_SCALE, FIRE_DRAGON_STRAFE } from '../../config';
 import { dragonHitZones, type DragonHitZone, type DragonPose } from '../../rendering/dragon';
 import { dragonKnightLook, drawDragonWithRider } from '../../rendering/designs/heavySkins';
 import { HUMAN_BODY } from '../../rendering/bodyColors';
@@ -7,6 +7,7 @@ import { IGNITE_HEAT, breathControl, drawFireStream, firePuffs, puffPosition } f
 import { GIB_GROUND_Y } from '../../rendering/stickmanGibs';
 import type { BodyAnchor } from '../../systems/bodyAnchor';
 import { cruiseAltitude, type HoverSide } from '../../systems/dragonFlight';
+import { groundReach, strafeAltitude, streamLength } from '../../systems/dragonStrafe';
 import { groundAt } from '../../systems/terrain';
 import { enemyArchetype } from '../../data/enemyKinds';
 import type { Bounds, Vec2 } from '../../types';
@@ -171,9 +172,23 @@ export default class DragonEnemy extends Container {
     const pos = { x: this.x, y: this.y };
     this.motion.fly(pos, {
       targetX, timeMs: this.timeMs, deltaMs, followSpeed: this.speed, turbulence: this.afflictions.turbulence,
-      cheering: this.cheering, hold: this.breath.timeMs !== undefined,
+      cheering: this.cheering, hold: this.breath.timeMs !== undefined, strafe: this.strafeGeometry(targetX),
     });
     this.position.set(pos.x, pos.y);
+    // A strafing run lights the fire at its start (choked by turbulence, it flies the pass without it).
+    if (this.motion.takeStrafeIgnite() && !this.afflictions.isTurbulent) {
+      this.breath.ignite(FIRE_DRAGON_STRAFE.aim);
+    }
+  }
+
+  /** Fire dragon: where its fire would meet the ground on a pass at `targetX`, and how high it flies it. */
+  private strafeGeometry(targetX: number): { reach: number; altitude: number } | undefined {
+    if (!enemyArchetype(this.kind).breathesFire) {
+      return undefined;
+    }
+    const mouth = { ahead: this.pose.mouth.point.x * DRAGON_SCALE, drop: this.pose.mouth.point.y * DRAGON_SCALE };
+    const stream = streamLength(DRAGON_SCALE);
+    return { reach: groundReach(mouth, stream), altitude: strafeAltitude(groundAt(targetX), mouth, stream) };
   }
 
   /** Co-op: the rider's bow and the fire dragon's breath, for the guest. */
@@ -238,7 +253,8 @@ export default class DragonEnemy extends Container {
    * breathing or still catching its breath, starts a breath (rear back, then a long stream of fire).
    */
   public breathe(worldAngle: number): void {
-    if (!this.isAlive() || this.cheering || !enemyArchetype(this.kind).breathesFire || this.afflictions.isTurbulent || this.isTurning || this.flightSpeed > BREATHE_MAX_FLIGHT) {
+    const busy = this.afflictions.isTurbulent || this.isTurning || this.motion.isStrafing || this.flightSpeed > BREATHE_MAX_FLIGHT;
+    if (!this.isAlive() || this.cheering || !enemyArchetype(this.kind).breathesFire || busy) {
       return;
     }
     this.breath.breathe(frameLocalAngle(this.frame, worldAngle));

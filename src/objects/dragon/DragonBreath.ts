@@ -31,6 +31,14 @@ export class DragonBreath {
     }
   }
 
+  /** A strafing run: lights the fire now, aimed at `localAngle` and held there, whatever the wait. */
+  public ignite(localAngle: number): void {
+    this.target = Math.min(FIRE_AIM_MAX, Math.max(FIRE_AIM_MIN, localAngle));
+    this.aim = this.target;
+    this.timeMs = 0;
+    this.cooldownMs = FIRE_DRAGON_BREATH_INTERVAL_MS;
+  }
+
   /** Advances the breath (it runs to the end once started) and the wait until the next; the head follows the target. */
   public step(deltaMs: number): void {
     this.cooldownMs = Math.max(0, this.cooldownMs - deltaMs);

@@ -48,7 +48,9 @@ Dragons get a ring of wind (`drawAirVortex`) and turbulence (`DRAGON_TURBULENCE_
 
 ## Dragon manoeuvres (`dragonManoeuvre.ts`, pure, tested)
 Dragon archer phases approach → hover → transit (`stepManoeuvre`, `pickAltitude`, `kick` spring jolt, `flightShare`);
-tuning `DRAGON_FLIGHT`. Hover points and turning stay in `dragonFlight.ts`.
+tuning `DRAGON_FLIGHT`. Hover points and turning stay in `dragonFlight.ts`. The fire dragon may leave a hover for a
+strafing run (phase `'strafe'`: setup → rear → run → out; geometry in `dragonStrafe.ts`, pure, tested:
+`strafeStartX`, `strafeAltitude`, `groundReach`; `FIRE_DRAGON_STRAFE`, tunable), pass after pass, by `weight`.
 
 ## Friendly fire (`session.friendlyFire`, on by default; co-op: the host's)
 Players' arrows hit bowmen out in the open like enemies (`friendlyTargets`): top `BOWMAN_HEAD` px headshot, blasts,
