@@ -251,7 +251,8 @@ export class CombatSystem {
    * With friendly fire (and `hurtsBowmen`) the bowmen out in the open take it too: the same damage, knocked down
    * away from it, a frozen one's ice broken. `step`: a kamikaze bomb's blast is the next link of its chain (else a new
    * chain starts), where a kamikaze it catches may be a dud (kamikazeBomb.chainChance): knocked down unhurt, its bomb
-   * still live. A dud rolls once per chain: the chain's further blasts only knock it down again.
+   * still live. A dud rolls once per chain: the chain's further blasts only knock it down again; one too weak to kill a
+   * kamikaze doesn't hurt it at all.
    */
   private explode(
     point: Vec2, activeEnemies: readonly Foe[], directHit?: Foe | Bowman, power = 1, dragon = false, hurtsBowmen = true,
@@ -281,17 +282,20 @@ export class CombatSystem {
         }
         // Survivors are knocked down away from the blast and get back up; the rest die thrown back.
         const blastDistance = Math.hypot(dx, dy) / radius;
+        const damage = explosionDamage(blastDistance) * power;
         const kamikaze = !(candidate instanceof DragonEnemy) && enemyArchetype(candidate.kind).detonates ? candidate : undefined;
+        // A chain's blast that doesn't kill a kamikaze leaves it unhurt (only knocked down): a survivor keeps full health.
+        const harmless = kamikaze !== undefined && step.link > 0 && damage * kamikaze.buff.damageFactor < kamikaze.currentHealth;
         const fizzledHere = kamikaze !== undefined && this.duds.get(kamikaze) === step.chain;
-        if (kamikaze && (fizzledHere || Math.random() >= chainChance(step.link, this.world.enemyEdge.chainFalloff))) {
+        if (kamikaze && (harmless || fizzledHere || Math.random() >= chainChance(step.link, this.world.enemyEdge.chainFalloff))) {
           kamikaze.takeDamage(0, { cause: 'explosion', fromX: point.x, point, blastDistance });
-          if (!fizzledHere) {
+          if (!harmless && !fizzledHere) {
             this.duds.set(kamikaze, step.chain);
             this.world.effects.fizzle({ x: body.x + body.width / 2, y: body.y + body.height / 2 });
           }
           return;
         }
-        candidate.takeDamage(explosionDamage(blastDistance) * power, { cause: 'explosion', fromX: point.x, point, blastDistance });
+        candidate.takeDamage(damage, { cause: 'explosion', fromX: point.x, point, blastDistance });
         if (kamikaze && !kamikaze.isAlive()) {
           this.lightFuse(kamikaze, step);
         }

@@ -47,7 +47,7 @@ open the one you need:
   later, so groups chain) and a fatal fall; a fire arrow (`fireChance`) or lightning (`lightningChance`) may set it off
   (`systems/kamikazeBomb.ts`). On medium/hard a chain weakens: each `Bomb.link` past the first goes off with
   `chainChance` (`EnemyEdge.chainFalloff`, `DIFFICULTY_SCALE.*ChainFalloff`), else a dud (`explode`: knocked down unhurt,
-  `EffectsSystem.fizzle`, bomb still live; it rolls once per chain, `CombatSystem.duds`). It doesn't burn (`enemyTraits`: burnFactor 0); frozen, it never goes off.
+  `EffectsSystem.fizzle`, bomb still live; it rolls once per chain, `CombatSystem.duds`); a chain blast too weak to kill one leaves it unhurt. It doesn't burn (`enemyTraits`: burnFactor 0); frozen, it never goes off.
 - **Zombie**: shuffles (march dragged) with arms out (`pose.zombie`, `ZOMBIE_REST`), attacks with `'grab'` (hit on the
   yank), pale green with green blood (`BodyColors`: `HUMAN_BODY` / `ZOMBIE_BODY`, `enemy.bodyColors`).
 - **Mounted knight** (`horseKnight`, cavalry, `rides`): black knight on a warhorse (1.15×; `rendering/designs/warhorse.ts`)
