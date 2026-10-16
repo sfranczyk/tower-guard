@@ -320,11 +320,12 @@ export const FIRE_DRAGON_HOVER = tunable('FIRE_DRAGON_HOVER', 'Fire dragon hover
  * FIRE_DRAGON_RANGE of its mouth, at most once every FIRE_DRAGON_BREATH_INTERVAL_MS (start to start).
  */
 /**
- * The fire dragon's strafing run (systems/dragonStrafe.ts), picked instead of a hover-breath with `weight` (0..1) when
- * a hover ends: it sets up in front of its target low enough for the fire to reach the ground (at reachShare of the
- * stream, aimed `aim` rad down-forward), rears its head, then flies level past him, up to `speed` px/s with `accel`
- * px/s², breathing so he's in the middle of the burnt strip; it brakes passBeyond px behind him and the next pass
- * goes the other way. By the player's keep it may fly up to edgeOut px past the world's edge.
+ * The fire dragon's strafing run (systems/dragonStrafe.ts), picked with `weight` (0..1) when a hover ends: within
+ * readyRange px of its start it sets off at once, else it flies there (a hover point farther out) and lurks
+ * lurkMinMs..lurkMaxMs. Setting off it rears its head and dives to where the fire meets the ground at reachShare of
+ * the stream (aimed `aim` rad down-forward), flying level past him up to `speed` px/s with `accel` px/s², so he's in
+ * the middle of the burnt strip; it brakes passBeyond px behind him, and a next pass goes the other way. By the
+ * player's keep it may fly up to edgeOut px past the world's edge.
  */
 export const FIRE_DRAGON_STRAFE = tunable('FIRE_DRAGON_STRAFE', 'Fire dragon strafe', {
   weight: 0.65,
@@ -334,6 +335,10 @@ export const FIRE_DRAGON_STRAFE = tunable('FIRE_DRAGON_STRAFE', 'Fire dragon str
   reachShare: 0.65,
   passBeyond: 220,
   edgeOut: 300,
+  readyRange: 60,
+  lurkMinMs: 1200,
+  lurkMaxMs: 2200,
+  diveSpeed: 220,
 });
 export const FIRE_DRAGON_ALTITUDE = 290;
 export const FIRE_DRAGON_HOVER_OFFSET = 200;

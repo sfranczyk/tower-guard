@@ -20,12 +20,12 @@ const step = (state: ManoeuvreState, pos: Vec2, targetX: number, side: HoverSide
     strafe: { reach: REACH, altitude: ALTITUDE }, rng,
   });
 
-/** A dragon at the end of its hover, at `x`, about to strafe. */
+/** A dragon at the end of its hover at `x`, at a hover height, about to strafe. */
 const hovering = (x: number): { state: ManoeuvreState; pos: Vec2 } => {
-  const state = startManoeuvre(ALTITUDE, 200);
+  const state = startManoeuvre(280, 200);
   state.phase = 'hover';
   state.hoverLeftMs = 0;
-  return { state, pos: { x, y: ALTITUDE } };
+  return { state, pos: { x, y: 280 } };
 };
 
 describe('fire dragon strafing run', () => {
@@ -36,7 +36,7 @@ describe('fire dragon strafing run', () => {
     expect(along).toBeLessThan(STREAM);
   });
 
-  it('sets up in front of its target, rears, passes him and brakes behind him', () => {
+  it('from too close it lurks farther out first, then passes him and brakes behind him', () => {
     const target = 1000;
     const { state, pos } = hovering(target + 200);
     const stages: StrafeStage[] = [];
@@ -47,29 +47,44 @@ describe('fire dragon strafing run', () => {
         stages.push(stage);
       }
     }
-    expect(stages).toEqual(['setup', 'rear', 'run', 'out']);
+    expect(stages).toEqual(['lurk', 'run', 'out']);
     expect(pos.x).toBeLessThan(target - FIRE_DRAGON_STRAFE.passBeyond);
     expect(pos.y).toBeCloseTo(ALTITUDE, 0);
   });
 
+  it('near enough its start it sets off at once, diving to the pass height', () => {
+    const target = 1000;
+    const { state, pos } = hovering(strafeStartX(target, 1, REACH) - 30);
+    step(state, pos, target, 1);
+    expect(state.strafe?.stage).toBe('run');
+    expect(state.strafe?.ignite).toBe(true);
+    let lowest = 0;
+    for (let time = 0; time < 1500; time += FRAME) {
+      step(state, pos, target, 1);
+      lowest = Math.max(lowest, pos.y);
+    }
+    expect(Math.abs(pos.y - ALTITUDE)).toBeLessThan(2);
+    expect(lowest).toBeLessThan(ALTITUDE + 5);
+  });
+
   it('puts the bowman in the middle of the burnt strip', () => {
     const target = 1000;
-    const start = strafeStartX(target, 1, REACH);
-    const { state, pos } = hovering(start);
-    let flamesStart: number | undefined;
+    const { state, pos } = hovering(strafeStartX(target, 1, REACH));
+    let runStart: number | undefined;
     const fireAt: number[] = [];
     for (let time = 0; time < 10000; time += FRAME) {
       step(state, pos, target, 1);
-      if (state.strafe?.stage === 'run' && flamesStart === undefined) {
-        flamesStart = time;
+      if (state.strafe?.stage === 'run' && runStart === undefined) {
+        runStart = time;
       }
-      if (flamesStart !== undefined && time - flamesStart <= FIRE_BREATH.flameMs) {
+      const sinceFlames = runStart === undefined ? -1 : time - runStart - FIRE_BREATH.windUpMs;
+      if (sinceFlames >= 0 && sinceFlames <= FIRE_BREATH.flameMs) {
         // Where the fire meets the ground, flying left.
         fireAt.push(pos.x - REACH);
       }
     }
     const [first, last] = [fireAt[0], fireAt[fireAt.length - 1]];
-    expect(first - last).toBeCloseTo(stripLength(), -1);
+    expect(Math.abs(first - last - stripLength())).toBeLessThan(10);
     expect((first + last) / 2).toBeGreaterThan(target - 25);
     expect((first + last) / 2).toBeLessThan(target + 25);
   });

@@ -4,14 +4,18 @@ import { clamp } from '../utils/math';
 import type { HoverSide } from './dragonFlight';
 
 /**
- * The fire dragon's strafing run, as geometry (pure; systems/dragonManoeuvre.ts flies it): where it sets up and how
- * high, so that with the fire lit as it sets off the bowman ends up in the middle of the burnt strip. The stream
+ * The fire dragon's strafing run, as geometry (pure; systems/dragonManoeuvre.ts flies it): where it starts and how
+ * low it flies the pass, so that with the fire lit as it sets off (rearing its head while it dives to the pass's
+ * height, the flames out after the wind-up) the bowman ends up in the middle of the burnt strip. The stream
  * stays at the mouth and moves with it (rendering/dragonFire.ts), so the strip is the dragon's run shifted forward.
  * Tuning: FIRE_DRAGON_STRAFE.
  */
 
-/** 'setup': flying to its start; 'rear': holding there, head reared back (the breath's wind-up); 'run': the pass; 'out': braking past him. */
-export type StrafeStage = 'setup' | 'rear' | 'run' | 'out';
+/**
+ * 'lurk': flying to its start (higher, a hover point like any other) and waiting there a moment; 'run': the pass,
+ * diving to its height; 'out': braking past him.
+ */
+export type StrafeStage = 'lurk' | 'run' | 'out';
 
 export interface StrafeState {
   stage: StrafeStage;
@@ -21,7 +25,10 @@ export interface StrafeState {
   stageMs: number;
   /** The height (y) it flies the pass at. */
   y: number;
-  /** Set on entering 'rear': the fire is to be lit (DragonEnemy takes it). */
+  /** Lurking: at its start, and how long it still waits there (ms). */
+  arrived: boolean;
+  lurkLeftMs: number;
+  /** Set on setting off: the fire is to be lit (DragonEnemy takes it). */
   ignite: boolean;
 }
 
@@ -53,18 +60,21 @@ export const runDistance = (ms: number): number => {
   return t <= toTop ? 0.5 * accel * t * t : 0.5 * speed * toTop + speed * (t - toTop);
 };
 
-/** How long the burnt strip is (px): the pass flown while the fire pours out. */
-export const stripLength = (): number => runDistance(FIRE_BREATH.flameMs);
+/** How long the burnt strip is (px): the pass flown while the fire pours out (after the wind-up). */
+export const stripLength = (): number =>
+  runDistance(FIRE_BREATH.windUpMs + FIRE_BREATH.flameMs) - runDistance(FIRE_BREATH.windUpMs);
+
+/** How far in front of its target it starts a pass (px): its reach, the wind-up's flight and half the strip. */
+export const strafeDistance = (reach: number): number => reach + runDistance(FIRE_BREATH.windUpMs) + stripLength() / 2;
 
 /**
- * Where it sets up (x): it sets off as the flames come out, half the burnt strip plus its reach in front of
- * `targetX`, so he's in the strip's middle. On the player's side it may go up to edgeOut past the world's edge.
+ * Where it starts a pass (x), strafeDistance in front of `targetX`, so he's in the strip's middle. On the player's
+ * side it may go up to edgeOut past the world's edge.
  */
 export const strafeStartX = (targetX: number, side: HoverSide, reach: number): number =>
   clamp(unclampedStartX(targetX, side, reach), -FIRE_DRAGON_STRAFE.edgeOut, WORLD_WIDTH - EDGE_MARGIN);
 
-const unclampedStartX = (targetX: number, side: HoverSide, reach: number): number =>
-  targetX + side * (reach + stripLength() / 2);
+const unclampedStartX = (targetX: number, side: HoverSide, reach: number): number => targetX + side * strafeDistance(reach);
 
 /** The side it starts from: the one it's on now, unless the world's edge leaves no room there (and does on the other). */
 export const strafeSide = (dragonX: number, targetX: number, reach: number): HoverSide => {
@@ -77,8 +87,17 @@ export const strafeSide = (dragonX: number, targetX: number, reach: number): Hov
 /** At the end of a hover: a strafing run (true) or another hover point (false), by FIRE_DRAGON_STRAFE.weight. */
 export const pickStrafe = (rng: () => number): boolean => rng() < FIRE_DRAGON_STRAFE.weight;
 
-export const startStrafe = (side: HoverSide, y: number): StrafeState => ({ stage: 'setup', side, stageMs: 0, y, ignite: false });
+/** Whether a dragon at `dragonX` is close enough to its start to set off right away (readyRange). */
+export const readyToStrafe = (dragonX: number, targetX: number, side: HoverSide, reach: number): boolean =>
+  Math.abs(dragonX - strafeStartX(targetX, side, reach)) <= FIRE_DRAGON_STRAFE.readyRange;
+
+/** A pass: lurking first, or (`now`) setting off right away. */
+export const startStrafe = (side: HoverSide, y: number, now: boolean, rng: () => number): StrafeState => ({
+  stage: now ? 'run' : 'lurk', side, stageMs: 0, y, arrived: false, ignite: now,
+  lurkLeftMs: FIRE_DRAGON_STRAFE.lurkMinMs + rng() * Math.max(0, FIRE_DRAGON_STRAFE.lurkMaxMs - FIRE_DRAGON_STRAFE.lurkMinMs),
+});
 
 /** The pass is over: the dragon (at `dragonX`) is passBeyond past its target and has stopped pouring fire. */
 export const passDone = (strafe: StrafeState, dragonX: number, targetX: number): boolean =>
-  (dragonX - targetX) * -strafe.side >= FIRE_DRAGON_STRAFE.passBeyond && strafe.stageMs >= FIRE_BREATH.flameMs + FIRE_BREATH.recoverMs;
+  (dragonX - targetX) * -strafe.side >= FIRE_DRAGON_STRAFE.passBeyond
+  && strafe.stageMs >= FIRE_BREATH.windUpMs + FIRE_BREATH.flameMs + FIRE_BREATH.recoverMs;

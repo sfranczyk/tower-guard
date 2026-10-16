@@ -1,9 +1,8 @@
 import { DRAGON_FLIGHT, FIRE_DRAGON_STRAFE } from '../config';
 import type { Vec2 } from '../types';
 import { approach, clamp } from '../utils/math';
-import { FIRE_BREATH } from '../rendering/dragonFire';
 import { cruiseAltitude, flyTowards, hoverX, type HoverSide } from './dragonFlight';
-import { passDone, pickStrafe, startStrafe, strafeSide, strafeStartX, type StrafeState } from './dragonStrafe';
+import { passDone, pickStrafe, readyToStrafe, startStrafe, strafeSide, strafeStartX, type StrafeState } from './dragonStrafe';
 
 /**
  * The dragon archer's manoeuvres (pure; objects/dragon/DragonEnemy.ts runs them): it flies in, hovers and shoots for a
@@ -150,7 +149,7 @@ export const stepManoeuvre = (state: ManoeuvreState, pos: Vec2, input: Manoeuvre
     } else if (state.phase === 'hover') {
       state.hoverLeftMs -= deltaMs;
       if (state.hoverLeftMs <= 0 && !input.hold) {
-        moveOn(state, pos, input);
+        moveOn(state, pos, input, true);
       }
     }
   }
@@ -158,12 +157,19 @@ export const stepManoeuvre = (state: ManoeuvreState, pos: Vec2, input: Manoeuvre
   animate(state, braking, dt);
 };
 
-/** Done with a hover or a pass: a strafing run (the fire dragon, by chance) or a flight to a new hover point. */
-const moveOn = (state: ManoeuvreState, pos: Vec2, input: ManoeuvreInput): void => {
+/**
+ * Done with a hover (`fromHover`) or a pass: a strafing run (the fire dragon, by chance; at once if it's already about
+ * at its start, else it lurks there first) or a flight to a new hover point.
+ */
+const moveOn = (state: ManoeuvreState, pos: Vec2, input: ManoeuvreInput, fromHover: boolean): void => {
   state.strafe = undefined;
   if (input.strafe && pickStrafe(input.rng)) {
+    const side = strafeSide(pos.x, input.targetX, input.strafe.reach);
+    const now = fromHover && !input.turning && side === input.side && readyToStrafe(pos.x, input.targetX, side, input.strafe.reach);
     state.phase = 'strafe';
-    state.strafe = startStrafe(strafeSide(pos.x, input.targetX, input.strafe.reach), input.strafe.altitude);
+    state.transitMs = 0;
+    state.altitude = pickAltitude(state.altitude, input.ranges, input.rng);
+    state.strafe = startStrafe(side, input.strafe.altitude, now, input.rng);
     return;
   }
   state.phase = 'transit';
@@ -173,61 +179,54 @@ const moveOn = (state: ManoeuvreState, pos: Vec2, input: ManoeuvreInput): void =
 };
 
 /**
- * A strafing run: flies to its start in front of the target, holds there rearing its head (the fire is lit), flies
- * level past him speeding up, then brakes and moves on. True while braking.
+ * A strafing run: lurks at its start in front of the target (flying there like to any hover point), then sets off,
+ * the fire lit, diving to the pass's height and speeding up past him; then brakes and moves on. True while braking.
  */
 const stepStrafe = (state: ManoeuvreState, pos: Vec2, input: ManoeuvreInput, dt: number): boolean => {
   const { strafe } = state;
   if (!strafe || !input.strafe) {
-    moveOn(state, pos, { ...input, strafe: undefined });
+    moveOn(state, pos, { ...input, strafe: undefined }, false);
     return false;
   }
-  const { speed, accel } = FIRE_DRAGON_STRAFE;
-  const dir = -strafe.side;
-  strafe.stageMs += dt * 1000;
+  const { speed, accel, diveSpeed } = FIRE_DRAGON_STRAFE;
+  const deltaMs = dt * 1000;
+  strafe.stageMs += deltaMs;
   const enter = (stage: StrafeState['stage']): void => {
     strafe.stage = stage;
     strafe.stageMs = 0;
   };
-  switch (strafe.stage) {
-    case 'setup': {
-      strafe.y = input.strafe.altitude;
-      const goal = { x: strafeStartX(input.targetX, strafe.side, input.strafe.reach), y: strafe.y };
-      const braking = steer(state, pos, goal, dt);
-      const arrived = Math.hypot(goal.x - pos.x, goal.y - pos.y) <= ARRIVE_DISTANCE && Math.hypot(state.vx, state.vy) <= ARRIVE_SPEED;
-      if (arrived && !input.turning) {
-        enter('rear');
+  if (strafe.stage === 'lurk') {
+    const point = { x: strafeStartX(input.targetX, strafe.side, input.strafe.reach), y: cruiseAltitude(input.timeMs, state.altitude) };
+    let braking = false;
+    if (!strafe.arrived) {
+      braking = steer(state, pos, { x: point.x, y: point.y - DRAGON_FLIGHT.flareLift }, dt);
+      const distance = Math.hypot(point.x - pos.x, point.y - DRAGON_FLIGHT.flareLift - pos.y);
+      strafe.arrived = (distance <= ARRIVE_DISTANCE && Math.hypot(state.vx, state.vy) <= ARRIVE_SPEED) || strafe.stageMs >= TRANSIT_TIMEOUT_MS;
+    } else {
+      // Waiting at its start, keeping in front of him.
+      const before = { ...pos };
+      pos.x = flyTowards(pos.x, point.x, input.followSpeed, deltaMs);
+      pos.y = flyTowards(pos.y, point.y, FOLLOW_CLIMB, deltaMs);
+      state.vx = (pos.x - before.x) / dt;
+      state.vy = (pos.y - before.y) / dt;
+      strafe.lurkLeftMs -= deltaMs;
+      if (strafe.lurkLeftMs <= 0 && !input.turning) {
+        strafe.y = input.strafe.altitude;
         strafe.ignite = true;
-      } else if (strafe.stageMs >= TRANSIT_TIMEOUT_MS) {
-        // Its target kept running away: it gives up and hovers where it is.
-        state.strafe = undefined;
-        state.phase = 'hover';
-        state.hoverLeftMs = pickHoverMs(input.ranges, input.rng);
+        enter('run');
       }
-      return braking;
     }
-    case 'rear':
-      state.vx = approach(state.vx, 0, accel * dt);
-      state.vy = approach(state.vy, 0, accel * dt);
-      break;
-    case 'run':
-      state.vx = approach(state.vx, dir * speed, accel * dt);
-      state.vy = (strafe.y - pos.y) * LEVEL_PULL;
-      break;
-    case 'out':
-      state.vx = approach(state.vx, 0, accel * dt);
-      state.vy = (strafe.y - pos.y) * LEVEL_PULL;
-      break;
+    return braking;
   }
+  // The pass: down to its height (diving no faster than diveSpeed), along at speed; braking past him.
+  state.vx = approach(state.vx, strafe.stage === 'run' ? -strafe.side * speed : 0, accel * dt);
+  state.vy = clamp((strafe.y - pos.y) * LEVEL_PULL, -diveSpeed, diveSpeed);
   pos.x += state.vx * dt;
   pos.y += state.vy * dt;
-  if (strafe.stage === 'rear' && strafe.stageMs >= FIRE_BREATH.windUpMs) {
-    // The flames come out as it sets off.
-    enter('run');
-  } else if (strafe.stage === 'run' && passDone(strafe, pos.x, input.targetX)) {
+  if (strafe.stage === 'run' && passDone(strafe, pos.x, input.targetX)) {
     enter('out');
   } else if (strafe.stage === 'out' && Math.abs(state.vx) <= ARRIVE_SPEED) {
-    moveOn(state, pos, input);
+    moveOn(state, pos, input, false);
   }
   return strafe.stage === 'out';
 };
@@ -279,7 +278,7 @@ const animate = (state: ManoeuvreState, braking: boolean, dt: number): void => {
   const climb = clamp(-state.vy / top, 0, 1);
   const dive = clamp(state.vy / top, 0, 1);
   const speed = clamp(Math.hypot(state.vx, state.vy) / top, 0, 1);
-  const moving = state.phase === 'transit' || (state.phase === 'strafe' && state.strafe?.stage !== 'rear');
+  const moving = state.phase === 'transit' || (state.phase === 'strafe' && !(state.strafe?.stage === 'lurk' && state.strafe.arrived));
   const flap = braking ? 1.5 : moving ? 1 + climb * 0.9 - dive * 0.5 : 1;
   const glide = moving && !braking ? clamp(dive * 2.5, 0, 1) * clamp(speed * 2, 0, 1) : 0;
   const pitch = braking ? -0.18 : moving ? clamp(Math.atan2(state.vy, Math.abs(state.vx) + 20) * 0.45, -0.25, 0.3) : 0;

@@ -26,8 +26,8 @@ Its parts:
   Ground lightning skips it (`isFlying`).
 - Fire dragon (`fireDragon`, `DRAGON_KINDS`, `red` palette, `'unarmed'` rider): lower and closer
   (`FIRE_DRAGON_ALTITUDE`, `FIRE_DRAGON_HOVER_OFFSET`); `CombatSystem.updateFireDragon` calls `breathe` within
-  `FIRE_DRAGON_RANGE` (`FIRE_DRAGON_BREATH_INTERVAL_MS`) while hovering. Or strafes (`FIRE_DRAGON_STRAFE`): sets up
-  low in front of the bowman, rears, `breath.ignite` (`DragonMotion.takeStrafeIgnite`), flies level past him with the
+  `FIRE_DRAGON_RANGE` (`FIRE_DRAGON_BREATH_INTERVAL_MS`) while hovering. Or strafes (`FIRE_DRAGON_STRAFE`): lurks
+  farther out, then dives at him, rearing, `breath.ignite` (`DragonMotion.takeStrafeIgnite`), flies level past him with the
   stream at the mouth, brakes, may go up to `edgeOut` past the player's world edge; `DragonEnemy.strafeGeometry` gives
   the mouth's reach and pass height. Co-op needs nothing new (position, side, breath already in `DragonSnap`). Breath drawn into `fireArt`, `getFlames` gives hot puffs in
   world space. Killed by a direct explosive hit it blows up: `explode` with `FIRE_DRAGON_BLAST_POWER` (3),
