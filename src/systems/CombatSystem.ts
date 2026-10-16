@@ -39,8 +39,8 @@ export interface CombatWorld {
   readonly arrows: readonly Arrow[];
   readonly effects: EffectsSystem;
   readonly debug: Graphics;
-  /** The level's wind (px/s² on a normal arrow); enemy archers aim with it. */
-  readonly wind: number;
+  /** The level's wind now (px/s² on a normal arrow; it may change mid-level); enemy archers aim with it. */
+  wind(): number;
   /** Friendly fire (settings drawer): the players' arrows and their effects hit the bowmen too. */
   readonly friendlyFire: () => boolean;
   /** More enemies still to come this level (a priest left alone walks off the field only when none are). */

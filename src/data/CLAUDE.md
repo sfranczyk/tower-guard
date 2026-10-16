@@ -35,8 +35,9 @@ All pure and tested. Tuning numbers live in `config.ts`, sandbox defaults in `sa
   backdrop }`, `player` ArmorPalette picked to contrast with the map, tested; aim colours via
   `aimColorsOf(battleground)`, `DEFAULT_AIM_COLORS`, an optional `halo`). Add a map by adding an entry. `weather`:
   `fair` (cumulus, stratus, cirrus), `clear` (Sunscorch Dunes), `storm` (Thunder Ridge: storm deck, no sun, lightning,
-  light rain) or `snow` (Frostpeak Pass: `hillShape: 'mountains'`, snowy pines, `terrainAmplitude` 38, `terrainWaviness`
-  0.85 (few, high rises), and `wind`: each level rolls one up to it, px/s², part of `FlightParams`; the status line shows it).
+  light rain) or `snow` (Frostpeak Pass: `hillShape: 'mountains'`, snowy pines, `terrainAmplitude` 48, `terrainWaviness`
+  0.9 (few, high rises), and `wind` 300: each level rolls one up to it, px/s², part of `FlightParams`; it may shift
+  mid-level, `systems/windShift.ts`; the status line shows it).
 - **Sandbox** (`sandbox.ts`, `loadout.ts`): settings are pure data, `normalizeSandbox` clamps everything and still reads
   pre-rename setups (`waves`, `waveCount`). `SandboxSettings.loadout`: five weapon slots (`LOADOUT_SLOTS`), any arrows,
   each at most once, slots may stay empty. Persisted by `core/sandboxStorage.ts`.

@@ -31,6 +31,15 @@ export const BACKDROP_WIDTH = 1200;
 export const SCENERY_MARGIN = Math.max(0, Math.ceil((MAX_VIEW_WIDTH - BACKDROP_WIDTH) / 2)) + 40;
 export const CAMERA_ZOOM = 1;
 /**
+ * Windy maps (`Battleground.wind`): every `everyMs` the wind has a `chance` of changing to a new roll at least
+ * `minChange` × the map's strongest wind away from the old one (systems/windShift.ts).
+ */
+export const WIND_SHIFT = tunable('WIND_SHIFT', 'Wind shifts', {
+  everyMs: 45000,
+  chance: 0.5,
+  minChange: 0.4,
+}, { meta: { chance: { max: 1 }, minChange: { max: 2 } } });
+/**
  * Outline under the aim lines, circles and dots on maps that give one (`AimColors.halo`): `extra` px wider than the
  * line (half on each side), at `alpha` × the line's opacity. Read every frame.
  */

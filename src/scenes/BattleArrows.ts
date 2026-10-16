@@ -24,8 +24,8 @@ export interface BattleArrowsDeps {
   readonly world: Container;
   readonly textures: GameTextures;
   readonly battleground: Battleground;
-  /** This level's wind (px/s² on a normal arrow). */
-  readonly wind: number;
+  /** The level's wind now (px/s² on a normal arrow; an arrow keeps the wind it was loosed in). */
+  wind(): number;
   /** How many of the latest shots keep their trail (settings drawer). */
   arrowTrails(): number;
   effects(): EffectsSystem;
@@ -80,7 +80,7 @@ export class BattleArrows {
       arrow.scale.set(FRAGMENT_SCALE);
     }
     arrow.owner = owner;
-    arrow.wind = this.deps.wind;
+    arrow.wind = this.deps.wind();
     arrow.fire(angle, speed, type);
     if (this.deps.arrowTrails() === 0) {
       arrow.hideTrail();
@@ -129,7 +129,7 @@ export class BattleArrows {
     this.deps.world.addChild(trail);
     const arrow = new Arrow(from.x, from.y, this.deps.textures.arrows.normal, trail);
     arrow.tint = ENEMY_ARROW_TINT;
-    arrow.wind = this.deps.wind;
+    arrow.wind = this.deps.wind();
     arrow.fire(angle, speed, 'normal', true);
     // Enemy arrows fly clean: no trail to keep, so a gone one can be dropped at once.
     arrow.hideTrail();
@@ -148,7 +148,7 @@ export class BattleArrows {
     const power = aim.power;
     const speed = launchSpeed(projectile, power);
     const velocity = { x: aim.direction.x * speed, y: aim.direction.y * speed };
-    return simulateTrajectory(releasePoint, velocity, Arrow.getFlightParams(projectile, this.deps.wind), {
+    return simulateTrajectory(releasePoint, velocity, Arrow.getFlightParams(projectile, this.deps.wind()), {
       // Same surface (and offset) at which flying arrows stick into the ground.
       groundY: (x) => groundAt(x) - 3,
       minX: 0,

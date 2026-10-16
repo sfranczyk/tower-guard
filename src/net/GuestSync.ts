@@ -39,6 +39,8 @@ export interface GuestWorld {
   launchArrow(launch: ArrowLaunch): Arrow;
   playSound(id: SoundId, at: Vec2): void;
   setStatus(text: string): void;
+  /** The host's wind changed mid-level. */
+  setWind(wind: number): void;
   showEnd(info: EndInfo): void;
   /** The host started the next level (or a new battle). */
   restart(message: Extract<NetMessage, { t: 'start' }>): void;
@@ -237,6 +239,9 @@ export class GuestSync {
         if (event.player === this.world.localIndex) {
           this.world.setStatus(event.text);
         }
+        break;
+      case 'wind':
+        this.world.setWind(event.wind);
         break;
     }
   }

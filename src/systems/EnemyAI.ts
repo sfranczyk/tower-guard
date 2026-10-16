@@ -54,8 +54,8 @@ export interface EnemyAIWorld {
   readonly enemies: readonly Foe[];
   readonly effects: EffectsSystem;
   readonly debug: Graphics;
-  /** The level's wind (px/s² on a normal arrow); archers aim with it. */
-  readonly wind: number;
+  /** The level's wind now (px/s² on a normal arrow); archers aim with it. */
+  wind(): number;
   /** More enemies still to come this level (waves not yet released, a rider about to come off his horse). */
   readonly reinforcementsDue: () => boolean;
   /** The difficulty's edge (data/difficulty.ts): enemy hits × `damage`, enemy archers' aim error × `aimSpread`. */
@@ -286,7 +286,7 @@ export class EnemyAI {
       const cached = this.archerAim.get(enemy);
       let angle = cached?.angle;
       if (!cached || cached.ageMs >= ARCHER_AIM_REFRESH_MS) {
-        angle = solveLaunchAngle(enemy.getBowReleasePoint(), aimPoint, speed, Arrow.getFlightParams('normal', this.world.wind), GROUND_Y);
+        angle = solveLaunchAngle(enemy.getBowReleasePoint(), aimPoint, speed, Arrow.getFlightParams('normal', this.world.wind()), GROUND_Y);
         this.archerAim.set(enemy, { angle, ageMs: 0 });
       } else {
         cached.ageMs += deltaMs;
@@ -324,7 +324,7 @@ export class EnemyAI {
       const cached = this.archerAim.get(dragon);
       let angle = cached?.angle;
       if (!cached || cached.ageMs >= ARCHER_AIM_REFRESH_MS) {
-        angle = solveLaunchAngle(release, aimPoint, speed, Arrow.getFlightParams('normal', this.world.wind), GROUND_Y);
+        angle = solveLaunchAngle(release, aimPoint, speed, Arrow.getFlightParams('normal', this.world.wind()), GROUND_Y);
         this.archerAim.set(dragon, { angle, ageMs: 0 });
       } else {
         cached.ageMs += deltaMs;

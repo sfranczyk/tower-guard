@@ -27,6 +27,8 @@ export interface BattleSyncSetup {
   showGuestEnd(info: EndInfo): void;
   /** Guest: the host paused or resumed the battle. */
   guestPaused(paused: boolean): void;
+  /** Guest: the host's wind changed mid-level. */
+  windChanged(wind: number): void;
 }
 
 /**
@@ -58,6 +60,7 @@ export const startBattleSync = (setup: BattleSyncSetup): { hostSync?: HostSync; 
     launchArrow: (launch) => setup.shots.launchReplica(launch),
     playSound: setup.playSound,
     setStatus: (text) => ctx.ui.setStatus(text),
+    setWind: setup.windChanged,
     showEnd: setup.showGuestEnd,
     restart: (message) => restartAsGuest(ctx, message),
     setPaused: setup.guestPaused,

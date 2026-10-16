@@ -35,7 +35,7 @@ the pause dialog's "Main menu" leaves the room.
 - **Feature sync seen so far** (add yours here): knight `attack` style; priest `cast` / `heal` events (troll regeneration and the shaman's cast and mend reuse them), shaman buff `EnemySnap.bf` + fx `buffPulse`, `EnemySnap.mana` / `drained`,
   fx `heal` / `healPulse`; pinned time `EnemySnap.pinned`; afflictions `af`, thrown `th`; `BowmanSnap.net`
   (`Bowman.getNetState`); horse `EnemyNet.lame`, `spawn` event `place` (`RiderOff`), `unseat` event; dragon hover side and flight look `DragonSnap.fl`;
-  bowman `die` event carries the fall; exit-keep press (`PlayerInput.isExitPressed`).
+  bowman `die` event carries the fall; exit-keep press (`PlayerInput.isExitPressed`); mid-level wind shift `wind` event.
 - **Not yet**: a local preview of the guest's own arrows (they appear after a round trip), the guest's lightning bolts
   are its own (only the host's strikes hurt; their sparks arrive as effects), no reconnecting, and a hidden browser tab
   stops its game loop (keep the host's tab visible).

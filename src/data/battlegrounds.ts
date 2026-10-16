@@ -181,9 +181,9 @@ export const BATTLEGROUNDS: Readonly<Record<BattlegroundId, Battleground>> = {
     trees: { style: 'snowPine', colors: [0x2f4a44, 0x3a5a52, 0x263d38], trunk: 0x4a3b30 },
     ground: { fill: 0xdde5ec, edge: 0xf4f7fa, tufts: 0x9fb0c2 },
     // A mountain pass: high, broad rises and dips, few of them (flat only at the keeps).
-    terrainAmplitude: 38,
-    terrainWaviness: 0.85,
-    wind: 150,
+    terrainAmplitude: 48,
+    terrainWaviness: 0.9,
+    wind: 300,
     // Red or gold has the same lightness as the grey-blue rock (it shimmers, no clear edge): deep navy instead,
     // much darker than sky, peaks and snow, dark violet for the previous shot. A faint pale halo, barely wider than
     // the lines (AIM_HALO), keeps them visible over the dark pines.

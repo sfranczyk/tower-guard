@@ -30,6 +30,7 @@ import { BattleEnemies } from './BattleEnemies';
 import { BattlePlayers, MIN_SHOT_POWER } from './BattlePlayers';
 import { startBattleSync } from './battleSync';
 import { DEFAULT_STATUS, slotOfKey, windLabel } from './battleText';
+import { rollWind, WindShifts } from '../systems/windShift';
 import { showLevelEnd } from './levelEndScreen';
 import { PlayerControl, type Player } from './PlayerControl';
 import { AimOverlay } from '../rendering/AimOverlay';
@@ -63,8 +64,9 @@ export class GameScene extends Scene {
   /** Storm battlegrounds only: lightning. */
   private weather?: WeatherSystem;
   private snow?: Snow;
-  /** This level's wind (px/s² on a normal arrow), rolled from the battleground's strongest wind. */
-  private readonly wind: number;
+  /** The wind now (px/s² on a normal arrow), rolled from the battleground's strongest; it may change mid-level. */
+  private wind: number;
+  private readonly windShifts: WindShifts;
   private playerTower!: Tower;
   private enemyTower!: Tower;
   /** One per player (co-op: two; the host is player 1, the guest player 2). */
@@ -98,7 +100,8 @@ export class GameScene extends Scene {
     this.localIndex = this.role === 'guest' ? 1 : 0;
     // Windy maps roll a fresh wind for every level (direction and strength); a co-op guest takes the host's.
     const strongest = this.battleground.wind ?? 0;
-    this.wind = this.role === 'guest' ? ctx.session.net!.wind : Math.round((Math.random() * 2 - 1) * strongest);
+    this.wind = this.role === 'guest' ? ctx.session.net!.wind : rollWind(strongest);
+    this.windShifts = new WindShifts(this.role === 'guest' ? 0 : strongest);
     // Part of the battle setup (in co-op the host's sandbox), so it holds for the whole run.
     const { difficulty } = sandbox;
     this.foes = new BattleEnemies(this.level, {
@@ -112,7 +115,7 @@ export class GameScene extends Scene {
       world: this.world,
       textures: ctx.textures,
       battleground: this.battleground,
-      wind: this.wind,
+      wind: () => this.wind,
       arrowTrails: () => ctx.session.arrowTrails,
       effects: () => this.effects,
       playSound: (id, at) => this.playSound(id, at),
@@ -182,7 +185,7 @@ export class GameScene extends Scene {
         arrows: this.shots.list,
         effects: this.effects,
         debug: this.debugGraphics,
-        wind: this.wind,
+        wind: () => this.wind,
         friendlyFire: () => this.ctx.session.friendlyFire,
         reinforcementsDue: () => this.foes.reinforcementsDue,
         enemyEdge: enemyEdge(this.ctx.session.sandbox.difficulty),
@@ -217,6 +220,7 @@ export class GameScene extends Scene {
       playSound: (id, at) => this.playSound(id, at),
       showGuestEnd: (info) => this.showGuestEnd(info),
       guestPaused: (paused) => this.setPaused(paused, !this.pauseAsked),
+      windChanged: (wind) => this.setWind(wind),
     }));
     if (this.hostSync) {
       this.hostSync.onPauseRequest = (paused) => {
@@ -260,6 +264,11 @@ export class GameScene extends Scene {
       return;
     }
     this.foes.update(deltaMs);
+    const shifted = this.windShifts.update(deltaMs, this.wind);
+    if (shifted !== undefined) {
+      this.setWind(shifted);
+      this.hostSync?.push({ e: 'wind', wind: shifted });
+    }
     this.background.update(deltaMs);
     this.weather?.update(deltaMs, this.camera.x);
     this.snow?.update(deltaMs, this.camera.x);
@@ -285,6 +294,15 @@ export class GameScene extends Scene {
       this.checkEndConditions();
     }
     this.hostSync?.update(deltaMs);
+  }
+
+  /** The wind changed mid-level: arrows loosed from now on, the aim's path and the snow follow it. */
+  private setWind(wind: number): void {
+    this.wind = wind;
+    if (this.snow) {
+      this.snow.drift = wind * SNOW_WIND_DRIFT;
+    }
+    this.ctx.ui.setStatus(`The wind shifts · ${windLabel(wind, this.battleground.wind ?? 0)}`);
   }
 
   /** Esc: pauses or resumes (a co-op guest asks the host, which pauses both screens). */

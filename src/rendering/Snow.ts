@@ -15,8 +15,8 @@ export class Snow {
   private readonly flakes: Flake[];
   private lastCameraX?: number;
 
-  /** `drift` is the sideways speed (px/s) the wind gives the flakes. */
-  public constructor(container: Container, private readonly drift: number) {
+  /** `drift` is the sideways speed (px/s) the wind gives the flakes (set again when the wind changes). */
+  public constructor(container: Container, public drift: number) {
     this.graphics.zIndex = 90;
     // Flake y is world y (like the ground), so the layer sits as far down as the scenery (see VIEW_TOP).
     this.graphics.y = -VIEW_TOP;

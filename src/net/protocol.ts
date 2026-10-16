@@ -158,7 +158,9 @@ export type GameEvent =
   /** A bowman falls: in this fall (stickmanFall), hit from `fromX`. */
   | { e: 'die'; player: number; kind: FallKind; fromX: number }
   /** A status line message for one player. */
-  | { e: 'status'; player: number; text: string };
+  | { e: 'status'; player: number; text: string }
+  /** The wind changed mid-level (systems/windShift.ts). */
+  | { e: 'wind'; wind: number };
 
 /** What the guest's end screen shows (the host decides what comes next). */
 export interface EndInfo {
