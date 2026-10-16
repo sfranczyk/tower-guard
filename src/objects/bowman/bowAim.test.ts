@@ -24,6 +24,24 @@ describe('BowAim', () => {
     expect(aim.power).toBe(0);
   });
 
+  it('after a shot keeps a held bow up while the string springs back', () => {
+    const aim = new BowAim();
+    aim.set({ x: 1, y: 0 }, 0.8);
+    aim.raise(300);
+    aim.loose();
+    aim.held = true;
+    expect(aim.power).toBe(0);
+    expect(aim.shownTension).toBeCloseTo(0.8);
+    aim.raise(45);
+    expect(aim.shownTension).toBeCloseTo(0.3);
+    aim.raise(500);
+    expect(aim.shownTension).toBe(0);
+    expect(aim.ready).toBe(1);
+    aim.held = false;
+    aim.raise(380);
+    expect(aim.ready).toBe(0);
+  });
+
   it('hands out copies', () => {
     const aim = new BowAim();
     aim.snapshot().direction.x = 5;

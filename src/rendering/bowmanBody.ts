@@ -27,6 +27,8 @@ export interface BowmanBodyState {
   localAngle: number;
   tension: number;
   ready: number;
+  /** The string springing back after a shot: no arrow on it. */
+  loosed?: boolean;
 }
 
 /** Standing, walking or sprinting with the bow (cleared first; sets the sprite's x and y like drawStickman). */
@@ -37,6 +39,9 @@ export const drawBowmanBody = (
   sprite.x = 0;
   sprite.y = originY - LIVE_POSE_LIFT;
   const pose = bowmanBody(state.phase / (Math.PI * 2), state.idleBlend, state.runningBlend, state.localAngle, state.tension, state.ready);
+  if (state.loosed && pose.bow) {
+    pose.bow = { ...pose.bow, tension: 0 };
+  }
   drawHumanoid(sprite, pose, lookOf(look, palette, timeMs, 1 - state.idleBlend));
 };
 

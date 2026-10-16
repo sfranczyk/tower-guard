@@ -24,8 +24,9 @@ everything under `ctx.root` on each switch. Scenes never touch the DOM: they cal
   (`nextLookShift`); after the shot stays while he stands, eases back once he moves (`CAMERA_LOOK.returnMs`). The drag is
   measured on screen, `getAim()` maps it to the world as the camera is now.
 - **MenuScene**: menu over a live battlefield (meadow sun moved over the enemy keep, which lies in ruins: `abandoned`
-  keep at 0 health, no fire); the bowman shoots at archery targets (`menuRange.ts`, `MenuRange`; target art
-  `rendering/archeryTarget.ts`); labs under "Dev tools".
+  keep at 0 health, no fire); the bowman practises at archery targets (`menuRange.ts`, `MenuRange`: draw, hold,
+  loose with the bow held up while the string snaps back (`Bowman.loose` / `holdBow`), every 10 shots a walk to
+  collect the arrows; numbers in `RANGE`; target art `rendering/archeryTarget.ts`); labs under "Dev tools".
   Menus, labs and the lobby show a `BACKDROP_WIDTH` landscape, centred.
 - **AnimationLabScene**: every animation once on the bare skeleton, in tabs Movement, Combat, Hurt, Death, Cheer (Pixi on
   a cream panel; "← Menu"). Rows `LAB_CATEGORIES` in `labRows.ts` (ids for `?lab=<id>`), looping falls and gibs in

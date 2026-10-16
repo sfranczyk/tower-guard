@@ -116,8 +116,9 @@ export class BowmanFigure {
       idleBlend: this.idleBlend,
       runningBlend: this.runningBlend,
       localAngle: toArcherLocalAngle(aim.angle, body.rotation, this.facing),
-      tension: aim.power,
+      tension: aim.shownTension,
       ready: aim.ready,
+      loosed: aim.power <= 0,
     }, BODY_ORIGIN_Y, this.lookTimeMs);
     this.turnAloft();
   }

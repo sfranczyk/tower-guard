@@ -14,7 +14,7 @@ const MENU_KEEPS = { player: 190, enemy: 1010 } as const;
 const MENU_BOWMAN_X = 285;
 const MENU_SUN = { x: 975, y: 95 };
 /** Practice targets the bowman shoots at. */
-const MENU_TARGETS = [560, 760];
+const MENU_TARGETS = [640, 935];
 
 /** Main menu over a live battlefield (drifting clouds, the enemy keep in ruins, the bowman practising at targets). */
 export class MenuScene extends Scene {
@@ -55,7 +55,6 @@ export class MenuScene extends Scene {
     this.background?.update(deltaMs);
     this.keeps.forEach((keep) => keep.update(deltaMs));
     this.range?.update(deltaMs);
-    this.bowman?.updateAnimation(deltaMs, false);
   }
 
   private createScenery(battleground: (typeof BATTLEGROUNDS)[keyof typeof BATTLEGROUNDS]): void {

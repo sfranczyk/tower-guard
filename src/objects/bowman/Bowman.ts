@@ -208,6 +208,16 @@ export class Bowman extends Container {
     throwInAir(this, vx, vy, spin);
   }
 
+  /** The arrow is away: the string springs back; `holdBow` keeps the bow up meanwhile. */
+  public loose(): void {
+    this.aim.loose();
+  }
+
+  /** Keeps the bow raised without a draw (the menu's archer between shots). */
+  public holdBow(held: boolean): void {
+    this.aim.held = held;
+  }
+
   /** The draw is lost (frozen, caught, thrown). */
   public dropDraw(): void {
     this.aim.drop();
