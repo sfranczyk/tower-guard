@@ -7,18 +7,22 @@ import Bowman from '../objects/bowman/Bowman';
 import Tower from '../objects/Tower';
 import { Background } from '../rendering/Background';
 import { groundAt } from '../systems/terrain';
+import { MenuRange } from './menuRange';
 
 /** The menu shows the middle of the battlefield (centred in the view), with both keeps pulled into view. */
 const MENU_KEEPS = { player: 190, enemy: 1010 } as const;
 const MENU_BOWMAN_X = 285;
 const MENU_SUN = { x: 975, y: 95 };
+/** Practice targets the bowman shoots at. */
+const MENU_TARGETS = [560, 760];
 
-/** Main menu over a live battlefield (drifting clouds, flickering torches, the bowman at ease). */
+/** Main menu over a live battlefield (drifting clouds, the enemy keep in ruins, the bowman practising at targets). */
 export class MenuScene extends Scene {
   private background?: Background;
   private world?: Container;
   private keeps: Tower[] = [];
   private bowman?: Bowman;
+  private range?: MenuRange;
   private optionsVisible = false;
 
   public enter(): void {
@@ -50,6 +54,7 @@ export class MenuScene extends Scene {
     }
     this.background?.update(deltaMs);
     this.keeps.forEach((keep) => keep.update(deltaMs));
+    this.range?.update(deltaMs);
     this.bowman?.updateAnimation(deltaMs, false);
   }
 
@@ -62,12 +67,13 @@ export class MenuScene extends Scene {
     const hillColor = battleground.hills[0];
     this.keeps = [
       new Tower(MENU_KEEPS.player, groundAt(MENU_KEEPS.player), { hillColor, enemy: false, showHealth: false }),
-      new Tower(MENU_KEEPS.enemy, groundAt(MENU_KEEPS.enemy), { hillColor, enemy: true, showHealth: false }),
+      new Tower(MENU_KEEPS.enemy, groundAt(MENU_KEEPS.enemy), { hillColor, enemy: true, showHealth: false, abandoned: true }, 100, 0),
     ];
     this.bowman = new Bowman(MENU_BOWMAN_X, groundAt(MENU_BOWMAN_X), { x: 0, y: 0, width: BACKDROP_WIDTH, height: GAME_HEIGHT }, {
       armorColors: battleground.player,
     });
     world.addChild(...this.keeps, this.bowman);
+    this.range = new MenuRange(world, this.bowman, this.ctx.textures, MENU_TARGETS);
   }
 
   private setOptionsVisible(visible: boolean): void {

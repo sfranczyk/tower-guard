@@ -23,6 +23,8 @@ export interface KeepOptions {
   twin?: boolean;
   /** Health bar above it (default on; the menu's backdrop keeps have none). */
   showHealth?: boolean;
+  /** A cold ruin (the menu's enemy keep): no torch, fire or smoke at any damage stage. */
+  abandoned?: boolean;
 }
 
 /** Health bar above the keep (like the enemies'), in world px. */
@@ -249,9 +251,12 @@ export default class Tower extends Container {
     const flicker = 1 + Math.sin(this.timeMs / 70) * 0.12 + Math.sin(this.timeMs / 31) * 0.06;
     const flames = this.flames;
     flames.clear();
+    this.smoke.clear();
+    if (this.options.abandoned) {
+      return;
+    }
     flames.ellipse(TORCH.x, TORCH.y, 3.5 * flicker, 5 * flicker).fill({ color: 0xff9a2e });
     flames.ellipse(TORCH.x, TORCH.y - 1, 1.8, 3 * flicker).fill({ color: 0xffe27a });
-    this.smoke.clear();
     if (this.damage < 3) {
       return;
     }
