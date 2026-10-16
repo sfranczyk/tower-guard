@@ -325,6 +325,9 @@ export class GameScene extends Scene {
     }
     this.paused = paused;
     this.pauseAsked = false;
+    if (!paused) {
+      this.setOptionsVisible(false);
+    }
     this.localInput?.cancelAim();
     this.ctx.ui.showPause(paused ? {
       byPartner,
@@ -426,7 +429,9 @@ export class GameScene extends Scene {
 
     this.listenWindow('keydown', (event) => {
       if (event.code === 'Escape') {
-        if (!this.gameEnded) {
+        if (this.optionsVisible) {
+          this.setOptionsVisible(false);
+        } else if (!this.gameEnded) {
           this.togglePause();
         }
         return;
@@ -471,9 +476,16 @@ export class GameScene extends Scene {
     this.hostSync?.sound(id, at);
   }
 
+  /** The settings drawer opens from the pause dialog only (its button or I while paused); Esc closes it first. */
   private toggleOptions(): void {
-    this.optionsVisible = !this.optionsVisible;
-    this.ctx.ui.setOptionsVisible(this.optionsVisible);
+    if (this.paused || this.optionsVisible) {
+      this.setOptionsVisible(!this.optionsVisible);
+    }
+  }
+
+  private setOptionsVisible(visible: boolean): void {
+    this.optionsVisible = visible;
+    this.ctx.ui.setOptionsVisible(visible);
     this.localInput?.cancelAim();
   }
 

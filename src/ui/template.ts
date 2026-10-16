@@ -1,5 +1,5 @@
 import { ARROW_INFO, type ArrowType } from '../data/loadout';
-import { ICON_GEAR, ICON_LEVEL, ICON_WEAPONS } from './icons';
+import { ICON_LEVEL, ICON_WEAPONS } from './icons';
 
 /**
  * Static DOM markup. Elements are looked up by their data-* attributes in DomUi.
@@ -37,6 +37,7 @@ export const OVERLAY_TEMPLATE = `
           <div class="pause-actions">
             <button class="primary-button" data-pause-resume>Resume <span class="key-hint">Esc</span></button>
             <button class="secondary-button" data-pause-restart title="Full health for the bowmen, the level's enemies anew; the keep stays as it is">Restart level</button>
+            <button class="secondary-button" data-pause-settings>Settings <span class="key-hint">I</span></button>
             <button class="secondary-button" data-pause-menu>Main menu</button>
           </div>
         </div>
@@ -89,7 +90,6 @@ export const weaponSlots = (loadout: readonly (ArrowType | null)[]): string => l
 export const HUD_TOP_TEMPLATE = `
   <div class="hud-chip">${ICON_LEVEL}<div><div class="chip-label">Level <span data-level-number>1 / 1</span></div><div class="pips" data-enemy-pips></div><div class="meter" hidden><i data-level-bar></i></div><div class="chip-value" data-enemy-count>0 of 0 defeated</div></div></div>
   <div class="weapons" data-projectiles></div>
-  <button class="round-button" data-options aria-label="Open settings">${ICON_GEAR}</button>
 `;
 
 export const HUD_BOTTOM_TEMPLATE = `

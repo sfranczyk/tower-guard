@@ -225,11 +225,11 @@ export class DomUi {
     this.onClick('[data-open-tuning]', () => this.handlers.toggleTuning?.());
     this.onClick('[data-lab-menu]', () => this.handlers.labMenu?.());
     this.onClick('[data-lab-back]', () => this.handlers.labBack?.());
-    this.onClick('[data-options]', () => this.handlers.toggleOptions?.());
     this.onClick('[data-close-options]', () => this.handlers.toggleOptions?.());
     this.endButton.addEventListener('click', () => this.onEndButton?.());
     this.onClick('[data-pause-resume]', () => this.handlers.pauseResume?.());
     this.onClick('[data-pause-restart]', () => this.handlers.pauseRestart?.());
+    this.onClick('[data-pause-settings]', () => this.handlers.toggleOptions?.());
     this.onClick('[data-pause-menu]', () => this.handlers.pauseMenu?.());
     this.weaponsRoot.addEventListener('click', (event) => {
       const button = (event.target as HTMLElement).closest<HTMLButtonElement>('[data-projectile]');
