@@ -14,8 +14,10 @@ a shaman's spell, mid-swing), flees a noticed one's zone (`BlastDodge`, "!" = `E
 ## Allies (the player's soldiers)
 `Enemy` objects of the `side: 'ally'` kinds (squire, allyKnight, medic) in `CombatWorld.allies` (scenes/BattleAllies.ts).
 `AllyAI.ts`: fighters go for the nearest ground enemy their order allows (`allyOrders.ts`, pure, tested: `orderPost`,
-`pickFoe`; hold / advance / retreat), strike with `meleeBlow` (cause `'melee'`, `armor` turns it); the medic follows like
-the priest (`priestPost`) and heals soldiers and bowmen out in the open (`bowmanMissing` / `bowmanHealed` events). Enemies:
+`pickFoe`; hold / advance / retreat), strike with `meleeBlow` (cause `'melee'`, `armor` turns it); the medic (archetype `medic`, `bandages`) picks one
+patient (`bandaging.ts`, pure, tested: `pickPatient`, `bandageHeal`; tuning `MEDIC`), walks beside him, kneels
+(`Enemy.startBandage`, a hit breaks it) and heals over time, then rests; idle she keeps behind the front (`priestPost`).
+Bowmen via `bowmanHealth` / `bowmanHealed` events. Enemies:
 `nearestMeleeTarget` (`targeting.ts`) stops melee enemies at a soldier (`EnemyAI.fightAlly`), archers on foot aim at
 them, hostile arrows (`ArrowHits.hostileHitAlly`), kamikaze blasts and lightning hurt them; players' arrows only with
 friendly fire (`arrowTargets`). Limits and pauses: `allyRoster.ts` (pure, tested), tuning `ALLIES`.

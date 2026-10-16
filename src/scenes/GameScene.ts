@@ -221,7 +221,7 @@ export class GameScene extends Scene {
         bowmanIgnited: (bowman) => this.team.status(this.team.of(bowman), 'You are on fire! Get out of the flames'),
         enemyShot: (from, angle, speed, shooter) => this.shots.fireEnemy(from, angle, speed, shooter),
         sound: (id, at) => this.playSound(id, at),
-        bowmanMissing: (bowman) => (bowman.isDead ? 0 : Math.max(0, this.ctx.session.sandbox.bowmanHealth - this.team.of(bowman).health)),
+        bowmanHealth: (bowman) => ({ health: this.team.of(bowman).health, max: this.ctx.session.sandbox.bowmanHealth }),
         bowmanHealed: (bowman, amount) => {
           const player = this.team.of(bowman);
           player.health = Math.min(this.ctx.session.sandbox.bowmanHealth, player.health + amount);

@@ -545,6 +545,21 @@ export const ALLIES = tunable('ALLIES', 'Allies', {
 });
 
 /**
+ * The medic's bandaging (systems/AllyAI.ts, systems/bandaging.ts): she picks one patient (the bowman first while he is
+ * below `bowmanFirstBelow` of his health, else the lowest share of health; only one missing at least `minMissing`),
+ * walks up beside him (`reach` px), kneels and heals `healPerSecond` for up to `bandageMs`, then rests `restMs` before
+ * the next. A hit on her, or the patient walking off, breaks it off.
+ */
+export const MEDIC = tunable('MEDIC', 'Medic', {
+  healPerSecond: 6,
+  bandageMs: 4000,
+  restMs: 2000,
+  reach: 22,
+  bowmanFirstBelow: 0.5,
+  minMissing: 4,
+});
+
+/**
  * Difficulty levels (battle setup, data/difficulty.ts); the enemy counts are always as set. `*Damage`: how many times
  * harder every enemy hit lands on the bowmen and the keep than on easy; `*Spread`: enemy archers' aim error (dragon
  * riders' too) as a share of easy's ENEMY_ATTACK.archerSpread. On medium and hard a

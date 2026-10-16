@@ -13,7 +13,7 @@ import { getPinnedPose } from '../stickmanPinned';
 import type { JointPose } from '../stickmanPose';
 import { RUN_STRIDE_PER_RADIAN } from '../runCycle';
 import type { AttackStyle } from '../attackSwing';
-import { archerBody, attackBody, castBody, runBody, walkBody, withClub, type BodyPose } from './bodyPoses';
+import { archerBody, attackBody, bandageBody, castBody, runBody, walkBody, withClub, type BodyPose } from './bodyPoses';
 import { banditArcherLook, goblinBomberLook, goblinLook, raiderLook, sapperLook } from './enemySkins';
 import { shamanLook } from './shamanSkin';
 import { dragonArcherLook, dragonKnightLook, drawDragonWithRider, ogreLook, trollLook, zombieLook } from './heavySkins';
@@ -29,6 +29,7 @@ import { drawEnemyGibs } from '../enemyBody';
 import { GibSimulation } from '../stickmanGibs';
 import type { UnitType } from '../../types';
 import { allyKnightLook, medicLook, squireLook } from './allySkins';
+import { BANDAGE_LOOP_MS, bandageKneel } from '../bandaging';
 
 /** One animation of a design: a tile in the zoomed view. */
 export interface DesignView {
@@ -545,8 +546,8 @@ const ALLIES: DesignEntry[] = [
   {
     id: 'allyKnight',
     name: 'Knight',
-    tagline: 'Plate and a longsword: holds the line',
-    description: 'Bright plate under a blue tabard with a gold cross, a round pauldron, an open-faced helm with a blue plume, and a longsword. His plate turns most arrows and blows on the body (only a third gets through), headshots go through. Slow, hits hard. Up to three on the field.',
+    tagline: 'Shield and longsword: holds the line',
+    description: 'The footman idea in the bowman\'s blue: a closed helm with a visor slit and a blue plume, a breastplate over a blue tabard, mail, and a kite shield with a cream cross carried in front; a longsword. His armour turns most arrows and blows on the body (only a third gets through), headshots go through. Slow, hits hard. Up to three on the field.',
     views: [
       walking(allyKnightLook, KNIGHT_SPEED, 'overhead', false, 'march'),
       swinging('Sword cut', allyKnightLook, 'overhead'),
@@ -560,15 +561,14 @@ const ALLIES: DesignEntry[] = [
   {
     id: 'medic',
     name: 'Medic',
-    tagline: 'Heals the soldiers and the bowman',
-    description: 'A white robe to the shins with a red cross on the chest, a satchel on a strap, a white coif and a plain wooden staff. Never fights: keeps behind the front soldier and heals the wounded around her, the bowman too when he is out of the keep (the cross glows as she casts). Up to two on the field.',
+    tagline: 'Bandages one wounded man at a time',
+    description: 'A white robe to the shins with a red cross on the chest, a satchel on a strap, a white coif and a plain wooden staff. Never fights: goes to the most wounded soldier (or the bowman, when he is badly hurt and out of the keep), kneels beside him and bandages him for a few seconds, then rests. A hit breaks it off. Up to two on the field.',
     views: [
       {
-        label: 'Heal',
+        label: 'Bandaging',
         draw: (g, t) => {
-          const progress = Math.min(1, (t % CAST_LOOP_MS) / CAST_MS);
           g.clear();
-          drawHumanoid(g, castBody(progress), medicLook(t, Math.sin(Math.PI * progress)));
+          drawHumanoid(g, bandageBody(bandageKneel(t % BANDAGE_LOOP_MS), t), medicLook(t));
         },
       },
       walking(medicLook, PRIEST_SPEED, 'overhead'),

@@ -18,7 +18,8 @@ open the one you need:
 - `enemyNet.ts`: co-op `getNetState` / `applyNetState`.
 
 - **Allies**: the player's soldiers are `Enemy` objects too (`isAllyType(kind)`, `side: 'ally'` in ENEMY_KINDS;
-  `UnitType` = `EnemyType | AllyType`): blue health bar (`EnemyBars` `ally`), cheer facing right, `faceTowards(x)`.
+  `UnitType` = `EnemyType | AllyType`): blue health bar (`EnemyBars` `ally`), cheer facing right, `faceTowards(x)`; the medic's
+  `startBandage` / `stopBandage` / `advanceKneel` (body state `'bandage'`; no walking while kneeling).
 
 ## Behaviour
 - `Enemy.takeDamage(amount, { cause, fromX })` picks the reaction: headshot → `deathStiff`, explosion → `knockback`

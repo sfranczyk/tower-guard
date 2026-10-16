@@ -12,6 +12,8 @@ import { drawStickmanCheer } from '../rendering/stickmanCheer';
 import { getFlailPose } from '../rendering/stickmanFlail';
 import { drawPinnedStruggle } from '../rendering/stickmanPinned';
 import { drawJointPose } from '../rendering/stickmanPose';
+import { bandageBody } from '../rendering/designs/bodyPoses';
+import { BANDAGE_LOOP_MS, bandageKneel } from '../rendering/bandaging';
 import { FallClock, GibReplay, RUN_PHASE_MS, WALK_PHASE_MS } from './labSequences';
 
 /**
@@ -285,6 +287,12 @@ export const LAB_CATEGORIES: readonly LabCategory[] = [
         render: (sprite, clock) => drawStickman(sprite, clock.timeMs / 240, {
           idleBlend: 1, zombie: true, attackPhase: zombieGrabPhase(clock.timeMs), originY: 0,
         }),
+      },
+      {
+        id: 'bandage',
+        title: 'Bandaging',
+        description: 'The medic kneels on the rear knee, lays the staff aside and winds a bandage round a wound ahead with both hands, then gets up. Medics.',
+        render: (sprite, clock) => drawJointPose(sprite, bandageBody(bandageKneel(clock.timeMs % BANDAGE_LOOP_MS), clock.timeMs)),
       },
       {
         id: 'dragon-archer',

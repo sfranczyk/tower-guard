@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Vec2 } from '../../types';
-import { BODY_FOOT_Y, archerBody, attackBody, bowmanBody, castBody, runBody, standBody, walkBody, type BodyPose } from './bodyPoses';
+import { BODY_FOOT_Y, archerBody, attackBody, bandageBody, bowmanBody, castBody, runBody, standBody, walkBody, type BodyPose } from './bodyPoses';
 
 const distance = (a: Vec2, b: Vec2): number => Math.hypot(a.x - b.x, a.y - b.y);
 
@@ -121,5 +121,19 @@ describe('body poses for new looks', () => {
     const standing = bowmanBody(0.37, 1, 0, 0, 0, 0);
     expect(standing.frontFoot.y).toBeCloseTo(BODY_FOOT_Y);
     expect(standing.rearFoot.y).toBeCloseTo(BODY_FOOT_Y);
+  });
+
+  it('kneels to bandage: limbs kept, the rear knee down on the ground, hands ahead circling, the staff laid aside', () => {
+    for (const k of progressSteps) {
+      for (const t of [0, 170, 350, 520]) {
+        expectStickmanProportions(bandageBody(k, t));
+      }
+    }
+    const down = bandageBody(1, 0);
+    expect(down.rearKnee.y).toBeGreaterThan(BODY_FOOT_Y - 4);
+    expect(down.frontHand.x).toBeGreaterThan(down.hip.x + 15);
+    expect(down.club).toBeUndefined();
+    expect(bandageBody(0, 0).club).toBeDefined();
+    expect(distance(bandageBody(1, 0).frontHand, bandageBody(1, 350).frontHand)).toBeGreaterThan(3);
   });
 });

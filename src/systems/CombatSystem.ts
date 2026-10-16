@@ -80,8 +80,8 @@ export interface CombatEvents {
   sound(id: SoundId, at: Vec2): void;
   /** A hostile arrow loosed by `shooter` (its damage depends on who shot it). */
   enemyShot(from: Vec2, angle: number, speed: number, shooter: EnemyType): void;
-  /** How much health `bowman` is missing (the medic heals him). */
-  bowmanMissing(bowman: Bowman): number;
+  /** `bowman`'s health and his full health (the medic bandages him). */
+  bowmanHealth(bowman: Bowman): { health: number; max: number };
   bowmanHealed(bowman: Bowman, amount: number): void;
 }
 

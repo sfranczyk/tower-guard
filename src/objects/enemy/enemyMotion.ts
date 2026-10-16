@@ -29,8 +29,8 @@ export const walk = (enemy: Enemy, realDeltaMs: number, target: Vec2 | undefined
     enemy.halt();
     return;
   }
-  // Pinned: struggles on the spot; planted while swinging (the club is moving, the feet aren't), casting or staggered.
-  if (motion.isPinned || actions.swinging || actions.casting || actions.tickStagger(deltaMs)) {
+  // Pinned: struggles on the spot; planted while swinging (the club is moving, the feet aren't), casting, kneeling or staggered.
+  if (motion.isPinned || actions.swinging || actions.casting || enemy.isKneeling || actions.tickStagger(deltaMs)) {
     enemy.halt();
     enemy.y = groundAt(enemy.x);
     return;

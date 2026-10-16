@@ -92,6 +92,13 @@ export interface HumanoidLook {
   bow?: (g: Graphics, pose: BodyPose, layer: BowLayer) => void;
   /** Leave out the far leg (a rider's, hidden behind the mount). */
   hideFarLeg?: boolean;
+  /**
+   * The swinging (near) arm and its club drawn behind the body and the other arm in front, as if the weapon were in the
+   * far hand (the knight's sword behind him, his shield in front); `front` then goes over everything.
+   */
+  armsSwapped?: boolean;
+  /** Over everything (with `armsSwapped`: the shield on the front fist). */
+  front?: (g: Graphics, pose: BodyPose, frame: Frame) => void;
 }
 
 export type BowLayer = 'back' | 'front';
@@ -108,10 +115,25 @@ const drawLimb = (g: Graphics, root: Vec2, joint: Vec2, end: Vec2, look: LimbLoo
  */
 export const drawHumanoid = (g: Graphics, pose: BodyPose, look: HumanoidLook): void => {
   const frame = torsoFrame(pose);
+  const farArm = (): void => {
+    drawLimb(g, pose.shoulder, pose.rearElbow, pose.rearHand, look.armFar);
+    look.heldFar?.(g, pose.rearElbow, pose.rearHand);
+    g.circle(pose.rearHand.x, pose.rearHand.y, look.handRadius).fill({ color: look.handFar });
+  };
+  const nearArm = (): void => {
+    drawLimb(g, pose.shoulder, pose.frontElbow, pose.frontHand, look.arm);
+    look.heldNear?.(g, pose.frontElbow, pose.frontHand);
+    g.circle(pose.frontHand.x, pose.frontHand.y, look.handRadius).fill({ color: look.hand });
+  };
   look.back?.(g, pose);
-  drawLimb(g, pose.shoulder, pose.rearElbow, pose.rearHand, look.armFar);
-  look.heldFar?.(g, pose.rearElbow, pose.rearHand);
-  g.circle(pose.rearHand.x, pose.rearHand.y, look.handRadius).fill({ color: look.handFar });
+  if (look.armsSwapped) {
+    if (pose.club && look.club) {
+      look.club(g, pose.club.butt, pose.club.tip);
+    }
+    nearArm();
+  } else {
+    farArm();
+  }
   if (pose.bow && look.bow) {
     look.bow(g, pose, 'back');
   }
@@ -124,15 +146,19 @@ export const drawHumanoid = (g: Graphics, pose: BodyPose, look: HumanoidLook): v
   footShape(g, pose.frontFoot, pose.frontShinAngle, look.foot.length, look.foot.height, look.foot.color);
   look.overLegs?.(g, pose, frame);
   look.head(g, pose, headFrame(pose));
+  if (look.armsSwapped) {
+    farArm();
+    look.front?.(g, pose, frame);
+    return;
+  }
   if (pose.club && look.club) {
     look.club(g, pose.club.butt, pose.club.tip);
   }
   if (pose.bow && look.bow) {
     look.bow(g, pose, 'front');
   }
-  drawLimb(g, pose.shoulder, pose.frontElbow, pose.frontHand, look.arm);
-  look.heldNear?.(g, pose.frontElbow, pose.frontHand);
-  g.circle(pose.frontHand.x, pose.frontHand.y, look.handRadius).fill({ color: look.hand });
+  nearArm();
+  look.front?.(g, pose, frame);
 };
 
 /** A wooden club, thicker at the striking end, with a leather grip and an iron band. */

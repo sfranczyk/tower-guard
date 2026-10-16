@@ -1,5 +1,5 @@
 import type { Graphics } from 'pixi.js';
-import { ALLIES, PRIEST_POST_SLACK, SHOW_HITBOX_DEBUG } from '../config';
+import { ALLIES, MEDIC, PRIEST_POST_SLACK, SHOW_HITBOX_DEBUG } from '../config';
 import { enemyDamage, rollDamage } from '../data/enemies';
 import { enemyArchetype, enemyArmor, enemyTraits } from '../data/enemyKinds';
 import type Bowman from '../objects/bowman/Bowman';
@@ -9,7 +9,8 @@ import type { Vec2 } from '../types';
 import { orderPost, pickFoe, type AllyOrder } from './allyOrders';
 import { foeHitBoxes, type Foe } from './combatGeometry';
 import type { EffectsSystem } from './EffectsSystem';
-import { planHeals, priestPost } from './healing';
+import { bandageHeal, pickPatient } from './bandaging';
+import { priestPost } from './healing';
 import { groundAt } from './terrain';
 
 /** How close a soldier comes to the enemy he fights (as EnemyAI's MELEE_REACH), and how close counts as "in reach". */
@@ -44,18 +45,45 @@ export interface AllyAIWorld {
 }
 
 export interface AllyAIEvents {
-  /** How much health `bowman` is missing (the medic heals him too). */
-  bowmanMissing(bowman: Bowman): number;
+  /** `bowman`'s health and his full health (the medic bandages him too). */
+  bowmanHealth(bowman: Bowman): { health: number; max: number };
   bowmanHealed(bowman: Bowman, amount: number): void;
 }
+
+/** Someone the medic tends: a soldier or a bowman, read live. */
+interface Patient {
+  who: Enemy | Bowman;
+  bowman: boolean;
+  x(): number;
+  alive(): boolean;
+  missing(): number;
+  ratio(): number;
+  heal(amount: number): void;
+  chest(): Vec2;
+}
+
+interface MedicState {
+  patient?: Patient;
+  /** Rest after a bandage (ms left). */
+  restMs: number;
+  /** How long this bandage has gone on (0: not started). */
+  bandagedMs: number;
+  /** Until the next red cross rises from the patient. */
+  crossMs: number;
+}
+
+/** A red cross rises from the patient this often while she bandages him. */
+const CROSS_EVERY_MS = 900;
 
 /**
  * What the player's soldiers do each frame (CombatSystem calls `update` for each living one): fighters go for the
  * nearest enemy their order lets them fight (systems/allyOrders.ts) and strike it in reach, else walk to their post;
- * the medic keeps behind the front soldier and heals the soldiers and the bowmen around it (like the dark priest:
- * systems/healing.ts). They never strike the dragons.
+ * the medic bandages one wounded soldier or bowman at a time (systems/bandaging.ts). They never strike the dragons.
  */
 export class AllyAI {
+  /** Each medic's patient and clocks. */
+  private readonly medics = new WeakMap<Enemy, MedicState>();
+
   public constructor(private readonly world: AllyAIWorld, private readonly events: AllyAIEvents) {}
 
   public update(ally: Enemy, deltaMs: number): void {
@@ -63,7 +91,7 @@ export class AllyAI {
       ally.updateAnimation(deltaMs, false);
       return;
     }
-    if (enemyArchetype(ally.kind).heals) {
+    if (enemyArchetype(ally.kind).bandages) {
       this.updateMedic(ally, deltaMs);
     } else {
       this.updateFighter(ally, deltaMs);
@@ -113,62 +141,122 @@ export class AllyAI {
   }
 
   /**
-   * Medic: keeps `PRIEST_FOLLOW_GAP` behind the front of the soldiers (and the bowmen out in the open) facing the
-   * nearest enemy, never nearer it than `PRIEST_STANDOFF` (priestPost); with nobody to follow it falls back to
-   * `ALLIES.retreatX`. Heals when its mana allows.
+   * Medic: rests `MEDIC.restMs` after each bandage; else picks one patient (pickPatient: the bowman first when badly
+   * hurt, else the lowest share of health), walks up beside him on the keep's side and, once there, kneels and bandages:
+   * `MEDIC.healPerSecond` for up to `MEDIC.bandageMs`, crosses rising from him. A hit on her, the patient walking off,
+   * dying, hiding in the keep or healed full ends it. With nobody to tend she keeps behind the front (priestPost).
    */
   private updateMedic(medic: Enemy, deltaMs: number): void {
-    medic.updateMana(deltaMs);
-    const fighters = this.world.allies.filter((other) => other !== medic && other.isAlive() && !enemyArchetype(other.kind).heals).map((other) => other.x);
+    const state = this.medics.get(medic) ?? { restMs: 0, bandagedMs: 0, crossMs: 0 };
+    this.medics.set(medic, state);
+    state.restMs = Math.max(0, state.restMs - deltaMs);
+    const helpless = medic.isDown || medic.afflictions.isFrozen || medic.afflictions.inVortex;
+    if (state.patient && (!this.stillWounded(state.patient) || (state.bandagedMs > 0 && !medic.isBandaging) || helpless)) {
+      this.endBandage(medic, state);
+    }
+    if (!state.patient && state.restMs <= 0 && !helpless) {
+      state.patient = this.choosePatient(medic);
+    }
+    const patient = state.patient;
+    if (!patient) {
+      this.keepBehindFront(medic, deltaMs);
+      return;
+    }
+    const at = patient.x();
+    const besideX = at - MEDIC.reach;
+    if (!medic.isBandaging) {
+      medic.update(deltaMs, { x: besideX, y: groundAt(besideX) }, 3);
+      medic.updateAnimation(deltaMs, medic.isMoving());
+      if (Math.abs(medic.x - besideX) <= 3 && !helpless) {
+        medic.faceTowards(at);
+        medic.startBandage();
+        state.bandagedMs = 0.001;
+      }
+      return;
+    }
+    medic.update(deltaMs, { x: medic.x, y: medic.y }, 1);
+    medic.updateAnimation(deltaMs, false);
+    if (!medic.isKneeling || medic.isDown) {
+      return;
+    }
+    if (Math.abs(at - medic.x) > MEDIC.reach + 14) {
+      // He walked off: she gets up and follows him.
+      medic.stopBandage();
+      state.bandagedMs = 0;
+      return;
+    }
+    // Healing starts once she is down by him.
+    const amount = bandageHeal(deltaMs, patient.missing());
+    if (amount > 0) {
+      patient.heal(amount);
+    }
+    state.bandagedMs += deltaMs;
+    state.crossMs -= deltaMs;
+    if (state.crossMs <= 0) {
+      state.crossMs = CROSS_EVERY_MS;
+      this.world.effects.healCrosses(patient.chest());
+    }
+    if (state.bandagedMs >= MEDIC.bandageMs || patient.missing() <= 0) {
+      this.endBandage(medic, state);
+    }
+  }
+
+  private endBandage(medic: Enemy, state: MedicState): void {
+    if (state.bandagedMs > 0) {
+      state.restMs = MEDIC.restMs;
+    }
+    state.patient = undefined;
+    state.bandagedMs = 0;
+    medic.stopBandage();
+  }
+
+  private stillWounded(patient: Patient): boolean {
+    return patient.alive() && patient.missing() > 0;
+  }
+
+  /** The wounded soldiers (not herself, not one another medic already tends) and bowmen out of the keep. */
+  private choosePatient(medic: Enemy): Patient | undefined {
+    const tended = new Set([...this.medicsTending()].filter((other) => other.medic !== medic).map((other) => other.who));
+    const soldiers: Patient[] = this.world.allies
+      .filter((other) => other !== medic && other.isAlive() && enemyTraits(other.kind).healable && !tended.has(other))
+      .map((other) => ({
+        who: other, bowman: false, x: () => other.x, alive: () => other.isAlive(), missing: () => other.missingHealth,
+        ratio: () => other.getHealthRatio(), heal: (amount) => other.heal(amount), chest: () => chest(other),
+      }));
+    const bowmen: Patient[] = this.world.bowmen
+      .filter((bowman) => !bowman.isDead && !bowman.isInTower && !tended.has(bowman))
+      .map((bowman) => {
+        const health = (): { health: number; max: number } => this.events.bowmanHealth(bowman);
+        return {
+          who: bowman, bowman: true, x: () => bowman.x, alive: () => !bowman.isDead && !bowman.isInTower,
+          missing: () => Math.max(0, health().max - health().health), ratio: () => health().health / Math.max(1, health().max),
+          heal: (amount) => this.events.bowmanHealed(bowman, amount), chest: () => chest(bowman),
+        };
+      });
+    const all = [...soldiers, ...bowmen];
+    const pick = pickPatient(all.map((patient) => ({ missing: patient.missing(), ratio: patient.ratio(), bowman: patient.bowman })));
+    return pick === undefined ? undefined : all[pick];
+  }
+
+  private *medicsTending(): Iterable<{ medic: Enemy; who: unknown }> {
+    for (const medic of this.world.allies) {
+      const patient = this.medics.get(medic)?.patient;
+      if (patient && medic.isAlive()) {
+        yield { medic, who: patient.who };
+      }
+    }
+  }
+
+  /** Nobody to tend: `PRIEST_FOLLOW_GAP` behind the front of the soldiers and bowmen, facing the nearest enemy. */
+  private keepBehindFront(medic: Enemy, deltaMs: number): void {
+    const fighters = this.world.allies.filter((other) => other !== medic && other.isAlive() && !enemyArchetype(other.kind).bandages).map((other) => other.x);
     const bowmen = this.world.bowmen.filter((bowman) => !bowman.isDead && !bowman.isInTower).map((bowman) => bowman.x);
-    const foes = this.groundFoes();
     const front = Math.max(ALLIES.retreatX, ...fighters, ...bowmen);
+    const foes = this.groundFoes();
     const nearestFoe = foes.reduce<number | undefined>((best, foe) => (best === undefined || Math.abs(foe.x - front) < Math.abs(best - front) ? foe.x : best), undefined);
     const post = priestPost(medic.x, [...fighters, ...bowmen], nearestFoe ?? front + ALLIES.engageRange, ALLIES.retreatX);
     medic.update(deltaMs, { x: post, y: groundAt(post) }, PRIEST_POST_SLACK);
     medic.updateAnimation(deltaMs, medic.isMoving());
-    if (medic.isDown || medic.afflictions.isFrozen || medic.afflictions.inVortex) {
-      // Knocked down, thrown, frozen or in a vortex: a cast under way is lost (its mana too).
-      medic.actions.interrupt();
-      return;
-    }
-    this.castHeal(medic);
-  }
-
-  /** As the priest's cast (EnemyAI.castHeal): mana goes now, the heals land when it ends, crosses rise from each one. */
-  private castHeal(medic: Enemy): void {
-    const { mana } = medic;
-    if (!mana?.canCast || medic.isCasting || medic.isAttacking) {
-      return;
-    }
-    const spent = this.planHeals(medic, mana.mana).reduce((sum, { amount }) => sum + amount, 0);
-    if (spent === 0) {
-      return;
-    }
-    mana.spend(spent);
-    medic.castHeal(() => {
-      const heals = this.planHeals(medic, spent);
-      if (heals.length === 0) {
-        return;
-      }
-      this.world.effects.healPulse({ x: medic.x, y: medic.y });
-      heals.forEach(({ heal, at, amount }) => {
-        heal(amount);
-        this.world.effects.healCrosses(at);
-      });
-    });
-  }
-
-  /** Who a cast with `mana` heals now: the wounded soldiers (not itself) and bowmen out in the open, nearest first. */
-  private planHeals(medic: Enemy, mana: number): { heal(amount: number): void; at: Vec2; amount: number }[] {
-    const soldiers = this.world.allies
-      .filter((other) => other !== medic && other.isAlive() && other.missingHealth > 0 && enemyTraits(other.kind).healable)
-      .map((other) => ({ at: chest(other), missing: other.missingHealth, heal: (amount: number) => other.heal(amount) }));
-    const bowmen = this.world.bowmen
-      .filter((bowman) => !bowman.isDead && !bowman.isInTower && this.events.bowmanMissing(bowman) > 0)
-      .map((bowman) => ({ at: chest(bowman), missing: this.events.bowmanMissing(bowman), heal: (amount: number) => this.events.bowmanHealed(bowman, amount) }));
-    const wounded = [...soldiers, ...bowmen];
-    return planHeals(chest(medic), wounded, mana).map(({ index, amount }) => ({ heal: wounded[index].heal, at: wounded[index].at, amount }));
   }
 
   private drawDebugHitboxes(ally: Enemy): void {

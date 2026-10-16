@@ -221,6 +221,49 @@ export const castBody = (progress: number): BodyPose => {
   };
 };
 
+/** The kneeling medic's hip and feet (rear knee on the ground, shin flat behind). */
+const KNEEL = { hip: { x: -2, y: 24.3 }, frontFoot: { x: 17, y: BODY_FOOT_Y }, rearFoot: { x: -34, y: 55 }, lean: 0.45 };
+/** One turn of the bandage round the wound (ms) and how wide the hands circle (px). */
+export const BANDAGE_TURN_MS = 700;
+const BANDAGE_CIRCLE = 3.5;
+
+/** A forearm reaching for `target` from `shoulder`, elbow down (the target pulled into reach). */
+const reachDown = (shoulder: Vec2, target: Vec2): { elbow: Vec2; hand: Vec2 } => {
+  const elbow = solveJoint(shoulder, target, ARM, ARM, -1);
+  const toward = Math.atan2(target.x - elbow.x, target.y - elbow.y);
+  return { elbow, hand: { x: elbow.x + Math.sin(toward) * ARM, y: elbow.y + Math.cos(toward) * ARM } };
+};
+
+/**
+ * The medic bandaging a wounded soldier in front of her: `kneel` 0 standing (with the staff) … 1 down on the rear knee,
+ * leaning in, both hands circling round the wound at hip height ahead (`timeMs` turns them, BANDAGE_TURN_MS a turn).
+ * The staff is laid aside once she is halfway down.
+ */
+export const bandageBody = (kneel: number, timeMs: number): BodyPose => {
+  const k = smooth(Math.max(0, Math.min(1, kneel)));
+  const lerp = (from: number, to: number): number => from + (to - from) * k;
+  const hip = { x: lerp(0, KNEEL.hip.x), y: lerp(BODY_FOOT_Y - 55, KNEEL.hip.y) };
+  const body = torso(hip, lerp(0, KNEEL.lean));
+  const frontTarget = { x: lerp(STANCE_HALF_WIDTH, KNEEL.frontFoot.x), y: BODY_FOOT_Y };
+  const rearTarget = { x: lerp(-STANCE_HALF_WIDTH, KNEEL.rearFoot.x), y: lerp(BODY_FOOT_Y, KNEEL.rearFoot.y) };
+  const standing = standBody('overhead');
+  // Hands circling the wound, the far one half a turn behind.
+  const turn = (timeMs / BANDAGE_TURN_MS) * Math.PI * 2;
+  const wound = { x: body.shoulder.x + 24, y: body.shoulder.y + 20 };
+  const circle = (offset: number): Vec2 => ({
+    x: wound.x + Math.cos(turn + offset) * BANDAGE_CIRCLE, y: wound.y + Math.sin(turn + offset) * BANDAGE_CIRCLE,
+  });
+  const toward = (rest: Vec2, work: Vec2): Vec2 => ({ x: rest.x + (work.x - rest.x) * k, y: rest.y + (work.y - rest.y) * k });
+  const front = reachDown(body.shoulder, toward(standing.frontHand, circle(0)));
+  const rear = reachDown(body.shoulder, toward(standing.rearHand, { ...circle(Math.PI), x: circle(Math.PI).x - 4 }));
+  return {
+    ...body,
+    ...legs(hip, frontTarget, rearTarget),
+    frontElbow: front.elbow, frontHand: front.hand, rearElbow: rear.elbow, rearHand: rear.hand,
+    club: k < 0.5 ? clubFrom(front.hand, Math.atan2(front.hand.x - front.elbow.x, front.hand.y - front.elbow.y), 0, 'overhead') : undefined,
+  };
+};
+
 /** Standing still, arms hanging (the end of an attack, a pause in the walk). */
 export const standBody = (club?: AttackStyle): BodyPose => (club ? attackBody(0, club) : { ...attackBody(0, 'overhead'), club: undefined });
 

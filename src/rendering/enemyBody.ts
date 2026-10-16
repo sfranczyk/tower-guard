@@ -5,7 +5,7 @@ import type { BodyColors } from './bodyColors';
 import { HUMAN_BODY, ZOMBIE_BODY } from './bodyColors';
 import type { AttackStyle } from './attackSwing';
 import type { JointPose } from './stickmanPose';
-import { archerBody, attackBody, castBody, runBody, standBody, walkBody, withClub, type BodyPose } from './designs/bodyPoses';
+import { archerBody, attackBody, bandageBody, castBody, runBody, standBody, walkBody, withClub, type BodyPose } from './designs/bodyPoses';
 import { banditArcherLook, goblinBomberLook, goblinLook, raiderLook, sapperLook } from './designs/enemySkins';
 import { ogreLook, trollLook, zombieLook } from './designs/heavySkins';
 import { blackKnightLook, darkPriestLook, heavyKnightLook } from './designs/knightSkins';
@@ -76,6 +76,8 @@ export type EnemyBodyState =
   | { mode: 'archer'; localAngle: number; tension: number; ready: number; walkPhase?: number }
   /** A spell (the priest's heal), progress 0..1. */
   | { mode: 'cast'; progress: number }
+  /** The medic bandaging: `kneel` 0 standing … 1 down, `timeMs` turns the hands. */
+  | { mode: 'bandage'; kneel: number; timeMs: number }
   /** Falls (sprite at originY, like drawJointPose), cheers and the pinned struggle. */
   | { mode: 'joints'; pose: JointPose; club: boolean }
   /** On horseback (sprite at originY: the hooves stand where a fall's feet lie); `riderless` once he's been thrown. */
@@ -101,6 +103,8 @@ const poseFor = (kind: UnitType, state: HumanState): BodyPose => {
       return attackBody(state.progress, zombie ? 'grab' : state.style);
     case 'cast':
       return castBody(state.progress);
+    case 'bandage':
+      return bandageBody(state.kneel, state.timeMs);
     case 'archer':
       return archerBody(state.localAngle, state.tension, state.ready, state.walkPhase === undefined ? undefined : state.walkPhase / TWO_PI);
     case 'joints':

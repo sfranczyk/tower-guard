@@ -22,7 +22,7 @@ import type { AllyType, EnemyType, UnitType } from '../types';
  * variant (an orc kamikaze, an elf archer) is one entry here plus its look and icon.
  */
 
-export type EnemyArchetype = 'fighter' | 'runner' | 'heavy' | 'archer' | 'kamikaze' | 'grabber' | 'skyArcher' | 'fireBreather' | 'healer' | 'cavalry' | 'shaman';
+export type EnemyArchetype = 'fighter' | 'runner' | 'heavy' | 'archer' | 'kamikaze' | 'grabber' | 'skyArcher' | 'fireBreather' | 'healer' | 'cavalry' | 'shaman' | 'medic';
 
 export type EnemyRace = 'human' | 'goblin' | 'ogre' | 'undead' | 'dragon';
 
@@ -83,11 +83,13 @@ export interface ArchetypeInfo {
    * killed, it is thrown off and fights on foot as its kind's `unhorsed` while the horse bolts.
    */
   rides: boolean;
+  /** The player's medic: goes to one wounded soldier or bowman at a time and bandages him (systems/AllyAI.ts). */
+  bandages: boolean;
 }
 
 /** An unarmed walker that does none of the special things (the archetypes below say what they add). */
 const ON_FOOT: ArchetypeInfo = {
-  attackStyle: 'overhead', runs: false, club: false, shoots: false, detonates: false, flies: false, breathesFire: false, heals: false, buffs: false, rides: false,
+  attackStyle: 'overhead', runs: false, club: false, shoots: false, detonates: false, flies: false, breathesFire: false, heals: false, buffs: false, rides: false, bandages: false,
 };
 
 export const ARCHETYPES: Readonly<Record<EnemyArchetype, ArchetypeInfo>> = {
@@ -110,6 +112,8 @@ export const ARCHETYPES: Readonly<Record<EnemyArchetype, ArchetypeInfo>> = {
   cavalry: { ...ON_FOOT, attackStyle: 'thrust', runs: true, rides: true },
   // Follows the soldiers like the healer and casts buffs on them; never attacks (its staff is drawn as the club).
   shaman: { ...ON_FOOT, club: true, buffs: true },
+  // The player's medic: kneels by one wounded man at a time and bandages him; never attacks (the staff is the club).
+  medic: { ...ON_FOOT, club: true, bandages: true },
 };
 
 /** How the arrows' effects take to an enemy (races set them; a variant can override any). */
@@ -325,9 +329,9 @@ export const ENEMY_KINDS: Readonly<Record<UnitType, EnemyKind>> = {
     stats: { health: 45, speed: ENEMY_SPEED * 0.9 }, damage: { melee: [10, 15] }, build: { size: 1, strikeReach: 60, walkStyle: 'march' },
     traits: { mass: 1.9 },
   },
-  // Never fights: follows the soldiers and heals them and the bowman (a healer like the dark priest).
+  // Never fights: goes to the most wounded soldier (or the bowman, badly hurt) and bandages him (MEDIC in config.ts).
   medic: {
-    label: 'Medic', archetype: 'healer', race: 'human', magical: false, arrival: 0, side: 'ally',
+    label: 'Medic', archetype: 'medic', race: 'human', magical: false, arrival: 0, side: 'ally',
     stats: { health: 25, speed: ENEMY_SPEED }, damage: { melee: [0, 0] }, build: { size: 1, strikeReach: 0 },
   },
 };

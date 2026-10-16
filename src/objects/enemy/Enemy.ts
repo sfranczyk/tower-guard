@@ -10,6 +10,7 @@ import { enemyGibColors } from '../../rendering/enemyBody';
 import { fromBodyAnchor, spriteToWorld, toBodyAnchor, type BodyAnchor } from '../../systems/bodyAnchor';
 import { ENEMY_LOOKS, type EnemyLook } from '../../data/enemies';
 import { enemyArchetype, isAllyType } from '../../data/enemyKinds';
+import { BANDAGE_KNEEL_MS } from '../../rendering/bandaging';
 import { mountHealth } from '../../data/enemyTuning';
 import { groundAt } from '../../systems/terrain';
 import { boundsAround } from '../../utils/math';
@@ -207,6 +208,10 @@ export default class Enemy extends Container {
       amount *= asSent ? 1 : this.buff.damageFactor;
       this.netHooks?.damaged(amount, hit);
       this.onDamaged?.(amount, hit);
+      // A medic hit while bandaging breaks it off.
+      if (amount > 0) {
+        this.bandaging = false;
+      }
       applyDamage(this, amount, hit);
     }
     return this.vitals.health;
@@ -425,6 +430,36 @@ export default class Enemy extends Container {
   /** How it's drawn now, for its hit shape (enemyHitShape.ts). */
   private shape(): EnemyShape {
     return { transform: this.figure.transform(), size: this.look.size, pose: this.figure.jointPose() };
+  }
+
+  /** The medic: bandaging now (she kneels), and how far down she is (0 standing … 1 kneeling). */
+  private bandaging = false;
+  private kneel = 0;
+
+  /** The medic kneels to bandage (AllyAI); a hit on her or `stopBandage` gets her up. */
+  public startBandage(): void {
+    this.bandaging = true;
+    this.halt();
+  }
+
+  public stopBandage(): void {
+    this.bandaging = false;
+  }
+
+  public get isBandaging(): boolean {
+    return this.bandaging && this.isAlive();
+  }
+
+  /** Down or getting up: she can't walk until she is on her feet. */
+  public get isKneeling(): boolean {
+    return this.kneel > 0;
+  }
+
+  /** The kneel moves towards down while bandaging, up otherwise (EnemyFigure draws it). */
+  public advanceKneel(deltaMs: number): number {
+    const step = deltaMs / BANDAGE_KNEEL_MS;
+    this.kneel = Math.max(0, Math.min(1, this.kneel + (this.isBandaging ? step : -step)));
+    return this.kneel;
   }
 
   /** Turns (standing) to face world x `x`: a soldier or an enemy about to strike one behind it. */

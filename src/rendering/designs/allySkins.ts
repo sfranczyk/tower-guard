@@ -3,11 +3,12 @@ import type { Vec2 } from '../../types';
 import { limb, shape } from './designShapes';
 import { capPoints } from './enemySkins';
 import { longsword } from './knightSkins';
-import { at, ellipseIn, shapeIn, type HumanoidLook, type LimbLook } from './skinKit';
+import type { BodyPose } from './bodyPoses';
+import { at, ellipseIn, shapeIn, type Frame, type HumanoidLook, type LimbLook } from './skinKit';
 
 /**
  * The player's soldiers (scenes/BattleAllies.ts), in the bowman's blue and silver so they read as his side: the squire
- * (blue tunic, leather cap, short sword), the knight (bright plate, blue tabard, plumed helm, longsword) and the medic
+ * (blue tunic, leather cap, short sword), the knight (the footman idea in blue: closed helm, tabard, kite shield) and the medic
  * (white robe with a red cross, a satchel, a wooden staff).
  */
 
@@ -23,6 +24,7 @@ const STEEL = 0xc9d0da;
 const STEEL_DARK = 0x8a93a0;
 const STEEL_EDGE = 0xeef2f6;
 const GOLD = 0xd8b54a;
+const BLUE_DARK = 0x21416c;
 
 /** A plain face: an eye, a nose. */
 const face = (g: Graphics, head: Vec2, frame: Parameters<typeof at>[1]): void => {
@@ -68,38 +70,64 @@ export const squireLook = (): HumanoidLook => ({
   club: shortSword,
 });
 
-/** Knight: bright plate, a blue tabard with a gold cross, a plumed helm with an open face; a longsword. */
+const MAIL = 0x8d96a0;
+const MAIL_DARK = 0x666e78;
+const CREAM = 0xf1ead0;
+
+/** A kite shield held in front of the body on the far fist: steel rim, blue face, a cream cross. */
+const kiteShield = (g: Graphics, pose: BodyPose, frame: Frame): void => {
+  const c = at(pose.rearHand, frame, 2, 4);
+  const kite = (grow: number): Array<[number, number]> => [[16 + grow, -11 - grow], [16 + grow, 11 + grow], [-2, 11 + grow], [-22 - grow * 1.5, 0], [-2, -11 - grow]];
+  shapeIn(g, c, frame, kite(2), STEEL_DARK);
+  shapeIn(g, c, frame, kite(0), BLUE);
+  shapeIn(g, c, frame, [[15, 1], [15, 10], [-2, 10], [-12, 4]], 0x3d72b8, 0.7);
+  limb(g, at(c, frame, 12, 0), at(c, frame, -14, 0), 3, 3, CREAM);
+  limb(g, at(c, frame, 5, -8), at(c, frame, 5, 8), 3, 3, CREAM);
+};
+
+/**
+ * Knight (after the design lab's footman idea): a closed helm with a visor slit and a blue plume streaming back, a
+ * breastplate over a blue tabard, mail on the limbs, a kite shield carried in front; the longsword in the far hand,
+ * behind him (`armsSwapped`: the swinging arm is drawn behind the body, the shield arm in front).
+ */
 export const allyKnightLook = (timeMs: number): HumanoidLook => ({
-  arm: limbs(STEEL, STEEL_DARK, [8.5, 7], [7, 6.5]),
-  armFar: limbs(STEEL_DARK, STEEL_DARK, [8.5, 7], [7, 6.5]),
-  leg: limbs(STEEL, STEEL_DARK, [11, 9], [9, 8]),
-  legFar: limbs(STEEL_DARK, 0x6f7784, [11, 9], [9, 8]),
-  hand: STEEL_DARK, handFar: 0x6f7784, handRadius: 4.2,
-  foot: { color: STEEL_DARK, colorFar: 0x6f7784, length: 16, height: 7.5 },
+  // The sword arm (the pose's near arm) is behind the body, so it is the darker one.
+  arm: limbs(MAIL_DARK, MAIL_DARK, [8, 7], [7, 6]),
+  armFar: limbs(MAIL, MAIL, [8, 7], [7, 6]),
+  leg: limbs(MAIL, MAIL, [10, 8], [8, 7]),
+  legFar: limbs(MAIL_DARK, MAIL_DARK, [10, 8], [8, 7]),
+  hand: MAIL_DARK, handFar: STEEL_DARK, handRadius: 4,
+  armsSwapped: true,
+  foot: { color: 0x3a3433, colorFar: 0x262120, length: 16, height: 8 },
   torso: (g, pose, frame) => {
-    shapeIn(g, pose.hip, frame, [[38, -10], [39, 9], [20, 12], [-7, 10], [-7, -10]], STEEL);
-    // The tabard over the plate, down to the thighs, with a gold cross.
-    shapeIn(g, pose.hip, frame, [[34, -8], [34, 9], [-16, 10], [-16, -8]], BLUE);
-    limb(g, at(pose.hip, frame, 28, 1), at(pose.hip, frame, 8, 1), 2.6, 2.6, GOLD);
-    limb(g, at(pose.hip, frame, 21, -5), at(pose.hip, frame, 21, 7), 2.6, 2.6, GOLD);
-    limb(g, at(pose.hip, frame, 0, -10), at(pose.hip, frame, 0, 11), 3.4, 3.4, LEATHER);
+    // The tabard from the shoulders to the thighs, the breastplate over it, a belt.
+    shapeIn(g, pose.hip, frame, [[38, -11], [38, 11], [-14, 12], [-14, -12]], BLUE);
+    shapeIn(g, pose.hip, frame, [[-4, -11], [-4, 11], [-14, 12], [-14, -12]], BLUE_DARK);
+    ellipseIn(g, at(pose.hip, frame, 24, 1), frame, 12, 13, STEEL);
+    ellipseIn(g, at(pose.hip, frame, 28, 5), frame, 4, 6, STEEL_EDGE, 0.8);
+    limb(g, at(pose.hip, frame, -1, -11), at(pose.hip, frame, -1, 12), 4, 4, LEATHER);
   },
   overLegs: (g, pose, frame) => {
-    const centre = at(pose.hip, frame, 33, 0);
-    ellipseIn(g, centre, frame, 8, 5.8, STEEL);
-    ellipseIn(g, at(centre, frame, 2, 2), frame, 4.8, 2.6, STEEL_EDGE, 0.6);
+    // A round knee guard and the shoulder plate.
+    g.circle(pose.frontKnee.x, pose.frontKnee.y, 5).fill({ color: STEEL });
+    ellipseIn(g, at(pose.hip, frame, 34, 1), frame, 9, 7, STEEL);
   },
+  // The shield over everything, on the front fist.
+  front: kiteShield,
   head: (g, pose, frame) => {
     const head = pose.head;
-    limb(g, pose.shoulder, pose.neckTop, 8, 7, STEEL_DARK);
-    const sway = Math.sin(timeMs / 160) * 1.5;
-    shapeIn(g, head, frame, [[9, -4], [16, -6], [18 + sway, -14], [12 + sway, -20], [7, -14], [6, -8]], BLUE);
-    // An open-faced helm: the face shows between the cheek guards.
-    shapeIn(g, head, frame, [[11, -8], [12, 6], [4, 10], [-10, 11], [-11, -9], [2, -12]], STEEL);
-    ellipseIn(g, at(head, frame, -0.5, 5), frame, 4.6, 6.4, SKIN);
-    limb(g, at(head, frame, 8, -6), at(head, frame, 8, 9), 2, 2, STEEL_EDGE, 0.8);
-    limb(g, at(head, frame, 8, 5), at(head, frame, -6, 5.5), 2.2, 2.2, STEEL_DARK);
-    g.circle(...xy(at(head, frame, 1.5, 6.5)), 1.4).fill({ color: 0x2c2420 });
+    // The plume streaming back from the crest.
+    for (let i = 0; i < 4; i++) {
+      const wave = Math.sin(timeMs / 140 - i * 0.9) * (1 + i * 0.6);
+      ellipseIn(g, at(head, frame, 11 - i * 1.5 + wave, -2 - i * 5), frame, 5 - i * 0.6, 3.4 - i * 0.4, BLUE);
+    }
+    limb(g, pose.shoulder, pose.neckTop, 9, 9, STEEL_DARK);
+    g.circle(head.x, head.y, 11).fill({ color: STEEL });
+    // The visor over the face, a slit across it, a rivet at the temple.
+    shapeIn(g, head, frame, [[4, 3], [3, 12], [-8, 12], [-10, 4]], STEEL_DARK);
+    limb(g, at(head, frame, 1, 4), at(head, frame, 1, 11), 2.5, 2.5, 0x1d2329);
+    g.circle(...xy(at(head, frame, -2, -5)), 1.2).fill({ color: STEEL_DARK });
+    ellipseIn(g, at(head, frame, 5, -3), frame, 3, 4, STEEL_EDGE, 0.6);
   },
   club: longsword,
 });
