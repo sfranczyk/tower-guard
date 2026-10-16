@@ -329,7 +329,7 @@ export class ArrowMagic {
   }
 
   /**
-   * A thrown enemy hits the ground: a kamikaze the fall would kill goes off, a frozen one shatters, the rest take the fall's damage. A
+   * A thrown enemy hits the ground: a frozen one shatters, a kamikaze the fall would kill goes off, the rest take the fall's damage. A
    * bowman takes the fall too (frozen, his ice breaks first).
    */
   private landed(enemy: Walker, impactSpeed: number, damageScale: number): void {
@@ -352,11 +352,12 @@ export class ArrowMagic {
       return;
     }
     const damage = fallDamage(impactSpeed) * damageScale;
-    if (enemyArchetype(enemy.kind).detonates && damage * enemy.buff.damageFactor >= enemy.vitals.health) {
-      // A landing hard enough to kill a kamikaze sets its bomb off; a softer one only hurts it.
-      this.hooks.detonate(enemy);
-    } else if (enemy.afflictions.isFrozen) {
+    if (enemy.afflictions.isFrozen) {
+      // Frozen, it shatters (a kamikaze's bomb in the ice doesn't go off).
       this.hooks.shatter(enemy, enemy.x);
+    } else if (enemyArchetype(enemy.kind).detonates && damage * enemy.buff.damageFactor >= enemy.vitals.health) {
+      // A landing hard enough to kill a kamikaze sets its bomb off; a softer one only knocks it down.
+      this.hooks.detonate(enemy);
     } else {
       if (damage > 0) {
         enemy.takeDamage(damage, { cause: 'fall', fromX: enemy.x });

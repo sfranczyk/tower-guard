@@ -10,6 +10,7 @@ import type { SoundId } from '../audio/SoundManager';
 import type Arrow from '../objects/Arrow';
 import type { EnemyEdge } from '../data/difficulty';
 import { enemyDamage, explosionDamage, rollDamage } from '../data/enemies';
+import { enemyArchetype } from '../data/enemyKinds';
 import { burnDamage } from './burning';
 import type Bowman from '../objects/bowman/Bowman';
 import type { BowmanHit } from './bowmanDeath';
@@ -24,11 +25,19 @@ import { ArrowMagic } from './ArrowMagic';
 import { ArrowHits } from './ArrowHits';
 import { BOWMAN_CHEST, TOWER_HALF_WIDTH, type Foe } from './combatGeometry';
 import { EnemyAI } from './EnemyAI';
+import { BombFuses, bombGoesOff } from './kamikazeBomb';
 
 export type { Foe } from './combatGeometry';
 
 /** A kamikaze's blast reaches the bowman and the keep within this many explosion radii. */
 const KAMIKAZE_REACH = 1.2;
+
+/** A kamikaze's bomb going off: where, whose (its damage), how big (a shaman's spell). */
+interface Bomb {
+  readonly point: Vec2;
+  readonly kind: EnemyType;
+  readonly power: number;
+}
 
 export interface CombatWorld {
   /** One bowman per player (co-op: two); enemies go for the nearest one out in the open. */
@@ -71,6 +80,8 @@ export class CombatSystem {
   private readonly magic: ArrowMagic;
   private readonly ai: EnemyAI;
   private readonly hits: ArrowHits;
+  /** Kamikazes killed by a blast: their bombs go off a moment later. */
+  private readonly fuses = new BombFuses<Bomb>();
 
   public constructor(
     private readonly world: CombatWorld,
@@ -88,6 +99,8 @@ export class CombatSystem {
     this.ai = new EnemyAI(world, events, { detonate: (kamikaze) => this.detonate(kamikaze) });
     this.hits = new ArrowHits(world, events, magic, {
       explode: (point, activeEnemies, directHit, power, dragon) => this.explode(point, activeEnemies, directHit, power, dragon),
+      detonate: (kamikaze) => this.detonate(kamikaze),
+      lightFuse: (kamikaze) => this.lightFuse(kamikaze),
       shatter: (enemy, fromX) => this.shatter(enemy, fromX),
       breakIce: (bowman) => this.breakIce(bowman),
     });
@@ -100,6 +113,7 @@ export class CombatSystem {
 
   /** With `enemiesActive` false (debug: enemies hidden) enemies freeze and arrows pass through them. */
   public update(deltaMs: number, enemiesActive = true): void {
+    this.fuses.tick(deltaMs).forEach((bomb) => this.blowUp(bomb));
     const activeEnemies = enemiesActive ? this.world.enemies.filter((enemy) => enemy.isAlive()) : [];
     activeEnemies.forEach((enemy) => this.ai.update(enemy, deltaMs));
     // Burning: steady damage until the burn runs out (each bowman counts it down in his animation); a dragon's fire, so the difficulty's.
@@ -150,8 +164,15 @@ export class CombatSystem {
     const { bowmen, enemies, effects } = this.world;
     effects.lightningStrike(point);
     // Ground strikes don't reach flying dragons.
+    // A kamikaze's bomb may go off (KAMIKAZE_BOMB.lightningChance); else it dies silently like the rest.
     struckBy(point.x, LIGHTNING_RADIUS, enemies.filter((enemy) => enemy.isAlive() && !enemy.isFlying))
-      .forEach((enemy) => enemy.takeDamage(LIGHTNING_DAMAGE, { cause: 'lightning', fromX: point.x }));
+      .forEach((enemy) => {
+        if (!(enemy instanceof DragonEnemy) && enemyArchetype(enemy.kind).detonates && bombGoesOff('lightning', enemy.afflictions.isFrozen)) {
+          this.detonate(enemy);
+        } else {
+          enemy.takeDamage(LIGHTNING_DAMAGE, { cause: 'lightning', fromX: point.x });
+        }
+      });
     struckBy(point.x, LIGHTNING_RADIUS, bowmen.filter((bowman) => !bowman.isInTower && !bowman.isDead))
       .forEach((bowman) => this.events.bowmanDamaged(bowman, LIGHTNING_DAMAGE, { cause: 'lightning', fromX: point.x }));
   }
@@ -165,33 +186,46 @@ export class CombatSystem {
     enemy.takeDamage(Number.MAX_SAFE_INTEGER, { cause: 'shatter', fromX, point });
   }
 
-  /**
-   * A kamikaze blows up: it bursts apart, the blast hurts the enemies around it like an explosive arrow,
-   * and the bowmen (unless in the keep) and the keep take its damage if they're close; bowmen are thrown back.
-   */
-  private detonate(kamikaze: Enemy): void {
-    const { bowmen, playerTower, effects } = this.world;
+  /** A kamikaze's bomb where it is now (a shaman's spell makes it bigger: further reach, more damage). */
+  private static bombOf(kamikaze: Enemy): Bomb {
     const body = kamikaze.getPhysicsBounds();
-    const point = { x: body.x + body.width / 2, y: body.y + body.height / 2 };
-    // A shaman's spell makes the bomb bigger: further reach, more damage.
-    const power = kamikaze.buff.blastPower;
-    kamikaze.takeDamage(Number.MAX_SAFE_INTEGER, { cause: 'blast', fromX: point.x, point });
+    return { point: { x: body.x + body.width / 2, y: body.y + body.height / 2 }, kind: kamikaze.kind, power: kamikaze.buff.blastPower };
+  }
+
+  /** A kamikaze sets its bomb off now (reaching its target, a fatal fall, fire or lightning): it bursts apart in the blast. */
+  private detonate(kamikaze: Enemy): void {
+    const bomb = CombatSystem.bombOf(kamikaze);
+    kamikaze.takeDamage(Number.MAX_SAFE_INTEGER, { cause: 'blast', fromX: bomb.point.x, point: bomb.point });
+    this.blowUp(bomb, kamikaze);
+  }
+
+  /** A kamikaze just killed by a blast (not frozen): its bomb goes off where it died, KAMIKAZE_BOMB.chainDelayMs later. */
+  private lightFuse(kamikaze: Enemy): void {
+    this.fuses.light(CombatSystem.bombOf(kamikaze));
+  }
+
+  /**
+   * A kamikaze's bomb goes off: the blast hurts the enemies around it like an explosive arrow (a kamikaze it kills
+   * lights its own fuse), and the bowmen (unless in the keep) and the keep take its damage if they're close; bowmen are thrown back.
+   */
+  private blowUp({ point, kind, power }: Bomb, self?: Enemy): void {
+    const { bowmen, playerTower, effects } = this.world;
     // The bowmen take the kamikaze's own blast below, not the arrows' splash.
-    this.explode(point, this.world.enemies.filter((enemy) => enemy.isAlive()), kamikaze, power, false, false);
+    this.explode(point, this.world.enemies.filter((enemy) => enemy.isAlive()), self, power, false, false);
     const reach = EXPLOSION_RADIUS * KAMIKAZE_REACH * power;
     bowmen.filter((bowman) => !bowman.isInTower && !bowman.isDead).forEach((bowman) => {
       const bowmanDistance = Math.hypot(bowman.x - point.x, bowman.y - BOWMAN_CHEST - point.y);
       if (bowmanDistance > reach) {
         return;
       }
-      this.events.bowmanDamaged(bowman, rollDamage(enemyDamage(kamikaze.kind, 'melee', 'bowman')) * power * this.world.enemyEdge.damage, { cause: 'blast', fromX: point.x });
+      this.events.bowmanDamaged(bowman, rollDamage(enemyDamage(kind, 'melee', 'bowman')) * power * this.world.enemyEdge.damage, { cause: 'blast', fromX: point.x });
       effects.bloodBurst({ x: bowman.x, y: bowman.y - BOWMAN_CHEST });
       // Thrown away from the blast, harder the closer he stood.
       const { minStrength } = BOWMAN_KNOCKBACK;
       bowman.knockBack(point.x, minStrength + (1 - minStrength) * (1 - bowmanDistance / reach));
     });
     if (point.x - (playerTower.x + TOWER_HALF_WIDTH) <= reach) {
-      playerTower.takeDamage(rollDamage(enemyDamage(kamikaze.kind, 'melee', 'keep')) * power * this.world.enemyEdge.damage, { x: playerTower.x + TOWER_HALF_WIDTH - 4, y: point.y });
+      playerTower.takeDamage(rollDamage(enemyDamage(kind, 'melee', 'keep')) * power * this.world.enemyEdge.damage, { x: playerTower.x + TOWER_HALF_WIDTH - 4, y: point.y });
     }
   }
 
@@ -227,6 +261,9 @@ export class CombatSystem {
         // Survivors are knocked down away from the blast and get back up; the rest die thrown back.
         const blastDistance = Math.hypot(dx, dy) / radius;
         candidate.takeDamage(explosionDamage(blastDistance) * power, { cause: 'explosion', fromX: point.x, point, blastDistance });
+        if (!(candidate instanceof DragonEnemy) && !candidate.isAlive() && enemyArchetype(candidate.kind).detonates) {
+          this.lightFuse(candidate);
+        }
       });
     if (!hurtsBowmen) {
       return;

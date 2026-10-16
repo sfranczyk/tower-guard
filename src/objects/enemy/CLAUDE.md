@@ -42,8 +42,10 @@ open the one you need:
 - **Kamikaze**: runs in unarmed with a bomb (`pose.bomb`): the human sapper takes a headshot or two body hits, the goblin bomber
   (`goblinKamikaze`: smaller, quicker, weaker blast) dies to one arrow; the blast's damage is the detonating kind's. Reaching the bowman (jumping doesn't save
   him) or the keep, `CombatSystem.detonate` (cause `'blast'`) runs `explode` and hurts the bowman (not in the keep) and
-  keep within `KAMIKAZE_REACH` × radius, knocking him down (`Bowman.knockBack`, `BOWMAN_KNOCKBACK`). Killed by a direct
-  explosive hit its bomb goes off with `KAMIKAZE_BLAST_POWER` (2); its pieces fly `KAMIKAZE_GIB_FORCE` times harder.
+  keep within `KAMIKAZE_REACH` × radius, knocking him down (`Bowman.knockBack`, `BOWMAN_KNOCKBACK`); its pieces fly
+  `KAMIKAZE_GIB_FORCE` times harder. Other deaths are silent except a blast (`BombFuses`: goes off `KAMIKAZE_BOMB.chainDelayMs`
+  later, so groups chain) and a fatal fall; a fire arrow (`fireChance`) or lightning (`lightningChance`) may set it off
+  (`systems/kamikazeBomb.ts`). It doesn't burn (`enemyTraits`: burnFactor 0); frozen, it never goes off.
 - **Zombie**: shuffles (march dragged) with arms out (`pose.zombie`, `ZOMBIE_REST`), attacks with `'grab'` (hit on the
   yank), pale green with green blood (`BodyColors`: `HUMAN_BODY` / `ZOMBIE_BODY`, `enemy.bodyColors`).
 - **Mounted knight** (`horseKnight`, cavalry, `rides`): black knight on a warhorse (1.15×; `rendering/designs/warhorse.ts`)

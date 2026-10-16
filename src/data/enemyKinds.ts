@@ -314,7 +314,12 @@ export const ENEMY_TYPES = Object.keys(ENEMY_KINDS) as readonly EnemyType[];
 export const enemyArchetype = (type: EnemyType): ArchetypeInfo => ARCHETYPES[ENEMY_KINDS[type].archetype];
 
 /** Its race's traits with its own overrides. */
-export const enemyTraits = (type: EnemyType): EnemyTraits => ({ ...RACES[ENEMY_KINDS[type].race].traits, ...ENEMY_KINDS[type].traits });
+/** Race traits with the variant's overrides; a bomb carrier doesn't burn (fire sets the bomb off or does nothing, systems/kamikazeBomb.ts). */
+export const enemyTraits = (type: EnemyType): EnemyTraits => ({
+  ...RACES[ENEMY_KINDS[type].race].traits,
+  ...ENEMY_KINDS[type].traits,
+  ...(enemyArchetype(type).detonates ? { burnFactor: 0 } : {}),
+});
 
 /** Its group (by its race). */
 export const enemyGroup = (type: EnemyType): EnemyGroup => RACES[ENEMY_KINDS[type].race].group;

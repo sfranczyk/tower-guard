@@ -7,7 +7,6 @@ import {
   FRIENDLY_FIRE_GRACE_MS,
   FROST_ARROW_DAMAGE,
   HORSE_LEG,
-  KAMIKAZE_BLAST_POWER,
   PIN_DAMAGE,
   PIN_DURATION_MS,
   SHOW_HITBOX_DEBUG,
@@ -17,6 +16,7 @@ import type { SoundId } from '../audio/SoundManager';
 import type { EnemyEdge } from '../data/difficulty';
 import { enemyDamage, explosionDamage, legHitLames, pinDurationMs, rollArrowDamage, rollDamage, type DamageTarget, type MountPart } from '../data/enemies';
 import { enemyArchetype, enemyArmor } from '../data/enemyKinds';
+import { bombGoesOff } from './kamikazeBomb';
 import type Arrow from '../objects/Arrow';
 import type Bowman from '../objects/bowman/Bowman';
 import DragonEnemy from '../objects/dragon/DragonEnemy';
@@ -82,6 +82,10 @@ export interface ArrowHitsActions {
   explode(point: Vec2, activeEnemies: readonly Foe[], directHit?: Foe | Bowman, power?: number, dragon?: boolean): void;
   shatter(enemy: Enemy, fromX: number): void;
   breakIce(bowman: Bowman): void;
+  /** A kamikaze's bomb goes off now (CombatSystem.detonate). */
+  detonate(kamikaze: Enemy): void;
+  /** A kamikaze just killed by a blast: its bomb goes off a moment later. */
+  lightFuse(kamikaze: Enemy): void;
 }
 
 /**
@@ -318,6 +322,16 @@ export class ArrowHits {
       return;
     }
     const frozen = !(enemy instanceof DragonEnemy) && enemy.afflictions.isFrozen;
+    const bomber = !(enemy instanceof DragonEnemy) && enemyArchetype(enemy.kind).detonates ? enemy : undefined;
+    if (arrow.type === 'fire' && bomber && bombGoesOff('fire', frozen)) {
+      // A fire arrow may set a kamikaze's bomb off (KAMIKAZE_BOMB.fireChance); if not, it's just the hit (it doesn't burn).
+      effects.fireBurst(impactPoint);
+      this.actions.detonate(bomber);
+      hitEnemies.add(enemy);
+      arrow.registerImpact();
+      arrow.deactivate();
+      return;
+    }
     // Plate armour turns most of a body hit: sparks fly instead of blood (headshots, piercing arrows and blasts go through).
     // On horseback only the rider wears it.
     const plated = part === undefined || part === 'rider';
@@ -381,13 +395,11 @@ export class ArrowHits {
       this.actions.explode({ x: body.x + body.width / 2, y: body.y + body.height / 2 }, activeEnemies, enemy, FIRE_DRAGON_BLAST_POWER, true);
       this.world.arrows.filter((stuck) => stuck.stuckTo === enemy).forEach((stuck) => stuck.deactivate());
       arrow.deactivate();
-    } else if (explosive && enemyArchetype(enemy.kind).detonates && !enemy.isAlive()) {
-      // A kamikaze killed by a direct explosive hit sets its bomb off: a twice-as-big blast where it stood.
-      const body = enemy.getPhysicsBounds();
-      const power = KAMIKAZE_BLAST_POWER * (enemy instanceof DragonEnemy ? 1 : enemy.buff.blastPower);
-      this.actions.explode({ x: body.x + body.width / 2, y: body.y + body.height / 2 }, activeEnemies, enemy, power);
-      arrow.deactivate();
     } else if (explosive) {
+      // A kamikaze it kills (not frozen: that one shatters) lights its bomb's fuse.
+      if (bomber && !frozen && !bomber.isAlive()) {
+        this.actions.lightFuse(bomber);
+      }
       this.actions.explode(impactPoint, activeEnemies, enemy);
       arrow.deactivate();
     } else if (arrow.type === 'piercing') {

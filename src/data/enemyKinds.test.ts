@@ -79,6 +79,8 @@ describe('ENEMY_KINDS', () => {
     expect(enemyTraits('zombie').pinMs).toBe(PIN_DURATION_ZOMBIE_MS);
     expect(enemyTraits('dragon').burnFactor).toBe(1);
     expect(enemyTraits('fireDragon').burnFactor).toBe(0);
+    expect(enemyTraits('kamikaze').burnFactor).toBe(0);
+    expect(enemyTraits('goblinKamikaze').burnFactor).toBe(0);
   });
 
   it('drives the arrows\' effects through the traits', () => {

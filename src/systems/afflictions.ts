@@ -36,9 +36,9 @@ export const tickAfflictions = (state: Readonly<Afflictions>, deltaMs: number): 
 /** How long a fire arrow (or the fire spreading) sets `type` alight (its traits: the undead burn longer, the fire dragon not at all). */
 export const burnDurationMs = (type: EnemyType): number => ENEMY_BURN_MS * enemyTraits(type).burnFactor;
 
-/** Set alight (or relit to the full time, `duration`): fire thaws ice and drives the chill out. */
+/** Set alight (or relit to the full time, `duration`): fire thaws ice and drives the chill out (also from one that doesn't burn). */
 export const ignite = (state: Readonly<Afflictions>, type: EnemyType, duration = burnDurationMs(type)): Afflictions => {
-  return duration > 0 ? { burnMs: Math.max(state.burnMs, duration), chillMs: 0, chillHits: 0, frozenMs: 0 } : { ...state };
+  return { burnMs: duration > 0 ? Math.max(state.burnMs, duration) : state.burnMs, chillMs: 0, chillHits: 0, frozenMs: 0 };
 };
 
 /** How long a freeze holds `type` (its traits: ogres briefly); 0 for dragons (only chilled). */

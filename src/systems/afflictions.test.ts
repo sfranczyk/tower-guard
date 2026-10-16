@@ -38,6 +38,8 @@ describe('afflictions', () => {
     expect(burning.burnMs).toBeGreaterThan(0);
     expect(chill(burning, 'raider', false).state.burnMs).toBe(0);
     expect(ignite(NO_AFFLICTIONS, 'fireDragon').burnMs).toBe(0);
+    // A kamikaze doesn't burn, but fire still thaws its ice.
+    expect(ignite(chill(NO_AFFLICTIONS, 'kamikaze', true).state, 'kamikaze')).toEqual(NO_AFFLICTIONS);
     expect(ignite(NO_AFFLICTIONS, 'zombie').burnMs).toBeGreaterThan(ignite(NO_AFFLICTIONS, 'raider').burnMs);
   });
 });

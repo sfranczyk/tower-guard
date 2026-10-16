@@ -3,7 +3,7 @@
 ## Combat layout
 `CombatSystem.update` runs a frame on the host: `EnemyAI` (every living enemy: walk, swing, shoot, detonate, dragons),
 `ArrowMagic` (fire, frost, vortex), `ArrowHits` (each arrow against enemies, keeps and, with friendly fire, bowmen);
-CombatSystem keeps what reaches beyond one target (explode, detonate, shatter, lightning, burns). Shared shapes in
+CombatSystem keeps what reaches beyond one target (explode, detonate, shatter, lightning, burns); what sets a kamikaze's bomb off and the chain fuses: `kamikazeBomb.ts`. Shared shapes in
 `combatGeometry.ts` (`Foe`, `bowmanBox`, `foeHitBoxes`). Emits `sound(id, at)` events (audio/CLAUDE.md). It forgets what
 stuck or gone arrows hit. Targeting: nearest bowman out in the open, else the keep (`targeting.ts`).
 
