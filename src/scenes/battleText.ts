@@ -19,8 +19,11 @@ export const PROJECTILE_LABELS: Record<ProjectileType, string> = {
 /** Weapon slot keys: Digit1 picks the first slot of the quiver, and so on. */
 export const slotOfKey = (code: string): number => (/^Digit[1-9]$/.test(code) ? Number(code.slice(5)) - 1 : -1);
 
-/** Status text for the wind: arrows for its direction, one to three by strength. */
+/** Status text for the wind: arrows for its direction, one to three by strength (or no wind). */
 export const windLabel = (wind: number, strongest: number): string => {
+  if (wind === 0) {
+    return 'no wind';
+  }
   const strength = Math.max(1, Math.min(3, Math.ceil((Math.abs(wind) / Math.max(1, strongest)) * 3)));
   const arrows = (wind < 0 ? '←' : '→').repeat(strength);
   return `wind ${arrows} ${['light', 'moderate', 'strong'][strength - 1]}`;

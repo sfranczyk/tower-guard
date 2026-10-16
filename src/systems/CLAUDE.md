@@ -78,5 +78,6 @@ hit the bowman (not dead), or the keep while he hides, never enemies. `ENEMY_ARC
 touching the ground.
 
 ## Wind (`windShift.ts`, pure)
-`rollWind` per level; `WindShifts` (tunable `WIND_SHIFT`: every 45 s a 50% chance) gives a clearly different wind.
+Steps −3..3 (`WIND_STEPS`, calm between, = the status line's arrows); `rollWind` per level; `WindShifts` every 45 s:
+±1 step 50%, ±2 10%, wild (3+ away) 5%, else none (tunable `WIND_SHIFT`).
 GameScene reads it live (`wind()` in BattleArrows / CombatWorld; an arrow keeps the wind it was loosed in), co-op event `wind`.

@@ -20,7 +20,8 @@ describe('windLabel', () => {
     expect(windLabel(30, 30)).toBe('wind →→→ strong');
   });
 
-  it('calls a calm map light', () => {
-    expect(windLabel(0, 0)).toBe('wind → light');
+  it('says when there is no wind (a calm map, or a windy one calmed down)', () => {
+    expect(windLabel(0, 0)).toBe('no wind');
+    expect(windLabel(0, 300)).toBe('no wind');
   });
 });
