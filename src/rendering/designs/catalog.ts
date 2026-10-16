@@ -198,7 +198,7 @@ const ENEMIES: DesignEntry[] = [
     id: 'raider',
     name: 'Raider',
     tagline: 'The basic enemy',
-    description: 'The raider from the ideas, now on its own skeleton and moves: tunic, belt, bandana with flapping tails, a stubbled face. The club is now a real one: a gripped handle, a head that thickens towards the end and an iron band, held in the fist exactly where the game holds it.',
+    description: 'The raider on its own skeleton and moves: tunic, belt, bandana with flapping tails, a stubbled face. The club is now a real one: a gripped handle, a head that thickens towards the end and an iron band, held in the fist exactly where the game holds it.',
     views: [
       walking(raiderLook, FIGHTER_SPEED, 'overhead'),
       swinging('Club swing', raiderLook, 'overhead'),
@@ -513,5 +513,5 @@ const IDEAS: DesignEntry[] = ENEMY_DESIGNS.map((design) => ({
 export const DESIGN_SECTIONS: readonly DesignSection[] = [
   { id: 'enemies', tab: 'Enemies', intro: 'Every enemy as it looks in the game now, over its own moves. Click one for all its animations and the old stickman.', entries: ENEMIES },
   { id: 'player', tab: 'Player', intro: 'The player looks: the ranger (player 1) and the keep warden (player 2 in co-op), next to the old armored archer.', entries: PLAYER },
-  { id: 'ideas', tab: 'Ideas', intro: 'Proposals for new enemy looks, each a step further from the stickman (not tied to an enemy yet).', entries: IDEAS },
+  { id: 'ideas', tab: 'Ideas', intro: 'Proposals for new enemy looks, from the most human to the least (not tied to an enemy yet).', entries: IDEAS },
 ];

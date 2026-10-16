@@ -32,12 +32,16 @@ export interface WalkPose {
 
 /** Gaits of the walking designs (their limb proportions). */
 export const DESIGN_GAITS = {
-  raider: { thigh: 30, shin: 30, hipHeight: 57, stride: 13, lift: 9, bob: 2 },
-  goblin: { thigh: 20, shin: 20, hipHeight: 38, stride: 10, lift: 8, bob: 2.5 },
   footman: { thigh: 30, shin: 30, hipHeight: 57, stride: 12, lift: 7, bob: 1.5 },
   orc: { thigh: 24, shin: 24, hipHeight: 45, stride: 11, lift: 6, bob: 3.5 },
   cultist: { thigh: 28, shin: 28, hipHeight: 54, stride: 9, lift: 4, bob: 1 },
   golem: { thigh: 28, shin: 28, hipHeight: 53, stride: 12, lift: 5, bob: 3 },
+  skeleton: { thigh: 29, shin: 29, hipHeight: 55, stride: 12, lift: 8, bob: 2 },
+  mummy: { thigh: 28, shin: 28, hipHeight: 53, stride: 8, lift: 3, bob: 1.5 },
+  dwarf: { thigh: 17, shin: 17, hipHeight: 31, stride: 9, lift: 6, bob: 2 },
+  lizardman: { thigh: 28, shin: 28, hipHeight: 50, stride: 13, lift: 8, bob: 2 },
+  treant: { thigh: 27, shin: 27, hipHeight: 50, stride: 11, lift: 5, bob: 3 },
+  myconid: { thigh: 13, shin: 13, hipHeight: 23, stride: 7, lift: 6, bob: 2 },
 } as const satisfies Record<string, Gait>;
 
 const smooth = (u: number): number => u * u * (3 - 2 * u);

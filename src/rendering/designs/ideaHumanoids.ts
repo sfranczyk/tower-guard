@@ -9,100 +9,7 @@ import { add, boot, ellipsePoints, glow, hash, limb, mix, rockAlong, shape } fro
 
 const xy = (point: { x: number; y: number }): [number, number] => [point.x, point.y];
 
-/** Step 1: still the stickman's proportions, now with flesh, clothes and a face. */
-export const drawRaider = (g: Graphics, p: number, timeMs: number): void => {
-  const SKIN = 0xd9a074, SKIN_DARK = 0xa8754f, TUNIC = 0x7b5233, LEATHER = 0x3b2a20, WOOD = 0x8a5a32;
-  const TROUSERS = 0x4f5d6e, TROUSERS_DARK = 0x3a4553, BANDANA = 0xb8383b;
-  const w = walkPose(p, DESIGN_GAITS.raider);
-  const { hip } = w;
-  const shoulder = add(hip, 3, -35);
-  const head = add(shoulder, 2, -16);
-  g.clear();
-
-  const rear = armPose(shoulder, w.swing * 0.45, 0.35, 17, 16);
-  limb(g, shoulder, rear.elbow, 7, 6, SKIN_DARK);
-  limb(g, rear.elbow, rear.hand, 6, 5, SKIN_DARK);
-  g.circle(rear.hand.x, rear.hand.y, 3.6).fill({ color: SKIN_DARK });
-  limb(g, hip, w.rearKnee, 10, 8, TROUSERS_DARK);
-  limb(g, w.rearKnee, w.rearFoot, 8, 6, TROUSERS_DARK);
-  boot(g, w.rearFoot, 15, 7, 0x2a1e17);
-
-  shape(g, [add(shoulder, -8, -3), add(shoulder, 9, -3), add(hip, 12, 11), add(hip, -11, 11)], TUNIC);
-  limb(g, add(hip, -10, 0), add(hip, 11, 0), 4, 4, LEATHER);
-  limb(g, hip, w.frontKnee, 10, 8, TROUSERS);
-  limb(g, w.frontKnee, w.frontFoot, 8, 6, TROUSERS);
-  boot(g, w.frontFoot, 15, 7, LEATHER);
-
-  limb(g, add(shoulder, 1, -2), add(head, 0, 7), 6, 6, SKIN);
-  // Bandana tails flap behind the head.
-  const flap = Math.sin(timeMs / 120) * 2;
-  limb(g, add(head, -8, -3), add(head, -17, 1 + flap), 3, 2, BANDANA);
-  limb(g, add(head, -8, -2), add(head, -15, 5 - flap), 3, 2, BANDANA);
-  g.circle(head.x, head.y, 10).fill({ color: SKIN });
-  shape(g, [...ellipsePoints(head, 10.6, 10.6, 16).filter((point) => point.y <= head.y - 1.5)
-    .sort((a, b) => a.x - b.x)], BANDANA);
-  g.circle(head.x + 5, head.y, 1.6).fill({ color: 0x2c2420 });
-  shape(g, [add(head, 9, -1), add(head, 13, 3), add(head, 9, 4)], SKIN);
-  limb(g, add(head, 4, 6), add(head, 8, 6), 1.5, 1.5, 0x7a4a33);
-
-  const front = armPose(shoulder, -w.swing * 0.45 + 0.1, 0.5, 17, 16);
-  const forearm = -w.swing * 0.45 + 0.6;
-  limb(g, along(front.hand, forearm + 2.5, -4), along(front.hand, forearm + 2.5, 26), 4, 8, WOOD);
-  limb(g, shoulder, front.elbow, 7, 6, SKIN);
-  limb(g, front.elbow, front.hand, 6, 5, SKIN);
-  g.circle(front.hand.x, front.hand.y, 3.8).fill({ color: SKIN });
-};
-
-/** Step 2: hunched and short-legged, with a big head, long ears and a nose: proportions no stickman has. */
-export const drawGoblin = (g: Graphics, p: number, _timeMs: number): void => {
-  const SKIN = 0x86b04b, DARK = 0x5f8a36, BELLY = 0x9cc463, CLOTH = 0x7a5a3a, EAR = 0xc98a7a;
-  const w = walkPose(p, DESIGN_GAITS.goblin);
-  const { hip } = w;
-  const shoulder = add(hip, 9, -22);
-  const head = add(shoulder, 10, -9);
-  const flap = Math.sin(p * Math.PI * 4) * 1.5;
-  g.clear();
-
-  shape(g, [add(head, -4, -6), add(head, -24, -14 + flap), add(head, -6, 2)], DARK);
-  const rear = armPose(shoulder, w.swing * 0.5 + 0.2, 0.6, 14, 13);
-  limb(g, shoulder, rear.elbow, 5, 4, DARK);
-  limb(g, rear.elbow, rear.hand, 4, 3.5, DARK);
-  g.circle(rear.hand.x, rear.hand.y, 3).fill({ color: DARK });
-  limb(g, hip, w.rearKnee, 7, 6, DARK);
-  limb(g, w.rearKnee, w.rearFoot, 6, 5, DARK);
-  boot(g, w.rearFoot, 14, 6, DARK);
-
-  shape(g, [
-    add(hip, -8, 4), add(hip, -9, -10), add(shoulder, -7, -3), add(shoulder, 4, -4),
-    add(shoulder, 8, 4), add(hip, 11, -6), add(hip, 9, 5),
-  ], SKIN);
-  g.ellipse(...xy(add(mix(hip, shoulder, 0.4), 5, 0)), 5, 8).fill({ color: BELLY });
-  shape(g, [add(hip, -9, 0), add(hip, 10, 0), add(hip, 8, 13), add(hip, 3, 10), add(hip, -1, 14), add(hip, -5, 10), add(hip, -9, 13)], CLOTH);
-  limb(g, add(hip, -9, 0), add(hip, 10, 0), 2.5, 2.5, 0x4e3824);
-  limb(g, hip, w.frontKnee, 7, 6, SKIN);
-  limb(g, w.frontKnee, w.frontFoot, 6, 5, SKIN);
-  boot(g, w.frontFoot, 14, 6, SKIN);
-
-  g.circle(head.x, head.y, 12).fill({ color: SKIN });
-  shape(g, [add(head, -2, -7), add(head, -22, -17 + flap), add(head, -3, 3)], SKIN);
-  shape(g, [add(head, -4, -5), add(head, -17, -13 + flap), add(head, -5, 0)], EAR);
-  shape(g, [add(head, 9, -4), add(head, 20, 3), add(head, 9, 3)], SKIN);
-  g.circle(head.x + 5, head.y - 4, 3.2).fill({ color: 0xf2d54a });
-  g.ellipse(head.x + 6, head.y - 4, 0.9, 2.2).fill({ color: 0x1b1a12 });
-  limb(g, add(head, 1, -9), add(head, 9, -7), 2, 2, DARK);
-  limb(g, add(head, 3, 6), add(head, 11, 5), 2.2, 2.2, 0x3a2a1e);
-  shape(g, [add(head, 5, 5), add(head, 6.5, 8), add(head, 8, 5)], 0xf1ead0);
-
-  const front = armPose(shoulder, -w.swing * 0.5 + 0.3, 0.7, 14, 13);
-  const forearm = -w.swing * 0.5 + 1;
-  limb(g, front.hand, along(front.hand, forearm + 0.9, 15), 3.5, 1, 0xc9ced4);
-  limb(g, along(front.hand, forearm + 0.9 + Math.PI / 2, 3), along(front.hand, forearm + 0.9 - Math.PI / 2, 3), 2, 2, 0x5b4632);
-  limb(g, shoulder, front.elbow, 5, 4, SKIN);
-  limb(g, front.elbow, front.hand, 4, 3.5, SKIN);
-  g.circle(front.hand.x, front.hand.y, 3.2).fill({ color: SKIN });
-};
-
-/** Step 3: a soldier in plate: helmet, breastplate and shield hide the body almost entirely. */
+/** A soldier in plate: helmet, breastplate and shield hide the body almost entirely. */
 export const drawFootman = (g: Graphics, p: number, timeMs: number): void => {
   const STEEL = 0xb9c3cc, STEEL_DARK = 0x7e8995, MAIL = 0x8d96a0, MAIL_DARK = 0x666e78, TABARD = 0xa8343a, BOOT = 0x3a3433;
   const w = walkPose(p, DESIGN_GAITS.footman);
@@ -156,7 +63,7 @@ export const drawFootman = (g: Graphics, p: number, timeMs: number): void => {
   limb(g, add(c, -8, -5), add(c, 8, -5), 3, 3, 0xf1ead0);
 };
 
-/** Step 4: a hulk. Huge hunched torso, small head on the front, arms hanging to the knees. */
+/** A hulk. Huge hunched torso, small head on the front, arms hanging to the knees. */
 export const drawOrc = (g: Graphics, p: number, timeMs: number): void => {
   const SKIN = 0x6f8a5e, DARK = 0x4f6643, BELLY = 0x86a073, FUR = 0x6b4a2f, FUR_DARK = 0x4e3420, CLOTH = 0x5a3d2a;
   const w = walkPose(p, DESIGN_GAITS.orc);
@@ -207,7 +114,7 @@ export const drawOrc = (g: Graphics, p: number, timeMs: number): void => {
   g.circle(front.hand.x, front.hand.y, 8.5).fill({ color: SKIN });
 };
 
-/** Step 5: a robe with no legs to see, a hood with no face, only two glowing eyes and a staff. */
+/** A robe with no legs to see, a hood with no face, only two glowing eyes and a staff. */
 export const drawCultist = (g: Graphics, p: number, timeMs: number): void => {
   const ROBE = 0x3d2b52, ROBE_DARK = 0x2a1d3a, TRIM = 0xc9a227, HAND = 0xb7b4c9, GLOW = 0xc77dff, WOOD = 0x4a3524;
   const G = DESIGN_GROUND_Y;
@@ -252,7 +159,7 @@ export const drawCultist = (g: Graphics, p: number, timeMs: number): void => {
   g.circle(arm.hand.x + 1, arm.hand.y + 1, 3.5).fill({ color: HAND });
 };
 
-/** Step 6: loose rocks held together by a glowing core; the joints are gaps with light in them. */
+/** Loose rocks held together by a glowing core; the joints are gaps with light in them. */
 export const drawGolem = (g: Graphics, p: number, timeMs: number): void => {
   const STONE_LIGHT = 0xa39c8e, STONE = 0x857f73, STONE_DARK = 0x625d55, CRACK = 0x463f38, GLOW = 0xffa53a, MOSS = 0x6f8f45;
   const w = walkPose(p, DESIGN_GAITS.golem);

@@ -8,7 +8,7 @@ import { add, limb, shape } from './designShapes';
 /** Half step of the beetle's legs (its walking speed in the lab is measured against it). */
 export const BEETLE_STRIDE = 8;
 
-/** Step 7: a beetle the size of a man, six legs in a tripod gait (three on the ground at a time). */
+/** A beetle the size of a man, six legs in a tripod gait (three on the ground at a time). */
 export const drawBeetle = (g: Graphics, p: number, timeMs: number): void => {
   const SHELL = 0x2e6b5e, SHELL_LIGHT = 0x5fb39c, SHELL_DARK = 0x1f4a41, LEG = 0x1d2b28, LEG_FAR = 0x34463f;
   const HEAD = 0x1f3b35, EYE = 0xffb347;
@@ -57,7 +57,7 @@ export const drawBeetle = (g: Graphics, p: number, timeMs: number): void => {
 /** One hop of the slime, in ms. */
 export const SLIME_HOP_MS = 1100;
 
-/** Step 8: no skeleton at all, a hopping blob of slime with what it has swallowed showing inside. */
+/** No skeleton at all, a hopping blob of slime with what it has swallowed showing inside. */
 export const drawSlime = (g: Graphics, timeMs: number): void => {
   const G = DESIGN_GROUND_Y;
   const t = (timeMs % SLIME_HOP_MS) / SLIME_HOP_MS;
