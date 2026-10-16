@@ -306,7 +306,8 @@ export class EnemyAI {
   private updateDragon(dragon: DragonEnemy, deltaMs: number): void {
     const bowman = nearestExposedBowman(this.world.bowmen, dragon.x);
     const aimPoint = this.aimPointFrom(dragon.x);
-    dragon.update(deltaMs, aimPoint.x);
+    // Everyone hiding in the keep: the fire dragon (its fire can't hurt the keep) waits away from it.
+    dragon.update(deltaMs, aimPoint.x, !bowman);
     if (enemyArchetype(dragon.kind).breathesFire) {
       this.updateFireDragon(dragon, bowman, aimPoint, deltaMs);
       return;
@@ -342,8 +343,9 @@ export class EnemyAI {
   }
 
   /**
-   * Fire dragon: hovers lower and closer (DragonEnemy) and breathes fire at the bowman (or the keep, if he's
-   * hiding) whenever the target is within FIRE_DRAGON_RANGE of its mouth, ahead of and below it. Its flames
+   * Fire dragon: hovers lower and closer (DragonEnemy) and breathes fire at the bowman whenever he's within
+   * FIRE_DRAGON_RANGE of its mouth, ahead of and below it (or strafes him, DragonEnemy); with everyone hiding in
+   * the keep it waits away from it, no fire. Its flames
    * set the bowman alight (systems/burning.ts); the burn's damage is applied in update.
    */
   private updateFireDragon(dragon: DragonEnemy, bowman: Bowman | undefined, aimPoint: Vec2, deltaMs: number): void {
@@ -353,7 +355,7 @@ export class EnemyAI {
     const dx = target.x - mouth.x;
     const dy = target.y - mouth.y;
     const inReach = dx * dragon.facingX > 0 && dy > 0 && Math.hypot(dx, dy) <= FIRE_DRAGON_RANGE;
-    if (inReach && this.world.bowmen.some((candidate) => !candidate.isDead)) {
+    if (inReach && bowman) {
       dragon.breathe(Math.atan2(dy, dx));
     }
     dragon.updateAnimation(deltaMs);

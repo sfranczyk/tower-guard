@@ -29,7 +29,9 @@ Its parts:
   `FIRE_DRAGON_RANGE` (`FIRE_DRAGON_BREATH_INTERVAL_MS`) while hovering. Or strafes (`FIRE_DRAGON_STRAFE`): lurks
   farther out, then dives at him, rearing, `breath.ignite` (`DragonMotion.takeStrafeIgnite`), flies level past him with the
   stream at the mouth, brakes, may go up to `edgeOut` past the player's world edge; `DragonEnemy.strafeGeometry` gives
-  the mouth's reach and pass height. Co-op needs nothing new (position, side, breath already in `DragonSnap`). Breath drawn into `fireArt`, `getFlames` gives hot puffs in
+  the mouth's reach and pass height. Co-op needs nothing new (position, side, breath already in `DragonSnap`).
+  Everyone in the keep (its fire can't hurt it): it waits (`DragonLook.waits` = `FIRE_DRAGON_WAIT`, tunable: far from the
+  keep, high), no fire or strafes; a pass or breath still winding up is called off, one already pouring is finished. Breath drawn into `fireArt`, `getFlames` gives hot puffs in
   world space. Killed by a direct explosive hit it blows up: `explode` with `FIRE_DRAGON_BLAST_POWER` (3),
   `EffectsSystem.dragonBlast`, `DragonGibSimulation` chunks and rider gibs (`DragonDeath.dragonGibs`), stuck arrows gone
   (`Arrow.stuckTo`).

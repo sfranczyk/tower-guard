@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { FIRE_DRAGON_HOVER, FIRE_DRAGON_STRAFE, WORLD_WIDTH } from '../config';
+import { FIRE_DRAGON_HOVER, FIRE_DRAGON_STRAFE, FIRE_DRAGON_WAIT, PLAYER_TOWER_X, WORLD_WIDTH } from '../config';
 import { FIRE_BREATH } from '../rendering/dragonFire';
 import { startManoeuvre, stepManoeuvre, type ManoeuvreState } from './dragonManoeuvre';
 import { groundReach, strafeAltitude, strafeSide, strafeStartX, stripLength, type StrafeStage } from './dragonStrafe';
@@ -151,6 +151,40 @@ describe('fire dragon strafing run', () => {
       lowest = Math.min(lowest, pos.x);
     }
     expect(lowest).toBeGreaterThanOrEqual(-FIRE_DRAGON_STRAFE.edgeOut - 2);
+  });
+
+  it('everyone in the keep: it gives up its lurk and waits well away from it, without strafing; then comes back', () => {
+    const { state, pos } = hovering(PLAYER_TOWER_X + 200);
+    step(state, pos, PLAYER_TOWER_X + 100, 1);
+    expect(state.strafe?.stage).toBe('lurk');
+    const wait = (waiting: boolean, ms: number): void => {
+      for (let time = 0; time < ms; time += FRAME) {
+        stepManoeuvre(state, pos, {
+          targetX: PLAYER_TOWER_X, side: 1, timeMs: time, deltaMs: FRAME, followSpeed: 36,
+          ranges: waiting ? FIRE_DRAGON_WAIT : FIRE_DRAGON_HOVER, waiting, rng: () => 0,
+          strafe: waiting ? undefined : { reach: REACH, altitude: ALTITUDE },
+        });
+        if (waiting) {
+          expect(state.strafe).toBeUndefined();
+        }
+      }
+    };
+    wait(true, 20000);
+    expect(pos.x - PLAYER_TOWER_X).toBeGreaterThanOrEqual(FIRE_DRAGON_WAIT.offsetMin - 5);
+    expect(pos.y).toBeLessThan(FIRE_DRAGON_WAIT.altitudeMax + 15);
+    wait(false, 50);
+    expect(state.phase).toBe('transit');
+  });
+
+  it('everyone in the keep before the flames are out: it calls the pass off', () => {
+    const { state, pos } = hovering(strafeStartX(1000, 1, REACH));
+    step(state, pos, 1000, 1);
+    expect(state.strafe?.stage).toBe('run');
+    stepManoeuvre(state, pos, {
+      targetX: PLAYER_TOWER_X, side: 1, timeMs: 0, deltaMs: FRAME, followSpeed: 36, ranges: FIRE_DRAGON_WAIT, waiting: true, rng: () => 0,
+    });
+    expect(state.phase).toBe('transit');
+    expect(state.strafe).toBeUndefined();
   });
 
   it('without a strafe it never leaves a hover for one', () => {

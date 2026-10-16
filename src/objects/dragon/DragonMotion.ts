@@ -59,9 +59,11 @@ export class DragonMotion {
    */
   public fly(pos: Vec2, input: {
     targetX: number; timeMs: number; deltaMs: number; followSpeed: number; turbulence: number; cheering: boolean; hold: boolean;
-    strafe?: { reach: number; altitude: number };
+    strafe?: { reach: number; altitude: number }; waiting?: boolean;
   }): void {
     const { manoeuvre } = this;
+    // Everyone in the keep: a dragon with somewhere to wait (the fire dragon) waits there, without strafes.
+    const waiting = input.waiting === true && this.look.waits !== undefined;
     pos.x -= this.offset.x;
     pos.y -= this.offset.y;
     // On a strafing run it keeps the side it started from, even once its target is behind it.
@@ -72,7 +74,8 @@ export class DragonMotion {
     }
     stepManoeuvre(manoeuvre, pos, {
       targetX: input.targetX, side: this.side, timeMs: input.timeMs, deltaMs: input.deltaMs, followSpeed: input.followSpeed,
-      ranges: this.look.hovers, hold: input.hold, strafe: input.strafe, turning: this.isTurning, rng: Math.random,
+      ranges: waiting ? this.look.waits ?? this.look.hovers : this.look.hovers, hold: input.hold, strafe: waiting ? undefined : input.strafe,
+      turning: this.isTurning, waiting, rng: Math.random,
     });
     if (manoeuvre.strafe) {
       this.side = manoeuvre.strafe.side;

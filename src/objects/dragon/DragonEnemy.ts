@@ -3,7 +3,7 @@ import { DRAGON_SCALE, FIRE_DRAGON_STRAFE } from '../../config';
 import { dragonHitZones, type DragonHitZone, type DragonPose } from '../../rendering/dragon';
 import { dragonKnightLook, drawDragonWithRider } from '../../rendering/designs/heavySkins';
 import { HUMAN_BODY } from '../../rendering/bodyColors';
-import { IGNITE_HEAT, breathControl, drawFireStream, firePuffs, puffPosition } from '../../rendering/dragonFire';
+import { FIRE_BREATH, IGNITE_HEAT, breathControl, drawFireStream, firePuffs, puffPosition } from '../../rendering/dragonFire';
 import { GIB_GROUND_Y } from '../../rendering/stickmanGibs';
 import type { BodyAnchor } from '../../systems/bodyAnchor';
 import { cruiseAltitude, type HoverSide } from '../../systems/dragonFlight';
@@ -162,8 +162,11 @@ export default class DragonEnemy extends Container {
     this.paused = paused;
   }
 
-  /** Hovers in front of `targetX`, now and then flying to another height and distance (DragonMotion). */
-  public update(realDeltaMs: number, targetX: number): void {
+  /**
+   * Hovers in front of `targetX`, now and then flying to another height and distance (DragonMotion); `waiting`
+   * (everyone hides in the keep at `targetX`), the fire dragon keeps well away from it.
+   */
+  public update(realDeltaMs: number, targetX: number, waiting = false): void {
     if (!this.isAlive()) {
       return;
     }
@@ -172,9 +175,13 @@ export default class DragonEnemy extends Container {
     const pos = { x: this.x, y: this.y };
     this.motion.fly(pos, {
       targetX, timeMs: this.timeMs, deltaMs, followSpeed: this.speed, turbulence: this.afflictions.turbulence,
-      cheering: this.cheering, hold: this.breath.timeMs !== undefined, strafe: this.strafeGeometry(targetX),
+      cheering: this.cheering, hold: this.breath.timeMs !== undefined, strafe: this.strafeGeometry(targetX), waiting,
     });
     this.position.set(pos.x, pos.y);
+    // Everyone went into the keep before the flames came out: it doesn't waste them.
+    if (waiting && this.breath.timeMs !== undefined && this.breath.timeMs < FIRE_BREATH.windUpMs) {
+      this.breath.stop();
+    }
     // A strafing run lights the fire at its start (choked by turbulence, it flies the pass without it).
     if (this.motion.takeStrafeIgnite() && !this.afflictions.isTurbulent) {
       this.breath.ignite(FIRE_DRAGON_STRAFE.aim);

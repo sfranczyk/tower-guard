@@ -52,7 +52,8 @@ tuning `DRAGON_FLIGHT`. Hover points and turning stay in `dragonFlight.ts`. The 
 strafing run (phase `'strafe'`: lurk (flies to its start like to a hover point, waits; skipped within `readyRange`; `lurkStep`: never backs off, sets
 off when he comes `readyRange` closer, turns round if he runs under it) →
 run (fire lit, dives to the pass height; `nearWorldEdge` brakes it within `edgeOut`) → out; geometry in `dragonStrafe.ts`, pure, tested:
-`strafeDistance`, `strafeStartX`, `strafeAltitude`, `groundReach`; `FIRE_DRAGON_STRAFE`, tunable), pass after pass, by `weight`.
+`strafeDistance`, `strafeStartX`, `strafeAltitude`, `groundReach`; `FIRE_DRAGON_STRAFE`, tunable), pass after pass, by `weight`. `ManoeuvreInput.waiting` (all in the keep): `switchWaiting` swaps
+to the wait ranges.
 
 ## Friendly fire (`session.friendlyFire`, on by default; co-op: the host's)
 Players' arrows hit bowmen out in the open like enemies (`friendlyTargets`): top `BOWMAN_HEAD` px headshot, blasts,

@@ -1,6 +1,7 @@
 import { DRAGON_FLIGHT, FIRE_DRAGON_STRAFE } from '../config';
 import type { Vec2 } from '../types';
 import { approach, clamp } from '../utils/math';
+import { FIRE_BREATH } from '../rendering/dragonFire';
 import { cruiseAltitude, flyTowards, hoverX, type HoverSide } from './dragonFlight';
 import { lurkStep, nearWorldEdge, passDone, pickStrafe, readyToStrafe, startStrafe, strafeSide, type StrafeState } from './dragonStrafe';
 
@@ -40,6 +41,8 @@ export interface ManoeuvreState {
   offset: number;
   /** The strafing run under way (phase 'strafe'). */
   strafe?: StrafeState;
+  /** Hovering away from the keep while everyone hides in it (ManoeuvreInput.waiting). */
+  waiting: boolean;
   /** The hit jolt: an offset (px) springing back to 0, and its velocity. */
   jolt: { x: number; y: number; vx: number; vy: number };
   /** Animation, eased: wing beat speed (1 = hovering), wings held spread (0..1), nose down (+, radians). */
@@ -66,6 +69,8 @@ export interface ManoeuvreInput {
   strafe?: { reach: number; altitude: number };
   /** Swinging round: a strafe doesn't start until it faces its target. */
   turning?: boolean;
+  /** Everyone hides in the keep (`ranges` are then where it waits): it gives up its point or lurk for one there. */
+  waiting?: boolean;
   rng: () => number;
 }
 
@@ -84,7 +89,7 @@ const LEVEL_PULL = 3;
 const EASE = { flap: 2.5, glide: 3, pitch: 1.2 };
 
 export const startManoeuvre = (altitude: number, offset: number): ManoeuvreState => ({
-  phase: 'approach', vx: 0, vy: 0, hoverLeftMs: 0, transitMs: 0, altitude, offset,
+  phase: 'approach', vx: 0, vy: 0, hoverLeftMs: 0, transitMs: 0, altitude, offset, waiting: false,
   jolt: { x: 0, y: 0, vx: 0, vy: 0 }, flapRate: 1, glide: 0, pitch: 0,
 });
 
@@ -125,6 +130,9 @@ export const stepManoeuvre = (state: ManoeuvreState, pos: Vec2, input: Manoeuvre
   if (dt <= 0) {
     return;
   }
+  if ((input.waiting ?? false) !== state.waiting) {
+    switchWaiting(state, input);
+  }
   const point = { x: hoverX(input.targetX, state.offset, input.side), y: cruiseAltitude(input.timeMs, state.altitude) };
   let braking = false;
   if (state.phase === 'strafe') {
@@ -158,6 +166,26 @@ export const stepManoeuvre = (state: ManoeuvreState, pos: Vec2, input: Manoeuvre
 };
 
 /**
+ * Everyone went into the keep, or someone came out: it leaves its hover point (or a lurk, or a pass whose flames
+ * aren't out yet) for one from the new ranges; a pass already pouring fire it finishes first, then moves on.
+ */
+const switchWaiting = (state: ManoeuvreState, input: ManoeuvreInput): void => {
+  state.waiting = input.waiting ?? false;
+  const { strafe } = state;
+  const burning = strafe && (strafe.stage === 'out' || (strafe.stage === 'run' && strafe.stageMs >= FIRE_BREATH.windUpMs));
+  if (state.phase === 'strafe' && burning) {
+    return;
+  }
+  state.altitude = pickAltitude(state.altitude, input.ranges, input.rng);
+  state.offset = pickOffset(input.ranges, input.rng);
+  if (state.phase !== 'approach') {
+    state.strafe = undefined;
+    state.phase = 'transit';
+    state.transitMs = 0;
+  }
+};
+
+/**
  * Done with a hover (`fromHover`) or a pass: a strafing run (the fire dragon, by chance; at once if it's already about
  * at its start, else it lurks there first) or a flight to a new hover point.
  */
@@ -184,8 +212,8 @@ const moveOn = (state: ManoeuvreState, pos: Vec2, input: ManoeuvreInput, fromHov
  */
 const stepStrafe = (state: ManoeuvreState, pos: Vec2, input: ManoeuvreInput, dt: number): boolean => {
   const { strafe } = state;
-  if (!strafe || !input.strafe) {
-    moveOn(state, pos, { ...input, strafe: undefined }, false);
+  if (!strafe || (strafe.stage === 'lurk' && !input.strafe)) {
+    moveOn(state, pos, input, false);
     return false;
   }
   const { speed, accel, diveSpeed } = FIRE_DRAGON_STRAFE;
@@ -195,7 +223,7 @@ const stepStrafe = (state: ManoeuvreState, pos: Vec2, input: ManoeuvreInput, dt:
     strafe.stage = stage;
     strafe.stageMs = 0;
   };
-  if (strafe.stage === 'lurk') {
+  if (strafe.stage === 'lurk' && input.strafe) {
     // He's coming at it (or ran under it, and it turns round): it sets off now, whether or not he'll be mid-strip.
     strafe.go ||= lurkStep(strafe, pos.x, input.targetX, input.strafe.reach);
     const point = { x: strafe.startX, y: cruiseAltitude(input.timeMs, state.altitude) };

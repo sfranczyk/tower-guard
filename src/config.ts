@@ -315,6 +315,19 @@ export const FIRE_DRAGON_HOVER = tunable('FIRE_DRAGON_HOVER', 'Fire dragon hover
   hoverMaxMs: 8000,
 });
 /**
+ * The fire dragon while everyone hides in the keep (its fire can't hurt it): no fire, it hovers well away from the
+ * keep (offsetMin..offsetMax px) and high, now and then moving, until someone comes out.
+ */
+export const FIRE_DRAGON_WAIT = tunable('FIRE_DRAGON_WAIT', 'Fire dragon waits', {
+  altitudeMin: 150,
+  altitudeMax: 230,
+  minAltitudeChange: 30,
+  offsetMin: 480,
+  offsetMax: 600,
+  hoverMinMs: 6000,
+  hoverMaxMs: 10000,
+});
+/**
  * Fire dragon: flies lower (FIRE_DRAGON_ALTITUDE) and hovers closer (FIRE_DRAGON_HOVER_OFFSET) so its fire
  * (rendering/dragonFire.ts, ~290 px long at DRAGON_SCALE) reaches the bowman; it breathes when he's within
  * FIRE_DRAGON_RANGE of its mouth, at most once every FIRE_DRAGON_BREATH_INTERVAL_MS (start to start).
