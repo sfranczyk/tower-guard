@@ -124,14 +124,16 @@ export const FIRE_DRAGON_BLAST_POWER = 3;
 /**
  * A kamikaze's bomb (systems/kamikazeBomb.ts): killed by a blast it goes off `chainDelayMs` later (so a group blows up
  * one after another, each bomb as strong as the first); struck by a fire arrow it goes off with `fireChance` (else
- * just the hit: it doesn't burn), by lightning with `lightningChance`. A kamikaze blown apart throws its pieces
+ * just the hit: it doesn't burn), by lightning with `lightningChance`. Its damage to the bowmen and the keep falls off
+ * with distance, to `edgeShare` of it at the edge of its reach. A kamikaze blown apart throws its pieces
  * KAMIKAZE_GIB_FORCE times harder.
  */
 export const KAMIKAZE_BOMB = tunable('KAMIKAZE_BOMB', 'Kamikaze bomb', {
   chainDelayMs: 60,
   fireChance: 0.5,
   lightningChance: 0.8,
-}, { meta: { chainDelayMs: { min: 10, max: 500, step: 10 }, fireChance: { max: 1 }, lightningChance: { max: 1 } } });
+  edgeShare: 0.3,
+}, { meta: { chainDelayMs: { min: 10, max: 500, step: 10 }, fireChance: { max: 1 }, lightningChance: { max: 1 }, edgeShare: { max: 1 } } });
 export const KAMIKAZE_GIB_FORCE = 1.8;
 /**
  * Soldiers keeping clear of kamikazes (systems/blastAwareness.ts): a kamikaze coming within `noticeRange` px is

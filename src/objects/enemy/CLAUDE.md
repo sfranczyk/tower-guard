@@ -42,7 +42,7 @@ open the one you need:
 - **Kamikaze**: runs in unarmed with a bomb (`pose.bomb`): the human sapper takes a headshot or two body hits, the goblin bomber
   (`goblinKamikaze`: smaller, quicker, weaker blast) dies to one arrow; the blast's damage is the detonating kind's. Reaching the bowman (jumping doesn't save
   him) or the keep, `CombatSystem.detonate` (cause `'blast'`) runs `explode` and hurts the bowman (not in the keep) and
-  keep within `KAMIKAZE_REACH` × radius, knocking him down (`Bowman.knockBack`, `BOWMAN_KNOCKBACK`); its pieces fly
+  keep within `KAMIKAZE_REACH` × radius (less further off: `blastFalloff`, `KAMIKAZE_BOMB.edgeShare`), knocking him down (`Bowman.knockBack`, `BOWMAN_KNOCKBACK`); its pieces fly
   `KAMIKAZE_GIB_FORCE` times harder. Other deaths are silent except a blast (`BombFuses`: goes off `KAMIKAZE_BOMB.chainDelayMs`
   later, so groups chain) and a fatal fall; a fire arrow (`fireChance`) or lightning (`lightningChance`) may set it off
   (`systems/kamikazeBomb.ts`). On medium/hard a chain weakens: each `Bomb.link` past the first (an explosive arrow's splash is link 1) goes off with

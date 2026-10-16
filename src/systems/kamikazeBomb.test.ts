@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { KAMIKAZE_BOMB } from '../config';
-import { BombFuses, bombChance, bombGoesOff, chainChance } from './kamikazeBomb';
+import { BombFuses, blastFalloff, bombChance, bombGoesOff, chainChance } from './kamikazeBomb';
 
 describe('bombChance', () => {
   it('always goes off in a blast, a fatal fall or on reaching its target', () => {
@@ -45,5 +45,14 @@ describe('chainChance', () => {
 
   it('without falloff (easy) every link goes off', () => {
     expect(chainChance(7, 0)).toBe(1);
+  });
+});
+
+describe('blastFalloff', () => {
+  it('all of the damage at the blast, edgeShare at the edge of its reach, evenly between', () => {
+    expect(blastFalloff(0, 100)).toBe(1);
+    expect(blastFalloff(-5, 100)).toBe(1);
+    expect(blastFalloff(100, 100)).toBeCloseTo(KAMIKAZE_BOMB.edgeShare);
+    expect(blastFalloff(50, 100)).toBeCloseTo((1 + KAMIKAZE_BOMB.edgeShare) / 2);
   });
 });

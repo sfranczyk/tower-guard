@@ -27,6 +27,13 @@ export const bombGoesOff = (trigger: BombTrigger, frozen: boolean, roll = Math.r
  * set off (arrow, fire, lightning, contact, an explosive arrow's direct hit) is link 0, the ones its blast (or an
  * explosive arrow's) catches link 1, and so on; each link `falloff` less likely than the one before, with no end to the chain. Else it's a dud.
  */
+/**
+ * Share of a bomb's damage to a bowman or the keep `distance` px from it: all of it at the blast, falling off evenly to
+ * KAMIKAZE_BOMB.edgeShare at `reach`.
+ */
+export const blastFalloff = (distance: number, reach: number): number =>
+  1 - (1 - KAMIKAZE_BOMB.edgeShare) * Math.max(0, Math.min(1, distance / reach));
+
 export const chainChance = (link: number, falloff: number): number => (1 - falloff) ** link;
 
 /**

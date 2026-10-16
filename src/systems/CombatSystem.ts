@@ -25,7 +25,7 @@ import { ArrowMagic } from './ArrowMagic';
 import { ArrowHits } from './ArrowHits';
 import { BOWMAN_CHEST, TOWER_HALF_WIDTH, type Foe } from './combatGeometry';
 import { EnemyAI } from './EnemyAI';
-import { BombFuses, bombGoesOff, chainChance } from './kamikazeBomb';
+import { BombFuses, blastFalloff, bombGoesOff, chainChance } from './kamikazeBomb';
 
 export type { Foe } from './combatGeometry';
 
@@ -222,7 +222,8 @@ export class CombatSystem {
 
   /**
    * A kamikaze's bomb goes off: the blast hurts the enemies around it like an explosive arrow (a kamikaze it kills
-   * lights its own fuse), and the bowmen (unless in the keep) and the keep take its damage if they're close; bowmen are thrown back.
+   * lights its own fuse), and the bowmen (unless in the keep) and the keep take its damage if they're close, less the
+   * further they are (blastFalloff); bowmen are thrown back.
    */
   private blowUp({ point, kind, power, chain, link }: Bomb, self?: Enemy): void {
     const { bowmen, playerTower, effects } = this.world;
@@ -234,14 +235,17 @@ export class CombatSystem {
       if (bowmanDistance > reach) {
         return;
       }
-      this.events.bowmanDamaged(bowman, rollDamage(enemyDamage(kind, 'melee', 'bowman')) * power * this.world.enemyEdge.damage, { cause: 'blast', fromX: point.x });
+      const damage = rollDamage(enemyDamage(kind, 'melee', 'bowman')) * power * this.world.enemyEdge.damage * blastFalloff(bowmanDistance, reach);
+      this.events.bowmanDamaged(bowman, damage, { cause: 'blast', fromX: point.x });
       effects.bloodBurst({ x: bowman.x, y: bowman.y - BOWMAN_CHEST });
       // Thrown away from the blast, harder the closer he stood.
       const { minStrength } = BOWMAN_KNOCKBACK;
       bowman.knockBack(point.x, minStrength + (1 - minStrength) * (1 - bowmanDistance / reach));
     });
-    if (point.x - (playerTower.x + TOWER_HALF_WIDTH) <= reach) {
-      playerTower.takeDamage(rollDamage(enemyDamage(kind, 'melee', 'keep')) * power * this.world.enemyEdge.damage, { x: playerTower.x + TOWER_HALF_WIDTH - 4, y: point.y });
+    const keepDistance = point.x - (playerTower.x + TOWER_HALF_WIDTH);
+    if (keepDistance <= reach) {
+      const damage = rollDamage(enemyDamage(kind, 'melee', 'keep')) * power * this.world.enemyEdge.damage * blastFalloff(keepDistance, reach);
+      playerTower.takeDamage(damage, { x: playerTower.x + TOWER_HALF_WIDTH - 4, y: point.y });
     }
   }
 
