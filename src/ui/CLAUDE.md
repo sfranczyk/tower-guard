@@ -8,7 +8,7 @@
   play field. Keep and bowman health are bars in the world (Tower, `Bowman.setHealthRatio`), not in the HUD. Weapons are square slots (`LOADOUT_SLOTS` = 5,
   `weaponSlots`): icon only (name in the tooltip), key in the corner, ammo underneath (∞ for now); built from the quiver
   (`DomUi.setLoadout`).
-- **Overlays on the canvas** (menu, sandbox/sound panels, end screen, pause dialog `[data-pause]` placed under the
+- **Overlays on the canvas** (menu, sandbox/sound panels, end screen, pause dialog `[data-pause]` (`PauseView`: restart button, the quiver editor while in the keep) placed under the
   settings drawer and the tuning panel, settings drawer) are laid out for a canvas at
   scale 1 and zoom with it (`--ui-scale`, set in `fitCanvas`, `UI_SCALE` limits); the sandbox's buttons stay pinned
   at the bottom of its card.

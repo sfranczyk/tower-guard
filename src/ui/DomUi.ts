@@ -8,7 +8,8 @@ import type { ArrowType, Loadout } from '../data/loadout';
 import { Hud, type HudValues } from './Hud';
 import { CoopPanel, type CoopView } from './CoopPanel';
 import { SandboxForm } from './SandboxForm';
-import type { PartnerQuiver } from './quiverPage';
+import { quiverPage, type PartnerQuiver } from './quiverPage';
+import { editQuiverIn, type QuiverEdit } from './quiverEditing';
 import { TuningPanel } from './TuningPanel';
 import { SoundLabPanel, type SoundLabMusic, type SoundLabMusicState, type SoundLabRow } from './SoundLabPanel';
 import { HUD_BOTTOM_TEMPLATE, HUD_TOP_TEMPLATE, OVERLAY_TEMPLATE, weaponSlots } from './template';
@@ -26,6 +27,16 @@ export type UiScreen = 'menu' | 'coop' | 'sandbox' | 'animationLab' | 'soundLab'
 export type { CoopView } from './CoopPanel';
 
 export type { HudValues } from './Hud';
+
+/** What the battle's pause dialog shows. */
+export interface PauseView {
+  byPartner: boolean;
+  coop: boolean;
+  /** Alone or the co-op host: "Restart level" (the guest waits for the host). */
+  canRestart: boolean;
+  /** The local bowman is in the keep: his quiver, editable in the dialog. */
+  quiver?: Loadout;
+}
 
 export interface EndScreenOptions {
   title: string;
@@ -56,9 +67,12 @@ export interface UiHandlers {
   /** Animation lab: leave the zoomed view and return to the list. */
   labBack?: () => void;
   toggleOptions?: () => void;
-  /** The pause dialog's "Resume" and "Main menu" buttons. */
+  /** The pause dialog's "Resume", "Restart level" and "Main menu" buttons. */
   pauseResume?: () => void;
+  pauseRestart?: () => void;
   pauseMenu?: () => void;
+  /** The pause dialog's quiver (shown while the bowman is in the keep) was changed. */
+  pauseLoadout?: (loadout: Loadout) => void;
   selectProjectile?: (type: ProjectileType) => void;
   /** `level`: the level being edited (its battleground is shown behind the form). */
   sandboxChange?: (settings: SandboxSettings, level: number) => void;
@@ -102,6 +116,11 @@ export class DomUi {
   private readonly endScreen: HTMLElement;
   private readonly pauseScreen: HTMLElement;
   private readonly pauseCopy: HTMLElement;
+  private readonly pauseCard: HTMLElement;
+  private readonly pauseQuiverRoot: HTMLElement;
+  private readonly pauseRestart: HTMLElement;
+  /** The quiver being edited in the pause dialog (undefined while none is shown). */
+  private pauseQuiver?: QuiverEdit;
   private readonly endTitle: HTMLElement;
   private readonly endCopy: HTMLElement;
   private readonly endButton: HTMLButtonElement;
@@ -146,6 +165,16 @@ export class DomUi {
     this.endScreen = this.query('[data-end]');
     this.pauseScreen = this.query('[data-pause]');
     this.pauseCopy = this.query('[data-pause-copy]');
+    this.pauseCard = this.query('[data-pause] .end-card');
+    this.pauseQuiverRoot = this.query('[data-pause-quiver]');
+    this.pauseRestart = this.query('[data-pause-restart]');
+    editQuiverIn(this.pauseQuiverRoot, () => this.pauseQuiver, ({ loadout, slot, changed }) => {
+      this.pauseQuiver = { loadout, slot };
+      this.renderPauseQuiver();
+      if (changed) {
+        this.handlers.pauseLoadout?.(loadout);
+      }
+    });
     this.endTitle = this.query('[data-end-title]');
     this.endCopy = this.query('[data-end-copy]');
     this.endButton = this.query<HTMLButtonElement>('[data-end-button]');
@@ -200,6 +229,7 @@ export class DomUi {
     this.onClick('[data-close-options]', () => this.handlers.toggleOptions?.());
     this.endButton.addEventListener('click', () => this.onEndButton?.());
     this.onClick('[data-pause-resume]', () => this.handlers.pauseResume?.());
+    this.onClick('[data-pause-restart]', () => this.handlers.pauseRestart?.());
     this.onClick('[data-pause-menu]', () => this.handlers.pauseMenu?.());
     this.weaponsRoot.addEventListener('click', (event) => {
       const button = (event.target as HTMLElement).closest<HTMLButtonElement>('[data-projectile]');
@@ -344,11 +374,22 @@ export class DomUi {
    * The battle's pause dialog (hidden with `undefined`). It lies under the settings drawer and the tuning panel, so
    * both stay usable while paused.
    */
-  public showPause(pause: { byPartner: boolean; coop: boolean } | undefined): void {
+  public showPause(pause: PauseView | undefined): void {
     this.pauseScreen.hidden = !pause;
     if (pause) {
       this.pauseCopy.textContent = pause.byPartner ? 'Your partner paused the battle.' : pause.coop ? 'Paused for both players.' : 'The battle waits for you.';
+      this.pauseRestart.hidden = !pause.canRestart;
+      this.pauseQuiver = pause.quiver ? { loadout: [...pause.quiver], slot: 0 } : undefined;
+      this.renderPauseQuiver();
     }
+  }
+
+  /** In the keep: the quiver editor; out in the open: a hint where to change it. */
+  private renderPauseQuiver(): void {
+    this.pauseCard.classList.toggle('pause-wide', this.pauseQuiver !== undefined);
+    this.pauseQuiverRoot.innerHTML = this.pauseQuiver
+      ? quiverPage(this.pauseQuiver.loadout, this.pauseQuiver.slot)
+      : '<p class="pause-quiver-hint">Hide in the keep to change your quiver.</p>';
   }
 
   /** The dev tuning panel (`?tune`), over the canvas's right edge. */

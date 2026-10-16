@@ -11,7 +11,9 @@ everything under `ctx.root` on each switch. Scenes never touch the DOM: they cal
   places unhorsed riders, defeated count, O-key hide), bowmen to `BattlePlayers` (creation, per-frame picks/shots/bursts,
   falls, `status`), co-op setup to `startBattleSync` (`battleSync.ts`), the end screen to `showLevelEnd`
   (`levelEndScreen.ts`, text from pure `levelEndInfo`), status texts to `battleText.ts` (pure). A
-  Esc pauses (`togglePause` / `setPaused`: `update` stops, `DomUi.showPause`; co-op: net/CLAUDE.md). A
+  Esc pauses (`togglePause` / `setPaused`: `update` stops, `DomUi.showPause`; co-op: net/CLAUDE.md). The pause dialog's
+  "Restart level" (`restartLevel`, solo/host) starts the level over: bowmen at full health, keeps as they are; in the keep
+  it edits the quiver (`changeLoadout`: saved, shared in co-op, HUD rebuilt). A
   cleared level offers "Next level" (health carries over) until the last, then Victory; defeat goes back to setup. The
   world keeps running after a level ends (enemies cheer on defeat).
   `players` / `PlayerControl.ts`: see net/CLAUDE.md. Follows the bowman across `WORLD_WIDTH` (centred,

@@ -25,7 +25,7 @@ export const ARROW_INFO: Readonly<Record<ArrowType, { name: string; summary: str
 /** `null` is an empty slot. */
 export type Loadout = (ArrowType | null)[];
 
-export const DEFAULT_LOADOUT: readonly ArrowType[] = ARROW_TYPES.slice(0, LOADOUT_SLOTS);
+export const DEFAULT_LOADOUT: readonly ArrowType[] = ['normal', 'explosive', 'piercing', 'fire', 'vortex'];
 
 export const isArrowType = (value: unknown): value is ArrowType => ARROW_TYPES.includes(value as ArrowType);
 

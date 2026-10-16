@@ -269,6 +269,10 @@
         .end-card h2[data-outcome="win"] { color: var(--good); }
         .end-card h2[data-outcome="loss"] { color: var(--bad); }
         .end-card p { margin: 6px 0 14px; color: var(--ink-soft); }
+        .end-card.pause-wide { width: min(760px, calc(100% - 28px)); }
+        .pause-quiver { align-self: stretch; margin-bottom: 14px; text-align: left; }
+        .pause-quiver:empty { display: none; }
+        .pause-quiver-hint { margin: -4px 0 0; color: var(--ink-soft); font-size: 13px; text-align: center; }
         .pause-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
         .end-stats { display: flex; justify-content: center; gap: 10px; margin-bottom: 18px; }
         .end-stats div { display: flex; flex-direction: column; min-width: 84px; padding: 6px 8px; border-radius: 12px; background: var(--panel-sunk); }

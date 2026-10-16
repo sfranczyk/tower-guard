@@ -19,7 +19,7 @@ export const MIN_LEVELS = 1;
 export const MAX_LEVELS = 5;
 export const MAX_ENEMIES_PER_TYPE = 20;
 export const HEALTH_LIMITS = {
-  bowman: { min: 20, max: 500, step: 10 },
+  bowman: { min: 20, max: 600, step: 10 },
   keep: { min: 100, max: 5000, step: 100 },
 } as const;
 
@@ -57,8 +57,8 @@ export const createDefaultSandbox = (): SandboxSettings => ({
     enemies: { ...enemies },
     battleground: BATTLEGROUND_IDS[index % BATTLEGROUND_IDS.length],
   })),
-  bowmanHealth: 100,
-  keepHealth: 2000,
+  bowmanHealth: 150,
+  keepHealth: 1000,
   loadout: [...DEFAULT_LOADOUT],
   difficulty: DEFAULT_DIFFICULTY,
 });

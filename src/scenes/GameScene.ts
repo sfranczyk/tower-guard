@@ -19,7 +19,8 @@ import { enemyEdge, wavePacing } from '../data/difficulty';
 import type { LevelSetup } from '../data/sandbox';
 import InputManager from '../managers/InputManager';
 import { LocalInput, ManualInput, RecordingInput } from '../input/PlayerInput';
-import { leaveCoop, loadoutOf } from '../net/coopLink';
+import { leaveCoop, loadoutOf, shareLoadout } from '../net/coopLink';
+import { loadSandbox, saveSandbox } from '../core/sandboxStorage';
 import type { GuestSync } from '../net/GuestSync';
 import type { HostSync } from '../net/HostSync';
 import type { EndInfo } from '../net/protocol';
@@ -40,7 +41,7 @@ import { EffectsSystem } from '../systems/EffectsSystem';
 import { Snow } from '../rendering/Snow';
 import { WeatherSystem } from '../systems/WeatherSystem';
 import { livingBowmen } from '../systems/targeting';
-import { firstArrow, type Loadout } from '../data/loadout';
+import { firstArrow, type ArrowType, type Loadout } from '../data/loadout';
 import type { Vec2 } from '../types';
 
 /**
@@ -324,7 +325,47 @@ export class GameScene extends Scene {
     this.paused = paused;
     this.pauseAsked = false;
     this.localInput?.cancelAim();
-    this.ctx.ui.showPause(paused ? { byPartner, coop: this.role !== 'solo' } : undefined);
+    this.ctx.ui.showPause(paused ? {
+      byPartner,
+      coop: this.role !== 'solo',
+      canRestart: this.role !== 'guest',
+      quiver: this.localPlayer.bowman.isInTower ? this.localLoadout : undefined,
+    } : undefined);
+  }
+
+  /**
+   * The pause dialog's "Restart level" (alone or the co-op host): the level starts over with the same enemies and
+   * every bowman at full health; the keeps keep the damage they took. A co-op guest follows the host's new `start`.
+   */
+  private restartLevel(): void {
+    const { session } = this.ctx;
+    session.run = {
+      ...session.run,
+      bowmanHealths: this.players.map(() => session.sandbox.bowmanHealth),
+      keepHealth: this.playerTower.getHealth(),
+      enemyKeepHealth: this.enemyTower.getHealth(),
+    };
+    this.ctx.goTo('game');
+  }
+
+  /** The quiver changed in the pause dialog (only while in the keep): kept for the run and for the next setup. */
+  private changeLoadout(loadout: Loadout): void {
+    const { session, ui } = this.ctx;
+    if (this.role === 'guest') {
+      // The guest's own quiver lives with this browser's stored setup, not the host's sandbox.
+      saveSandbox({ ...loadSandbox(), loadout });
+    } else {
+      session.sandbox = { ...session.sandbox, loadout };
+      saveSandbox(session.sandbox);
+    }
+    shareLoadout(session, loadout);
+    const { projectile } = this.localPlayer;
+    const kept = loadout.includes(projectile as ArrowType);
+    ui.setLoadout(loadout);
+    ui.setActiveProjectile(kept ? projectile : firstArrow(loadout));
+    if (!kept) {
+      this.localInput?.queueProjectile(firstArrow(loadout));
+    }
   }
 
   /** Guest: the host decides what comes after the level. */
@@ -357,6 +398,16 @@ export class GameScene extends Scene {
         this.togglePause();
       }
     };
+    ui.handlers.pauseRestart = () => {
+      if (this.paused && this.role !== 'guest') {
+        this.restartLevel();
+      }
+    };
+    ui.handlers.pauseLoadout = (loadout) => {
+      if (this.paused && this.localPlayer.bowman.isInTower) {
+        this.changeLoadout(loadout);
+      }
+    };
     ui.handlers.pauseMenu = () => {
       // Leaving a co-op battle leaves the room (the partner is told).
       leaveCoop(this.ctx);
@@ -366,6 +417,8 @@ export class GameScene extends Scene {
       ui.handlers.toggleOptions = undefined;
       ui.handlers.pauseResume = undefined;
       ui.handlers.pauseMenu = undefined;
+      ui.handlers.pauseRestart = undefined;
+      ui.handlers.pauseLoadout = undefined;
       ui.handlers.selectProjectile = undefined;
     });
 
