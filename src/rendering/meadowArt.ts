@@ -6,17 +6,22 @@ import { createRandom } from '../utils/math';
 import { mixColor } from './clouds';
 import type { MeadowFlower, MeadowLayout, MeadowTree } from './meadowLayout';
 
-/** Green Meadow scenery from a `layoutMeadow` plan: oaks, poplars and bushes, rocks, a fence and a haystack. */
+/** Green Meadow scenery from a `layoutMeadow` plan: oaks, poplars, birches and bushes, rocks, a fence and a haystack. */
 
 type Leaves = { main: number; light: number; dark: number };
 
+const BIRCH_BARK = 0xe9e6dc;
+const BIRCH_MARK = 0x3d3a36;
 const ROCK = { main: 0x8a8f86, light: 0xaab0a5, dark: 0x6a7068 };
 const HAY = { main: 0xd8b65c, light: 0xe9cf84, dark: 0xb08c3e };
 
 const treeLeaves = ({ trees: { colors }, hills }: Battleground, tree: MeadowTree): Leaves => {
   const [main, light, dark] = colors;
+  // Birches have airier, yellower leaves.
+  const birch = tree.kind === 'birch' ? 0.3 : 0;
   const tone = (color: number): number => {
-    const toned = tree.shade > 0 ? mixColor(color, 0xc9e39a, tree.shade * 0.07) : mixColor(color, 0x10241f, -tree.shade * 0.09);
+    let toned = mixColor(color, 0x9cc46e, birch);
+    toned = tree.shade > 0 ? mixColor(toned, 0xc9e39a, tree.shade * 0.14) : mixColor(toned, 0x10241f, -tree.shade * 0.18);
     return tree.far ? mixColor(toned, hills[0], MEADOW.farHaze) : toned;
   };
   return { main: tone(main), light: tone(light), dark: tone(dark) };
@@ -56,6 +61,22 @@ const drawTree = (g: Graphics, tree: MeadowTree, leaves: Leaves, trunk: number):
     g.ellipse(cx + rx * 0.12, cy + 2, rx, ry).fill({ color: leaves.dark });
     g.ellipse(cx - rx * 0.12, cy - 1, rx * 0.82, ry * 0.94).fill({ color: leaves.main });
     g.ellipse(cx - rx * 0.4, cy - ry * 0.25, rx * 0.3, ry * 0.5).fill({ color: leaves.light });
+    return;
+  }
+  if (tree.kind === 'birch') {
+    const top = ground - height * 0.72;
+    drawTrunk(g, x, ground, top, lean, 2.6 * scale, tree.far ? mixColor(BIRCH_BARK, leaves.dark, 0.35) : BIRCH_BARK);
+    for (let y = ground - 6; y > top + 4; y -= 6 + random() * 7) {
+      const along = (ground - y) / (ground - top);
+      g.rect(x + lean * along - 2 * scale + random() * 2, y, (1.5 + random() * 2) * scale, 1.4 * scale).fill({ color: BIRCH_MARK });
+    }
+    const r = width * 0.24;
+    const blobs = Array.from({ length: 4 }, (_, index): [number, number, number] => [
+      cx + (index - 1.5) * width * 0.2 + (random() - 0.5) * 6 * scale,
+      ground - height + r + (index % 2) * r * 0.9 + random() * 4 * scale,
+      r * (0.8 + random() * 0.35),
+    ]);
+    drawBlobs(g, blobs.sort((a, b) => a[1] - b[1]), leaves);
     return;
   }
   // Oak: a stout trunk under a broad crown of 4–5 blobs.

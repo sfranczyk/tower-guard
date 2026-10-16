@@ -65,7 +65,7 @@ animation gets a row in `scenes/labRows.ts` (or `scenes/labSequences.ts` for one
   space and cover `MAX_VIEW_WIDTH`. Mountains: valley mist (`drawMist`, horizon colour, thickening downwards) over the
   far peaks' and near slopes' feet, tunable in `MOUNTAIN_MIST`; planes step down in lightness, darkest in front.
   Meadow (`trees.style: 'meadow'`): `layoutMeadow` (`meadowLayout.ts`, pure, seeded per map, tested) places a hazy back
-  row and an uneven front row of oaks/poplars/bushes, rocks, flowers, a fence and a haystack; `meadowArt.ts`
+  row and an uneven front row of oaks/poplars/birches/bushes, rocks, flowers, a fence and a haystack; `meadowArt.ts`
   draws them (`drawMeadow`, `drawFlowers` in the grass); tunable in `MEADOW`.
 - **Aim overlay** (`AimOverlay.ts`): circles at the drag start (off by default, `session.showCursorCircle`) and at the
   bow; a ghost of the last shot stays where it was loosed.

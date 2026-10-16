@@ -6,7 +6,7 @@ import { createRandom } from '../utils/math';
  * the same, for both co-op players). rendering/meadowArt.ts draws them.
  */
 
-export type MeadowTreeKind = 'oak' | 'poplar' | 'bush';
+export type MeadowTreeKind = 'oak' | 'poplar' | 'birch' | 'bush';
 
 export interface MeadowTree {
   x: number;
@@ -50,9 +50,10 @@ export interface MeadowLayout {
 
 /** Species mix (weights) and size ranges. */
 const KINDS: ReadonlyArray<{ kind: MeadowTreeKind; weight: number; height: [number, number]; width: [number, number] }> = [
-  { kind: 'oak', weight: 0.65, height: [48, 70], width: [48, 62] },
-  { kind: 'poplar', weight: 0.22, height: [66, 88], width: [20, 26] },
-  { kind: 'bush', weight: 0.13, height: [15, 20], width: [28, 38] },
+  { kind: 'oak', weight: 0.42, height: [44, 74], width: [44, 66] },
+  { kind: 'poplar', weight: 0.2, height: [62, 92], width: [20, 28] },
+  { kind: 'birch', weight: 0.22, height: [48, 70], width: [30, 42] },
+  { kind: 'bush', weight: 0.16, height: [14, 22], width: [26, 42] },
 ];
 
 /** Grass strip depth the flowers grow in, below the ground line. */
@@ -84,7 +85,7 @@ const growRow = (random: () => number, left: number, right: number, far: boolean
       height: treeHeight,
       width: between(random, width) * scale,
       shade: random() * 2 - 1,
-      lean: (random() * 2 - 1) * treeHeight * 0.03,
+      lean: (random() * 2 - 1) * treeHeight * 0.06,
       far,
       seed: Math.floor(random() * 2 ** 31),
     });
