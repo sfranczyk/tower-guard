@@ -5,8 +5,11 @@ import { enemyEdge, healAfterLevel, isDifficultyLevel, wavePacing } from './diff
 
 describe('difficulty', () => {
   it('easy leaves the enemies as tuned, harder levels hit harder and aim better', () => {
-    expect(enemyEdge('easy')).toEqual({ damage: 1, aimSpread: 1 });
-    expect(enemyEdge('medium')).toEqual({ damage: DIFFICULTY_SCALE.mediumDamage, aimSpread: DIFFICULTY_SCALE.mediumSpread });
+    expect(enemyEdge('easy')).toEqual({ damage: 1, aimSpread: 1, chainFalloff: 0 });
+    expect(enemyEdge('medium')).toEqual({
+      damage: DIFFICULTY_SCALE.mediumDamage, aimSpread: DIFFICULTY_SCALE.mediumSpread, chainFalloff: DIFFICULTY_SCALE.mediumChainFalloff,
+    });
+    expect(enemyEdge('hard').chainFalloff).toBeGreaterThan(enemyEdge('medium').chainFalloff);
     expect(enemyEdge('hard').damage).toBeGreaterThan(enemyEdge('medium').damage);
     expect(enemyEdge('hard').aimSpread).toBeLessThan(enemyEdge('medium').aimSpread);
   });

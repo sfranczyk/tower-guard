@@ -218,6 +218,8 @@ export class GuestSync {
           effects.buffPulse(point);
         } else if (event.kind === 'alarm') {
           effects.alarm(point);
+        } else if (event.kind === 'fizzle') {
+          effects.fizzle(point);
         } else if (event.kind === 'vortex') {
           effects.vortex(point);
         } else {

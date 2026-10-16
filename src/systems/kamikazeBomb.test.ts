@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { KAMIKAZE_BOMB } from '../config';
-import { BombFuses, bombChance, bombGoesOff } from './kamikazeBomb';
+import { BombFuses, bombChance, bombGoesOff, chainChance } from './kamikazeBomb';
 
 describe('bombChance', () => {
   it('always goes off in a blast, a fatal fall or on reaching its target', () => {
@@ -32,5 +32,18 @@ describe('BombFuses', () => {
     expect(fuses.tick(1)).toEqual(['a', 'b']);
     expect(fuses.tick(KAMIKAZE_BOMB.chainDelayMs)).toEqual(['c']);
     expect(fuses.tick(1000)).toEqual([]);
+  });
+});
+
+describe('chainChance', () => {
+  it('the bomb a bowman set off always goes off, each further link falloff less likely, never quite zero', () => {
+    expect(chainChance(0, 0.2)).toBe(1);
+    expect(chainChance(1, 0.2)).toBeCloseTo(0.8);
+    expect(chainChance(2, 0.2)).toBeCloseTo(0.64);
+    expect(chainChance(20, 0.2)).toBeGreaterThan(0);
+  });
+
+  it('without falloff (easy) every link goes off', () => {
+    expect(chainChance(7, 0)).toBe(1);
   });
 });

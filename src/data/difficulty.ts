@@ -15,16 +15,24 @@ export const DIFFICULTY_LABELS: Readonly<Record<DifficultyLevel, string>> = { ea
 export const isDifficultyLevel = (value: unknown): value is DifficultyLevel =>
   DIFFICULTY_LEVELS.includes(value as DifficultyLevel);
 
-/** How hard the enemies are: `damage` multiplies every hit on the bowmen and the keep, `aimSpread` the archers' aim error. */
+/**
+ * How hard the enemies are: `damage` multiplies every hit on the bowmen and the keep, `aimSpread` the archers' aim error,
+ * `chainFalloff` how much less likely each further link of a kamikaze chain goes off (kamikazeBomb.chainChance).
+ */
 export interface EnemyEdge {
   damage: number;
   aimSpread: number;
+  chainFalloff: number;
 }
 
 /** Easy: as tuned; medium and hard: DIFFICULTY_SCALE. */
 export const enemyEdge = (level: DifficultyLevel): EnemyEdge => (level === 'easy'
-  ? { damage: 1, aimSpread: 1 }
-  : { damage: DIFFICULTY_SCALE[`${level}Damage`], aimSpread: DIFFICULTY_SCALE[`${level}Spread`] });
+  ? { damage: 1, aimSpread: 1, chainFalloff: 0 }
+  : {
+    damage: DIFFICULTY_SCALE[`${level}Damage`],
+    aimSpread: DIFFICULTY_SCALE[`${level}Spread`],
+    chainFalloff: DIFFICULTY_SCALE[`${level}ChainFalloff`],
+  });
 
 /** How a wave's enemies come out: `groupSize` at a time, `spawnIntervalMs` apart in a group, `groupGapMs` between. */
 export interface WavePacing {

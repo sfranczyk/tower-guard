@@ -25,18 +25,19 @@ import { ArrowMagic } from './ArrowMagic';
 import { ArrowHits } from './ArrowHits';
 import { BOWMAN_CHEST, TOWER_HALF_WIDTH, type Foe } from './combatGeometry';
 import { EnemyAI } from './EnemyAI';
-import { BombFuses, bombGoesOff } from './kamikazeBomb';
+import { BombFuses, bombGoesOff, chainChance } from './kamikazeBomb';
 
 export type { Foe } from './combatGeometry';
 
 /** A kamikaze's blast reaches the bowman and the keep within this many explosion radii. */
 const KAMIKAZE_REACH = 1.2;
 
-/** A kamikaze's bomb going off: where, whose (its damage), how big (a shaman's spell). */
+/** A kamikaze's bomb going off: where, whose (its damage), how big (a shaman's spell), its link in a chain (kamikazeBomb.chainChance). */
 interface Bomb {
   readonly point: Vec2;
   readonly kind: EnemyType;
   readonly power: number;
+  readonly link: number;
 }
 
 export interface CombatWorld {
@@ -188,9 +189,9 @@ export class CombatSystem {
   }
 
   /** A kamikaze's bomb where it is now (a shaman's spell makes it bigger: further reach, more damage). */
-  private static bombOf(kamikaze: Enemy): Bomb {
+  private static bombOf(kamikaze: Enemy, link = 0): Bomb {
     const body = kamikaze.getPhysicsBounds();
-    return { point: { x: body.x + body.width / 2, y: body.y + body.height / 2 }, kind: kamikaze.kind, power: kamikaze.buff.blastPower };
+    return { point: { x: body.x + body.width / 2, y: body.y + body.height / 2 }, kind: kamikaze.kind, power: kamikaze.buff.blastPower, link };
   }
 
   /** A kamikaze sets its bomb off now (reaching its target, a fatal fall, fire or lightning): it bursts apart in the blast. */
@@ -200,19 +201,19 @@ export class CombatSystem {
     this.blowUp(bomb, kamikaze);
   }
 
-  /** A kamikaze just killed by a blast (not frozen): its bomb goes off where it died, KAMIKAZE_BOMB.chainDelayMs later. */
-  private lightFuse(kamikaze: Enemy): void {
-    this.fuses.light(CombatSystem.bombOf(kamikaze));
+  /** A kamikaze just killed by a blast (not frozen): its bomb (`link` of a chain) goes off where it died, KAMIKAZE_BOMB.chainDelayMs later. */
+  private lightFuse(kamikaze: Enemy, link = 0): void {
+    this.fuses.light(CombatSystem.bombOf(kamikaze, link));
   }
 
   /**
    * A kamikaze's bomb goes off: the blast hurts the enemies around it like an explosive arrow (a kamikaze it kills
    * lights its own fuse), and the bowmen (unless in the keep) and the keep take its damage if they're close; bowmen are thrown back.
    */
-  private blowUp({ point, kind, power }: Bomb, self?: Enemy): void {
+  private blowUp({ point, kind, power, link }: Bomb, self?: Enemy): void {
     const { bowmen, playerTower, effects } = this.world;
-    // The bowmen take the kamikaze's own blast below, not the arrows' splash.
-    this.explode(point, this.world.enemies.filter((enemy) => enemy.isAlive()), self, power, false, false);
+    // The bowmen take the kamikaze's own blast below, not the arrows' splash; the kamikazes it catches are the chain's next link.
+    this.explode(point, this.world.enemies.filter((enemy) => enemy.isAlive()), self, power, false, false, link + 1);
     const reach = EXPLOSION_RADIUS * KAMIKAZE_REACH * power;
     bowmen.filter((bowman) => !bowman.isInTower && !bowman.isDead).forEach((bowman) => {
       const bowmanDistance = Math.hypot(bowman.x - point.x, bowman.y - BOWMAN_CHEST - point.y);
@@ -234,9 +235,12 @@ export class CombatSystem {
    * Explosion visuals plus splash damage and knockback for every living enemy whose body centre is
    * within EXPLOSION_RADIUS (except `directHit`, which already took the blast at its centre); damage falls off with distance.
    * With friendly fire (and `hurtsBowmen`) the bowmen out in the open take it too: the same damage, knocked down
-   * away from it, a frozen one's ice broken.
+   * away from it, a frozen one's ice broken. `chainLink`: a kamikaze bomb's blast is the next link of its chain, where a
+   * kamikaze it catches may be a dud (kamikazeBomb.chainChance): knocked down unhurt, its bomb still live.
    */
-  private explode(point: Vec2, activeEnemies: readonly Foe[], directHit?: Foe | Bowman, power = 1, dragon = false, hurtsBowmen = true): void {
+  private explode(
+    point: Vec2, activeEnemies: readonly Foe[], directHit?: Foe | Bowman, power = 1, dragon = false, hurtsBowmen = true, chainLink = 0,
+  ): void {
     if (dragon) {
       this.world.effects.dragonBlast(point);
     } else {
@@ -261,9 +265,15 @@ export class CombatSystem {
         }
         // Survivors are knocked down away from the blast and get back up; the rest die thrown back.
         const blastDistance = Math.hypot(dx, dy) / radius;
+        const kamikaze = !(candidate instanceof DragonEnemy) && enemyArchetype(candidate.kind).detonates ? candidate : undefined;
+        if (kamikaze && Math.random() >= chainChance(chainLink, this.world.enemyEdge.chainFalloff)) {
+          candidate.takeDamage(0, { cause: 'explosion', fromX: point.x, point, blastDistance });
+          this.world.effects.fizzle({ x: body.x + body.width / 2, y: body.y + body.height / 2 });
+          return;
+        }
         candidate.takeDamage(explosionDamage(blastDistance) * power, { cause: 'explosion', fromX: point.x, point, blastDistance });
-        if (!(candidate instanceof DragonEnemy) && !candidate.isAlive() && enemyArchetype(candidate.kind).detonates) {
-          this.lightFuse(candidate);
+        if (kamikaze && !kamikaze.isAlive()) {
+          this.lightFuse(kamikaze, chainLink);
         }
       });
     if (!hurtsBowmen) {

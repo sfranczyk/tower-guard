@@ -496,7 +496,9 @@ export const WAVES = tunable('WAVES', 'Waves', {
  * harder every enemy hit lands on the bowmen and the keep than on easy; `*Spread`: enemy archers' aim error (dragon
  * riders' too) as a share of easy's ENEMY_ATTACK.archerSpread. On medium and hard a
  * wave comes in groups of `groupSize` (same kinds together), `groupSpawnIntervalMs` apart inside a group and
- * `groupGapMs` between groups; easy sends them one by one, WAVES.spawnIntervalMs apart.
+ * `groupGapMs` between groups; easy sends them one by one, WAVES.spawnIntervalMs apart. `*ChainFalloff`: in a chain of
+ * kamikaze bombs each link is this much less likely to go off than the one before (a dud is only knocked down, unhurt;
+ * the bomb a bowman's arrow, fire, lightning or contact sets off always counts as the first link; easy: always).
  */
 export const DIFFICULTY_SCALE = tunable('DIFFICULTY_SCALE', 'Difficulty', {
   mediumDamage: 1.25,
@@ -510,7 +512,9 @@ export const DIFFICULTY_SCALE = tunable('DIFFICULTY_SCALE', 'Difficulty', {
   easyLevelHeal: 1,
   mediumLevelHeal: 0.5,
   hardLevelHeal: 0.1,
-});
+  mediumChainFalloff: 0.1,
+  hardChainFalloff: 0.2,
+}, { meta: { mediumChainFalloff: { max: 1 }, hardChainFalloff: { max: 1 } } });
 
 /** Sound effects: default effects volume (0..1) and the base volume of each sound. */
 export const SOUND_DEFAULT_VOLUME = 0.7;

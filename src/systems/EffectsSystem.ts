@@ -8,7 +8,7 @@ import { groundAt } from './terrain';
 /** Effects a co-op host replays on the guest's screen. */
 export type EffectKind =
   | 'blood' | 'greenBlood' | 'impact' | 'explosion' | 'dragonBlast' | 'lightning'
-  | 'fire' | 'frost' | 'shatter' | 'firePatch' | 'vortex' | 'vortexFade' | 'heal' | 'healPulse' | 'buffPulse' | 'alarm';
+  | 'fire' | 'frost' | 'shatter' | 'firePatch' | 'vortex' | 'vortexFade' | 'heal' | 'healPulse' | 'buffPulse' | 'alarm' | 'fizzle';
 
 type BloodParticle = {
   sprite: Graphics;
@@ -175,6 +175,19 @@ export class EffectsSystem {
       .roundRect(-2.6, -15, 5.2, 10.5, 2).circle(0, 0, 2.7).stroke({ width: 3, color: 0x2a1a0e })
       .roundRect(-2.6, -15, 5.2, 10.5, 2).circle(0, 0, 2.7).fill({ color: 0xffd23a });
     this.spawn(mark, point, 6, { velocity: { x: 0, y: -26 }, lifeMs: 900, gravity: 0, drag: 2.2, grow: -0.15 });
+  }
+
+  /** A kamikaze's bomb that a chain's blast failed to set off (a dud): a hiss of sparks and a grey puff at `point`. */
+  public fizzle(point: Vec2): void {
+    this.onEffect?.('fizzle', point);
+    for (let index = 0; index < 3; index += 1) {
+      const puff = new Graphics().circle(0, 0, random(4, 7)).fill({ color: pick([0x77777b, 0x8e8e92, 0x5f5f63]) });
+      this.spawn(puff, point, 4, { velocity: burst(-Math.PI * 0.8, -Math.PI * 0.2, 10, 30), lifeMs: random(500, 800), gravity: -30, drag: 1.5, grow: 0.6, startAlpha: 0.7 });
+    }
+    for (let index = 0; index < 6; index += 1) {
+      const spark = new Graphics().circle(0, 0, random(0.8, 1.4)).fill({ color: pick([0xffb347, 0xffe08a, 0xff7a2a]) });
+      this.spawn(spark, point, 5, { velocity: burst(-Math.PI, 0, 40, 100), lifeMs: random(200, 400), gravity: 150, drag: 2, grow: 0 });
+    }
   }
 
   /** A goblin shaman's spell going out: a green ring within its reach and a flare at the staff (`point`: its feet). */
