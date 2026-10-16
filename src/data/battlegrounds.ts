@@ -44,16 +44,14 @@ export interface Battleground {
   hills: readonly [number, number];
   /** dunes are lower and smoother than hills; mountains are snow-capped peaks with rocky slopes in front. */
   hillShape: 'hills' | 'dunes' | 'mountains';
-  /** meadow: a seeded mix of oaks, poplars, birches and bushes in two rows, with rocks, a fence and a haystack. */
-  trees: { style: 'round' | 'pine' | 'cactus' | 'snowPine' | 'meadow'; colors: readonly [number, number, number]; trunk: number };
+  trees: { style: 'round' | 'pine' | 'cactus' | 'snowPine'; colors: readonly [number, number, number]; trunk: number };
   /** Height of the ground waves (default TERRAIN_AMPLITUDE). */
   terrainAmplitude?: number;
   /** How close together the ground waves come (default 1; more = more, shorter rises and dips). */
   terrainWaviness?: number;
   /** Strongest wind of this map (px/s² on a normal arrow); each level rolls one between −wind and +wind. */
   wind?: number;
-  /** `flowers`: colours of the flowers scattered in the grass (meadow only). */
-  ground: { fill: number; edge: number; tufts: number; flowers?: readonly number[] };
+  ground: { fill: number; edge: number; tufts: number };
   /** Overrides DEFAULT_AIM_COLORS where the default gold and light blue don't stand out. */
   aimColors?: AimColors;
   /** Page backdrop behind the game and the UI accent (bars, highlights) for this map (CSS colours). */
@@ -106,8 +104,8 @@ export const BATTLEGROUNDS: Readonly<Record<BattlegroundId, Battleground>> = {
     cloudAlpha: 0.88,
     hills: [0x587d85, 0x3f6965],
     hillShape: 'hills',
-    trees: { style: 'meadow', colors: [0x2d594f, 0x35695a, 0x264e4b], trunk: 0x584d42 },
-    ground: { fill: 0x79a866, edge: 0xc7e094, tufts: 0x679452, flowers: [0xf6f1e4, 0xf2c94c, 0xe08aa8, 0xa9b4f0] },
+    trees: { style: 'round', colors: [0x2d594f, 0x35695a, 0x264e4b], trunk: 0x584d42 },
+    ground: { fill: 0x79a866, edge: 0xc7e094, tufts: 0x679452 },
     ui: { accent: '#3f6965', backdrop: '#20363b' },
   },
   crimsonPass: {

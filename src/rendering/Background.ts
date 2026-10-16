@@ -3,8 +3,6 @@ import { BACKDROP_WIDTH, GAME_HEIGHT, GROUND_Y, SCENERY_MARGIN, VIEW_BOTTOM, VIE
 import type { Battleground } from '../data/battlegrounds';
 import { layoutClouds, mixColor, type CloudLayer, type CloudShape } from './clouds';
 import { drawHills, drawVegetation } from './landscape';
-import { drawFlowers } from './meadowArt';
-import { layoutMeadow, type MeadowLayout } from './meadowLayout';
 import { groundAt, useTerrain } from '../systems/terrain';
 
 
@@ -68,9 +66,8 @@ export class Background {
       container.addChild(cloud);
       return { sprite: cloud, speed, width: shape.width };
     });
-    const meadow = battleground.trees.style === 'meadow' ? layoutMeadow(this.left, this.right, skySeed(battleground.name)) : undefined;
-    container.addChild(...this.tiledHills(drawHills(battleground)), drawVegetation(battleground, this.left, this.right, meadow));
-    container.addChild(this.createTerrain(battleground, meadow));
+    container.addChild(...this.tiledHills(drawHills(battleground)), drawVegetation(battleground, this.left, this.right));
+    container.addChild(this.createTerrain(battleground));
   }
 
   /**
@@ -132,7 +129,7 @@ export class Background {
     return graphics;
   }
 
-  private createTerrain({ ground: colors }: Battleground, meadow?: MeadowLayout): Graphics {
+  private createTerrain({ ground: colors }: Battleground): Graphics {
     const { left, right } = this;
     const ground = new Graphics();
     // Fill and grass edge follow the same surface line, so there's never a gap between them.
@@ -148,9 +145,6 @@ export class Background {
     ground.stroke({ width: 8, color: colors.edge, join: 'round' });
     for (let x = 25 - Math.ceil(SCENERY_MARGIN / 70) * 70; x < right; x += 70) {
       ground.ellipse(x, groundAt(x) + 32 + (((x % 3) + 3) % 3) * 8, 22, 6).fill({ color: colors.tufts, alpha: 0.35 });
-    }
-    if (meadow && colors.flowers) {
-      drawFlowers(ground, meadow.flowers, colors.flowers);
     }
     ground.zIndex = 0;
     return ground;
