@@ -2,6 +2,8 @@ import { Graphics } from 'pixi.js';
 import { BACKDROP_WIDTH, MOUNTAIN_MIST, VIEW_BOTTOM, WORLD_WIDTH } from '../config';
 import type { Battleground } from '../data/battlegrounds';
 import { groundAt } from '../systems/terrain';
+import { drawMeadow } from './meadowArt';
+import type { MeadowLayout } from './meadowLayout';
 
 /** Far and near hills (or lower, smoother dunes) between the sky and the ground, one BACKDROP_WIDTH stretch (Background repeats it). */
 export const drawHills = ({ hills: [far, near], hillShape, sky }: Battleground): Graphics => {
@@ -107,10 +109,17 @@ const drawCactus = (graphics: Graphics, x: number, height: number, colors: reado
 
 /**
  * The row of trees (round, pine) or sparse cacti standing on the horizon, from x `left` to `right`, each on the ground
- * where it stands (`groundAt`: in a dip it stands lower, on a rise its foot is behind the ground).
+ * where it stands (`groundAt`: in a dip it stands lower, on a rise its foot is behind the ground). The meadow style
+ * draws its `meadow` layout instead.
  */
-export const drawVegetation = ({ trees }: Battleground, left = 0, right = WORLD_WIDTH): Graphics => {
+export const drawVegetation = (battleground: Battleground, left = 0, right = WORLD_WIDTH, meadow?: MeadowLayout): Graphics => {
+  const { trees } = battleground;
   const forest = new Graphics();
+  if (meadow) {
+    drawMeadow(forest, battleground, meadow);
+    forest.zIndex = 0;
+    return forest;
+  }
   const [main, light, dark] = trees.colors;
   if (trees.style === 'cactus') {
     for (let index = 0, x = 60; x < right; index += 1) {
