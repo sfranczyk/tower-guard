@@ -54,7 +54,7 @@ describe('vortex', () => {
     expect(flingVelocity(30, true, 0.5, 0.5).y).toBeLessThan(flingVelocity(30, false, 0.5, 0.5).y);
   });
 
-  it('levitates the one it hit straight up, above the funnel, never past its height; its drop hurts less than a throw', () => {
+  it('levitates the one it hit straight up, above the funnel, never past its height', () => {
     expect(levitateHeight(0)).toBe(0);
     expect(levitateHeight(1000)).toBeGreaterThan(VORTEX.levitateSpeed * 0.7);
     // The funnel is drawn a little above VORTEX.top; by the end it hangs well above it.
@@ -63,14 +63,25 @@ describe('vortex', () => {
       expect(levitateHeight(age)).toBeLessThanOrEqual(VORTEX.levitateHeight + 4);
       expect(levitateHeight(age + 50) - levitateHeight(age)).toBeLessThan((VORTEX.levitateSpeed * 50) / 1000 + 1);
     }
-    // Each further hit lifts it higher (up to the cap); a brute barely leaves the ground.
-    expect(levitateHeight(VORTEX.ms, FIGHTER, VORTEX.levitateBoost)).toBeGreaterThan(levitateHeight(VORTEX.ms) + VORTEX.levitateBoost * 0.9);
-    expect(levitateHeight(VORTEX.ms, FIGHTER, 10_000)).toBe(VORTEX.levitateMax);
+    // A brute barely leaves the ground; its drop still hurts.
     expect(levitateHeight(VORTEX.ms, OGRE)).toBeLessThan(VORTEX.top * 0.4);
     expect(levitateHeight(VORTEX.ms, OGRE)).toBeGreaterThan(10);
-    const drop = fallDamage(landingSpeed(levitateHeight(VORTEX.ms), 0)) * VORTEX.levitateFall;
-    expect(drop).toBeGreaterThan(3);
-    expect(drop).toBeLessThan(fallDamage(landingSpeed(VORTEX.top, throwVelocity(1, 0.5, 0.5).y)));
+    expect(fallDamage(landingSpeed(levitateHeight(VORTEX.ms), 0))).toBeGreaterThan(3);
+  });
+
+  it('lifts it again from where it is on every further hit, each lift levitateDecay of the one before, never past 1 / (1 - decay)', () => {
+    // Long after the hit, at a moment the bob is level: the lift in full.
+    const settled = 260 * Math.PI * 100;
+    expect(levitateHeight(0, FIGHTER, 300, 2)).toBe(300);
+    expect(levitateHeight(10, FIGHTER, 300, 2)).toBeGreaterThan(300);
+    expect(levitateHeight(settled, FIGHTER, 0, 2) / levitateHeight(settled, FIGHTER, 0, 1)).toBeCloseTo(VORTEX.levitateDecay);
+    let height = 0;
+    for (let hits = 1; hits <= 60; hits += 1) {
+      height = levitateHeight(settled, FIGHTER, height, hits);
+    }
+    const ceiling = VORTEX.levitateHeight / (1 - VORTEX.levitateDecay);
+    expect(height).toBeGreaterThan(ceiling * 0.99);
+    expect(height).toBeLessThanOrEqual(ceiling + 1e-6);
   });
 
   it('takes a fighter (the reference mass) at the base pace, the lighter faster and further, the heavier slower and shorter', () => {

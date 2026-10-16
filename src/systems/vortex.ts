@@ -109,20 +109,21 @@ export const levitateShare = (mass: number): number => {
 };
 
 /**
- * How high (px) the enemy a vortex arrow hit has levitated `ageMs` after: straight up at VORTEX.levitateSpeed,
- * easing off towards VORTEX.levitateHeight, with a gentle bob; `boost` px higher for every further hit (see
- * VORTEX.levitateBoost), never above VORTEX.levitateMax. Something heavier than VORTEX_MASS.levitateFull rises
- * slower and lower (levitateShare: a brute only a little).
+ * How high (px) the enemy a vortex arrow hit has levitated `ageMs` after its latest hit: from `from` px straight up
+ * at VORTEX.levitateSpeed, easing off towards a lift of VORTEX.levitateHeight, with a gentle bob. Its `hits`-th hit
+ * lifts it VORTEX.levitateDecay^(hits - 1) of that (so all together at most 1 / (1 - levitateDecay) as high).
+ * Something heavier than VORTEX_MASS.levitateFull rises slower and lower (levitateShare: a brute only a little).
  */
-export const levitateHeight = (ageMs: number, mass: number = VORTEX_MASS.reference, boost = 0): number => {
+export const levitateHeight = (ageMs: number, mass: number = VORTEX_MASS.reference, from = 0, hits = 1): number => {
   if (ageMs <= 0) {
-    return 0;
+    return from;
   }
   const share = levitateShare(mass);
+  const lift = VORTEX.levitateHeight * VORTEX.levitateDecay ** (hits - 1);
   // Lower, and also slower to get there (the time it takes grows as the share shrinks).
-  const rise = VORTEX.levitateHeight * (1 - Math.exp((-VORTEX.levitateSpeed * Math.sqrt(share) * ageMs) / 1000 / VORTEX.levitateHeight));
+  const rise = lift * (1 - Math.exp((-VORTEX.levitateSpeed * Math.sqrt(share) * ageMs) / 1000 / lift));
   const bob = Math.sin(ageMs / 260) * 4 * Math.min(1, ageMs / 600);
-  return Math.min(VORTEX.levitateMax, (rise + boost + bob) * share);
+  return from + (rise + bob) * share;
 };
 
 /** Damage from hitting the ground at `speed` px/s (straight down): none up to a safe speed, then more the harder. */

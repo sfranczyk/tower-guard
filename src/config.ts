@@ -238,8 +238,9 @@ export const FROST_FREEZE_BRUTE_MS = 5000;
  * the end it dies away and flings out the ones it hasn't lifted yet (VORTEX_FLING). Thrown enemies fall under
  * THROW_GRAVITY and take FALL_DAMAGE on landing: perSpeed × how much faster than safeSpeed they hit the ground.
  * The arrow itself does no damage: an enemy it hits glows and levitates straight up (towards VORTEX.levitateHeight
- * at VORTEX.levitateSpeed px/s, rising above the funnel) while the vortex lasts, then drops, taking VORTEX.levitateFall × the fall damage.
- * Each further vortex arrow that hits it lifts it VORTEX.levitateBoost px higher (at most VORTEX.levitateMax). Up to
+ * at VORTEX.levitateSpeed px/s, rising above the funnel) for VORTEX.ms, then drops and takes the full fall damage.
+ * Each further vortex arrow that hits it starts its VORTEX.ms over and lifts it again, VORTEX.levitateDecay as high as
+ * the lift before (all together at most 1 / (1 - levitateDecay) × levitateHeight); no new vortex opens up there. Up to
  * VORTEX_MASS.levitateFull it levitates as a man does; heavier ones rise ever slower and lower, down to
  * VORTEX_LEVITATE_HEAVY as high at VORTEX_MASS.levitateHeavy (a brute) and beyond.
  */
@@ -252,10 +253,8 @@ export const VORTEX = tunable('VORTEX', 'Vortex', {
   top: 130,
   levitateSpeed: 110,
   levitateHeight: 280,
-  levitateFall: 0.5,
-  levitateBoost: 110,
-  levitateMax: 400,
-}, { meta: { heavyWalk: { max: 1 }, levitateFall: { max: 1 } } });
+  levitateDecay: 0.8,
+}, { meta: { heavyWalk: { max: 1 }, levitateDecay: { max: 0.95 } } });
 export const VORTEX_THROW = { up: [420, 560], side: [110, 260] } as const;
 export const VORTEX_FLING = { up: [170, 260], side: [170, 290] } as const;
 export const THROW_GRAVITY = 1100;

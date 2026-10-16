@@ -17,7 +17,7 @@ import type Enemy from '../objects/enemy/Enemy';
 import type { ProjectileType, Vec2 } from '../types';
 import type { BowmanHit } from './bowmanDeath';
 import {
-  VORTEX_CORE, VORTEX_SPIN, fallDamage, flingVelocity, funnelCeiling, funnelPosition, levitateHeight, levitateShare, massPace, resistsVortex, throwVelocity,
+  VORTEX_CORE, VORTEX_SPIN, fallDamage, flingVelocity, funnelCeiling, funnelPosition, levitateHeight, massPace, resistsVortex, throwVelocity,
   vortexPull, vortexRise, vortexStrength,
 } from './vortex';
 import type { EffectsSystem } from './EffectsSystem';
@@ -55,19 +55,25 @@ interface Vortex {
   x: number;
   ageMs: number;
   caught: Map<Walker, Caught>;
-  /**
-   * The enemy the arrow hit: it levitates straight up (at `x`) instead of being caught in the funnel, `boost` px
-   * higher (easing towards `boostTarget`) for every further vortex arrow that hits it.
-   */
-  levitating?: { enemy: Walker; x: number; boost: number; boostTarget: number };
+}
+
+/**
+ * The enemy a vortex arrow hit: it levitates straight up (at `x`) instead of being caught in the funnel, on its own
+ * clock: `ageMs` since its latest hit (the `hits`-th), which started it rising from `from` px; `height` where it is now.
+ */
+interface Levitation {
+  enemy: Walker;
+  x: number;
+  ageMs: number;
+  from: number;
+  hits: number;
+  height: number;
 }
 
 /** A levitating enemy sways this much (radians) as it hangs in the air. */
 const LEVITATE_SWAY = 0.25;
 /** Dropped when the vortex dies away, it drifts sideways at most this fast (px/s). */
 const LEVITATE_DRIFT = 30;
-/** How quickly a levitating enemy rises to a boost (1/s). */
-const BOOST_RATE = 3;
 /** A rider pulled out of the saddle starts levitating from this high (px; Enemy.liftFromSaddle). */
 const SADDLE_LIFT = 22;
 
@@ -95,6 +101,7 @@ export const isMagicArrow = (type: ProjectileType): type is 'fire' | 'frost' | '
 export class ArrowMagic {
   private patches: Array<{ x: number; msLeft: number }> = [];
   private vortices: Vortex[] = [];
+  private levitations: Levitation[] = [];
   /** Horses whose riders a vortex pulled out of the saddle: bolting, slowed by the wind while in a vortex's reach. */
   private fleeing: Enemy[] = [];
   private burnClockMs = 0;
@@ -128,16 +135,19 @@ export class ArrowMagic {
       } else if (!(enemy instanceof Bowman) && enemy.rides && part === 'rider') {
         this.unseat(enemy);
       } else {
-        const held = this.vortices.find((other) => other.levitating?.enemy === enemy)?.levitating;
+        const held = this.levitations.find((levitation) => levitation.enemy === enemy);
         if (held) {
-          // Already levitating: it goes up higher still.
-          held.boostTarget += VORTEX.levitateBoost;
+          // Already levitating: its clock starts over and it rises again from where it is (a little less each time).
+          held.from = held.height;
+          held.ageMs = 0;
+          held.hits += 1;
           this.hooks.sound('shrapnelBurst', impact);
           return;
         }
         // The one it hits levitates; the vortex opens under it for the others.
         this.vortices.forEach((other) => other.caught.delete(enemy));
-        this.openVortex(enemy.x, enemy);
+        this.openVortex(enemy.x);
+        this.levitate(enemy);
       }
     }
   }
@@ -180,6 +190,7 @@ export class ArrowMagic {
       return patch.msLeft > 0;
     });
     this.vortices = this.vortices.filter((vortex) => this.updateVortex(vortex, deltaMs, walkers));
+    this.levitations = this.levitations.filter((levitation) => this.updateLevitation(levitation, deltaMs));
     if (this.vortices.length === 0) {
       this.fleeing = [];
     }
@@ -221,18 +232,41 @@ export class ArrowMagic {
   private unseat(mounted: Enemy): void {
     const rider = mounted.unseat();
     this.fleeing.push(mounted);
-    this.openVortex(rider?.x ?? mounted.x, rider, SADDLE_LIFT);
+    this.openVortex(rider?.x ?? mounted.x);
+    if (rider) {
+      this.levitate(rider, SADDLE_LIFT);
+    }
   }
 
-  /** Opens a vortex at `x`; `levitating` (the one the arrow hit) levitates over it, starting `startHeight` px up. */
-  private openVortex(x: number, levitating?: Walker, startHeight = 0): void {
+  /** Opens a vortex on the ground at `x`. */
+  private openVortex(x: number): void {
     this.effects.vortex({ x, y: groundAt(x) });
-    // The levitation's boost is scaled by its share (vortex.levitateHeight): this much starts it at `startHeight`.
-    const boost = levitating ? startHeight / levitateShare(massOf(levitating)) : 0;
-    this.vortices.push({
-      x, ageMs: 0, caught: new Map(), levitating: levitating ? { enemy: levitating, x: levitating.x, boost, boostTarget: boost } : undefined,
-    });
+    this.vortices.push({ x, ageMs: 0, caught: new Map() });
     this.hooks.sound('shrapnelBurst', { x, y: groundAt(x) });
+  }
+
+  /** The one a vortex arrow hit starts levitating, from `from` px up. */
+  private levitate(enemy: Walker, from = 0): void {
+    this.levitations.push({ enemy, x: enemy.x, ageMs: 0, from, hits: 1, height: from });
+  }
+
+  /**
+   * Holds a levitating enemy up, straight up, glowing, swaying a little; once its time is up it drops (taking the
+   * full fall). Returns false then, or once it's killed, knocked down or pinned.
+   */
+  private updateLevitation(levitation: Levitation, deltaMs: number): boolean {
+    const { enemy } = levitation;
+    if (!enemy.isAlive() || enemy.isDown || enemy.isPinned) {
+      return false;
+    }
+    levitation.ageMs += deltaMs;
+    if (levitation.ageMs >= VORTEX.ms) {
+      this.launch(enemy, { x: (Math.random() * 2 - 1) * LEVITATE_DRIFT, y: 0 });
+      return false;
+    }
+    levitation.height = levitateHeight(levitation.ageMs, massOf(enemy), levitation.from, levitation.hits);
+    enemy.holdInVortex(levitation.x, levitation.height, Math.sin(levitation.ageMs / 420) * LEVITATE_SWAY, true);
+    return true;
   }
 
   /**
@@ -246,18 +280,7 @@ export class ArrowMagic {
       return false;
     }
     const strength = vortexStrength(vortex.ageMs);
-    const { caught, levitating } = vortex;
-    if (levitating) {
-      const { enemy } = levitating;
-      if (!enemy.isAlive() || enemy.isDown || enemy.isPinned) {
-        vortex.levitating = undefined;
-      } else {
-        // Straight up, glowing, swaying a little (and higher with every further hit).
-        levitating.boost += (levitating.boostTarget - levitating.boost) * Math.min(1, (BOOST_RATE * deltaMs) / 1000);
-        const height = levitateHeight(vortex.ageMs, massOf(enemy), levitating.boost);
-        enemy.holdInVortex(levitating.x, height, Math.sin(vortex.ageMs / 420) * LEVITATE_SWAY, true);
-      }
-    }
+    const { caught } = vortex;
     // Knocked down, pinned or killed: it lets go (a dead one falls).
     caught.forEach((_, enemy) => {
       if (!enemy.isAlive() || enemy.isDown || enemy.isPinned) {
@@ -271,7 +294,7 @@ export class ArrowMagic {
       .forEach((enemy) => enemy.afflictions.slowByWind(VORTEX.heavyWalk));
     walkers
       .filter((enemy) => !resistsVortex(massOf(enemy)) && !caught.has(enemy) && !enemy.isDown && !enemy.isPinned && inReach(enemy))
-      .filter((enemy) => !this.vortices.some((other) => other.caught.has(enemy) || other.levitating?.enemy === enemy))
+      .filter((enemy) => !this.vortices.some((other) => other.caught.has(enemy)) && !this.levitations.some((held) => held.enemy === enemy))
       .forEach((enemy) => caught.set(enemy, { phase: 'pull', height: 0, angle: 0 }));
 
     caught.forEach((state, enemy) => {
@@ -304,15 +327,11 @@ export class ArrowMagic {
   }
 
   /**
-   * The vortex dies away: it flings out the ones it hasn't thrown yet, away from its centre, and drops the one it
-   * held up (that one takes VORTEX.levitateFall of the fall damage).
+   * The vortex dies away: it flings out the ones it hasn't thrown yet, away from its centre (the one levitating
+   * over it keeps its own clock).
    */
   private dieAway(vortex: Vortex): void {
     this.effects.vortexFade({ x: vortex.x, y: groundAt(vortex.x) });
-    const held = vortex.levitating?.enemy;
-    if (held?.isAlive() && !held.isDown) {
-      this.launch(held, { x: (Math.random() * 2 - 1) * LEVITATE_DRIFT, y: 0 }, VORTEX.levitateFall);
-    }
     vortex.caught.forEach((state, enemy) => {
       if (enemy.isAlive()) {
         this.launch(enemy, flingVelocity(enemy.x - vortex.x, state.phase === 'rise', Math.random(), Math.random(), massOf(enemy)));
@@ -321,18 +340,18 @@ export class ArrowMagic {
     vortex.caught.clear();
   }
 
-  /** Throws `enemy` through the air; when it lands it takes the fall (× `damageScale`, see landed). */
-  private launch(enemy: Walker, velocity: Vec2, damageScale = 1): void {
+  /** Throws `enemy` through the air; when it lands it takes the fall (see landed). */
+  private launch(enemy: Walker, velocity: Vec2): void {
     const spin = Math.sign(velocity.x || 1) * (THROW_SPIN[0] + Math.random() * (THROW_SPIN[1] - THROW_SPIN[0]));
     enemy.throwInAir(velocity.x, velocity.y, spin);
-    enemy.onLanded = (impactSpeed) => this.landed(enemy, impactSpeed, damageScale);
+    enemy.onLanded = (impactSpeed) => this.landed(enemy, impactSpeed);
   }
 
   /**
    * A thrown enemy hits the ground: a frozen one shatters, a kamikaze the fall would kill goes off, the rest take the fall's damage. A
    * bowman takes the fall too (frozen, his ice breaks first).
    */
-  private landed(enemy: Walker, impactSpeed: number, damageScale: number): void {
+  private landed(enemy: Walker, impactSpeed: number): void {
     const point = { x: enemy.x, y: groundAt(enemy.x) - 4 };
     this.effects.impact(point);
     if (!enemy.isAlive()) {
@@ -342,7 +361,7 @@ export class ArrowMagic {
       if (enemy.isFrozen) {
         this.hooks.breakIce(enemy);
       }
-      const damage = fallDamage(impactSpeed) * damageScale;
+      const damage = fallDamage(impactSpeed);
       if (damage > 0) {
         this.hooks.hurtBowman(enemy, damage, { cause: 'fall', fromX: enemy.x });
       }
@@ -351,7 +370,7 @@ export class ArrowMagic {
       }
       return;
     }
-    const damage = fallDamage(impactSpeed) * damageScale;
+    const damage = fallDamage(impactSpeed);
     if (enemy.afflictions.isFrozen) {
       // Frozen, it shatters (a kamikaze's bomb in the ice doesn't go off).
       this.hooks.shatter(enemy, enemy.x);
