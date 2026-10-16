@@ -256,7 +256,7 @@ export const ENEMY_ATTACK = tunable('ENEMY_ATTACK', 'Enemy attacks', {
   archerRange: 340,
   archerDrawMs: 900,
   archerCooldownMs: 1700,
-  archerSpread: 0.07,
+  archerSpread: 0.1,
 });
 /** Draw power (0..1) of enemy shots (their damage per shooter is in data/enemies.ts, ENEMY_DAMAGE). */
 export const ENEMY_ARROW_POWER = 0.75;
@@ -350,8 +350,8 @@ export const WAVES = tunable('WAVES', 'Waves', {
 export const DIFFICULTY_SCALE = tunable('DIFFICULTY_SCALE', 'Difficulty', {
   mediumDamage: 1.25,
   hardDamage: 1.5,
-  mediumSpread: 0.7,
-  hardSpread: 0.4,
+  mediumSpread: 0.75,
+  hardSpread: 0.55,
   groupSize: 5,
   groupSpawnIntervalMs: 300,
   groupGapMs: 1500,
