@@ -2,6 +2,8 @@ import { Graphics } from 'pixi.js';
 import { BACKDROP_WIDTH, MOUNTAIN_MIST, VIEW_BOTTOM, WORLD_WIDTH } from '../config';
 import type { Battleground } from '../data/battlegrounds';
 import { groundAt } from '../systems/terrain';
+import { treeDesign } from './designs/treeDesigns';
+import { meadowTreeAt } from './meadowTrees';
 
 /** Far and near hills (or lower, smoother dunes) between the sky and the ground, one BACKDROP_WIDTH stretch (Background repeats it). */
 export const drawHills = ({ hills: [far, near], hillShape, sky }: Battleground): Graphics => {
@@ -146,10 +148,9 @@ export const drawVegetation = ({ trees }: Battleground, left = 0, right = WORLD_
         forest.poly([x - halfWidth, base, x, base - height * 0.8, x + halfWidth, base]).fill({ color });
       });
     } else {
-      forest.circle(x, ground - height, 18).fill({ color: main });
-      forest.circle(x - 14, ground - height + 12, 15).fill({ color: light });
-      forest.circle(x + 15, ground - height + 12, 15).fill({ color: dark });
-      forest.rect(x - 3, ground - height + 16, 6, height).fill({ color: trees.trunk });
+      // Round trees (Green Meadow): a mix of the design lab's tree designs, in their own colours.
+      const slot = Math.round((x - 20) / 92);
+      treeDesign(meadowTreeAt(slot)).draw(forest, x, ground, height, slot);
     }
   }
   forest.zIndex = 0;

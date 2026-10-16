@@ -526,5 +526,5 @@ export const DESIGN_SECTIONS: readonly DesignSection[] = [
   { id: 'enemies', tab: 'Enemies', intro: 'Every enemy as it looks in the game now, over its own moves. Click one for all its animations and the old stickman.', entries: ENEMIES },
   { id: 'player', tab: 'Player', intro: 'The player looks: the ranger (player 1) and the keep warden (player 2 in co-op), next to the old armored archer.', entries: PLAYER },
   { id: 'ideas', tab: 'Ideas', intro: 'Proposals for new enemy looks, from the most human to the least (not tied to an enemy yet).', entries: IDEAS },
-  { id: 'trees', tab: 'Trees', intro: 'Proposals for the Green Meadow\'s trees: small variations on the round tree the map has now (the first card). Click one for a row of them as on the map.', entries: TREES },
+  { id: 'trees', tab: 'Trees', intro: 'Proposals for the Green Meadow\'s trees: small variations on the round tree (the first card); the map mixes those weighted in MEADOW_TREES (?tune). Click one for a row of them as on the map.', entries: TREES },
 ];

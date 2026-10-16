@@ -3,7 +3,7 @@ import { mixColor } from '../clouds';
 
 /**
  * Tree proposals for the Green Meadow (design lab, tab Trees): variations on the map's round tree (three circles on a
- * trunk, rendering/landscape.ts), in its colours. Not in the game yet.
+ * trunk), in its colours. Those named in MEADOW_TREES stand on the map (rendering/landscape.ts, meadowTrees.ts).
  */
 
 /** Ground y in the lab's sprite space (as drawStickman). */
@@ -15,8 +15,8 @@ const TRUNK = 0x584d42;
 /** Spacing of the trees on the map. */
 const SPACING = 92;
 
-/** Draws one tree standing at x on GROUND; `height` as on the map (38, 52 or 66), `index` its place in the row. */
-type TreeDrawer = (g: Graphics, x: number, height: number, index: number) => void;
+/** Draws one tree with its foot at (x, ground); `height` as on the map (38, 52 or 66), `index` its place in the row. */
+export type TreeDrawer = (g: Graphics, x: number, ground: number, height: number, index: number) => void;
 
 export interface TreeDesign {
   id: string;
@@ -32,13 +32,13 @@ const roundCrown = (g: Graphics, x: number, top: number, size = 1, colors = [MAI
   g.circle(x - 14 * size, top + 12 * size, 15 * size).fill({ color: colors[1] });
   g.circle(x + 15 * size, top + 12 * size, 15 * size).fill({ color: colors[2] });
 };
-const trunk = (g: Graphics, x: number, from: number, width = 6, color = TRUNK): void => {
-  g.rect(x - width / 2, from, width, GROUND - from).fill({ color });
+const trunk = (g: Graphics, x: number, ground: number, from: number, width = 6, color = TRUNK): void => {
+  g.rect(x - width / 2, from, width, ground - from).fill({ color });
 };
-const current: TreeDrawer = (g, x, height) => {
-  const top = GROUND - height;
+const current: TreeDrawer = (g, x, ground, height) => {
+  const top = ground - height;
   roundCrown(g, x, top);
-  trunk(g, x, top + 16);
+  trunk(g, x, ground, top + 16);
 };
 
 /** Small steady per-tree differences (the same every frame). */
@@ -57,11 +57,11 @@ const designs: TreeDesign[] = [
     name: 'Tall crown',
     tagline: 'A fourth circle on top',
     description: 'The same three circles, a little narrower, with a fourth one on top: an upright, taller tree that breaks the row\'s even outline.',
-    draw: (g, x, height) => {
-      const top = GROUND - height;
+    draw: (g, x, ground, height) => {
+      const top = ground - height;
       g.circle(x, top - 16, 13).fill({ color: MAIN });
       roundCrown(g, x, top, 0.85);
-      trunk(g, x, top + 14);
+      trunk(g, x, ground, top + 14);
     },
   },
   {
@@ -69,12 +69,12 @@ const designs: TreeDesign[] = [
     name: 'Wide crown',
     tagline: 'Broad and low',
     description: 'Five circles side by side on a shorter, thicker trunk: a spreading tree like an old oak.',
-    draw: (g, x, height) => {
-      const top = GROUND - height * 0.85;
+    draw: (g, x, ground, height) => {
+      const top = ground - height * 0.85;
       g.circle(x - 25, top + 18, 12).fill({ color: LIGHT });
       g.circle(x + 26, top + 18, 12).fill({ color: DARK });
       roundCrown(g, x, top);
-      trunk(g, x, top + 16, 8);
+      trunk(g, x, ground, top + 16, 8);
     },
   },
   {
@@ -82,14 +82,14 @@ const designs: TreeDesign[] = [
     name: 'Lopsided',
     tagline: 'Grown towards the light',
     description: 'The crown sits off the trunk and its side circles differ in size, as if one side got more sun. Each tree in the row leans its crown a different way.',
-    draw: (g, x, height, index) => {
-      const top = GROUND - height;
+    draw: (g, x, ground, height, index) => {
+      const top = ground - height;
       const side = index % 2 === 0 ? 1 : -1;
       const cx = x + side * 5;
       g.circle(cx, top, 18).fill({ color: MAIN });
       g.circle(cx - 14 - (side < 0 ? 3 : 0), top + 12, side < 0 ? 17 : 12).fill({ color: LIGHT });
       g.circle(cx + 15 + (side > 0 ? 3 : 0), top + 12, side > 0 ? 17 : 12).fill({ color: DARK });
-      trunk(g, x, top + 16);
+      trunk(g, x, ground, top + 16);
     },
   },
   {
@@ -97,11 +97,11 @@ const designs: TreeDesign[] = [
     name: 'Leaning',
     tagline: 'A slanted trunk',
     description: 'The map\'s tree with its trunk slightly slanted, so the crown stands a few pixels to one side of the foot; how far and which way changes from tree to tree.',
-    draw: (g, x, height, index) => {
-      const top = GROUND - height;
+    draw: (g, x, ground, height, index) => {
+      const top = ground - height;
       const lean = (wobble(index, 1) * 2 - 1) * 9;
       roundCrown(g, x + lean, top);
-      g.poly([x - 3.5, GROUND, x + 3.5, GROUND, x + lean + 2.5, top + 16, x + lean - 2.5, top + 16]).fill({ color: TRUNK });
+      g.poly([x - 3.5, ground, x + 3.5, ground, x + lean + 2.5, top + 16, x + lean - 2.5, top + 16]).fill({ color: TRUNK });
     },
   },
   {
@@ -109,15 +109,15 @@ const designs: TreeDesign[] = [
     name: 'Forked',
     tagline: 'Two crowns on one trunk',
     description: 'The trunk splits halfway into two branches, each carrying a smaller three-circle crown, one a little higher than the other.',
-    draw: (g, x, height) => {
-      const top = GROUND - height;
-      const fork = GROUND - height * 0.45;
+    draw: (g, x, ground, height) => {
+      const top = ground - height;
+      const fork = ground - height * 0.45;
       [[-11, top + 6], [12, top - 2]].forEach(([dx, y]) => {
         g.moveTo(x, fork).lineTo(x + dx, y + 10).stroke({ width: 4, color: TRUNK, cap: 'round' });
       });
       roundCrown(g, x - 11, top + 6, 0.68);
       roundCrown(g, x + 12, top - 2, 0.72);
-      trunk(g, x, fork, 6);
+      trunk(g, x, ground, fork, 6);
     },
   },
   {
@@ -125,10 +125,10 @@ const designs: TreeDesign[] = [
     name: 'Young',
     tagline: 'Thin and small',
     description: 'A sapling: a thin trunk and the three circles at two thirds of their size. Mixed in, it makes the row look grown rather than planted.',
-    draw: (g, x, height) => {
-      const top = GROUND - height * 0.8;
+    draw: (g, x, ground, height) => {
+      const top = ground - height * 0.8;
       roundCrown(g, x, top, 0.68);
-      trunk(g, x, top + 11, 4);
+      trunk(g, x, ground, top + 11, 4);
     },
   },
   {
@@ -136,12 +136,12 @@ const designs: TreeDesign[] = [
     name: 'Shaded',
     tagline: 'Light and shadow on the crown',
     description: 'The map\'s tree with a small sunlit patch at the top left and a shadow under the crown, so it reads as a ball rather than three flat discs.',
-    draw: (g, x, height) => {
-      const top = GROUND - height;
+    draw: (g, x, ground, height) => {
+      const top = ground - height;
       g.circle(x + 3, top + 17, 16).fill({ color: mixColor(DARK, 0x000000, 0.2) });
       roundCrown(g, x, top);
       g.circle(x - 7, top - 7, 7).fill({ color: mixColor(LIGHT, 0xc9e39a, 0.25) });
-      trunk(g, x, top + 24);
+      trunk(g, x, ground, top + 24);
     },
   },
   {
@@ -149,11 +149,11 @@ const designs: TreeDesign[] = [
     name: 'Bush at its foot',
     tagline: 'Undergrowth',
     description: 'The map\'s tree with a low bush at its foot (two dark circles), on one side or the other.',
-    draw: (g, x, height, index) => {
-      current(g, x, height, index);
+    draw: (g, x, ground, height, index) => {
+      current(g, x, ground, height, index);
       const side = index % 2 === 0 ? 1 : -1;
-      g.circle(x + side * 9, GROUND - 4, 9).fill({ color: DARK });
-      g.circle(x + side * 19, GROUND - 2, 7).fill({ color: LIGHT });
+      g.circle(x + side * 9, ground - 4, 9).fill({ color: DARK });
+      g.circle(x + side * 19, ground - 2, 7).fill({ color: LIGHT });
     },
   },
   {
@@ -161,12 +161,12 @@ const designs: TreeDesign[] = [
     name: 'Clump',
     tagline: 'Two trees together',
     description: 'A smaller, darker tree just behind and beside the map\'s tree, so they stand as a pair instead of one by one.',
-    draw: (g, x, height, index) => {
-      const behind = GROUND - height * 0.75;
+    draw: (g, x, ground, height, index) => {
+      const behind = ground - height * 0.75;
       const shade = (color: number): number => mixColor(color, 0x10241f, 0.25);
       roundCrown(g, x - 17, behind, 0.75, [shade(MAIN), shade(LIGHT), shade(DARK)]);
-      trunk(g, x - 17, behind + 12, 4, shade(TRUNK));
-      current(g, x + 6, height, index);
+      trunk(g, x - 17, ground, behind + 12, 4, shade(TRUNK));
+      current(g, x + 6, ground, height, index);
     },
   },
 ];
@@ -175,16 +175,18 @@ const HEIGHTS = [38, 52, 66];
 
 export const TREE_DESIGNS: readonly TreeDesign[] = designs;
 
+export const treeDesign = (id: string): TreeDesign => designs.find((design) => design.id === id) ?? designs[0];
+
 /** One tree, middle height. */
 export const drawTreeSingle = (design: TreeDesign) => (g: Graphics): void => {
   g.clear();
-  design.draw(g, 0, 52, 0);
+  design.draw(g, 0, GROUND, 52, 0);
 };
 
 /** Five trees as on the map: every SPACING px, heights cycling 38/52/66. */
 export const drawTreeRow = (design: TreeDesign) => (g: Graphics): void => {
   g.clear();
   for (let index = 0; index < 5; index += 1) {
-    design.draw(g, (index - 2) * SPACING, HEIGHTS[index % 3], index);
+    design.draw(g, (index - 2) * SPACING, GROUND, HEIGHTS[index % 3], index);
   }
 };

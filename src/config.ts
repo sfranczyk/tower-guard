@@ -90,6 +90,20 @@ export const MEADOW = tunable('MEADOW', 'Meadow scenery', {
   rockEvery: 380,
 }, { meta: { clumpChance: { max: 1 }, clearingChance: { max: 1 }, farScale: { max: 1, step: 0.01 }, farHaze: { max: 1 } } });
 
+/**
+ * How often each Green Meadow tree (design lab, tab Trees) stands in the row: relative weights, 0 = never. Read when a
+ * level's background is drawn.
+ */
+export const MEADOW_TREES = tunable('MEADOW_TREES', 'Meadow trees', {
+  current: 4,
+  wide: 1,
+  leaning: 1.5,
+  forked: 1,
+  young: 1,
+  undergrowth: 1,
+  clump: 1,
+});
+
 export const GROUND_Y = 490;
 /** The ground surface waves up and down by this much around GROUND_Y (see systems/terrain.ts). */
 export const TERRAIN_AMPLITUDE = 7;
