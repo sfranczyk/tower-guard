@@ -35,7 +35,7 @@ animation gets a row in `scenes/labRows.ts` (or `scenes/labSequences.ts` for one
 - **Designs** (`designs/`): `bodyPoses.ts` (BodyPose for every animation, pure, tested), `skinKit.ts` (parts in
   torso/head frames), `drawHumanoid` / `HumanoidLook`; looks in `enemySkins.ts`, `heavySkins.ts`, `knightSkins.ts`,
   `playerSkins.ts`, `warhorse.ts`; ideas in `ideas.ts` (+ `ideaHumanoids.ts`, `ideaFolk.ts`, `ideaUndead.ts`, `ideaBeasts.ts`, `ideaCreatures.ts`, gaits in `designSkeleton.ts`);
-  catalogue `catalog.ts`.
+  catalogue `catalog.ts`. Tree proposals for the Green Meadow (tab Trees): `treeDesigns.ts` (`TREE_DESIGNS`).
 
 ## Dragons
 - `dragon.ts`: `getDragonPose` (pure; wing beat, bob, neck and tail), `DRAGON_PALETTES` (`dark`, `red`),

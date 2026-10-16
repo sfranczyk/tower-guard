@@ -18,6 +18,7 @@ import { banditArcherLook, goblinBomberLook, goblinLook, raiderLook, sapperLook 
 import { shamanLook } from './shamanSkin';
 import { dragonArcherLook, dragonKnightLook, drawDragonWithRider, ogreLook, trollLook, zombieLook } from './heavySkins';
 import { ENEMY_DESIGNS } from './ideas';
+import { TREE_DESIGNS, drawTreeRow, drawTreeSingle } from './treeDesigns';
 import { blackKnightLook, darkPriestLook, heavyKnightLook } from './knightSkins';
 import { drawMountedKnight } from './warhorse';
 import { HORSE_DEATH_MS, getHorseDeath, type HorseDeathKind } from '../horseDeath';
@@ -510,8 +511,20 @@ const IDEAS: DesignEntry[] = ENEMY_DESIGNS.map((design) => ({
   views: [{ label: 'Walk', draw: design.draw, speed: design.speed }],
 }));
 
+const TREES: DesignEntry[] = TREE_DESIGNS.map((design) => ({
+  id: `tree-${design.id}`,
+  name: design.name,
+  tagline: design.tagline,
+  description: design.description,
+  views: [
+    { label: 'One tree', draw: drawTreeSingle(design), scale: 1.6 },
+    { label: 'A row, as on the map', draw: drawTreeRow(design), scale: 0.26 },
+  ],
+}));
+
 export const DESIGN_SECTIONS: readonly DesignSection[] = [
   { id: 'enemies', tab: 'Enemies', intro: 'Every enemy as it looks in the game now, over its own moves. Click one for all its animations and the old stickman.', entries: ENEMIES },
   { id: 'player', tab: 'Player', intro: 'The player looks: the ranger (player 1) and the keep warden (player 2 in co-op), next to the old armored archer.', entries: PLAYER },
   { id: 'ideas', tab: 'Ideas', intro: 'Proposals for new enemy looks, from the most human to the least (not tied to an enemy yet).', entries: IDEAS },
+  { id: 'trees', tab: 'Trees', intro: 'Proposals for the Green Meadow\'s trees: small variations on the round tree the map has now (the first card). Click one for a row of them as on the map.', entries: TREES },
 ];
