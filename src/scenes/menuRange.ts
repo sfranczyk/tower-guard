@@ -143,12 +143,13 @@ export class MenuRange {
 
   private loose(direction: Vec2, power: number): void {
     const from = this.bowman.getBowReleasePoint();
-    this.arrows.forEach(({ arrow }) => arrow.ageTrail(2));
     const trail = new Graphics();
     trail.zIndex = 1;
     this.world.addChild(trail);
     const arrow = new Arrow(from.x, from.y, this.textures.arrows.normal, trail);
     arrow.fire(Math.atan2(direction.y, direction.x), launchSpeed('normal', power));
+    // No trails in the menu.
+    arrow.hideTrail();
     this.world.addChild(arrow);
     this.arrows.push({ arrow });
     this.bowman.loose();
