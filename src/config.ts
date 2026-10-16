@@ -31,6 +31,14 @@ export const BACKDROP_WIDTH = 1200;
 export const SCENERY_MARGIN = Math.max(0, Math.ceil((MAX_VIEW_WIDTH - BACKDROP_WIDTH) / 2)) + 40;
 export const CAMERA_ZOOM = 1;
 /**
+ * Outline under the aim lines, circles and dots on maps that give one (`AimColors.halo`): `extra` px wider than the
+ * line (half on each side), at `alpha` × the line's opacity. Read every frame.
+ */
+export const AIM_HALO = tunable('AIM_HALO', 'Aim halo', {
+  extra: 1,
+  alpha: 0.35,
+}, { meta: { alpha: { max: 1 }, extra: { min: 0, max: 4, step: 0.25 } } });
+/**
  * Valley mist of the mountain maps (rendering/landscape.ts): clear at `*Top`, thickening down to `*Alpha` at `*Bottom`
  * (world y), once over the far peaks' feet (the near slopes cover its lower end) and once over the near slopes'
  * feet behind the pines. Read when a level's background is drawn (start the level again to see a change).

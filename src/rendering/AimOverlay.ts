@@ -1,4 +1,5 @@
 import { Graphics } from 'pixi.js';
+import { AIM_HALO } from '../config';
 import { DEFAULT_AIM_COLORS, type AimColors } from '../data/battlegrounds';
 import type { AimInput } from '../managers/InputManager';
 import type { Vec2 } from '../types';
@@ -91,24 +92,24 @@ export class AimOverlay extends Graphics {
     this.segment(origin, { x: origin.x + this.lastReleaseDirection.x * radius, y: origin.y + this.lastReleaseDirection.y * radius }, previousColor, 0.55);
   }
 
-  /** Circle outline, over a dark halo when the battleground asks for one. */
+  /** Circle outline, over the battleground's halo when it asks for one. */
   private ring(center: Vec2, radius: number, color: number, alpha: number, width = 1): void {
     if (this.colors.halo !== undefined) {
-      this.circle(center.x, center.y, radius).stroke({ width: width + 2.5, color: this.colors.halo, alpha: alpha * 0.6 });
+      this.circle(center.x, center.y, radius).stroke({ width: width + AIM_HALO.extra, color: this.colors.halo, alpha: alpha * AIM_HALO.alpha });
     }
-    this.circle(center.x, center.y, radius).stroke({ width: width + (this.colors.halo !== undefined ? 0.5 : 0), color, alpha });
+    this.circle(center.x, center.y, radius).stroke({ width, color, alpha });
   }
 
   private segment(from: Vec2, to: Vec2, color: number, alpha: number, width = 1): void {
     if (this.colors.halo !== undefined) {
-      this.moveTo(from.x, from.y).lineTo(to.x, to.y).stroke({ width: width + 2.5, color: this.colors.halo, alpha: alpha * 0.6, cap: 'round' });
+      this.moveTo(from.x, from.y).lineTo(to.x, to.y).stroke({ width: width + AIM_HALO.extra, color: this.colors.halo, alpha: alpha * AIM_HALO.alpha, cap: 'round' });
     }
-    this.moveTo(from.x, from.y).lineTo(to.x, to.y).stroke({ width: width + (this.colors.halo !== undefined ? 0.5 : 0), color, alpha, cap: 'round' });
+    this.moveTo(from.x, from.y).lineTo(to.x, to.y).stroke({ width, color, alpha, cap: 'round' });
   }
 
   private dot(center: Vec2, radius: number, color: number, alpha: number): void {
     if (this.colors.halo !== undefined) {
-      this.circle(center.x, center.y, radius + 1.2).fill({ color: this.colors.halo, alpha: alpha * 0.7 });
+      this.circle(center.x, center.y, radius + AIM_HALO.extra / 2).fill({ color: this.colors.halo, alpha: alpha * AIM_HALO.alpha });
     }
     this.circle(center.x, center.y, radius).fill({ color, alpha });
   }

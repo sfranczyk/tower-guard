@@ -185,14 +185,15 @@ export const BATTLEGROUNDS: Readonly<Record<BattlegroundId, Battleground>> = {
     terrainWaviness: 1.5,
     wind: 150,
     // Red or gold has the same lightness as the grey-blue rock (it shimmers, no clear edge): deep navy instead,
-    // much darker than sky, peaks and snow, dark violet for the previous shot. No halo (it thickened the lines);
-    // over the dark pines the aim is faint.
+    // much darker than sky, peaks and snow, dark violet for the previous shot. A faint pale halo, barely wider than
+    // the lines (AIM_HALO), keeps them visible over the dark pines.
     aimColors: {
       aim: 0x1b2a6b,
       previousShot: 0x6a1f8f,
       trajectory: 0x1b2a6b,
       trailGlow: 0x4a5fc4,
       trailCore: 0x101a4a,
+      halo: 0xeef3f7,
     },
     ui: { accent: '#5b6f8c', backdrop: '#1c2533' },
   },
