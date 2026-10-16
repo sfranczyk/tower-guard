@@ -39,6 +39,8 @@ export interface BowmanConfig {
   armorColors?: ArmorPalette;
   /** Ranger (default, player 1) or keep warden (the co-op second player). */
   look?: BowmanLook;
+  /** How long he burns after the fire last touched him (the battle's difficulty: `relight`); easy by default. */
+  burnMs?: number;
 }
 
 /**
@@ -66,10 +68,10 @@ export class Bowman extends Container {
   /** Walking, jumping, the board's edges. */
   public readonly footing: BowmanFooting;
   /**
-   * His fire (the fire dragon's flames, and with friendly fire the fire arrows: BURN_DURATION_MS, his own flame
+   * His fire (the fire dragon's flames, and with friendly fire the fire arrows: BURN_DURATION_MS by difficulty, his own flame
    * size), frost and vortex state, drawn over him.
    */
-  public readonly afflictions = new AfflictionLayer('basic', { burnMs: relight(), flameSize: BURN_FLAME_SIZE, burnFadeMs: BURN_FADE_MS });
+  public readonly afflictions: AfflictionLayer;
   /**
    * Thrown through the air by a vortex, flailing until he lands (then `onLanded`: the host deals the fall); pinned by
    * the foot to the ground by a pinning arrow (can't walk, jump or hide, still shoots).
@@ -94,6 +96,7 @@ export class Bowman extends Container {
     this.maxHealth = config.maxHealth ?? 100;
     this.health = this.maxHealth;
     this.figure = new BowmanFigure(this, config.look ?? 'ranger', config.armorColors);
+    this.afflictions = new AfflictionLayer('basic', { burnMs: config.burnMs ?? relight(), flameSize: BURN_FLAME_SIZE, burnFadeMs: BURN_FADE_MS });
 
     this.addChild(this.figure.body, this.afflictions.art, this.healthBar);
 
@@ -132,7 +135,7 @@ export class Bowman extends Container {
   }
 
   /**
-   * Touched by fire: catches (or keeps) burning for the full BURN_DURATION_MS; it thaws the ice and drives the chill
+   * Touched by fire: catches (or keeps) burning for the full `burnMs` (BURN_DURATION_MS by difficulty); it thaws the ice and drives the chill
    * out. Returns true if he just caught fire.
    */
   public ignite(): boolean {

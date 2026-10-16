@@ -11,6 +11,7 @@ import Bowman from '../objects/bowman/Bowman';
 import { secondPlayerArmor } from '../rendering/armor';
 import type { AimOverlay } from '../rendering/AimOverlay';
 import type { EffectsSystem } from '../systems/EffectsSystem';
+import { relight } from '../systems/burning';
 import { groundAt } from '../systems/terrain';
 import type { ProjectileType } from '../types';
 import type { BattleArrows } from './BattleArrows';
@@ -53,6 +54,7 @@ export class BattlePlayers {
         armorColors: index === 0 ? armor : secondPlayerArmor(armor),
         // Player 1 is the ranger; in co-op player 2 is the keep warden.
         look: index === 0 ? 'ranger' : 'warden',
+        burnMs: relight(sandbox.difficulty),
       });
       bowman.y = groundAt(bowman.x);
       const health = run.bowmanHealths[index] ?? sandbox.bowmanHealth;

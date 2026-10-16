@@ -19,23 +19,24 @@ describe('flamesTouch', () => {
 
 describe('burn', () => {
   it('lasts BURN_DURATION_MS after the last touch', () => {
-    expect(relight()).toBe(BURN_DURATION_MS);
+    expect(relight()).toBe(BURN_DURATION_MS.easy);
+    expect(relight('hard')).toBe(BURN_DURATION_MS.hard);
   });
 
   it('deals steady damage per second, and nothing once burnt out', () => {
-    expect(burnDamage(BURN_DURATION_MS, 1000)).toBeCloseTo(BURN_DAMAGE_PER_S);
-    expect(burnDamage(BURN_DURATION_MS, 16)).toBeCloseTo(BURN_DAMAGE_PER_S * 0.016);
+    expect(burnDamage(BURN_DURATION_MS.easy, 1000)).toBeCloseTo(BURN_DAMAGE_PER_S);
+    expect(burnDamage(BURN_DURATION_MS.easy, 16)).toBeCloseTo(BURN_DAMAGE_PER_S * 0.016);
     expect(burnDamage(8, 16)).toBeCloseTo(BURN_DAMAGE_PER_S * 0.008);
     expect(burnDamage(0, 16)).toBe(0);
   });
 
   it('adds up to BURN_DAMAGE_PER_S × the duration over a whole burn', () => {
-    let remaining = BURN_DURATION_MS;
+    let remaining = BURN_DURATION_MS.easy;
     let total = 0;
     while (remaining > 0) {
       total += burnDamage(remaining, 16);
       remaining -= 16;
     }
-    expect(total).toBeCloseTo((BURN_DAMAGE_PER_S * BURN_DURATION_MS) / 1000, 6);
+    expect(total).toBeCloseTo((BURN_DAMAGE_PER_S * BURN_DURATION_MS.easy) / 1000, 6);
   });
 });

@@ -1,9 +1,10 @@
 import { BURN_DAMAGE_PER_S, BURN_DURATION_MS } from '../config';
+import type { DifficultyLevel } from '../data/difficulty';
 import type { Vec2 } from '../types';
 
 /**
  * Fire that sets the bowman alight (pure, tested): whether a stream's flames touch his body, and the
- * burn itself, which deals BURN_DAMAGE_PER_S for BURN_DURATION_MS after the last touch.
+ * burn itself, which deals BURN_DAMAGE_PER_S for BURN_DURATION_MS (by difficulty) after the last touch.
  */
 
 export interface Flame {
@@ -28,8 +29,8 @@ export const flamesTouch = (flames: readonly Flame[], box: Box): boolean => flam
   return Math.hypot(center.x - nearestX, center.y - nearestY) <= radius * FLAME_CORE;
 });
 
-/** Burn time left after being touched again by fire (a fresh touch always relights it fully). */
-export const relight = (): number => BURN_DURATION_MS;
+/** Burn time left after being touched again by fire (a fresh touch always relights it fully); longer on harder levels. */
+export const relight = (level: DifficultyLevel = 'easy'): number => BURN_DURATION_MS[level];
 
 /** Damage a burn deals over `deltaMs` while `remainingMs` of it is left (it stops when the burn runs out). */
 export const burnDamage = (remainingMs: number, deltaMs: number): number =>

@@ -362,9 +362,9 @@ export const FIRE_DRAGON_RANGE = 300;
 export const FIRE_DRAGON_BREATH_INTERVAL_MS = 6500;
 /**
  * Burning (the fire dragon's flames set the bowman alight, systems/burning.ts): BURN_DAMAGE_PER_S of steady
- * damage for BURN_DURATION_MS after the flames last touched him; staying in the fire keeps relighting it.
+ * damage for BURN_DURATION_MS (by difficulty) after the flames last touched him; staying in the fire keeps relighting it.
  */
-export const BURN_DURATION_MS = 4000;
+export const BURN_DURATION_MS = { easy: 4000, medium: 6000, hard: 8000 } as const;
 export const BURN_DAMAGE_PER_S = 3;
 /** Dragon drawn at this scale (its art is ~300 px long with the tail). */
 export const DRAGON_SCALE = 0.42;

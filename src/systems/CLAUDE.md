@@ -66,7 +66,7 @@ hit the bowman (not dead), or the keep while he hides, never enemies. `ENEMY_ARC
 
 ## Burning bowman (`burning.ts`)
 `flamesTouch` (fire dragon puff cores vs the bowman box; not in the keep) → `Bowman.ignite`: `BURN_DAMAGE_PER_S` for
-`BURN_DURATION_MS` after the last touch.
+`BURN_DURATION_MS` (easy 4 s, medium 6 s, hard 8 s; `relight(difficulty)`, `BowmanConfig.burnMs`) after the last touch.
 
 ## Lightning (storm weather)
 `lightning.ts` pure (bolt shapes, schedule, range), `WeatherSystem.ts` draws: sky flashes, ground strikes crackling for
