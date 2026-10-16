@@ -216,6 +216,8 @@ export class GuestSync {
           effects.healPulse(point);
         } else if (event.kind === 'buffPulse') {
           effects.buffPulse(point);
+        } else if (event.kind === 'alarm') {
+          effects.alarm(point);
         } else if (event.kind === 'vortex') {
           effects.vortex(point);
         } else {

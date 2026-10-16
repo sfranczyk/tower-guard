@@ -134,6 +134,29 @@ export const KAMIKAZE_BOMB = tunable('KAMIKAZE_BOMB', 'Kamikaze bomb', {
 }, { meta: { chainDelayMs: { min: 10, max: 500, step: 10 }, fireChance: { max: 1 }, lightningChance: { max: 1 } } });
 export const KAMIKAZE_GIB_FORCE = 1.8;
 /**
+ * Soldiers keeping clear of kamikazes (systems/blastAwareness.ts): a kamikaze coming within `noticeRange` px is
+ * noticed or missed once (miss chance: 1 − the race's `blastAwareness`, plus `lowHealthMiss` scaled below
+ * `lowHealthBelow` of its health, `buffMiss` under a shaman's spell, `busyMiss` mid-swing). A noticed one sends it
+ * `margin` px beyond the ground its bomb would blast (with every bomb that one sets off in turn), shouting "!"; it
+ * stays out while within `margin + hold` px of it and, once it's gone, waits `hesitateMinMs`..`hesitateMaxMs`.
+ */
+export const KAMIKAZE_AWARENESS = tunable('KAMIKAZE_AWARENESS', 'Kamikaze awareness', {
+  noticeRange: 320,
+  margin: 24,
+  hold: 40,
+  lowHealthBelow: 0.4,
+  lowHealthMiss: 0.6,
+  buffMiss: 0.3,
+  busyMiss: 0.25,
+  hesitateMinMs: 500,
+  hesitateMaxMs: 1500,
+}, {
+  meta: {
+    noticeRange: { min: 50, max: 800, step: 10 }, lowHealthBelow: { max: 1 }, lowHealthMiss: { max: 1 }, buffMiss: { max: 1 }, busyMiss: { max: 1 },
+    hesitateMinMs: { max: 5000, step: 50 }, hesitateMaxMs: { max: 5000, step: 50 },
+  },
+});
+/**
  * Knights' black plate: the share of an arrow's body hit that gets through (headshots through the visor, piercing
  * arrows and blasts deal their full damage).
  */

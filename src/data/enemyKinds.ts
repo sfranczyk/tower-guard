@@ -127,6 +127,8 @@ export interface EnemyTraits {
   pinMs: number;
   /** A priest's magic can heal it (not the undead). */
   healable: boolean;
+  /** How surely it notices a kamikaze coming and keeps clear of the blast, 0..1 (0: never, the undead; systems/blastAwareness.ts). */
+  blastAwareness: number;
 }
 
 export interface RaceInfo {
@@ -137,17 +139,18 @@ export interface RaceInfo {
   magical: boolean;
 }
 
-const NORMAL_TRAITS: EnemyTraits = { mass: 1.2, freezeMs: FROST_FREEZE_MS, burnFactor: 1, pinMs: PIN_DURATION_MS, healable: true };
+const NORMAL_TRAITS: EnemyTraits = { mass: 1.2, freezeMs: FROST_FREEZE_MS, burnFactor: 1, pinMs: PIN_DURATION_MS, healable: true, blastAwareness: 0.85 };
 
 export const RACES: Readonly<Record<EnemyRace, RaceInfo>> = {
   human: { label: 'Human', group: 'humans', traits: NORMAL_TRAITS, magical: false },
-  // Small and light: a vortex tosses them about.
-  goblin: { label: 'Goblin', group: 'nonHumans', traits: { ...NORMAL_TRAITS, mass: 0.8 }, magical: false },
-  // Big and heavy: no vortex lifts them, the ice holds them only briefly, no pin holds them down.
-  ogre: { label: 'Ogre', group: 'nonHumans', traits: { ...NORMAL_TRAITS, mass: 4.2, freezeMs: FROST_FREEZE_BRUTE_MS, pinMs: 0 }, magical: false },
-  // Dry and numb: burns longer, keeps struggling on a pin longer; a priest's healing doesn't reach the dead.
+  // Small and light: a vortex tosses them about. Wary: they nearly always see a bomb coming.
+  goblin: { label: 'Goblin', group: 'nonHumans', traits: { ...NORMAL_TRAITS, mass: 0.8, blastAwareness: 0.95 }, magical: false },
+  // Big and heavy: no vortex lifts them, the ice holds them only briefly, no pin holds them down. Dull: often blind to a bomb.
+  ogre: { label: 'Ogre', group: 'nonHumans', traits: { ...NORMAL_TRAITS, mass: 4.2, freezeMs: FROST_FREEZE_BRUTE_MS, pinMs: 0, blastAwareness: 0.4 }, magical: false },
+  // Dry and numb: burns longer, keeps struggling on a pin longer; a priest's healing doesn't reach the dead. Mindless:
+  // they never step aside from a bomb.
   undead: {
-    label: 'Undead', group: 'creatures', traits: { ...NORMAL_TRAITS, mass: 1, burnFactor: ENEMY_BURN_ZOMBIE_FACTOR, pinMs: PIN_DURATION_ZOMBIE_MS, healable: false }, magical: false,
+    label: 'Undead', group: 'creatures', traits: { ...NORMAL_TRAITS, mass: 1, burnFactor: ENEMY_BURN_ZOMBIE_FACTOR, pinMs: PIN_DURATION_ZOMBIE_MS, healable: false, blastAwareness: 0 }, magical: false,
   },
   // Up in the air: never frozen solid or pinned.
   // Up in the air (a vortex only stirs them: turbulence) and huge. (A dragon with its rider: a mighty human; a wild
@@ -282,7 +285,8 @@ export const ENEMY_KINDS: Readonly<Record<EnemyType, EnemyKind>> = {
   heavyKnight: {
     label: 'Heavy knight', archetype: 'heavy', race: 'human', magical: false, arrival: 0.35, armor: KNIGHT_ARMOR,
     stats: { health: 67, speed: ENEMY_SPEED * 0.7 }, damage: { melee: [16, 24] }, keepDamage: { melee: 2 }, build: { size: 1.1, strikeReach: 75, walkStyle: 'march' },
-    traits: { mass: 2.5 },
+    // Trusts its plate: slower to heed a bomb.
+    traits: { mass: 2.5, blastAwareness: 0.7 },
   },
   // The black knight on a black warhorse (drawn 1.15× so the horse stands tall): gallops in and strikes with a lance from beyond a sword's reach. Rider
   // and horse have their own health: the rider's plate (`armor`, on his torso only) turns body hits, the horse has none. The horse killed, the knight is

@@ -7,6 +7,7 @@ import {
   ENEMY_ARROW_POWER,
   ENEMY_ATTACK,
   ENEMY_TOWER_X,
+  EXPLOSION_RADIUS,
   FIRE_DRAGON_RANGE,
   GROUND_Y,
   PRIEST_ESCAPE_BEYOND,
@@ -27,6 +28,7 @@ import { TOWER_HEIGHT } from '../objects/Tower';
 import type Tower from '../objects/Tower';
 import type { EnemyType, Vec2 } from '../types';
 import { solveLaunchAngle } from './ballistics';
+import { BlastDodge, blastZones, missChance, type BlastZone, type BombSpot, type DodgeStep } from './blastAwareness';
 import { flamesTouch } from './burning';
 import { planHeals, priestPost } from './healing';
 import { REGEN_START, regenStep, type RegenState } from './regeneration';
@@ -81,6 +83,10 @@ export class EnemyAI {
   /** Regeneration clock per troll. */
   private readonly regen = new WeakMap<Enemy, RegenState>();
   private readonly shamanSpells: ShamanSpells;
+  /** Each soldier's heed of the kamikazes (systems/blastAwareness.ts). */
+  private readonly dodges = new WeakMap<Enemy, BlastDodge<Enemy>>();
+  /** The kamikazes on the field this frame (their x) and the ground their bombs are about to blast (beginFrame). */
+  private bombs: { kamikazes: Map<Enemy, number>; zones: BlastZone<Enemy>[] } = { kamikazes: new Map(), zones: [] };
 
   public constructor(
     private readonly world: EnemyAIWorld,
@@ -88,6 +94,27 @@ export class EnemyAI {
     private readonly actions: { detonate(kamikaze: Enemy): void },
   ) {
     this.shamanSpells = new ShamanSpells(world);
+  }
+
+  /**
+   * Before the enemies' frame: where each kamikaze would blow up (at what it runs at) and which bombs that blast would
+   * set off in turn (blastZones). A pinned one only links a chain (else a bowman could shelter by it); frozen in ice a
+   * bomb doesn't go off.
+   */
+  public beginFrame(): void {
+    const kamikazes = this.world.enemies.filter((enemy): enemy is Enemy =>
+      !(enemy instanceof DragonEnemy) && enemy.isAlive() && enemyArchetype(enemy.kind).detonates && !enemy.afflictions.isFrozen);
+    const spots = kamikazes.flatMap((kamikaze): BombSpot<Enemy>[] => {
+      const radius = EXPLOSION_RADIUS * kamikaze.buff.blastPower;
+      const here = { owner: kamikaze, x: kamikaze.x, radius, fused: false };
+      if (kamikaze.isPinned || kamikaze.isCelebrating) {
+        return [here];
+      }
+      const bowman = nearestExposedBowman(this.world.bowmen, kamikaze.x);
+      const blastX = bowman ? bowman.x + Math.sign(kamikaze.x - bowman.x) * MELEE_REACH : this.world.playerTower.x + TOWER_ATTACK_REACH;
+      return [here, { owner: kamikaze, x: blastX, radius, fused: true }];
+    });
+    this.bombs = { kamikazes: new Map(kamikazes.map((kamikaze) => [kamikaze, kamikaze.x])), zones: blastZones(spots) };
   }
 
   /** One living enemy's frame. */
@@ -127,6 +154,20 @@ export class EnemyAI {
       ? { x: bowmanBehindEnemy ? enemy.x + 100 : bowman.x, y: BOWMAN_Y }
       : { x: playerTower.x, y: GROUND_Y };
 
+    const dodge = this.heedBombs(enemy, bowman ? enemy.x >= bowman.x : true, deltaMs);
+    if (dodge.kind !== 'free') {
+      // Getting away from a kamikaze's blast (or waiting a moment before coming back): no attacking meanwhile.
+      const toX = dodge.kind === 'flee' ? Math.min(WORLD_WIDTH, Math.max(playerTower.x + keepReach, dodge.toX)) : enemy.x;
+      enemy.update(deltaMs, { x: toX, y: groundAt(toX) }, 2);
+      enemy.updateAnimation(deltaMs, enemy.isMoving());
+      this.drawDebugHitboxes(enemy);
+      if (dodge.kind === 'flee' && dodge.startled) {
+        const head = enemy.getHeadBounds();
+        this.world.effects.alarm({ x: head.x + head.width / 2, y: head.y - 6 });
+      }
+      enemy.clearHitTint();
+      return;
+    }
     enemy.update(deltaMs, targetPosition, enemy.target === 'tower' ? keepReach : meleeReach);
     enemy.updateAnimation(deltaMs, enemy.isMoving());
     this.drawDebugHitboxes(enemy);
@@ -175,6 +216,24 @@ export class EnemyAI {
     }
 
     enemy.clearHitTint();
+  }
+
+  /**
+   * A soldier (not a kamikaze) facing the bombs about to go off (beginFrame): one it noticed sends it beyond their blast
+   * (`awayRight`: to the right of it), shouting "!"; one it missed it never heeds (systems/blastAwareness.ts).
+   */
+  private heedBombs(enemy: Enemy, awayRight: boolean, deltaMs: number): DodgeStep {
+    if (enemyArchetype(enemy.kind).detonates) {
+      return { kind: 'free' };
+    }
+    let dodge = this.dodges.get(enemy);
+    if (!dodge) {
+      dodge = new BlastDodge<Enemy>();
+      this.dodges.set(enemy, dodge);
+    }
+    const { blastAwareness } = enemyTraits(enemy.kind);
+    const miss = (): number => missChance({ awareness: blastAwareness, healthRatio: enemy.getHealthRatio(), buffed: enemy.buff.kind !== undefined, busy: enemy.isAttacking });
+    return dodge.update(enemy.x, awayRight, this.bombs.kamikazes, this.bombs.zones, miss, deltaMs);
   }
 
   /** A troll's wounds close unless it burns (systems/regeneration.ts); each step reaches the guest as a heal event. */

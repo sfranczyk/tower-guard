@@ -73,10 +73,11 @@ describe('ENEMY_KINDS', () => {
   });
 
   it('takes its traits from its race, with its own overrides', () => {
-    expect(enemyTraits('tank')).toEqual({ mass: 4.2, freezeMs: FROST_FREEZE_BRUTE_MS, burnFactor: 1, pinMs: 0, healable: true });
-    expect(enemyTraits('raider')).toEqual({ mass: 1.2, freezeMs: FROST_FREEZE_MS, burnFactor: 1, pinMs: PIN_DURATION_MS, healable: true });
+    expect(enemyTraits('tank')).toEqual({ mass: 4.2, freezeMs: FROST_FREEZE_BRUTE_MS, burnFactor: 1, pinMs: 0, healable: true, blastAwareness: 0.4 });
+    expect(enemyTraits('raider')).toEqual({ mass: 1.2, freezeMs: FROST_FREEZE_MS, burnFactor: 1, pinMs: PIN_DURATION_MS, healable: true, blastAwareness: 0.85 });
     expect(ENEMY_TYPES.filter((type) => !enemyTraits(type).healable)).toEqual(['zombie']);
     expect(enemyTraits('zombie').pinMs).toBe(PIN_DURATION_ZOMBIE_MS);
+    expect(enemyTraits('zombie').blastAwareness).toBe(0);
     expect(enemyTraits('dragon').burnFactor).toBe(1);
     expect(enemyTraits('fireDragon').burnFactor).toBe(0);
     expect(enemyTraits('kamikaze').burnFactor).toBe(0);

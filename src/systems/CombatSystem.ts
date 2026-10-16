@@ -115,6 +115,7 @@ export class CombatSystem {
   public update(deltaMs: number, enemiesActive = true): void {
     this.fuses.tick(deltaMs).forEach((bomb) => this.blowUp(bomb));
     const activeEnemies = enemiesActive ? this.world.enemies.filter((enemy) => enemy.isAlive()) : [];
+    this.ai.beginFrame();
     activeEnemies.forEach((enemy) => this.ai.update(enemy, deltaMs));
     // Burning: steady damage until the burn runs out (each bowman counts it down in his animation); a dragon's fire, so the difficulty's.
     this.world.bowmen

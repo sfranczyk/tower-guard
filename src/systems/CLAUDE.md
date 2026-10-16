@@ -6,6 +6,10 @@
 CombatSystem keeps what reaches beyond one target (explode, detonate, shatter, lightning, burns); what sets a kamikaze's bomb off and the chain fuses: `kamikazeBomb.ts`. Shared shapes in
 `combatGeometry.ts` (`Foe`, `bowmanBox`, `foeHitBoxes`). Emits `sound(id, at)` events (audio/CLAUDE.md). It forgets what
 stuck or gone arrows hit. Targeting: nearest bowman out in the open, else the keep (`targeting.ts`).
+Kamikaze awareness (`blastAwareness.ts`, pure, tested; tuning `KAMIKAZE_AWARENESS`): `EnemyAI.beginFrame` builds
+`blastZones` (each kamikaze's blast at what it runs at, chained through every bomb within reach); a melee soldier
+notices or misses each kamikaze once within `noticeRange` (`missChance`: race `blastAwareness`, zombies 0, low health,
+a shaman's spell, mid-swing), flees a noticed one's zone (`BlastDodge`, "!" = `EffectsSystem.alarm`), then hesitates.
 
 ## Waves (`waveDirector.ts`, pure, tested; not shown in the UI yet)
 `planWaves` spreads each type through the level (tougher types later, by `arrival`, so the first wave of

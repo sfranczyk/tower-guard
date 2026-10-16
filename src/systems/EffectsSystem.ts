@@ -8,7 +8,7 @@ import { groundAt } from './terrain';
 /** Effects a co-op host replays on the guest's screen. */
 export type EffectKind =
   | 'blood' | 'greenBlood' | 'impact' | 'explosion' | 'dragonBlast' | 'lightning'
-  | 'fire' | 'frost' | 'shatter' | 'firePatch' | 'vortex' | 'vortexFade' | 'heal' | 'healPulse' | 'buffPulse';
+  | 'fire' | 'frost' | 'shatter' | 'firePatch' | 'vortex' | 'vortexFade' | 'heal' | 'healPulse' | 'buffPulse' | 'alarm';
 
 type BloodParticle = {
   sprite: Graphics;
@@ -166,6 +166,15 @@ export class EffectsSystem {
       const spark = new Graphics().circle(0, 0, random(1, 1.8)).fill({ color: pick([0xff3a48, 0xffb3b8, 0xe8323f]) });
       this.spawn(spark, orb, 5, { velocity: burst(-Math.PI, Math.PI, 40, 110), lifeMs: random(300, 550), gravity: 60, drag: 2.5, grow: 0 });
     }
+  }
+
+  /** A soldier noticing a kamikaze coming (systems/blastAwareness.ts): a "!" popping up over its head (`point`). */
+  public alarm(point: Vec2): void {
+    this.onEffect?.('alarm', point);
+    const mark = new Graphics()
+      .roundRect(-2.6, -15, 5.2, 10.5, 2).circle(0, 0, 2.7).stroke({ width: 3, color: 0x2a1a0e })
+      .roundRect(-2.6, -15, 5.2, 10.5, 2).circle(0, 0, 2.7).fill({ color: 0xffd23a });
+    this.spawn(mark, point, 6, { velocity: { x: 0, y: -26 }, lifeMs: 900, gravity: 0, drag: 2.2, grow: -0.15 });
   }
 
   /** A goblin shaman's spell going out: a green ring within its reach and a flare at the staff (`point`: its feet). */
