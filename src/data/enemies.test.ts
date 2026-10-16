@@ -64,7 +64,7 @@ describe('enemy toughness and damage', () => {
     expect(average(ENEMY_DAMAGE.dragon.arrow!)).toBeGreaterThan(average(ENEMY_DAMAGE.hunter.arrow!));
   });
 
-  it('hits the keep as hard as the bowman, except archer arrows (half), brutes (double) and kamikazes (×8)', () => {
+  it('hits the keep as hard as the bowman, except archer arrows (half), brutes (double) and kamikazes (×3)', () => {
     const keepFactor = (type: Parameters<typeof enemyDamage>[0], attack: 'melee' | 'arrow' = 'melee') =>
       enemyDamage(type, attack, 'keep')[1] / enemyDamage(type, attack, 'bowman')[1];
     (['raider', 'fast', 'zombie'] as const).forEach((type) =>
@@ -73,7 +73,7 @@ describe('enemy toughness and damage', () => {
     expect(keepFactor('hunter', 'arrow')).toBe(0.5);
     expect(keepFactor('hunter')).toBe(1);
     expect(keepFactor('tank')).toBe(2);
-    expect(keepFactor('kamikaze')).toBe(8);
+    expect(keepFactor('kamikaze')).toBe(3);
   });
 
   it('gives non-shooters the archer arrow', () => {
