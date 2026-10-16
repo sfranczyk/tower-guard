@@ -2,7 +2,7 @@ import { DRAGON_FLIGHT, FIRE_DRAGON_STRAFE } from '../config';
 import type { Vec2 } from '../types';
 import { approach, clamp } from '../utils/math';
 import { cruiseAltitude, flyTowards, hoverX, type HoverSide } from './dragonFlight';
-import { passDone, pickStrafe, readyToStrafe, startStrafe, strafeSide, strafeStartX, type StrafeState } from './dragonStrafe';
+import { lurkStep, nearWorldEdge, passDone, pickStrafe, readyToStrafe, startStrafe, strafeSide, type StrafeState } from './dragonStrafe';
 
 /**
  * The dragon archer's manoeuvres (pure; objects/dragon/DragonEnemy.ts runs them): it flies in, hovers and shoots for a
@@ -169,7 +169,7 @@ const moveOn = (state: ManoeuvreState, pos: Vec2, input: ManoeuvreInput, fromHov
     state.phase = 'strafe';
     state.transitMs = 0;
     state.altitude = pickAltitude(state.altitude, input.ranges, input.rng);
-    state.strafe = startStrafe(side, input.strafe.altitude, now, input.rng);
+    state.strafe = startStrafe(side, input.targetX, input.strafe.reach, input.strafe.altitude, now, input.rng);
     return;
   }
   state.phase = 'transit';
@@ -196,7 +196,9 @@ const stepStrafe = (state: ManoeuvreState, pos: Vec2, input: ManoeuvreInput, dt:
     strafe.stageMs = 0;
   };
   if (strafe.stage === 'lurk') {
-    const point = { x: strafeStartX(input.targetX, strafe.side, input.strafe.reach), y: cruiseAltitude(input.timeMs, state.altitude) };
+    // He's coming at it (or ran under it, and it turns round): it sets off now, whether or not he'll be mid-strip.
+    strafe.go ||= lurkStep(strafe, pos.x, input.targetX, input.strafe.reach);
+    const point = { x: strafe.startX, y: cruiseAltitude(input.timeMs, state.altitude) };
     let braking = false;
     if (!strafe.arrived) {
       braking = steer(state, pos, { x: point.x, y: point.y - DRAGON_FLIGHT.flareLift }, dt);
@@ -210,11 +212,11 @@ const stepStrafe = (state: ManoeuvreState, pos: Vec2, input: ManoeuvreInput, dt:
       state.vx = (pos.x - before.x) / dt;
       state.vy = (pos.y - before.y) / dt;
       strafe.lurkLeftMs -= deltaMs;
-      if (strafe.lurkLeftMs <= 0 && !input.turning) {
-        strafe.y = input.strafe.altitude;
-        strafe.ignite = true;
-        enter('run');
-      }
+    }
+    if ((strafe.go || (strafe.arrived && strafe.lurkLeftMs <= 0)) && !input.turning && input.side === strafe.side) {
+      strafe.y = input.strafe.altitude;
+      strafe.ignite = true;
+      enter('run');
     }
     return braking;
   }
@@ -223,7 +225,7 @@ const stepStrafe = (state: ManoeuvreState, pos: Vec2, input: ManoeuvreInput, dt:
   state.vy = clamp((strafe.y - pos.y) * LEVEL_PULL, -diveSpeed, diveSpeed);
   pos.x += state.vx * dt;
   pos.y += state.vy * dt;
-  if (strafe.stage === 'run' && passDone(strafe, pos.x, input.targetX)) {
+  if (strafe.stage === 'run' && (passDone(strafe, pos.x, input.targetX) || nearWorldEdge(pos.x, state.vx))) {
     enter('out');
   } else if (strafe.stage === 'out' && Math.abs(state.vx) <= ARRIVE_SPEED) {
     moveOn(state, pos, input, false);

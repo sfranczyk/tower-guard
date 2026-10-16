@@ -89,6 +89,38 @@ describe('fire dragon strafing run', () => {
     expect((first + last) / 2).toBeLessThan(target + 25);
   });
 
+  it('lurking, it never backs away from a bowman running at it: it sets off instead', () => {
+    let target = 1000;
+    const { state, pos } = hovering(target + 200);
+    step(state, pos, target, 1);
+    expect(state.strafe?.stage).toBe('lurk');
+    let farthest = pos.x;
+    for (let time = 0; time < 4000 && state.strafe?.stage === 'lurk'; time += FRAME) {
+      target += 120 * (FRAME / 1000);
+      step(state, pos, target, 1);
+      farthest = Math.max(farthest, pos.x);
+    }
+    expect(state.strafe?.stage).toBe('run');
+    expect(state.strafe?.side).toBe(1);
+    expect(farthest).toBeLessThan(strafeStartX(1000, 1, REACH) + 20);
+  });
+
+  it('lurking, when he runs under it to its other side it turns round and attacks him', () => {
+    const { state, pos } = hovering(1200);
+    step(state, pos, 1000, 1);
+    step(state, pos, pos.x + 40, 1);
+    expect(state.strafe?.side).toBe(-1);
+    expect(state.strafe?.stage).toBe('lurk');
+    // Still turning: it waits.
+    stepManoeuvre(state, pos, {
+      targetX: pos.x + 40, side: -1, timeMs: 0, deltaMs: FRAME, followSpeed: 36, ranges: FIRE_DRAGON_HOVER,
+      strafe: { reach: REACH, altitude: ALTITUDE }, turning: true, rng: () => 0,
+    });
+    expect(state.strafe?.stage).toBe('lurk');
+    step(state, pos, pos.x + 40, -1);
+    expect(state.strafe?.stage).toBe('run');
+  });
+
   it('goes the other way on the next pass', () => {
     const target = 1000;
     const { state, pos } = hovering(target + 200);
@@ -108,6 +140,17 @@ describe('fire dragon strafing run', () => {
     expect(strafeStartX(150, -1, REACH)).toBeGreaterThanOrEqual(-FIRE_DRAGON_STRAFE.edgeOut);
     expect(strafeSide(100, 150, REACH)).toBe(-1);
     expect(strafeSide(WORLD_WIDTH - 50, WORLD_WIDTH - 150, REACH)).toBe(-1);
+  });
+
+  it('brakes in time not to fly more than edgeOut past the world edge', () => {
+    const { state, pos } = hovering(400);
+    step(state, pos, 300, 1);
+    let lowest = pos.x;
+    for (let time = 0; time < 8000; time += FRAME) {
+      step(state, pos, -150, state.strafe?.side ?? 1);
+      lowest = Math.min(lowest, pos.x);
+    }
+    expect(lowest).toBeGreaterThanOrEqual(-FIRE_DRAGON_STRAFE.edgeOut - 2);
   });
 
   it('without a strafe it never leaves a hover for one', () => {

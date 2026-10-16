@@ -28,6 +28,11 @@ export interface StrafeState {
   /** Lurking: at its start, and how long it still waits there (ms). */
   arrived: boolean;
   lurkLeftMs: number;
+  /** Lurking: where it waits (x; it never backs away from its target, only follows him), and where he was then. */
+  startX: number;
+  lurkTargetX: number;
+  /** Lurking: he came at it, so it sets off as soon as it faces him. */
+  go: boolean;
   /** Set on setting off: the fire is to be lit (DragonEnemy takes it). */
   ignite: boolean;
 }
@@ -91,11 +96,38 @@ export const pickStrafe = (rng: () => number): boolean => rng() < FIRE_DRAGON_ST
 export const readyToStrafe = (dragonX: number, targetX: number, side: HoverSide, reach: number): boolean =>
   Math.abs(dragonX - strafeStartX(targetX, side, reach)) <= FIRE_DRAGON_STRAFE.readyRange;
 
-/** A pass: lurking first, or (`now`) setting off right away. */
-export const startStrafe = (side: HoverSide, y: number, now: boolean, rng: () => number): StrafeState => ({
+/** A pass at `targetX`: lurking first, or (`now`) setting off right away. */
+export const startStrafe = (
+  side: HoverSide, targetX: number, reach: number, y: number, now: boolean, rng: () => number,
+): StrafeState => ({
   stage: now ? 'run' : 'lurk', side, stageMs: 0, y, arrived: false, ignite: now,
+  startX: strafeStartX(targetX, side, reach), lurkTargetX: targetX, go: false,
   lurkLeftMs: FIRE_DRAGON_STRAFE.lurkMinMs + rng() * Math.max(0, FIRE_DRAGON_STRAFE.lurkMaxMs - FIRE_DRAGON_STRAFE.lurkMinMs),
 });
+
+/**
+ * Lurking, one frame: its start follows the target when he moves away but never backs off when he comes closer;
+ * true when it should set off rather than retreat: he came closer by readyRange, or ran under it to its other side
+ * (then it turns to face him first).
+ */
+export const lurkStep = (strafe: StrafeState, dragonX: number, targetX: number, reach: number): boolean => {
+  if ((dragonX - targetX) * strafe.side < 0) {
+    strafe.side = -strafe.side as HoverSide;
+    strafe.startX = dragonX;
+    return true;
+  }
+  const wanted = strafeStartX(targetX, strafe.side, reach);
+  if ((wanted - strafe.startX) * strafe.side < 0) {
+    strafe.startX = wanted;
+  }
+  return (targetX - strafe.lurkTargetX) * strafe.side > FIRE_DRAGON_STRAFE.readyRange;
+};
+
+/** Flying at `vx` it has to brake now not to stop past edgeOut beyond the world's edge (or the far edge's margin). */
+export const nearWorldEdge = (x: number, vx: number): boolean => {
+  const stopsAt = x + (vx * Math.abs(vx)) / (2 * Math.max(1, FIRE_DRAGON_STRAFE.accel));
+  return stopsAt < -FIRE_DRAGON_STRAFE.edgeOut || stopsAt > WORLD_WIDTH - EDGE_MARGIN;
+};
 
 /** The pass is over: the dragon (at `dragonX`) is passBeyond past its target and has stopped pouring fire. */
 export const passDone = (strafe: StrafeState, dragonX: number, targetX: number): boolean =>
