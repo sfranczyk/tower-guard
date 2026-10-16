@@ -470,6 +470,10 @@ export const DIFFICULTY_SCALE = tunable('DIFFICULTY_SCALE', 'Difficulty', {
   groupSize: 5,
   groupSpawnIntervalMs: 300,
   groupGapMs: 1500,
+  // Share of the bowman's full health healed after a cleared level (easy: back to full).
+  easyLevelHeal: 1,
+  mediumLevelHeal: 0.5,
+  hardLevelHeal: 0.1,
 });
 
 /** Sound effects: default effects volume (0..1) and the base volume of each sound. */

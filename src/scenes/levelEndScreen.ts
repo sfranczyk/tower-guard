@@ -3,7 +3,7 @@ import type { HostSync } from '../net/HostSync';
 import { levelEndInfo, type LevelOutcome } from './levelEnd';
 
 /**
- * Shows the end of a level. A cleared level with levels left offers the next one (`nextRun`: health carries over);
+ * Shows the end of a level. A cleared level with levels left offers the next one (`nextRun`: bowmen heal by the difficulty, the keep is whole);
  * otherwise it's the end of the run and the button goes back to the main menu (co-op: both to the lobby); a new run is
  * set up only from there. Returns what the button (and Space) does.
  */

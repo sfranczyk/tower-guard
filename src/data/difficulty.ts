@@ -41,3 +41,11 @@ export const wavePacing = (level: DifficultyLevel): WavePacing => (level === 'ea
     spawnIntervalMs: DIFFICULTY_SCALE.groupSpawnIntervalMs,
     groupGapMs: DIFFICULTY_SCALE.groupGapMs,
   });
+
+/**
+ * A bowman's health at the start of the next level: heals the difficulty's share of `max` (easy: all, medium: half,
+ * hard: a tenth; DIFFICULTY_SCALE.*LevelHeal), capped at `max`. A fallen bowman (0) stays fallen.
+ */
+export const healAfterLevel = (level: DifficultyLevel, health: number, max: number): number => (health <= 0
+  ? 0
+  : Math.min(max, health + max * DIFFICULTY_SCALE[`${level}LevelHeal`]));

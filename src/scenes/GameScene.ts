@@ -16,7 +16,7 @@ import { spatialMix } from '../audio/spatial';
 import { Scene, type GameContext } from '../core/Scene';
 import { viewWidth } from '../core/viewport';
 import { BATTLEGROUNDS, aimColorsOf, type Battleground } from '../data/battlegrounds';
-import { enemyEdge, wavePacing } from '../data/difficulty';
+import { enemyEdge, healAfterLevel, wavePacing } from '../data/difficulty';
 import type { LevelSetup } from '../data/sandbox';
 import InputManager from '../managers/InputManager';
 import { LocalInput, ManualInput, RecordingInput } from '../input/PlayerInput';
@@ -336,14 +336,15 @@ export class GameScene extends Scene {
 
   /**
    * The pause dialog's "Restart level" (alone or the co-op host): the level starts over with the same enemies and
-   * every bowman at full health; the keeps keep the damage they took. A co-op guest follows the host's new `start`.
+   * every bowman and the player's keep at full health; the enemy keep keeps its damage. A co-op guest follows the
+   * host's new `start`.
    */
   private restartLevel(): void {
     const { session } = this.ctx;
     session.run = {
       ...session.run,
       bowmanHealths: this.players.map(() => session.sandbox.bowmanHealth),
-      keepHealth: this.playerTower.getHealth(),
+      keepHealth: session.sandbox.keepHealth,
       enemyKeepHealth: this.enemyTower.getHealth(),
     };
     this.ctx.goTo('game');
@@ -538,7 +539,7 @@ export class GameScene extends Scene {
       this.enemies.forEach((enemy) => enemy.celebrate());
       this.hostSync?.push({ e: 'cheer' });
     }
-    const { run } = this.ctx.session;
+    const { run, sandbox } = this.ctx.session;
     this.endAction = showLevelEnd(this.ctx, {
       won,
       levelCleared,
@@ -551,8 +552,9 @@ export class GameScene extends Scene {
       playerHealths: this.players.map((player) => player.health),
     }, () => ({
       levelIndex: run.levelIndex + 1,
-      bowmanHealths: this.players.map((player) => player.health),
-      keepHealth: this.playerTower.getHealth(),
+      // Bowmen heal by the difficulty; the keep starts every level whole.
+      bowmanHealths: this.players.map((player) => healAfterLevel(sandbox.difficulty, player.health, sandbox.bowmanHealth)),
+      keepHealth: sandbox.keepHealth,
       enemyKeepHealth: this.enemyTower.getHealth(),
     }), this.hostSync);
   }
