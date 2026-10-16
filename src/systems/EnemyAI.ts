@@ -2,6 +2,7 @@ import type { Graphics } from 'pixi.js';
 import {
   BOWMAN_Y,
   DRAGON_RANGE,
+  DRAGON_FLIGHT,
   DRAGON_TURBULENCE_SPREAD,
   ENEMY_ARROW_POWER,
   ENEMY_ATTACK,
@@ -327,9 +328,13 @@ export class EnemyAI {
       } else {
         cached.ageMs += deltaMs;
       }
-      if (dragon.aim(angle ?? Math.PI, deltaMs)) {
+      // In flight between hovers he shoots less often and much wider (DRAGON_FLIGHT).
+      const moving = dragon.flightSpeed;
+      if (dragon.aim(angle ?? Math.PI, deltaMs, 1 + (DRAGON_FLIGHT.movingShotPace - 1) * moving)) {
         // Buffeted by turbulence the rider can't aim well.
-        const spread = (Math.random() * 2 - 1) * ENEMY_ATTACK.archerSpread * this.world.enemyEdge.aimSpread * (dragon.afflictions.isTurbulent ? DRAGON_TURBULENCE_SPREAD : 1);
+        const turbulence = dragon.afflictions.isTurbulent ? DRAGON_TURBULENCE_SPREAD : 1;
+        const flight = 1 + (DRAGON_FLIGHT.movingSpread - 1) * moving;
+        const spread = (Math.random() * 2 - 1) * ENEMY_ATTACK.archerSpread * this.world.enemyEdge.aimSpread * turbulence * flight;
         this.events.enemyShot(dragon.getBowReleasePoint(), (angle ?? Math.PI) + spread, speed * (0.97 + Math.random() * 0.06), 'dragon');
       }
     }

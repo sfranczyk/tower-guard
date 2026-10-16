@@ -16,11 +16,13 @@ export interface DragonLook {
   rider: DragonRider;
   altitude: number;
   hoverOffset: number;
+  /** Hovers, then flies to a new height and distance (systems/dragonManoeuvre.ts); else it holds one hover point. */
+  manoeuvres: boolean;
 }
 
 export const DRAGON_KINDS: Readonly<Record<DragonKind, DragonLook>> = {
-  dragon: { palette: DRAGON_PALETTES.dark, rider: 'archer', altitude: DRAGON_ALTITUDE, hoverOffset: DRAGON_HOVER_OFFSET },
-  fireDragon: { palette: DRAGON_PALETTES.red, rider: 'unarmed', altitude: FIRE_DRAGON_ALTITUDE, hoverOffset: FIRE_DRAGON_HOVER_OFFSET },
+  dragon: { palette: DRAGON_PALETTES.dark, rider: 'archer', altitude: DRAGON_ALTITUDE, hoverOffset: DRAGON_HOVER_OFFSET, manoeuvres: true },
+  fireDragon: { palette: DRAGON_PALETTES.red, rider: 'unarmed', altitude: FIRE_DRAGON_ALTITUDE, hoverOffset: FIRE_DRAGON_HOVER_OFFSET, manoeuvres: false },
 };
 
 /** The riders' looks (rendering/designs): the dragon archer's hooded bandit; the fire dragon's knight is animated. */

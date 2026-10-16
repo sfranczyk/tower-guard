@@ -188,12 +188,20 @@ export interface ArcherControl {
   tension: number;
 }
 
-/** Pose at `timeMs` (wings loop every DRAGON_FLAP_MS). */
-export const getDragonPose = (timeMs: number, riderKind: DragonRider = 'spear', archer?: ArcherControl, breath?: BreathControl): DragonPose => {
+/** Wings held this far up (of the flap's swing) while gliding. */
+const GLIDE_FLAP = 0.15;
+
+/**
+ * Pose at `timeMs` (wings loop every DRAGON_FLAP_MS). `glide` (0..1, diving or coasting) holds the wings spread
+ * instead of beating, and the body stops bobbing.
+ */
+export const getDragonPose = (timeMs: number, riderKind: DragonRider = 'spear', archer?: ArcherControl, breath?: BreathControl, glide = 0): DragonPose => {
   const phase = ((timeMs % DRAGON_FLAP_MS) + DRAGON_FLAP_MS) % DRAGON_FLAP_MS / DRAGON_FLAP_MS * Math.PI * 2;
-  const flap = Math.sin(phase);
+  const held = Math.max(0, Math.min(1, glide));
+  const beat = (offset: number): number => Math.sin(phase - offset) * (1 - held) + GLIDE_FLAP * held;
+  const flap = beat(0);
   // The body rises on the downstroke (a quarter period after the wings peak).
-  const bob = -Math.cos(phase) * 7;
+  const bob = -Math.cos(phase) * 7 * (1 - held);
   const wave = (offset: number): number => Math.sin(phase - offset);
 
   const tail: Vec2[] = Array.from({ length: 9 }, (_, index) => {
@@ -278,7 +286,7 @@ export const getDragonPose = (timeMs: number, riderKind: DragonRider = 'spear', 
     jaw,
     mouth,
     nearWing: wing({ x: 8, y: -16 + bob }, flap, 1),
-    farWing: wing({ x: 20, y: -20 + bob }, Math.sin(phase - 0.35), 0.85),
+    farWing: wing({ x: 20, y: -20 + bob }, beat(0.35), 0.85),
     saddle,
     rider,
     spear: rig || riderKind === 'unarmed' ? undefined : {

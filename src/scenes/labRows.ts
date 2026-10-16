@@ -107,6 +107,29 @@ const burnIntensity = (timeMs: number): number => {
   return t < catchMs + burnMs ? 1 : Math.max(0, 1 - (t - catchMs - burnMs) / fadeMs);
 };
 
+/** The manoeuvre row's loop: [ms, wing beat speed, glide, nose-down pitch] per stage (hover, climb, dive, brake). */
+const MANOEUVRE_STAGES: ReadonlyArray<readonly [number, number, number, number]> = [
+  [1500, 1, 0, 0], [1500, 1.8, 0, -0.2], [1500, 0.6, 1, 0.25], [900, 1.5, 0, -0.18],
+];
+const MANOEUVRE_LOOP_MS = MANOEUVRE_STAGES.reduce((sum, [ms]) => sum + ms, 0);
+
+/** The wing clock (beats run at each stage's speed), glide and pitch at `timeMs`, eased over a stage's first 400 ms. */
+const manoeuvreLoop = (timeMs: number): { wingMs: number; glide: number; pitch: number } => {
+  const loops = Math.floor(timeMs / MANOEUVRE_LOOP_MS);
+  let left = timeMs - loops * MANOEUVRE_LOOP_MS;
+  let wingMs = loops * MANOEUVRE_STAGES.reduce((sum, [ms, flap]) => sum + ms * flap, 0);
+  for (let index = 0; ; index += 1) {
+    const [ms, flap, glide, pitch] = MANOEUVRE_STAGES[index];
+    if (left < ms || index === MANOEUVRE_STAGES.length - 1) {
+      const [, , glideBefore, pitchBefore] = MANOEUVRE_STAGES[(index + MANOEUVRE_STAGES.length - 1) % MANOEUVRE_STAGES.length];
+      const ease = Math.min(1, left / 400);
+      return { wingMs: wingMs + left * flap, glide: glideBefore + (glide - glideBefore) * ease, pitch: pitchBefore + (pitch - pitchBefore) * ease };
+    }
+    wingMs += ms * flap;
+    left -= ms;
+  }
+};
+
 const dragonDeath = (kind: DragonDeathKind) => (sprite: Graphics, clock: LabClock): void => {
   drawDragonDeath(sprite, clock.timeMs % (DRAGON_DEATH_MS + DRAGON_DEATH_PAUSE_MS), kind);
 };
@@ -177,6 +200,24 @@ export const LAB_CATEGORIES: readonly LabCategory[] = [
         description: 'Wing beat (the far wing a beat behind), bobbing up on each downstroke, neck and tail undulating; the rider sits astride.',
         ...DRAGON,
         render: (sprite, clock) => drawDragonRider(sprite, clock.timeMs, 'unarmed', undefined, DRAGON_PALETTES.red),
+      },
+      {
+        id: 'dragon-glide',
+        title: 'Dragon glide',
+        description: 'Diving between hovers: the wings held spread instead of beating, no bobbing; neck and tail still undulate.',
+        ...DRAGON,
+        render: (sprite, clock) => drawDragonRider(sprite, clock.timeMs, 'archer', undefined, DRAGON_PALETTES.dark, undefined, 1),
+      },
+      {
+        id: 'dragon-manoeuvre',
+        title: 'Dragon manoeuvre',
+        description: 'The archer’s flight between hovers, looped: hover, climb (faster beats, nose up), glide down (wings spread, nose down), brake into the next hover (hard beats, nose up).',
+        ...DRAGON,
+        render: (sprite, clock) => {
+          const flight = manoeuvreLoop(clock.timeMs);
+          drawDragonRider(sprite, flight.wingMs, 'archer', undefined, DRAGON_PALETTES.dark, undefined, flight.glide);
+          sprite.rotation = flight.pitch;
+        },
       },
     ],
   },

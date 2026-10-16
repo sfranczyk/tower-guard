@@ -42,6 +42,7 @@ animation gets a row in `scenes/labRows.ts` (or `scenes/labSequences.ts` for one
   `dragonHitZones`. Riders: `'spear'`, `'unarmed'`, `'archer'` (`DRAGON_ARCHER_SHOT_MS`); rider is a JointPose astride,
   far leg via `drawRearLeg`, rest with `drawJointPose(..., { append: true, hideRearLeg: true })`. The near wing is
   drawn over the rider. Drawing in `dragonArt.ts` (`drawDragon`, `drawDragonRiderOnly`, `drawDragonWithRider`).
+- Gliding: `getDragonPose(…, glide)` 0..1 holds the wings spread, no bob (lab `dragon-glide`, `dragon-manoeuvre`).
 - `dragonFire.ts`: `breathControl` (rear back, thrust, jaw `pose.jaw`, `pose.mouth`, `FIRE_BREATH.flameMs`),
   `firePuffs` (~`FIRE_REACH`).
 - `dragonDeath.ts` (pure, ground `GIB_GROUND_Y`, `dragonFallState` takes start height): `fall`, `explode`,

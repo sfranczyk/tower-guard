@@ -46,6 +46,10 @@ from `anchor` (3.6, `resistsVortex`) not caught, walks at `VORTEX.heavyWalk` (`s
 Dragons get a ring of wind (`drawAirVortex`) and turbulence (`DRAGON_TURBULENCE_MS`, `AfflictionLayer.stir`,
 `buffetOffset`: no fire breath, archer `DRAGON_TURBULENCE_SPREAD`× wider). Visuals: `magicVisuals.ts` via EffectsSystem.
 
+## Dragon manoeuvres (`dragonManoeuvre.ts`, pure, tested)
+Dragon archer phases approach → hover → transit (`stepManoeuvre`, `pickAltitude`, `kick` spring jolt, `flightShare`);
+tuning `DRAGON_FLIGHT`. Hover points and turning stay in `dragonFlight.ts`.
+
 ## Friendly fire (`session.friendlyFire`, on by default; co-op: the host's)
 Players' arrows hit bowmen out in the open like enemies (`friendlyTargets`): top `BOWMAN_HEAD` px headshot, blasts,
 fire (`Bowman.ignite`), frost (`Bowman.chill`; frozen = stunned, blast or landing breaks the ice), vortices (`Walker` =

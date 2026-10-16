@@ -200,9 +200,9 @@ export const dragonKnightLook = (timeMs: number): HumanoidLook => {
 /** A dragon with a new-look rider: the rider in `look` instead of the stickman (under the near wing). */
 export const drawDragonWithRider = (
   g: Graphics, timeMs: number, kind: 'archer' | 'unarmed', look: HumanoidLook, palette: DragonPalette,
-  archer?: ArcherControl, breath?: BreathControl,
+  archer?: ArcherControl, breath?: BreathControl, glide = 0,
 ): DragonPose => {
-  const pose = getDragonPose(timeMs, kind, archer, breath);
+  const pose = getDragonPose(timeMs, kind, archer, breath, glide);
   g.clear();
   const rider: BodyPose = { ...pose.rider, bow: pose.bow ? { rig: pose.bow.rig, tension: pose.bow.tension } : undefined };
   drawDragon(g, pose, (target) => {

@@ -1,4 +1,4 @@
-import { DRAGON_DRAW_MS, DRAGON_SHOT_INTERVAL_MS } from '../../config';
+import { DRAGON_DRAW_MS, DRAGON_FLIGHT, DRAGON_SHOT_INTERVAL_MS } from '../../config';
 
 const RELAX_MS = 400;
 
@@ -11,10 +11,13 @@ export class DragonBow {
   public tension = 0;
   private shotTimerMs = DRAGON_SHOT_INTERVAL_MS * 0.5;
 
-  /** One frame of aiming at `worldAngle` (already slowed by afflictions): true on the frame the arrow is loosed. */
-  public draw(worldAngle: number, deltaMs: number): boolean {
+  /**
+   * One frame of aiming at `worldAngle` (already slowed by afflictions): true on the frame the arrow is loosed.
+   * `pace` < 1 (in flight) brings the next shot round slower.
+   */
+  public draw(worldAngle: number, deltaMs: number, pace = 1): boolean {
     this.aimAngle = worldAngle;
-    this.shotTimerMs -= deltaMs;
+    this.shotTimerMs -= deltaMs * pace;
     this.tension = Math.max(0, Math.min(1, 1 - this.shotTimerMs / DRAGON_DRAW_MS));
     if (this.shotTimerMs > 0) {
       return false;
@@ -22,6 +25,14 @@ export class DragonBow {
     this.shotTimerMs = DRAGON_SHOT_INTERVAL_MS;
     this.tension = 0;
     return true;
+  }
+
+  /** The dragon was hit: the rider loses his draw a little (DRAGON_FLIGHT.hitShotDelayMs later). */
+  public flinch(): void {
+    if (this.shotTimerMs < DRAGON_DRAW_MS) {
+      this.shotTimerMs = Math.min(DRAGON_DRAW_MS, this.shotTimerMs + DRAGON_FLIGHT.hitShotDelayMs);
+      this.tension = Math.max(0, Math.min(1, 1 - this.shotTimerMs / DRAGON_DRAW_MS));
+    }
   }
 
   /** Out of range or turning: ease the string back. */

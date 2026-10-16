@@ -110,6 +110,8 @@ export interface DragonSnap {
   /** Which side of its target it hovers on (1: right, facing left); the guest plays the turn itself. */
   side: 1 | -1;
   af?: AfflictionNet;
+  /** The archer's flight look (wings held spread 0..1, nose-down pitch, wing beat speed). */
+  fl?: [number, number, number];
 }
 
 export interface Snapshot {

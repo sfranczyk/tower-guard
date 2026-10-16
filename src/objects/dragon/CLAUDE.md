@@ -14,7 +14,10 @@ Its parts:
 - Dragon archer (`dragon`): flies at `DRAGON_ALTITUDE`, hovers `DRAGON_HOVER_OFFSET` in front of the bowman
   (`systems/dragonFlight.ts`, pure) on either side: turns (`nextHoverSide`, over `DRAGON_TURN_MS`, no shots meanwhile)
   when he gets `DRAGON_TURN_PAST` behind or the edge leaves no room. `CombatSystem.updateDragon` aims like an enemy
-  archer. Hit zones `dragonHitZones` (`rendering/dragon.ts`; rider and head = headshots, body and halves of neck and
+  archer. Manoeuvres (`DragonLook.manoeuvres`, `systems/dragonManoeuvre.ts`, `DRAGON_FLIGHT`, tunable): hovers a while,
+  then flies to a new height and distance (dives fast, climbs slow, brakes from above); wing clock `wingMs` at
+  `flapRate`, `glide`, `pitch` in `rotation`. In flight `flightSpeed` widens aim and slows shots (EnemyAI); a hit
+  `kick`s it a little and `DragonBow.flinch` delays the draw. Hit zones `dragonHitZones` (`rendering/dragon.ts`; rider and head = headshots, body and halves of neck and
   tail normal; tested to chain without gaps); earliest zone hit wins (headshot ties). Arrows stick into it. Killed, it
   plays the lab's `fall` in "death space" (sprite space, ground at `GIB_GROUND_Y`, from its height above `groundAt(x)`;
   `toWorld` follows `art` so stuck arrows stay); a direct explosive kill blows the rider apart (`riderGibSimulation`).

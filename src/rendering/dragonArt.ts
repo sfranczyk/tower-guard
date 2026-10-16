@@ -80,8 +80,9 @@ export const drawDragonRider = (
   archer?: ArcherControl,
   palette: DragonPalette = DRAGON_PALETTES.red,
   breath?: BreathControl,
+  glide = 0,
 ): DragonPose => {
-  const pose = getDragonPose(timeMs, riderKind, archer, breath);
+  const pose = getDragonPose(timeMs, riderKind, archer, breath, glide);
   g.clear();
   drawDragon(g, pose, true, palette);
   return pose;

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DRAGON_DRAW_MS, DRAGON_SHOT_INTERVAL_MS } from '../../config';
+import { DRAGON_DRAW_MS, DRAGON_FLIGHT, DRAGON_SHOT_INTERVAL_MS } from '../../config';
 import { DragonBow } from './DragonBow';
 
 describe('DragonBow', () => {
@@ -19,5 +19,20 @@ describe('DragonBow', () => {
     expect(bow.tension).toBe(0);
     expect(bow.draw(1, DRAGON_DRAW_MS - 1)).toBe(false);
     expect(bow.draw(1, 1)).toBe(true);
+  });
+
+  it('shoots less often at a slower pace', () => {
+    const bow = new DragonBow();
+    expect(bow.draw(1, DRAGON_SHOT_INTERVAL_MS * 0.5, 0.5)).toBe(false);
+    expect(bow.draw(1, DRAGON_SHOT_INTERVAL_MS * 0.5, 0.5)).toBe(true);
+  });
+
+  it('a hit mid-draw delays the shot', () => {
+    const bow = new DragonBow();
+    bow.draw(1, DRAGON_SHOT_INTERVAL_MS * 0.5 - DRAGON_DRAW_MS / 2);
+    bow.flinch();
+    expect(bow.tension).toBeLessThan(0.5);
+    expect(bow.draw(1, DRAGON_DRAW_MS / 2)).toBe(false);
+    expect(bow.draw(1, DRAGON_FLIGHT.hitShotDelayMs)).toBe(true);
   });
 });

@@ -274,6 +274,31 @@ export const DRAGON_SHOT_INTERVAL_MS = 2800;
  * there's no room in front of it by the world's edge; the turn takes DRAGON_TURN_MS (no shooting or fire meanwhile).
  */
 export const DRAGON_TURN_PAST = 60;
+/**
+ * Dragon archer manoeuvres (systems/dragonManoeuvre.ts): it hovers for hoverMinMs..hoverMaxMs, then flies to a new
+ * hover point at a random height (y altitudeMin..altitudeMax, at least minAltitudeChange from the last) and distance
+ * (offsetMin..offsetMax in front of its target). In transit: top speed transitSpeed (px/s), steering accel (px/s²),
+ * diveGain (share of both gained diving straight down, lost climbing), braking into the hover from flareLift px above
+ * it. A hit jolts it by hitKick px/s (springs back) and delays the shot being drawn by hitShotDelayMs. In flight the rider's aim error
+ * grows to movingSpread× and his shots come movingShotPace as often (both at full transit speed).
+ */
+export const DRAGON_FLIGHT = tunable('DRAGON_FLIGHT', 'Dragon flight', {
+  altitudeMin: 120,
+  altitudeMax: 260,
+  minAltitudeChange: 50,
+  offsetMin: 200,
+  offsetMax: 340,
+  hoverMinMs: 4000,
+  hoverMaxMs: 7000,
+  transitSpeed: 130,
+  accel: 140,
+  diveGain: 0.5,
+  flareLift: 18,
+  hitKick: 80,
+  hitShotDelayMs: 300,
+  movingSpread: 4,
+  movingShotPace: 0.5,
+});
 export const DRAGON_TURN_MS = 700;
 /**
  * Fire dragon: flies lower (FIRE_DRAGON_ALTITUDE) and hovers closer (FIRE_DRAGON_HOVER_OFFSET) so its fire
