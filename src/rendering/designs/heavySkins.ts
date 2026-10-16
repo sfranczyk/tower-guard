@@ -218,5 +218,5 @@ export const drawDragonWithRider = (
   return pose;
 };
 
-/** The dragon archer's rider: the bandit archer in a darker hood, matching the near-black dragon. */
+/** The dragon archer's rider: the raider archer in a darker hood, matching the near-black dragon. */
 export const dragonArcherLook = (): HumanoidLook => ({ ...banditArcherLook(0x5a4a6a, 0x3a2f46), hideFarLeg: true });

@@ -9,7 +9,7 @@ from beyond the enemy keep on the right. PixiJS 8 + TypeScript (strict), bundled
   - `?debug`: hitboxes; `window.__towerGuard.scene` is the running `GameScene`
     (e.g. `scene.enemies[0].takeDamage(999, { cause: 'headshot', fromX: 0 })`).
   - `?lab`, `?lab=<tab>` (e.g. `death`), `?lab=<id>` (e.g. `run`; ids in `scenes/labRows.ts`): animation lab.
-  - `?designs`, `?designs=<tab or id>` (e.g. `player`, `bandit`): design lab.
+  - `?designs`, `?designs=<tab or id>` (e.g. `player`, `raider`): design lab.
   - `?sounds`: sound test panel. `?coop`: local 2-bowman test. `?net=local`: co-op between two tabs.
 - `npm run verify`: type-check + tests, prints only errors and failures (use this, not `check`/`test` separately).
 - `npm run build`: production build to `dist/`.

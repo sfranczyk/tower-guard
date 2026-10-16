@@ -215,8 +215,8 @@ export interface EnemyKind {
  * brutes smash it and a kamikaze's bomb is made for walls.
  */
 export const ENEMY_KINDS: Readonly<Record<EnemyType, EnemyKind>> = {
-  bandit: {
-    label: 'Bandit', archetype: 'fighter', race: 'human', magical: false, arrival: 0,
+  raider: {
+    label: 'Raider', archetype: 'fighter', race: 'human', magical: false, arrival: 0,
     stats: { health: 35, speed: ENEMY_SPEED }, damage: { melee: [6, 10] }, build: { size: 1, strikeReach: 55 },
   },
   // Goblins, three quarters of a man's height.

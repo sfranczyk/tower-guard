@@ -4,7 +4,7 @@ import { WaveDirector, groupByKind, planWaves } from './waveDirector';
 
 const last = <T>(items: readonly T[]): T => items[items.length - 1];
 
-const level = { bandit: 6, fast: 4, tank: 3, troll: 0, hunter: 3, dragon: 1, fireDragon: 1, kamikaze: 2, goblinKamikaze: 0, zombie: 2, knight: 2, heavyKnight: 1, horseKnight: 1, priest: 1, shaman: 0 };
+const level = { raider: 6, fast: 4, tank: 3, troll: 0, hunter: 3, dragon: 1, fireDragon: 1, kamikaze: 2, goblinKamikaze: 0, zombie: 2, knight: 2, heavyKnight: 1, horseKnight: 1, priest: 1, shaman: 0 };
 const total = 27;
 
 describe('wave waves', () => {
@@ -13,7 +13,7 @@ describe('wave waves', () => {
     expect(waves.flat()).toHaveLength(total);
     expect(waves[0]).toHaveLength(WAVES.firstSize);
     waves.forEach((wave) => expect(wave.length).toBeLessThanOrEqual(WAVES.maxSize + 1));
-    (['bandit', 'fast', 'tank', 'troll', 'hunter', 'dragon', 'fireDragon', 'kamikaze', 'goblinKamikaze', 'zombie', 'knight', 'heavyKnight', 'horseKnight', 'priest', 'shaman'] as const).forEach((type) =>
+    (['raider', 'fast', 'tank', 'troll', 'hunter', 'dragon', 'fireDragon', 'kamikaze', 'goblinKamikaze', 'zombie', 'knight', 'heavyKnight', 'horseKnight', 'priest', 'shaman'] as const).forEach((type) =>
       expect(waves.flat().filter((t) => t === type)).toHaveLength(level[type]));
   });
 
@@ -25,16 +25,16 @@ describe('wave waves', () => {
   });
 
   it('grows by WAVES.sizeStep up to WAVES.maxSize, the rest in the last wave', () => {
-    const sizes = (bandit: number): number[] =>
-      planWaves({ bandit, fast: 0, tank: 0, troll: 0, hunter: 0, dragon: 0, fireDragon: 0, kamikaze: 0, goblinKamikaze: 0, zombie: 0, knight: 0, heavyKnight: 0, horseKnight: 0, priest: 0, shaman: 0 }).map((wave) => wave.length);
+    const sizes = (raider: number): number[] =>
+      planWaves({ raider, fast: 0, tank: 0, troll: 0, hunter: 0, dragon: 0, fireDragon: 0, kamikaze: 0, goblinKamikaze: 0, zombie: 0, knight: 0, heavyKnight: 0, horseKnight: 0, priest: 0, shaman: 0 }).map((wave) => wave.length);
     expect(sizes(30)).toEqual([3, 5, 7, 9, 6]);
     expect(sizes(50)).toEqual([3, 5, 7, 9, 10, 10, 6]);
   });
 
 
   it('never leaves a lone enemy as the last wave', () => {
-    expect(last(planWaves({ bandit: 6, fast: 0, tank: 0, troll: 0, hunter: 0, dragon: 0, fireDragon: 0, kamikaze: 0, goblinKamikaze: 0, zombie: 0, knight: 0, heavyKnight: 0, horseKnight: 0, priest: 0, shaman: 0 })).length).toBeGreaterThan(1);
-    expect(planWaves({ bandit: 1, fast: 0, tank: 0, troll: 0, hunter: 0, dragon: 0, fireDragon: 0, kamikaze: 0, goblinKamikaze: 0, zombie: 0, knight: 0, heavyKnight: 0, horseKnight: 0, priest: 0, shaman: 0 })).toEqual([['bandit']]);
+    expect(last(planWaves({ raider: 6, fast: 0, tank: 0, troll: 0, hunter: 0, dragon: 0, fireDragon: 0, kamikaze: 0, goblinKamikaze: 0, zombie: 0, knight: 0, heavyKnight: 0, horseKnight: 0, priest: 0, shaman: 0 })).length).toBeGreaterThan(1);
+    expect(planWaves({ raider: 1, fast: 0, tank: 0, troll: 0, hunter: 0, dragon: 0, fireDragon: 0, kamikaze: 0, goblinKamikaze: 0, zombie: 0, knight: 0, heavyKnight: 0, horseKnight: 0, priest: 0, shaman: 0 })).toEqual([['raider']]);
   });
 });
 
@@ -67,14 +67,14 @@ describe('wave director', () => {
 
   it('sends a wave in groups: close together inside a group, a longer gap between groups', () => {
     const pacing = { groupSize: 2, spawnIntervalMs: 300, groupGapMs: 1500 };
-    const big = { ...level, bandit: 12 };
+    const big = { ...level, raider: 12 };
     const { spawns } = run(() => 99, 100, 120000, new WaveDirector(big, pacing));
     expect(spawns[1] - spawns[0]).toBe(300);
     expect(spawns[2] - spawns[1]).toBe(1500);
   });
 
   it('puts the same kinds of a wave together', () => {
-    const grouped = groupByKind(['bandit', 'hunter', 'bandit', 'fast', 'hunter', 'fast']);
+    const grouped = groupByKind(['raider', 'hunter', 'raider', 'fast', 'hunter', 'fast']);
     expect(grouped).toHaveLength(6);
     // Each kind is one unbroken run.
     expect(grouped.filter((type, index) => type !== grouped[index - 1])).toHaveLength(3);

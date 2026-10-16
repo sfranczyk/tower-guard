@@ -7,12 +7,12 @@ import { ARCHETYPES, ENEMY_GROUP_IDS, ENEMY_KINDS, ENEMY_TYPES, RACES, enemyArch
 
 describe('ENEMY_KINDS', () => {
   it('lists every enemy once, in the setup order', () => {
-    expect(ENEMY_TYPES).toEqual(['bandit', 'fast', 'tank', 'troll', 'hunter', 'dragon', 'fireDragon', 'kamikaze', 'goblinKamikaze', 'zombie', 'knight', 'heavyKnight', 'horseKnight', 'priest', 'shaman']);
+    expect(ENEMY_TYPES).toEqual(['raider', 'fast', 'tank', 'troll', 'hunter', 'dragon', 'fireDragon', 'kamikaze', 'goblinKamikaze', 'zombie', 'knight', 'heavyKnight', 'horseKnight', 'priest', 'shaman']);
   });
 
   it('gives each enemy its archetype and race', () => {
     const of = (type: keyof typeof ENEMY_KINDS) => [ENEMY_KINDS[type].archetype, ENEMY_KINDS[type].race];
-    expect(of('bandit')).toEqual(['fighter', 'human']);
+    expect(of('raider')).toEqual(['fighter', 'human']);
     expect(of('hunter')).toEqual(['archer', 'human']);
     expect(of('kamikaze')).toEqual(['kamikaze', 'human']);
     expect(of('goblinKamikaze')).toEqual(['kamikaze', 'goblin']);
@@ -30,7 +30,7 @@ describe('ENEMY_KINDS', () => {
 
   it('sorts the enemies into groups by race', () => {
     expect(Object.fromEntries(ENEMY_GROUP_IDS.map((group) => [group, enemyTypesOf(group)]))).toEqual({
-      humans: ['bandit', 'hunter', 'kamikaze', 'knight', 'heavyKnight', 'horseKnight', 'priest'],
+      humans: ['raider', 'hunter', 'kamikaze', 'knight', 'heavyKnight', 'horseKnight', 'priest'],
       mightyHumans: ['dragon', 'fireDragon'],
       nonHumans: ['fast', 'tank', 'troll', 'goblinKamikaze', 'shaman'],
       creatures: ['zombie'],
@@ -39,14 +39,14 @@ describe('ENEMY_KINDS', () => {
 
   it('weighs each enemy (a fighter 1.2): goblins lightest, then the undead, knights heavier, ogres, then horse and rider heaviest on the ground', () => {
     expect(Object.fromEntries(ENEMY_TYPES.filter((type) => !isFlyingType(type)).map((type) => [type, enemyMass(type)]))).toEqual({
-      fast: 0.8, shaman: 0.8, zombie: 1, goblinKamikaze: 1, priest: 1.2, hunter: 1.2, bandit: 1.2, kamikaze: 1.4, knight: 1.9, heavyKnight: 2.5, tank: 4.2, troll: 4.2, horseKnight: 6,
+      fast: 0.8, shaman: 0.8, zombie: 1, goblinKamikaze: 1, priest: 1.2, hunter: 1.2, raider: 1.2, kamikaze: 1.4, knight: 1.9, heavyKnight: 2.5, tank: 4.2, troll: 4.2, horseKnight: 6,
     });
   });
 
   it('armours only the knights (the mounted one\'s rider; ArrowHits spares his horse)', () => {
     expect(ENEMY_TYPES.filter((type) => enemyArmor(type) < 1)).toEqual(['knight', 'heavyKnight', 'horseKnight']);
     expect(enemyArmor('knight')).toBe(KNIGHT_ARMOR);
-    expect(enemyArmor('bandit')).toBe(1);
+    expect(enemyArmor('raider')).toBe(1);
   });
 
   it('makes every enemy of a magical race magical (dragons), and the priest', () => {
@@ -65,7 +65,7 @@ describe('ENEMY_KINDS', () => {
   });
 
   it('lets only clubbers carry a club (sword, hammer and scepter too), only kamikazes detonate and only priests heal', () => {
-    expect(ENEMY_TYPES.filter((type) => enemyArchetype(type).club)).toEqual(['bandit', 'fast', 'tank', 'troll', 'knight', 'heavyKnight', 'priest', 'shaman']);
+    expect(ENEMY_TYPES.filter((type) => enemyArchetype(type).club)).toEqual(['raider', 'fast', 'tank', 'troll', 'knight', 'heavyKnight', 'priest', 'shaman']);
     expect(ENEMY_TYPES.filter((type) => enemyArchetype(type).heals)).toEqual(['priest']);
     expect(ENEMY_TYPES.filter((type) => enemyArchetype(type).buffs)).toEqual(['shaman']);
     expect(ENEMY_TYPES.filter((type) => enemyArchetype(type).detonates)).toEqual(['kamikaze', 'goblinKamikaze']);
@@ -74,7 +74,7 @@ describe('ENEMY_KINDS', () => {
 
   it('takes its traits from its race, with its own overrides', () => {
     expect(enemyTraits('tank')).toEqual({ mass: 4.2, freezeMs: FROST_FREEZE_BRUTE_MS, burnFactor: 1, pinMs: 0, healable: true });
-    expect(enemyTraits('bandit')).toEqual({ mass: 1.2, freezeMs: FROST_FREEZE_MS, burnFactor: 1, pinMs: PIN_DURATION_MS, healable: true });
+    expect(enemyTraits('raider')).toEqual({ mass: 1.2, freezeMs: FROST_FREEZE_MS, burnFactor: 1, pinMs: PIN_DURATION_MS, healable: true });
     expect(ENEMY_TYPES.filter((type) => !enemyTraits(type).healable)).toEqual(['zombie']);
     expect(enemyTraits('zombie').pinMs).toBe(PIN_DURATION_ZOMBIE_MS);
     expect(enemyTraits('dragon').burnFactor).toBe(1);
@@ -87,12 +87,12 @@ describe('ENEMY_KINDS', () => {
     expect(freezeDurationMs('fireDragon')).toBe(0);
     expect(freezeDurationMs('tank')).toBe(FROST_FREEZE_BRUTE_MS);
     expect(burnDurationMs('fireDragon')).toBe(0);
-    expect(burnDurationMs('zombie')).toBeGreaterThan(burnDurationMs('bandit'));
+    expect(burnDurationMs('zombie')).toBeGreaterThan(burnDurationMs('raider'));
   });
 
   it('brings tougher enemies later in a level', () => {
-    expect(ENEMY_KINDS.bandit.arrival).toBe(0);
-    expect(ENEMY_KINDS.tank.arrival).toBeGreaterThan(ENEMY_KINDS.bandit.arrival);
+    expect(ENEMY_KINDS.raider.arrival).toBe(0);
+    expect(ENEMY_KINDS.tank.arrival).toBeGreaterThan(ENEMY_KINDS.raider.arrival);
     expect(ENEMY_KINDS.fireDragon.arrival).toBeGreaterThan(ENEMY_KINDS.tank.arrival);
   });
 

@@ -5,7 +5,7 @@ import { at, drawBowWith, ellipseIn, headFrame, quiver, shapeIn, torsoFrame, woo
 
 /**
  * New looks for the game's enemies that walk and run, drawn over the game's own poses (BodyPose):
- * bandit → raider, runner → goblin, hunter → hooded archer, kamikaze → sapper, goblin kamikaze → goblin bomber.
+ * raider, runner → goblin, hunter → hooded archer, kamikaze → sapper, goblin kamikaze → goblin bomber.
  */
 
 const xy = (point: Vec2): [number, number] => [point.x, point.y];
@@ -22,7 +22,7 @@ const capPoints = (radius: number, from: number): Array<[number, number]> => {
   });
 };
 
-/** Bandit: the raider. Stickman proportions with flesh, a tunic, bandana and a proper club. */
+/** Raider: stickman proportions with flesh, a tunic, bandana and a proper club. */
 export const raiderLook = (timeMs: number): HumanoidLook => {
   const SKIN = 0xd9a074, SKIN_DARK = 0xa8754f, TUNIC = 0x7b5233, LEATHER = 0x3b2a20, BANDANA = 0xb8383b;
   return {

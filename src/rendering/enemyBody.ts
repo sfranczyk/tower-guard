@@ -18,7 +18,7 @@ import { drawMountedKnight } from './designs/warhorse';
 
 /**
  * Enemies drawn in their looks (rendering/designs) over the same poses drawStickman uses, so movement,
- * swings, falls and hitboxes are unchanged: bandit = raider, runner = goblin, hunter = hooded archer,
+ * swings, falls and hitboxes are unchanged: raider, runner = goblin, hunter = hooded archer,
  * brute = ogre, troll, kamikaze = sapper, goblin kamikaze = goblin bomber, zombie = rotting peasant; the black knight, heavy knight and dark priest as they are, the goblin shaman;
  * the mounted knight is the black knight on a warhorse (designs/warhorse.ts) in the 'mounted' state.
  */
@@ -37,7 +37,7 @@ interface EnemyBodyLook {
 const fixed = (look: HumanoidLook) => (): HumanoidLook => look;
 
 const LOOKS: Readonly<Record<GroundEnemy, EnemyBodyLook>> = {
-  bandit: { look: raiderLook, club: 'overhead', gibs: { ...HUMAN_BODY, bone: 0xd9a074, boneRear: 0x7b5233 } },
+  raider: { look: raiderLook, club: 'overhead', gibs: { ...HUMAN_BODY, bone: 0xd9a074, boneRear: 0x7b5233 } },
   fast: { look: goblinLook, club: 'uppercut', gibs: { ...HUMAN_BODY, bone: 0x86b04b, boneRear: 0x5f8a36 } },
   tank: { look: fixed(ogreLook()), club: 'twoHanded', gibs: { ...HUMAN_BODY, bone: 0xb59a6a, boneRear: 0x8f784f } },
   troll: { look: fixed(trollLook()), club: 'twoHanded', gibs: { ...HUMAN_BODY, bone: 0x7f8f74, boneRear: 0x5d6b55 } },
@@ -52,7 +52,7 @@ const LOOKS: Readonly<Record<GroundEnemy, EnemyBodyLook>> = {
   shaman: { look: shamanLook, club: 'overhead', gibs: { ...HUMAN_BODY, bone: 0x86b04b, boneRear: 0x6b4a32 } },
 };
 
-const lookOf = (kind: EnemyType): EnemyBodyLook => LOOKS[kind as GroundEnemy] ?? LOOKS.bandit;
+const lookOf = (kind: EnemyType): EnemyBodyLook => LOOKS[kind as GroundEnemy] ?? LOOKS.raider;
 
 /** Blood and the colours of the pieces of a blown-apart enemy. */
 export const enemyGibColors = (kind: EnemyType): BodyColors => lookOf(kind).gibs;

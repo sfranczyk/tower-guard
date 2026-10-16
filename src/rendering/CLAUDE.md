@@ -26,7 +26,7 @@ animation gets a row in `scenes/labRows.ts` (or `scenes/labSequences.ts` for one
 
 ## Looks
 - **Enemy bodies** (`enemyBody.ts`): `drawEnemyBody` builds the BodyPose with drawStickman's numbers and draws the look
-  (bandit = raider, runner = goblin, hunter = hooded archer, brute = ogre, kamikaze = sapper, goblin kamikaze = goblin bomber, zombie = rotting peasant,
+  (raider, runner = goblin, hunter = hooded archer, brute = ogre, kamikaze = sapper, goblin kamikaze = goblin bomber, zombie = rotting peasant,
   knights in black plate, priest in a robe). Gibs in the look: `drawEnemyGibs` → `designs/lookGibs.ts`;
   `enemyGibColors`. Colours: `bodyColors.ts`.
 - **Player** (`bowmanBody.ts`): ranger / keep warden from `designs/playerSkins.ts` (ranger: hood, cloak, sleeves =

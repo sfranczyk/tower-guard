@@ -4,12 +4,12 @@ import { NO_AFFLICTIONS, chill, ignite, tickAfflictions, timeScale } from './aff
 
 describe('afflictions', () => {
   it('chills, then freezes on the FROST_FREEZE_HITS-th hit while chilled', () => {
-    let state = chill(NO_AFFLICTIONS, 'bandit', false).state;
+    let state = chill(NO_AFFLICTIONS, 'raider', false).state;
     expect(timeScale(state)).toBe(FROST_SLOW);
     for (let hit = 2; hit < FROST_FREEZE_HITS; hit += 1) {
-      state = chill(state, 'bandit', false).state;
+      state = chill(state, 'raider', false).state;
     }
-    const third = chill(state, 'bandit', false);
+    const third = chill(state, 'raider', false);
     expect(third.froze).toBe(true);
     expect(third.state.frozenMs).toBe(FROST_FREEZE_MS);
     expect(timeScale(third.state)).toBe(0);
@@ -24,20 +24,20 @@ describe('afflictions', () => {
   });
 
   it('forgets the hits once the chill wears off', () => {
-    const state = chill(NO_AFFLICTIONS, 'bandit', false).state;
+    const state = chill(NO_AFFLICTIONS, 'raider', false).state;
     const thawed = tickAfflictions(state, FROST_CHILL_MS + 1);
     expect(thawed.chillHits).toBe(0);
-    expect(chill(thawed, 'bandit', false).froze).toBe(false);
+    expect(chill(thawed, 'raider', false).froze).toBe(false);
   });
 
   it('fire thaws ice, frost puts fire out, the fire dragon does not burn', () => {
-    const frozen = chill(NO_AFFLICTIONS, 'bandit', true).state;
-    const burning = ignite(frozen, 'bandit');
+    const frozen = chill(NO_AFFLICTIONS, 'raider', true).state;
+    const burning = ignite(frozen, 'raider');
     expect(burning.frozenMs).toBe(0);
     expect(burning.chillMs).toBe(0);
     expect(burning.burnMs).toBeGreaterThan(0);
-    expect(chill(burning, 'bandit', false).state.burnMs).toBe(0);
+    expect(chill(burning, 'raider', false).state.burnMs).toBe(0);
     expect(ignite(NO_AFFLICTIONS, 'fireDragon').burnMs).toBe(0);
-    expect(ignite(NO_AFFLICTIONS, 'zombie').burnMs).toBeGreaterThan(ignite(NO_AFFLICTIONS, 'bandit').burnMs);
+    expect(ignite(NO_AFFLICTIONS, 'zombie').burnMs).toBeGreaterThan(ignite(NO_AFFLICTIONS, 'raider').burnMs);
   });
 });

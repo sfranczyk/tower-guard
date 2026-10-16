@@ -3,7 +3,7 @@
  * rider is unarmed (both objects/dragon/DragonEnemy.ts).
  */
 export type EnemyType =
-  | 'bandit' | 'fast' | 'tank' | 'troll' | 'hunter' | 'dragon' | 'fireDragon' | 'kamikaze' | 'goblinKamikaze' | 'zombie' | 'knight' | 'heavyKnight' | 'horseKnight' | 'priest' | 'shaman';
+  | 'raider' | 'fast' | 'tank' | 'troll' | 'hunter' | 'dragon' | 'fireDragon' | 'kamikaze' | 'goblinKamikaze' | 'zombie' | 'knight' | 'heavyKnight' | 'horseKnight' | 'priest' | 'shaman';
 /** 'fragment' is one of the small arrows a shrapnel arrow bursts into (not selectable). */
 export type ProjectileType = 'normal' | 'explosive' | 'piercing' | 'shrapnel' | 'pinning' | 'fire' | 'frost' | 'vortex' | 'fragment';
 

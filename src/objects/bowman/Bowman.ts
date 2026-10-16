@@ -96,7 +96,7 @@ export class Bowman extends Container {
     this.maxHealth = config.maxHealth ?? 100;
     this.health = this.maxHealth;
     this.figure = new BowmanFigure(this, config.look ?? 'ranger', config.armorColors);
-    this.afflictions = new AfflictionLayer('bandit', { burnMs: config.burnMs ?? relight(), flameSize: BURN_FLAME_SIZE, burnFadeMs: BURN_FADE_MS });
+    this.afflictions = new AfflictionLayer('raider', { burnMs: config.burnMs ?? relight(), flameSize: BURN_FLAME_SIZE, burnFadeMs: BURN_FADE_MS });
 
     this.addChild(this.figure.body, this.afflictions.art, this.healthBar);
 

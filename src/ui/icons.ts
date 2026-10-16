@@ -93,7 +93,7 @@ const dragon = (hide: string, wing: string, belly: string, rider: string, extra 
 
 export const ICON_ENEMIES = {
   // Raider: a club raised over the head.
-  bandit: figure(`<circle cx="11" cy="6" r="3"/><path d="M11 9v9M11 18l-4 7M11 18l4 7M11 12l-4 4M11 12l5-1"/>${club(16, 11, 19, 4)}`),
+  raider: figure(`<circle cx="11" cy="6" r="3"/><path d="M11 9v9M11 18l-4 7M11 18l4 7M11 12l-4 4M11 12l5-1"/>${club(16, 11, 19, 4)}`),
   // Goblin: running, leaning in, a dagger in front, speed lines behind.
   fast: figure(`<circle cx="16" cy="6.5" r="2.6"/><path d="M15 9l-3 7M12 16l-1.5 4.5-4.5 1.5M12 16l4 3v4.5M14 11l-4 3M14 11l4 2"/>
     <path d="M18 13l3.5-1.5" stroke="#9aa4ae" stroke-width="1.6"/><path d="M2 10h4M1 14h4.5M2.5 18h3" stroke="#66756f" stroke-width="1.5"/>`),

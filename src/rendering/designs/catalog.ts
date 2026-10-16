@@ -195,17 +195,17 @@ const fixed = (look: HumanoidLook): LookAt => () => look;
 
 const ENEMIES: DesignEntry[] = [
   {
-    id: 'bandit',
-    name: 'Bandit',
+    id: 'raider',
+    name: 'Raider',
     tagline: 'The basic enemy',
-    description: 'The raider from the ideas, now on the bandit\'s own skeleton and moves: tunic, belt, bandana with flapping tails, a stubbled face. The club is now a real one: a gripped handle, a head that thickens towards the end and an iron band, held in the fist exactly where the game holds it.',
+    description: 'The raider from the ideas, now on its own skeleton and moves: tunic, belt, bandana with flapping tails, a stubbled face. The club is now a real one: a gripped handle, a head that thickens towards the end and an iron band, held in the fist exactly where the game holds it.',
     views: [
       walking(raiderLook, FIGHTER_SPEED, 'overhead'),
       swinging('Club swing', raiderLook, 'overhead'),
       falling('Death', raiderLook, 'death'),
       cheering(raiderLook, 'cheerFist', true),
       pinned(raiderLook),
-      blownApart('bandit'),
+      blownApart('raider'),
       now((t) => ({ phase: walkPhase(t, FIGHTER_SPEED), armed: true }), FIGHTER_SPEED),
     ],
   },
@@ -322,7 +322,7 @@ const ENEMIES: DesignEntry[] = [
     id: 'knight',
     name: 'Black knight',
     tagline: 'Armoured: aim for the visor',
-    description: 'Black plate from helm to sabatons: a closed great helm with two embers glowing through the visor slit and a dark red plume, a spiked pauldron, tassets over the thighs and a torn red cape. A longsword with a crossguard where the bandit holds his club. Body hits glance off the plate (only a third gets through); headshots and piercing arrows go through.',
+    description: 'Black plate from helm to sabatons: a closed great helm with two embers glowing through the visor slit and a dark red plume, a spiked pauldron, tassets over the thighs and a torn red cape. A longsword with a crossguard where the raider holds his club. Body hits glance off the plate (only a third gets through); headshots and piercing arrows go through.',
     views: [
       walking(blackKnightLook, KNIGHT_SPEED, 'overhead', false, 'march'),
       swinging('Sword cut', blackKnightLook, 'overhead'),

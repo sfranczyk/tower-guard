@@ -6,17 +6,17 @@ All pure and tested. Tuning numbers live in `config.ts`, sandbox defaults in `sa
   in `ENEMY_KINDS`: an **archetype** (how it fights: `fighter`, `runner`, `heavy`, `archer`, `kamikaze`, `grabber`,
   `skyArcher`, `fireBreather`, `healer`, `cavalry`; `ARCHETYPES` says whether it carries a club, runs, shoots, detonates,
   flies, breathes fire, heals, rides), a **race** (`human`, `goblin`, `ogre`, `undead`, `dragon`; `RACES` give the traits:
-  mass (a bandit 1.2; how a vortex takes it), freeze and pin durations, burn factor, healable), **magical** (dragons),
+  mass (a raider 1.2; how a vortex takes it), freeze and pin durations, burn factor, healable), **magical** (dragons),
   plus its stats, damage, keep damage, build (size, strike reach, optional `reach`: how close it comes to strike) and
   `arrival` (where in a level it starts to come). Gameplay code asks `enemyArchetype(type)` and `enemyTraits(type)` (race
   traits with the variant's overrides), never the id; looks stay per variant (`rendering/enemyBody.ts`, `ICON_ENEMIES`).
   A new variant is one entry here plus its look and icon (see the `/new-enemy` skill).
   Each race belongs to a **group** (`ENEMY_GROUPS`: humans, mighty humans = dragon riders, non-humans = goblin/ogre,
   creatures = undead; `enemyGroup`, `enemyTypesOf`): the setup's enemy picker is split by it, story levels build on it.
-  Now: bandit, hunter, kamikaze, the three knights, priest = human; runner, goblin kamikaze, shaman = goblin; brute, troll = ogre; zombie = undead; both
+  Now: raider, hunter, kamikaze, the three knights, priest = human; runner, goblin kamikaze, shaman = goblin; brute, troll = ogre; zombie = undead; both
   dragons = dragon. An entry may have `armor` (`enemyArmor`): the share of an arrow's body hit that gets through.
 - **Toughness and damage** (`enemies.ts`): health per type against a 20-damage arrow (headshot
-  ×`ARROWS.headshotMultiplier` = 1.25): bandit 35, runner 22, hunter 24 (one headshot), brute 110, dragon 170.
+  ×`ARROWS.headshotMultiplier` = 1.25): raider 35, runner 22, hunter 24 (one headshot), brute 110, dragon 170.
   `ENEMY_DAMAGE` gives each type a random range (`rollDamage`) for club swings and, for shooters, their arrows
   (`Arrow.shooter` tells CombatSystem whose arrow hit). The keep (2000 by default) takes the same
   × `KEEP_DAMAGE_MULTIPLIER` per attack (1, except hunter arrows 0.5, brute 2, kamikaze 8, goblin kamikaze 4); read ranges with
@@ -27,7 +27,7 @@ All pure and tested. Tuning numbers live in `config.ts`, sandbox defaults in `sa
   `RUN_STRIDE_PER_RADIAN` × body scale), so feet stay planted at any speed and size; `stepMs` only sets the sway of
   standing poses. Runners run, are 0.75× tall and stab from below; brutes are 1.5× tall (container scale, so hitboxes
   and arrow anchors scale too; the health bar keeps its size) and chop two-handed with a long club. Strike reach:
-  runner 45, bandit 55, brute 85 px.
+  runner 45, raider 55, brute 85 px.
 - **Projectiles** (`projectiles.ts`): each type has a mass, head drag and speed multiplier: launch speed
   ∝ speedMultiplier/√mass and drag ∝ dragMultiplier/mass. Gravity is the same for every type (keep it so). Piercing is
   light (fast, flat, long), explosive heavy (short high arc). Behaviour in systems/CLAUDE.md.
@@ -41,7 +41,7 @@ All pure and tested. Tuning numbers live in `config.ts`, sandbox defaults in `sa
   0.9 (few, high rises), and `wind` 300: each level rolls one up to it, px/s², part of `FlightParams`; it may shift
   mid-level, `systems/windShift.ts`; the status line shows it).
 - **Sandbox** (`sandbox.ts`, `loadout.ts`): settings are pure data, `normalizeSandbox` clamps everything and still reads
-  pre-rename setups (`waves`, `waveCount`). `SandboxSettings.loadout`: five weapon slots (`LOADOUT_SLOTS`), any arrows,
+  pre-rename setups (`waves`, `waveCount`; old enemy ids via `RENAMED_TYPES`). `SandboxSettings.loadout`: five weapon slots (`LOADOUT_SLOTS`), any arrows,
   each at most once, slots may stay empty. Persisted by `core/sandboxStorage.ts`.
   `SandboxSettings.difficulty` (`difficulty.ts`, medium by default): wave scale and pacing, picked in the battle setup. Between levels `healAfterLevel` heals the bowmen (easy full, medium +50%, hard +10% of max; `DIFFICULTY_SCALE.*LevelHeal`); the keep starts every level whole.
 - **Arrow tree** (`arrowTree.ts`): every arrow has a `path` (archer, craftsman, mage) and a `parent`, all growing out of
