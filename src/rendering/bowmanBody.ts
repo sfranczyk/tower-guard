@@ -29,6 +29,8 @@ export interface BowmanBodyState {
   ready: number;
   /** The string springing back after a shot: no arrow on it. */
   loosed?: boolean;
+  /** Where the string hand is (as a tension; default `tension`): it stays back a moment after a shot. */
+  handTension?: number;
 }
 
 /** Standing, walking or sprinting with the bow (cleared first; sets the sprite's x and y like drawStickman). */
@@ -38,7 +40,7 @@ export const drawBowmanBody = (
   sprite.clear();
   sprite.x = 0;
   sprite.y = originY - LIVE_POSE_LIFT;
-  const pose = bowmanBody(state.phase / (Math.PI * 2), state.idleBlend, state.runningBlend, state.localAngle, state.tension, state.ready);
+  const pose = bowmanBody(state.phase / (Math.PI * 2), state.idleBlend, state.runningBlend, state.localAngle, state.tension, state.ready, state.handTension);
   if (state.loosed && pose.bow) {
     pose.bow = { ...pose.bow, tension: 0 };
   }

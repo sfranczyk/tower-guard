@@ -119,6 +119,7 @@ export class BowmanFigure {
       tension: aim.shownTension,
       ready: aim.ready,
       loosed: aim.power <= 0,
+      handTension: aim.shownHand,
     }, BODY_ORIGIN_Y, this.lookTimeMs);
     this.turnAloft();
   }

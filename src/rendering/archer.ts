@@ -71,12 +71,17 @@ export const toArcherLocalAngle = (aimAngle: number, spriteRotation: number, fac
  * @param tension draw tension 0..1; only takes effect as the bow comes up to ready
  * @param ready 0 = bow lowered, 1 = bow raised to aim; values in between blend smoothly
  * @param freeArm where the string arm is while the bow is lowered (defaults to a hanging arm)
+ * @param handTension where the string hand is (as a draw tension); differs from `tension` just after a shot, when the
+ *   hand stays back while the string springs forward
  */
-export const getArcherRig = (localAngle: number, tension: number, ready = 1, freeArm: FreeArm = DEFAULT_FREE_ARM): ArcherRig => {
+export const getArcherRig = (
+  localAngle: number, tension: number, ready = 1, freeArm: FreeArm = DEFAULT_FREE_ARM, handTension = tension,
+): ArcherRig => {
   const r = Math.max(0, Math.min(1, ready));
   const eased = smooth(r);
   // The string can only be drawn once the bow is up.
   const t = Math.max(0, Math.min(1, tension)) * eased;
+  const handT = Math.max(0, Math.min(1, handTension)) * eased;
 
   // Bow grip and orientation move from the lowered pose to the aim pose.
   const readyGrip = {
@@ -101,12 +106,13 @@ export const getArcherRig = (localAngle: number, tension: number, ready = 1, fre
   const tipX = STRING_REST_X - 12 * t - GRIP_DISTANCE;
   const tipY = LIMB_HALF_HEIGHT - 6 * t;
   const stringNock = fromBowFrame(STRING_REST_X - STRING_PULL * t - GRIP_DISTANCE, 0);
+  const handOnString = handT === t ? stringNock : fromBowFrame(STRING_REST_X - STRING_PULL * handT - GRIP_DISTANCE, 0);
 
   return {
     woodHand: grip,
     woodElbow: lerpPoint(LOWERED_ELBOW, fromAimFrame(28, 4), eased),
-    stringHand: lerpPoint(freeArm.hand, stringNock, eased),
-    stringElbow: lerpPoint(freeArm.elbow, fromAimFrame(17.5 - 37.5 * t, 4 + 9 * t), eased),
+    stringHand: lerpPoint(freeArm.hand, handOnString, eased),
+    stringElbow: lerpPoint(freeArm.elbow, fromAimFrame(17.5 - 37.5 * handT, 4 + 9 * handT), eased),
     stringNock,
     bowTop: fromBowFrame(tipX, -tipY),
     bowBottom: fromBowFrame(tipX, tipY),

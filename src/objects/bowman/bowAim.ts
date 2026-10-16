@@ -6,6 +6,9 @@ const BOW_RAISE_MS = 200;
 const BOW_LOWER_MS = 380;
 /** After a loosed shot (`loose`), the string springs back straight this fast. */
 const STRING_SNAP_MS = 90;
+/** After a loosed shot the string hand stays where it let go this long, then goes back to the string in … */
+const HAND_STAY_MS = 320;
+const HAND_RETURN_MS = 200;
 
 export interface BowmanAim {
   direction: Vec2;
@@ -26,6 +29,9 @@ export class BowAim {
   public held = false;
   /** The string's tension still showing after `loose` (no arrow on it), springing back to 0. */
   public slack = 0;
+  /** The string hand's draw after `loose` (it stays back `HAND_STAY_MS`, then returns to the string). */
+  public hand = 0;
+  private handStayMs = 0;
 
   public get angle(): number {
     return Math.atan2(this.direction.y, this.direction.x);
@@ -46,13 +52,21 @@ export class BowAim {
     this.power = 0;
     this.ready = 0;
     this.slack = 0;
+    this.hand = 0;
     this.held = false;
   }
 
   /** The arrow is away: the draw ends, the string springs back from where it was (see `slack`). */
   public loose(): void {
     this.slack = this.power;
+    this.hand = this.power;
+    this.handStayMs = HAND_STAY_MS;
     this.power = 0;
+  }
+
+  /** Where the string hand is, as a draw: the draw, or held back for a moment after a shot. */
+  public get shownHand(): number {
+    return this.power > 0 ? this.power : this.hand;
   }
 
   /** The string tension to draw: the draw, or the slack springing back after a shot. */
@@ -69,6 +83,14 @@ export class BowAim {
   public raise(deltaMs: number): void {
     const drawing = this.power > 0 || this.held;
     this.slack = approach(this.slack, 0, deltaMs / STRING_SNAP_MS);
+    if (this.power > 0) {
+      this.hand = 0;
+      this.handStayMs = 0;
+    } else if (this.handStayMs > 0) {
+      this.handStayMs -= deltaMs;
+    } else {
+      this.hand = approach(this.hand, 0, deltaMs / HAND_RETURN_MS);
+    }
     this.ready = approach(this.ready, drawing ? 1 : 0, deltaMs / (drawing ? BOW_RAISE_MS : BOW_LOWER_MS));
   }
 

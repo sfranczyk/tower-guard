@@ -46,6 +46,17 @@ describe('getArcherRig', () => {
   });
 });
 
+describe('getArcherRig hand tension', () => {
+  it('keeps the string hand drawn back while the string has sprung forward', () => {
+    const loosed = getArcherRig(0, 0, 1, undefined, 1);
+    const drawn = getArcherRig(0, 1, 1);
+    const straight = getArcherRig(0, 0, 1);
+    expect(loosed.stringHand.x).toBeCloseTo(drawn.stringHand.x);
+    expect(loosed.stringElbow.x).toBeCloseTo(drawn.stringElbow.x);
+    expect(loosed.stringNock.x).toBeCloseTo(straight.stringNock.x);
+  });
+});
+
 describe('toArcherLocalAngle', () => {
   it('is the identity for an unrotated sprite facing right', () => {
     expect(toArcherLocalAngle(0.4, 0, 1)).toBeCloseTo(0.4);

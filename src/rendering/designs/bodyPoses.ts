@@ -233,12 +233,12 @@ export const archerBody = (aim: number, tension: number, ready: number, walk?: n
   archerOn(walk === undefined ? standBody() : walkBody(walk), aim, tension, ready);
 
 /** The archer rig on `base` (its legs and hip; its front arm swings while the bow is lowered). */
-const archerOn = (base: BodyPose, aim: number, tension: number, ready: number): BodyPose => {
+const archerOn = (base: BodyPose, aim: number, tension: number, ready: number, handTension = tension): BodyPose => {
   // The archer rig pivots at the neck of an upright stickman with the hip at the origin.
   const body = torso(base.hip, 0);
   const shift = { x: body.hip.x, y: body.hip.y };
   const unshift = (point: Vec2): Vec2 => ({ x: point.x - shift.x, y: point.y - shift.y });
-  const rig = getArcherRig(aim, tension, ready, { elbow: unshift(base.frontElbow), hand: unshift(base.frontHand) });
+  const rig = getArcherRig(aim, tension, ready, { elbow: unshift(base.frontElbow), hand: unshift(base.frontHand) }, handTension);
   const move = (point: Vec2): Vec2 => ({ x: point.x + shift.x, y: point.y + shift.y });
   const moved: ArcherRig = {
     woodHand: move(rig.woodHand), woodElbow: move(rig.woodElbow), stringHand: move(rig.stringHand),
@@ -262,7 +262,7 @@ const mixPoint = (a: Vec2, b: Vec2, t: number): Vec2 => ({ x: a.x + (b.x - a.x) 
  * blended, and the knees solved again, so the legs keep their length through every blend.
  */
 export const bowmanBody = (
-  phase: number, idleBlend: number, runningBlend: number, aim: number, tension: number, ready: number,
+  phase: number, idleBlend: number, runningBlend: number, aim: number, tension: number, ready: number, handTension = tension,
 ): BodyPose => {
   const walk = walkBody(phase, { lean: 0 });
   const run = runBody(phase + 0.4, undefined, 0);
@@ -275,7 +275,7 @@ export const bowmanBody = (
     ...legs(hip, blend('frontFoot'), blend('rearFoot')),
     frontElbow: blend('frontElbow'), frontHand: blend('frontHand'), rearElbow: stand.rearElbow, rearHand: stand.rearHand,
   };
-  return archerOn(base, aim, tension, ready);
+  return archerOn(base, aim, tension, ready, handTension);
 };
 
 /** A joint pose (cheer, pinned struggle) holding the club along the forearm, like drawJointPose's `club`. */

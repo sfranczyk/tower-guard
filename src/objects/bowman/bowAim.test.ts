@@ -34,7 +34,14 @@ describe('BowAim', () => {
     expect(aim.shownTension).toBeCloseTo(0.8);
     aim.raise(45);
     expect(aim.shownTension).toBeCloseTo(0.3);
+    // The string hand stays back while the string springs forward, then goes back to it.
+    expect(aim.shownHand).toBeCloseTo(0.8);
+    aim.raise(300);
+    expect(aim.shownHand).toBeCloseTo(0.8);
+    aim.raise(100);
+    expect(aim.shownHand).toBeLessThan(0.8);
     aim.raise(500);
+    expect(aim.shownHand).toBe(0);
     expect(aim.shownTension).toBe(0);
     expect(aim.ready).toBe(1);
     aim.held = false;
