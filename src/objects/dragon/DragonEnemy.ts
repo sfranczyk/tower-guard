@@ -1,14 +1,12 @@
 import { Container, Graphics } from 'pixi.js';
-import { DRAGON_SCALE, DRAGON_TURN_MS } from '../../config';
+import { DRAGON_SCALE } from '../../config';
 import { dragonHitZones, type DragonHitZone, type DragonPose } from '../../rendering/dragon';
 import { dragonKnightLook, drawDragonWithRider } from '../../rendering/designs/heavySkins';
 import { HUMAN_BODY } from '../../rendering/bodyColors';
 import { IGNITE_HEAT, breathControl, drawFireStream, firePuffs, puffPosition } from '../../rendering/dragonFire';
 import { GIB_GROUND_Y } from '../../rendering/stickmanGibs';
 import type { BodyAnchor } from '../../systems/bodyAnchor';
-import { cruiseAltitude, facingScale, flyTowards, hoverX, nextHoverSide, stepFacing, type HoverSide } from '../../systems/dragonFlight';
-import { flightShare, kick, startManoeuvre, stepManoeuvre, type ManoeuvreState } from '../../systems/dragonManoeuvre';
-import { buffetOffset } from '../../systems/vortex';
+import { cruiseAltitude, type HoverSide } from '../../systems/dragonFlight';
 import { groundAt } from '../../systems/terrain';
 import { enemyArchetype } from '../../data/enemyKinds';
 import type { Bounds, Vec2 } from '../../types';
@@ -19,6 +17,7 @@ import { AfflictionLayer, type AfflictionNet } from '../AfflictionLayer';
 import { DragonBow } from './DragonBow';
 import { DragonBreath } from './DragonBreath';
 import { DragonCorpse } from './DragonCorpse';
+import { DragonMotion, type FlightNet } from './DragonMotion';
 import { frameLocalAngle, frameToLocal, frameToWorld, frameWorldAngle, type DragonFrame } from './dragonFrame';
 import { DRAGON_ARCHER_LOOK, DRAGON_KINDS, type DragonKind, type DragonLook } from './dragonKinds';
 
@@ -30,6 +29,8 @@ const AFFLICTION_SIZE = 1.5;
 const AIM_MIN = -0.25;
 const AIM_MAX = 1.35;
 const HIT_FLASH_MS = 120;
+/** The fire dragon breathes only hovering, not flying faster than this share of its transit speed. */
+const BREATHE_MAX_FLIGHT = 0.25;
 /** Health bar above the dragon, in local (unscaled) units. */
 const HEALTH_BAR = { width: 70, height: 8, y: -112 };
 
@@ -72,15 +73,8 @@ export default class DragonEnemy extends Container {
   private corpse?: DragonCorpse;
   private cheering = false;
   private paused = false;
-  /** Thrown about by turbulence (a vortex arrow) and jolted by hits: the offset added to where it flies (px). */
-  private buffet = { x: 0, y: 0 };
-  /** The dragon archer's hovers and flights between them (the fire dragon holds one hover point). */
-  private readonly manoeuvre?: ManoeuvreState;
-  /** The wing beat's clock (beats faster climbing). */
-  private wingMs = 0;
-  /** The side of its target it hovers on (1: to the right, facing left), and its facing mid-turn (−1 left … 1 right). */
-  private side: HoverSide = 1;
-  private facing = -1;
+  /** Hovers and flights between them, side and turn, gusts and jolts, wing beat (DragonMotion). */
+  private readonly motion: DragonMotion;
 
   public constructor(x: number, health: number, speed: number, kind: DragonKind = 'dragon') {
     super();
@@ -89,10 +83,7 @@ export default class DragonEnemy extends Container {
     this.maxHealth = Math.max(1, health);
     this.health = this.maxHealth;
     this.speed = speed;
-    this.wingMs = this.timeMs;
-    if (this.look.manoeuvres) {
-      this.manoeuvre = startManoeuvre(this.look.altitude, this.look.hoverOffset);
-    }
+    this.motion = new DragonMotion(this.look, this.timeMs);
     // Faces left, towards the player's keep (it turns round when its target gets behind it).
     this.applyFacing();
     this.position.set(x, cruiseAltitude(this.timeMs, this.look.altitude));
@@ -116,10 +107,7 @@ export default class DragonEnemy extends Container {
     if (this.isAlive()) {
       this.cheering = true;
       this.bow.tension = 0;
-      if (this.manoeuvre) {
-        this.manoeuvre.phase = 'hover';
-        this.manoeuvre.hoverLeftMs = Infinity;
-      }
+      this.motion.stay();
     }
   }
 
@@ -152,18 +140,18 @@ export default class DragonEnemy extends Container {
     return this.health;
   }
 
-  /** A hit: a flash, and the archer's dragon jolts a little away from the arrow (`pushX` > 0: from the left) and his draw slips. */
+  /** A hit: a flash, a small jolt away from the arrow (`pushX` > 0: from the left), and the archer's draw slips. */
   public applyHitReaction(pushX: number): void {
     this.flashMs = HIT_FLASH_MS;
-    if (this.manoeuvre && this.isAlive()) {
-      kick(this.manoeuvre, pushX > 0);
+    if (this.isAlive()) {
+      this.motion.kick(pushX > 0);
       this.bow.flinch();
     }
   }
 
   /** How fast it is flying, as a share of DRAGON_FLIGHT.transitSpeed (0..1): the rider aims worse and shoots less. */
   public get flightSpeed(): number {
-    return this.manoeuvre ? flightShare(this.manoeuvre) : 0;
+    return this.motion.flightSpeed;
   }
 
   public clearHitTint(): void {}
@@ -173,52 +161,31 @@ export default class DragonEnemy extends Container {
     this.paused = paused;
   }
 
-  /** Flies towards its hover point in front of `targetX` at cruising altitude (alive and not cheering). */
+  /** Hovers in front of `targetX`, now and then flying to another height and distance (DragonMotion). */
   public update(realDeltaMs: number, targetX: number): void {
     if (!this.isAlive()) {
       return;
     }
-    // Chilled: it flies slower.
+    // Chilled: it flies slower. Mid-breath the fire dragon doesn't set off.
     const deltaMs = realDeltaMs * this.afflictions.timeScale;
-    // Flies where it means to, then the turbulence throws it about on top of that.
-    this.x -= this.buffet.x;
-    this.y -= this.buffet.y;
-    const { manoeuvre } = this;
-    if (manoeuvre) {
-      if (!this.cheering) {
-        this.side = nextHoverSide(this.x, targetX, this.side, manoeuvre.offset);
-      }
-      const pos = { x: this.x, y: this.y };
-      stepManoeuvre(manoeuvre, pos, { targetX, side: this.side, timeMs: this.timeMs, deltaMs, followSpeed: this.speed, rng: Math.random });
-      this.position.set(pos.x, pos.y);
-    } else {
-      if (!this.cheering) {
-        this.side = nextHoverSide(this.x, targetX, this.side, this.look.hoverOffset);
-        this.x = flyTowards(this.x, hoverX(targetX, this.look.hoverOffset, this.side), this.speed, deltaMs);
-      }
-      this.y = flyTowards(this.y, cruiseAltitude(this.timeMs, this.look.altitude), 40, deltaMs);
-    }
-    const gust = buffetOffset(this.timeMs, this.afflictions.turbulence);
-    const jolt = manoeuvre?.jolt ?? { x: 0, y: 0 };
-    const x = gust.x + jolt.x;
-    const y = gust.y + jolt.y;
-    this.buffet = { x, y };
-    this.x += x;
-    this.y += y;
+    const pos = { x: this.x, y: this.y };
+    this.motion.fly(pos, {
+      targetX, timeMs: this.timeMs, deltaMs, followSpeed: this.speed, turbulence: this.afflictions.turbulence,
+      cheering: this.cheering, hold: this.breath.timeMs !== undefined,
+    });
+    this.position.set(pos.x, pos.y);
   }
 
   /** Co-op: the rider's bow and the fire dragon's breath, for the guest. */
-  public getNetState(): { aim: number; tension: number; breathMs?: number; fireAim: number; side: HoverSide; af?: AfflictionNet; fl?: [number, number, number] } {
-    const { manoeuvre: m } = this;
+  public getNetState(): { aim: number; tension: number; breathMs?: number; fireAim: number; side: HoverSide; af?: AfflictionNet; fl: FlightNet } {
     return {
-      aim: this.bow.aimAngle, tension: this.bow.tension, breathMs: this.breath.timeMs, fireAim: this.breath.aim, side: this.side,
-      af: this.afflictions.getNetState(),
-      fl: m ? [Math.round(m.glide * 100) / 100, Math.round(m.pitch * 100) / 100, Math.round(m.flapRate * 100) / 100] : undefined,
+      aim: this.bow.aimAngle, tension: this.bow.tension, breathMs: this.breath.timeMs, fireAim: this.breath.aim,
+      af: this.afflictions.getNetState(), ...this.motion.getNetState(),
     };
   }
 
   /** Co-op guest: flies where the host has it, with the host's bow and breath (no AI runs on the guest). */
-  public applyNetState(state: { x: number; y: number; aim: number; tension: number; breathMs?: number; fireAim: number; side?: HoverSide; af?: AfflictionNet; fl?: [number, number, number] }): void {
+  public applyNetState(state: { x: number; y: number; aim: number; tension: number; breathMs?: number; fireAim: number; side?: HoverSide; af?: AfflictionNet; fl?: FlightNet }): void {
     if (!this.isAlive()) {
       return;
     }
@@ -227,22 +194,18 @@ export default class DragonEnemy extends Container {
     this.bow.aimAngle = state.aim;
     this.bow.tension = state.tension;
     this.breath.apply(state.breathMs, state.fireAim);
-    // It turns round on the guest's screen too (the turn itself plays here).
-    this.side = state.side ?? this.side;
-    // The archer's wings and pitch as the host flies it.
-    if (this.manoeuvre && state.fl) {
-      [this.manoeuvre.glide, this.manoeuvre.pitch, this.manoeuvre.flapRate] = state.fl;
-    }
+    // It turns round and flies like the host's (the turn itself plays here).
+    this.motion.applyNetState(state.side, state.fl);
   }
 
   /** Which way it faces (−1 left, 1 right; mid-turn, the way it's turning to). */
   public get facingX(): HoverSide {
-    return -this.side as HoverSide;
+    return this.motion.facingX;
   }
 
   /** Swinging round to face the other way (it doesn't shoot or breathe fire meanwhile). */
   public get isTurning(): boolean {
-    return this.facing !== this.facingX;
+    return this.motion.isTurning;
   }
 
   /** Fire dragon: whether it is pouring out fire right now (for damage once burning is added). */
@@ -275,7 +238,7 @@ export default class DragonEnemy extends Container {
    * breathing or still catching its breath, starts a breath (rear back, then a long stream of fire).
    */
   public breathe(worldAngle: number): void {
-    if (!this.isAlive() || this.cheering || !enemyArchetype(this.kind).breathesFire || this.afflictions.isTurbulent || this.isTurning) {
+    if (!this.isAlive() || this.cheering || !enemyArchetype(this.kind).breathesFire || this.afflictions.isTurbulent || this.isTurning || this.flightSpeed > BREATHE_MAX_FLIGHT) {
       return;
     }
     this.breath.breathe(frameLocalAngle(this.frame, worldAngle));
@@ -321,15 +284,15 @@ export default class DragonEnemy extends Container {
     } else {
       if (!this.paused) {
         this.timeMs += deltaMs;
-        this.wingMs += deltaMs * (this.manoeuvre?.flapRate ?? 1);
         this.breath.step(deltaMs);
-        if (this.isTurning) {
-          this.facing = stepFacing(this.facing, this.facingX, deltaMs, DRAGON_TURN_MS);
+        const turning = this.isTurning;
+        this.motion.step(deltaMs);
+        if (turning) {
           this.applyFacing();
         }
       }
       // Buffeted, it tilts with the gusts, and the fire chokes off; diving it noses down, braking up (either way it faces).
-      this.rotation = buffetOffset(this.timeMs, this.afflictions.turbulence).tilt + (this.manoeuvre?.pitch ?? 0) * facingScale(this.facing);
+      this.rotation = this.motion.tilt(this.timeMs, this.afflictions.turbulence);
       if (this.afflictions.isTurbulent) {
         this.breath.stop();
       }
@@ -399,7 +362,7 @@ export default class DragonEnemy extends Container {
 
   /** Draws it facing `facing` (mirrored to face left; squeezed mid-turn); the health bar keeps its size. */
   private applyFacing(): void {
-    this.scale.set(facingScale(this.facing) * DRAGON_SCALE, DRAGON_SCALE);
+    this.scale.set(this.motion.scaleX * DRAGON_SCALE, DRAGON_SCALE);
     this.healthBar.scale.set(1 / this.scale.x, 1 / this.scale.y);
   }
 
@@ -409,7 +372,7 @@ export default class DragonEnemy extends Container {
     if (rider === 'unarmed') {
       const breathMs = this.breath.timeMs;
       const breath = breathMs === undefined ? undefined : breathControl(breathMs, this.breath.aim);
-      const pose = drawDragonWithRider(this.art, this.wingMs, 'unarmed', dragonKnightLook(this.wingMs), palette, undefined, breath);
+      const pose = drawDragonWithRider(this.art, this.motion.wingMs, 'unarmed', dragonKnightLook(this.motion.wingMs), palette, undefined, breath, this.motion.glide);
       this.fireArt.clear();
       if (breathMs !== undefined) {
         drawFireStream(this.fireArt, pose.mouth.point, pose.mouth.angle, breathMs);
@@ -419,7 +382,7 @@ export default class DragonEnemy extends Container {
     // The sprite faces either way (mirrored to face left) and tilts: turn the world aim into the rider's local aim.
     const local = frameLocalAngle(this.frame, this.bow.aimAngle);
     const aim = Math.min(AIM_MAX, Math.max(AIM_MIN, local));
-    return drawDragonWithRider(this.art, this.wingMs, 'archer', DRAGON_ARCHER_LOOK, palette, { aim, tension: this.bow.tension }, undefined, this.manoeuvre?.glide ?? 0);
+    return drawDragonWithRider(this.art, this.motion.wingMs, 'archer', DRAGON_ARCHER_LOOK, palette, { aim, tension: this.bow.tension }, undefined, this.motion.glide);
   }
 
   private drawHealthBar(): void {

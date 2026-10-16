@@ -1,4 +1,5 @@
-import { DRAGON_ALTITUDE, DRAGON_HOVER_OFFSET, FIRE_DRAGON_ALTITUDE, FIRE_DRAGON_HOVER_OFFSET } from '../../config';
+import { DRAGON_ALTITUDE, DRAGON_ARCHER_HOVER, DRAGON_HOVER_OFFSET, FIRE_DRAGON_ALTITUDE, FIRE_DRAGON_HOVER, FIRE_DRAGON_HOVER_OFFSET } from '../../config';
+import type { HoverRanges } from '../../systems/dragonManoeuvre';
 import type { FlyingType } from '../../data/enemyKinds';
 import { HUMAN_BODY, type BodyColors } from '../../rendering/bodyColors';
 import { DRAGON_PALETTES, type DragonPalette } from '../../rendering/dragon';
@@ -10,19 +11,19 @@ export type DragonKind = FlyingType;
 
 export type DragonRider = 'archer' | 'unarmed';
 
-/** How a dragon looks and flies: hide, rider, cruising height and hover distance. */
+/** How a dragon looks and flies: hide, rider, height and hover distance flying in, its hovers. */
 export interface DragonLook {
   palette: DragonPalette;
   rider: DragonRider;
   altitude: number;
   hoverOffset: number;
-  /** Hovers, then flies to a new height and distance (systems/dragonManoeuvre.ts); else it holds one hover point. */
-  manoeuvres: boolean;
+  /** Where and how long it hovers before flying to the next point (systems/dragonManoeuvre.ts). */
+  hovers: HoverRanges;
 }
 
 export const DRAGON_KINDS: Readonly<Record<DragonKind, DragonLook>> = {
-  dragon: { palette: DRAGON_PALETTES.dark, rider: 'archer', altitude: DRAGON_ALTITUDE, hoverOffset: DRAGON_HOVER_OFFSET, manoeuvres: true },
-  fireDragon: { palette: DRAGON_PALETTES.red, rider: 'unarmed', altitude: FIRE_DRAGON_ALTITUDE, hoverOffset: FIRE_DRAGON_HOVER_OFFSET, manoeuvres: false },
+  dragon: { palette: DRAGON_PALETTES.dark, rider: 'archer', altitude: DRAGON_ALTITUDE, hoverOffset: DRAGON_HOVER_OFFSET, hovers: DRAGON_ARCHER_HOVER },
+  fireDragon: { palette: DRAGON_PALETTES.red, rider: 'unarmed', altitude: FIRE_DRAGON_ALTITUDE, hoverOffset: FIRE_DRAGON_HOVER_OFFSET, hovers: FIRE_DRAGON_HOVER },
 };
 
 /** The riders' looks (rendering/designs): the dragon archer's hooded bandit; the fire dragon's knight is animated. */

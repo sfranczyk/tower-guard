@@ -7,8 +7,20 @@ import { cruiseAltitude, flyTowards, hoverX, type HoverSide } from './dragonFlig
  * The dragon archer's manoeuvres (pure; objects/dragon/DragonEnemy.ts runs them): it flies in, hovers and shoots for a
  * while, then flies to a new hover point at another height and distance, so the player has to find it again. In
  * transit it steers with limited acceleration and flies on its energy: diving it speeds up, climbing it slows down;
- * it brakes into the hover from a little above it. A hit jolts it on a spring (`kick`). Tuning: DRAGON_FLIGHT.
+ * it brakes into the hover from a little above it. A hit jolts it on a spring (`kick`). Tuning: DRAGON_FLIGHT, and
+ * each dragon's own hover ranges (DRAGON_ARCHER_HOVER, FIRE_DRAGON_HOVER).
  */
+
+/** Where and how long a dragon hovers (config: DRAGON_ARCHER_HOVER, FIRE_DRAGON_HOVER). */
+export interface HoverRanges {
+  altitudeMin: number;
+  altitudeMax: number;
+  minAltitudeChange: number;
+  offsetMin: number;
+  offsetMax: number;
+  hoverMinMs: number;
+  hoverMaxMs: number;
+}
 
 /** 'approach': flying in from the spawn; 'hover': holding its point; 'transit': flying to a new one. */
 export type ManoeuvrePhase = 'approach' | 'hover' | 'transit';
@@ -39,6 +51,9 @@ export interface ManoeuvreInput {
   deltaMs: number;
   /** Its enemy speed: how fast it flies in and follows the bowman while hovering (px/s). */
   followSpeed: number;
+  ranges: HoverRanges;
+  /** Busy (the fire dragon mid-breath): it stays in its hover until done. */
+  hold?: boolean;
   rng: () => number;
 }
 
@@ -60,12 +75,12 @@ export const startManoeuvre = (altitude: number, offset: number): ManoeuvreState
 });
 
 /** A hover time in hoverMinMs..hoverMaxMs. */
-export const pickHoverMs = (rng: () => number): number =>
-  DRAGON_FLIGHT.hoverMinMs + rng() * Math.max(0, DRAGON_FLIGHT.hoverMaxMs - DRAGON_FLIGHT.hoverMinMs);
+export const pickHoverMs = (ranges: HoverRanges, rng: () => number): number =>
+  ranges.hoverMinMs + rng() * Math.max(0, ranges.hoverMaxMs - ranges.hoverMinMs);
 
 /** A new height in altitudeMin..altitudeMax at least minAltitudeChange from `current` (if the range allows it). */
-export const pickAltitude = (current: number, rng: () => number): number => {
-  const { altitudeMin: min, altitudeMax: max, minAltitudeChange: gap } = DRAGON_FLIGHT;
+export const pickAltitude = (current: number, ranges: HoverRanges, rng: () => number): number => {
+  const { altitudeMin: min, altitudeMax: max, minAltitudeChange: gap } = ranges;
   const below = Math.max(0, current - gap - min);
   const above = Math.max(0, max - (current + gap));
   if (below + above <= 0) {
@@ -75,8 +90,8 @@ export const pickAltitude = (current: number, rng: () => number): number => {
   return pick < below ? min + pick : current + gap + (pick - below);
 };
 
-export const pickOffset = (rng: () => number): number =>
-  DRAGON_FLIGHT.offsetMin + rng() * Math.max(0, DRAGON_FLIGHT.offsetMax - DRAGON_FLIGHT.offsetMin);
+export const pickOffset = (ranges: HoverRanges, rng: () => number): number =>
+  ranges.offsetMin + rng() * Math.max(0, ranges.offsetMax - ranges.offsetMin);
 
 /** Its speed as a share of transitSpeed (0..1): how hard the rider finds aiming. */
 export const flightShare = (state: ManoeuvreState): number =>
@@ -104,7 +119,7 @@ export const stepManoeuvre = (state: ManoeuvreState, pos: Vec2, input: Manoeuvre
     const distance = Math.hypot(point.x - pos.x, point.y - DRAGON_FLIGHT.flareLift - pos.y);
     if ((distance <= ARRIVE_DISTANCE && Math.hypot(state.vx, state.vy) <= ARRIVE_SPEED) || state.transitMs >= TRANSIT_TIMEOUT_MS) {
       state.phase = 'hover';
-      state.hoverLeftMs = pickHoverMs(input.rng);
+      state.hoverLeftMs = pickHoverMs(input.ranges, input.rng);
     }
   } else {
     const before = { ...pos };
@@ -114,14 +129,14 @@ export const stepManoeuvre = (state: ManoeuvreState, pos: Vec2, input: Manoeuvre
     state.vy = (pos.y - before.y) / dt;
     if (state.phase === 'approach' && Math.abs(pos.x - point.x) <= ARRIVE_DISTANCE) {
       state.phase = 'hover';
-      state.hoverLeftMs = pickHoverMs(input.rng);
+      state.hoverLeftMs = pickHoverMs(input.ranges, input.rng);
     } else if (state.phase === 'hover') {
       state.hoverLeftMs -= deltaMs;
-      if (state.hoverLeftMs <= 0) {
+      if (state.hoverLeftMs <= 0 && !input.hold) {
         state.phase = 'transit';
         state.transitMs = 0;
-        state.altitude = pickAltitude(state.altitude, input.rng);
-        state.offset = pickOffset(input.rng);
+        state.altitude = pickAltitude(state.altitude, input.ranges, input.rng);
+        state.offset = pickOffset(input.ranges, input.rng);
       }
     }
   }

@@ -7,6 +7,7 @@ Its parts:
 - `dragonKinds.ts`: `DRAGON_KINDS` (palette, rider, altitude, hover offset), rider looks, rider gib colours.
 - `DragonBow.ts` (pure, tested): the archer's aim, draw and shot timer.
 - `DragonBreath.ts` (pure, tested): the fire dragon's breath clock, cooldown and fire aim.
+- `DragonMotion.ts`: flight (manoeuvres, side and turn, gusts and hit jolts, wing clock `wingMs`, `tilt`, co-op `fl`).
 - `DragonCorpse.ts`: the death: fall or chunks, the thrown or blown-apart rider, `settled`.
 - `dragonFrame.ts` (pure, tested): sprite/art transforms, local ↔ world points and angles.
 
@@ -14,7 +15,8 @@ Its parts:
 - Dragon archer (`dragon`): flies at `DRAGON_ALTITUDE`, hovers `DRAGON_HOVER_OFFSET` in front of the bowman
   (`systems/dragonFlight.ts`, pure) on either side: turns (`nextHoverSide`, over `DRAGON_TURN_MS`, no shots meanwhile)
   when he gets `DRAGON_TURN_PAST` behind or the edge leaves no room. `CombatSystem.updateDragon` aims like an enemy
-  archer. Manoeuvres (`DragonLook.manoeuvres`, `systems/dragonManoeuvre.ts`, `DRAGON_FLIGHT`, tunable): hovers a while,
+  archer. Manoeuvres (both dragons; `systems/dragonManoeuvre.ts`, `DRAGON_FLIGHT`, ranges `DragonLook.hovers` =
+  `DRAGON_ARCHER_HOVER` / `FIRE_DRAGON_HOVER`, tunable; the fire dragon breathes only hovering, never sets off mid-breath): hovers a while,
   then flies to a new height and distance (dives fast, climbs slow, brakes from above); wing clock `wingMs` at
   `flapRate`, `glide`, `pitch` in `rotation`. In flight `flightSpeed` widens aim and slows shots (EnemyAI); a hit
   `kick`s it a little and `DragonBow.flinch` delays the draw. Hit zones `dragonHitZones` (`rendering/dragon.ts`; rider and head = headshots, body and halves of neck and

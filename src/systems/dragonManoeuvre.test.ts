@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { DRAGON_FLIGHT } from '../config';
+import { DRAGON_ARCHER_HOVER as RANGES, DRAGON_FLIGHT, FIRE_DRAGON_HOVER } from '../config';
 import { createRandom } from '../utils/math';
 import { hoverX } from './dragonFlight';
-import { flightShare, kick, pickAltitude, pickHoverMs, startManoeuvre, stepManoeuvre, type ManoeuvreState } from './dragonManoeuvre';
+import { flightShare, kick, pickAltitude, pickHoverMs, pickOffset, startManoeuvre, stepManoeuvre, type ManoeuvreState } from './dragonManoeuvre';
 import type { Vec2 } from '../types';
 
 const FRAME = 1000 / 60;
@@ -11,7 +11,7 @@ const TRANSIT_MS = 6000;
 
 const run = (state: ManoeuvreState, pos: Vec2, ms: number, rng = createRandom(1), onFrame?: () => void): void => {
   for (let time = 0; time < ms; time += FRAME) {
-    stepManoeuvre(state, pos, { targetX: TARGET, side: 1, timeMs: time, deltaMs: FRAME, followSpeed: 36, rng });
+    stepManoeuvre(state, pos, { targetX: TARGET, side: 1, timeMs: time, deltaMs: FRAME, followSpeed: 36, ranges: RANGES, rng });
     onFrame?.();
   }
 };
@@ -27,14 +27,14 @@ describe('dragon manoeuvres', () => {
   it('hovers for a while, then flies to another height', () => {
     const rng = createRandom(7);
     for (let i = 0; i < 50; i += 1) {
-      const ms = pickHoverMs(rng);
-      expect(ms).toBeGreaterThanOrEqual(DRAGON_FLIGHT.hoverMinMs);
-      expect(ms).toBeLessThanOrEqual(DRAGON_FLIGHT.hoverMaxMs);
+      const ms = pickHoverMs(RANGES, rng);
+      expect(ms).toBeGreaterThanOrEqual(RANGES.hoverMinMs);
+      expect(ms).toBeLessThanOrEqual(RANGES.hoverMaxMs);
       const current = 120 + rng() * 140;
-      const next = pickAltitude(current, rng);
-      expect(next).toBeGreaterThanOrEqual(DRAGON_FLIGHT.altitudeMin);
-      expect(next).toBeLessThanOrEqual(DRAGON_FLIGHT.altitudeMax);
-      expect(Math.abs(next - current)).toBeGreaterThanOrEqual(DRAGON_FLIGHT.minAltitudeChange - 1e-9);
+      const next = pickAltitude(current, RANGES, rng);
+      expect(next).toBeGreaterThanOrEqual(RANGES.altitudeMin);
+      expect(next).toBeLessThanOrEqual(RANGES.altitudeMax);
+      expect(Math.abs(next - current)).toBeGreaterThanOrEqual(RANGES.minAltitudeChange - 1e-9);
     }
   });
 
@@ -42,7 +42,7 @@ describe('dragon manoeuvres', () => {
     const state = startManoeuvre(180, 260);
     const pos = { x: hoverX(TARGET, 260) + 100, y: 180 };
     const phases = new Set<string>();
-    run(state, pos, 3000 + DRAGON_FLIGHT.hoverMaxMs + 500, createRandom(3), () => phases.add(state.phase));
+    run(state, pos, 3000 + RANGES.hoverMaxMs + 500, createRandom(3), () => phases.add(state.phase));
     expect([...phases]).toEqual(['approach', 'hover', 'transit']);
   });
 
@@ -73,5 +73,24 @@ describe('dragon manoeuvres', () => {
     expect(furthest).toBeGreaterThan(3);
     expect(furthest).toBeLessThan(20);
     expect(Math.hypot(state.jolt.x, state.jolt.y)).toBeLessThan(0.5);
+  });
+
+  it('holds its hover while busy', () => {
+    const state = startManoeuvre(180, 260);
+    state.phase = 'hover';
+    state.hoverLeftMs = 100;
+    const pos = { x: hoverX(TARGET, 260), y: 180 };
+    for (let time = 0; time < 2000; time += FRAME) {
+      stepManoeuvre(state, pos, { targetX: TARGET, side: 1, timeMs: time, deltaMs: FRAME, followSpeed: 36, ranges: RANGES, hold: true, rng: createRandom(1) });
+    }
+    expect(state.phase).toBe('hover');
+  });
+
+  it('keeps the fire dragon low and close enough to reach with its fire', () => {
+    const rng = createRandom(5);
+    for (let i = 0; i < 50; i += 1) {
+      expect(pickAltitude(290, FIRE_DRAGON_HOVER, rng)).toBeGreaterThanOrEqual(FIRE_DRAGON_HOVER.altitudeMin);
+      expect(pickOffset(FIRE_DRAGON_HOVER, rng)).toBeLessThanOrEqual(FIRE_DRAGON_HOVER.offsetMax);
+    }
   });
 });
