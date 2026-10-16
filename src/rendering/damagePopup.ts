@@ -14,6 +14,12 @@ const FADE = 0.4;
 /** Arrow hits get a number; burning and fall damage tick on their own, so they don't. */
 export const showsDamageNumber = (cause: HitInfo['cause'] | undefined): boolean => cause !== 'burn' && cause !== 'fall';
 
+/**
+ * A blow that kills outright (a bomb going off, shattering, unhorsing: Number.MAX_SAFE_INTEGER, maybe × stone skin) shows
+ * the `health` it took, not its size; any other hit shows its damage (overkill too).
+ */
+export const shownDamage = (amount: number, health: number): number => (amount >= Number.MAX_SAFE_INTEGER / 1000 ? health : amount);
+
 /** The number shown: whole points, at least 1 for any real hit; nothing for none. */
 export const damageLabel = (amount: number): string | undefined => (amount > 0 ? String(Math.max(1, Math.round(amount))) : undefined);
 

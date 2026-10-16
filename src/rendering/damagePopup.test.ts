@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { damageLabel, damagePopupFrame, showsDamageNumber } from './damagePopup';
+import { damageLabel, damagePopupFrame, shownDamage, showsDamageNumber } from './damagePopup';
 
 describe('damage popup', () => {
   it('labels whole points, at least 1, nothing for no damage', () => {
@@ -27,5 +27,13 @@ describe('damage popup', () => {
     const end = damagePopupFrame(1000, 1000, 40);
     expect(end.alpha).toBe(0);
     expect(end.rise).toBe(40);
+  });
+});
+
+describe('shownDamage', () => {
+  it('shows the health a blow that kills outright took, any other hit as dealt', () => {
+    expect(shownDamage(Number.MAX_SAFE_INTEGER, 25)).toBe(25);
+    expect(shownDamage(Number.MAX_SAFE_INTEGER * 0.6, 25)).toBe(25);
+    expect(shownDamage(30, 10)).toBe(30);
   });
 });

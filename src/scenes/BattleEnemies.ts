@@ -1,3 +1,4 @@
+import { shownDamage } from '../rendering/damagePopup';
 import type { Container } from 'pixi.js';
 import { WORLD_WIDTH } from '../config';
 import type { WavePacing } from '../data/difficulty';
@@ -103,7 +104,8 @@ export class BattleEnemies {
     }
     this.deps.world.addChild(enemy);
     this.deps.hostSync()?.trackEnemy(enemy, type, place);
-    enemy.onDamaged = (amount: number, hit?: HitInfo) => this.deps.onDamaged?.(enemy, amount, hit);
+    // Called before the hit lands, so its health is what the hit takes from.
+    enemy.onDamaged = (amount: number, hit?: HitInfo) => this.deps.onDamaged?.(enemy, shownDamage(amount, enemy.currentHealth), hit);
     if (enemy instanceof Enemy) {
       if (place) {
         // A rider keeps the health he had in the saddle (one with none left is killed by the blow: unhorse).

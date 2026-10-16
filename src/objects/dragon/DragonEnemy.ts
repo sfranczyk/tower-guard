@@ -101,6 +101,11 @@ export default class DragonEnemy extends Container {
     return this.health > 0;
   }
 
+  /** Health left (as Enemy.currentHealth). */
+  public get currentHealth(): number {
+    return this.health;
+  }
+
   public get isCelebrating(): boolean {
     return this.isAlive() && this.cheering;
   }
