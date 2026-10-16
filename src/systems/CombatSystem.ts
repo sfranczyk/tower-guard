@@ -109,7 +109,7 @@ export class CombatSystem {
     this.hits = new ArrowHits(world, events, magic, {
       explode: (point, activeEnemies, directHit, power, dragon) => this.explode(point, activeEnemies, directHit, power, dragon),
       detonate: (kamikaze) => this.detonate(kamikaze),
-      lightFuse: (kamikaze) => this.lightFuse(kamikaze),
+      lightFuse: (kamikaze, chain) => this.lightFuse(kamikaze, chain === undefined ? this.newChain() : { chain, link: 0 }),
       shatter: (enemy, fromX) => this.shatter(enemy, fromX),
       breakIce: (bowman) => this.breakIce(bowman),
     });
@@ -249,15 +249,17 @@ export class CombatSystem {
    * Explosion visuals plus splash damage and knockback for every living enemy whose body centre is
    * within EXPLOSION_RADIUS (except `directHit`, which already took the blast at its centre); damage falls off with distance.
    * With friendly fire (and `hurtsBowmen`) the bowmen out in the open take it too: the same damage, knocked down
-   * away from it, a frozen one's ice broken. `step`: a kamikaze bomb's blast is the next link of its chain (else a new
-   * chain starts), where a kamikaze it catches may be a dud (kamikazeBomb.chainChance): knocked down unhurt, its bomb
-   * still live. A dud rolls once per chain: the chain's further blasts only knock it down again; one too weak to kill a
-   * kamikaze doesn't hurt it at all.
+   * away from it, a frozen one's ice broken. Returns the id of the chain of kamikaze bombs it belongs to: `bomb`, a
+   * kamikaze bomb's blast, is the next link of its chain; any other blast (an explosive arrow, a fire dragon) starts a new
+   * one whose first link is the bomb it hit directly, so the kamikazes it catches are link 1. A kamikaze caught may be a
+   * dud (kamikazeBomb.chainChance): knocked down unhurt, its bomb still live; it rolls once per chain, the chain's further
+   * blasts only knock it down again; a bomb's blast too weak to kill a kamikaze doesn't hurt it at all.
    */
   private explode(
     point: Vec2, activeEnemies: readonly Foe[], directHit?: Foe | Bowman, power = 1, dragon = false, hurtsBowmen = true,
-    step = this.newChain(),
-  ): void {
+    bomb?: ChainStep,
+  ): number {
+    const step = bomb ?? { chain: this.newChain().chain, link: 1 };
     if (dragon) {
       this.world.effects.dragonBlast(point);
     } else {
@@ -285,7 +287,7 @@ export class CombatSystem {
         const damage = explosionDamage(blastDistance) * power;
         const kamikaze = !(candidate instanceof DragonEnemy) && enemyArchetype(candidate.kind).detonates ? candidate : undefined;
         // A chain's blast that doesn't kill a kamikaze leaves it unhurt (only knocked down): a survivor keeps full health.
-        const harmless = kamikaze !== undefined && step.link > 0 && damage * kamikaze.buff.damageFactor < kamikaze.currentHealth;
+        const harmless = kamikaze !== undefined && bomb !== undefined && damage * kamikaze.buff.damageFactor < kamikaze.currentHealth;
         const fizzledHere = kamikaze !== undefined && this.duds.get(kamikaze) === step.chain;
         if (kamikaze && (harmless || fizzledHere || Math.random() >= chainChance(step.link, this.world.enemyEdge.chainFalloff))) {
           kamikaze.takeDamage(0, { cause: 'explosion', fromX: point.x, point, blastDistance });
@@ -301,7 +303,7 @@ export class CombatSystem {
         }
       });
     if (!hurtsBowmen) {
-      return;
+      return step.chain;
     }
     this.friendlyTargets()
       .filter((bowman) => bowman !== directHit)
@@ -318,6 +320,7 @@ export class CombatSystem {
         this.world.effects.bloodBurst({ x: bowman.x, y: bowman.y - BOWMAN_CHEST });
         bowman.knockBack(point.x, 1 - blastDistance);
       });
+    return step.chain;
   }
 
   /** A frozen bowman's ice breaks (a blast, or landing after a vortex threw him): he's free, unhurt by it. */

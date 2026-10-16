@@ -79,13 +79,14 @@ export interface ArrowHitsEvents {
 
 /** The blasts and ice CombatSystem handles (they reach beyond the one arrow). */
 export interface ArrowHitsActions {
-  explode(point: Vec2, activeEnemies: readonly Foe[], directHit?: Foe | Bowman, power?: number, dragon?: boolean): void;
+  /** Returns the id of the chain of kamikaze bombs the blast starts. */
+  explode(point: Vec2, activeEnemies: readonly Foe[], directHit?: Foe | Bowman, power?: number, dragon?: boolean): number;
   shatter(enemy: Enemy, fromX: number): void;
   breakIce(bowman: Bowman): void;
   /** A kamikaze's bomb goes off now (CombatSystem.detonate). */
   detonate(kamikaze: Enemy): void;
-  /** A kamikaze just killed by a blast: its bomb goes off a moment later. */
-  lightFuse(kamikaze: Enemy): void;
+  /** A kamikaze just killed by a blast: its bomb goes off a moment later (the first link of `chain`, else of a new one). */
+  lightFuse(kamikaze: Enemy, chain?: number): void;
 }
 
 /**
@@ -396,11 +397,11 @@ export class ArrowHits {
       this.world.arrows.filter((stuck) => stuck.stuckTo === enemy).forEach((stuck) => stuck.deactivate());
       arrow.deactivate();
     } else if (explosive) {
-      // A kamikaze it kills (not frozen: that one shatters) lights its bomb's fuse.
+      // A kamikaze it kills (not frozen: that one shatters) lights its bomb's fuse, the first link of the blast's chain.
+      const chain = this.actions.explode(impactPoint, activeEnemies, enemy);
       if (bomber && !frozen && !bomber.isAlive()) {
-        this.actions.lightFuse(bomber);
+        this.actions.lightFuse(bomber, chain);
       }
-      this.actions.explode(impactPoint, activeEnemies, enemy);
       arrow.deactivate();
     } else if (arrow.type === 'piercing') {
       effects.impact(impactPoint);

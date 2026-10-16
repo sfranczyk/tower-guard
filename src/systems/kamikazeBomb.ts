@@ -24,8 +24,8 @@ export const bombGoesOff = (trigger: BombTrigger, frozen: boolean, roll = Math.r
 
 /**
  * The chance a kamikaze caught in a blast is set off by it (medium and hard: EnemyEdge.chainFalloff): the bomb a bowman
- * set off (arrow, fire, lightning, contact, an explosive arrow's blast) is link 0, the ones its blast catches link 1,
- * and so on; each link `falloff` less likely than the one before, with no end to the chain. Else it's a dud.
+ * set off (arrow, fire, lightning, contact, an explosive arrow's direct hit) is link 0, the ones its blast (or an
+ * explosive arrow's) catches link 1, and so on; each link `falloff` less likely than the one before, with no end to the chain. Else it's a dud.
  */
 export const chainChance = (link: number, falloff: number): number => (1 - falloff) ** link;
 

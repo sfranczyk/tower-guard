@@ -45,7 +45,7 @@ open the one you need:
   keep within `KAMIKAZE_REACH` × radius, knocking him down (`Bowman.knockBack`, `BOWMAN_KNOCKBACK`); its pieces fly
   `KAMIKAZE_GIB_FORCE` times harder. Other deaths are silent except a blast (`BombFuses`: goes off `KAMIKAZE_BOMB.chainDelayMs`
   later, so groups chain) and a fatal fall; a fire arrow (`fireChance`) or lightning (`lightningChance`) may set it off
-  (`systems/kamikazeBomb.ts`). On medium/hard a chain weakens: each `Bomb.link` past the first goes off with
+  (`systems/kamikazeBomb.ts`). On medium/hard a chain weakens: each `Bomb.link` past the first (an explosive arrow's splash is link 1) goes off with
   `chainChance` (`EnemyEdge.chainFalloff`, `DIFFICULTY_SCALE.*ChainFalloff`), else a dud (`explode`: knocked down unhurt,
   `EffectsSystem.fizzle`, bomb still live; it rolls once per chain, `CombatSystem.duds`); a chain blast too weak to kill one leaves it unhurt. It doesn't burn (`enemyTraits`: burnFactor 0); frozen, it never goes off.
 - **Zombie**: shuffles (march dragged) with arms out (`pose.zombie`, `ZOMBIE_REST`), attacks with `'grab'` (hit on the
