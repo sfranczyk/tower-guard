@@ -17,7 +17,7 @@ export const ENEMY_TYPE_LABELS: Readonly<Record<EnemyType, string>> = Object.fro
 
 export const MIN_LEVELS = 1;
 export const MAX_LEVELS = 5;
-export const MAX_ENEMIES_PER_TYPE = 20;
+export const MAX_ENEMIES_PER_TYPE = 50;
 export const HEALTH_LIMITS = {
   bowman: { min: 20, max: 600, step: 10 },
   keep: { min: 100, max: 5000, step: 100 },

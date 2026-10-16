@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { BATTLEGROUND_IDS } from './battlegrounds';
-import { MAX_LEVELS, createDefaultSandbox, normalizeSandbox, levelEnemyTotal } from './sandbox';
+import { MAX_ENEMIES_PER_TYPE, MAX_LEVELS, createDefaultSandbox, normalizeSandbox, levelEnemyTotal } from './sandbox';
 
 describe('sandbox settings', () => {
   it('defaults to one level with five prepared levels that get harder', () => {
@@ -23,7 +23,7 @@ describe('sandbox settings', () => {
     expect(settings.bowmanHealth).toBe(20);
     expect(settings.keepHealth).toBe(createDefaultSandbox().keepHealth);
     // Types missing from a stored level (added later) default to none.
-    expect(settings.levels[0].enemies).toEqual({ raider: 20, fast: 0, tank: 2, troll: 0, hunter: 1, dragon: 0, fireDragon: 0, kamikaze: 0, goblinKamikaze: 0, zombie: 0, knight: 0, heavyKnight: 0, horseKnight: 0, priest: 0, shaman: 0 });
+    expect(settings.levels[0].enemies).toEqual({ raider: MAX_ENEMIES_PER_TYPE, fast: 0, tank: 2, troll: 0, hunter: 1, dragon: 0, fireDragon: 0, kamikaze: 0, goblinKamikaze: 0, zombie: 0, knight: 0, heavyKnight: 0, horseKnight: 0, priest: 0, shaman: 0 });
     expect(settings.levels[0].battleground).toBe(createDefaultSandbox().levels[0].battleground);
     expect(settings.levels).toHaveLength(MAX_LEVELS);
   });
