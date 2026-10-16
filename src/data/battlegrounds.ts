@@ -176,13 +176,13 @@ export const BATTLEGROUNDS: Readonly<Record<BattlegroundId, Battleground>> = {
     weather: 'snow',
     cloudColor: 0xe9eef3,
     cloudAlpha: 0.85,
-    hills: [0x8295b2, 0x4e5d76],
+    hills: [0x8295b2, 0x5a6a84],
     hillShape: 'mountains',
     trees: { style: 'snowPine', colors: [0x2f4a44, 0x3a5a52, 0x263d38], trunk: 0x4a3b30 },
     ground: { fill: 0xdde5ec, edge: 0xf4f7fa, tufts: 0x9fb0c2 },
-    // A rough mountain pass: high, close-set rises and dips (flat only at the keeps).
-    terrainAmplitude: 26,
-    terrainWaviness: 1.5,
+    // A mountain pass: high, broad rises and dips, few of them (flat only at the keeps).
+    terrainAmplitude: 38,
+    terrainWaviness: 0.85,
     wind: 150,
     // Red or gold has the same lightness as the grey-blue rock (it shimmers, no clear edge): deep navy instead,
     // much darker than sky, peaks and snow, dark violet for the previous shot. A faint pale halo, barely wider than
