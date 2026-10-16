@@ -53,7 +53,7 @@ export class BattleArrows {
   /** Guest: an arrow the host launched (its sound comes as its own event). */
   public launchReplica(launch: ArrowLaunch): Arrow {
     if (launch.hostile) {
-      return this.fireEnemy(launch.from, launch.angle, launch.speed, launch.shooter ?? 'archer', true);
+      return this.fireEnemy(launch.from, launch.angle, launch.speed, launch.shooter ?? 'hunter', true);
     }
     if (launch.type !== 'fragment') {
       this.list.filter((arrow) => arrow.owner === launch.owner).forEach((arrow) => arrow.ageTrail(this.deps.arrowTrails()));

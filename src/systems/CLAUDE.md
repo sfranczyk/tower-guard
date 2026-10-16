@@ -38,8 +38,8 @@ chilled. A fire arrow in the ground leaves a fire patch.
 Vortex (`vortex.ts`, pure): pulls ground enemies in, lifts them (`Enemy.holdInVortex`, flailing) and throws them
 (`Enemy.throwInAir`, `flight.ts`); landing = knockback + `onLanded` fall damage (cause `'fall'`; a kamikaze the fall would kill goes off,
 frozen shatters). A direct hit levitates (`levitateHeight`, drops with `VORTEX.levitateFall`, `VORTEX.levitateBoost`
-per further arrow). It all goes by **mass** (`enemyMass`; goblin 0.8, zombie 1, fighter/archer/priest 1.2 =
-`VORTEX_MASS.reference`, bowman `BOWMAN_MASS` 1.3, kamikaze 1.4, black knight 1.9, hammer knight 2.5, ogre 4.2): pace
+per further arrow). It all goes by **mass** (`enemyMass`; goblin 0.8, zombie 1, bandit/hunter/priest 1.2 =
+`VORTEX_MASS.reference`, bowman `BOWMAN_MASS` 1.3, kamikaze 1.4, black knight 1.9, heavy knight 2.5, ogre 4.2): pace
 `massPace` (at most `lightest`×), thrown √(reference/mass); above `fullLift` (2.1) only up to `funnelCeiling`, circling;
 from `anchor` (3.6, `resistsVortex`) not caught, walks at `VORTEX.heavyWalk` (`slowByWind`). Levitation by mass:
 `levitateFull` 1.4, `levitateShare`, `VORTEX_LEVITATE_HEAVY` at `levitateHeavy` 4.2. Nothing is pinned in the air.

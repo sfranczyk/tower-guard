@@ -26,9 +26,9 @@ open the one you need:
 - `Enemy.celebrate()` picks a random cheer when the enemies win.
 - Pinning (`Enemy.pin`, `pinDurationMs`, arrow at `Enemy.pinnedFootPoint`): no walking, still swings or shoots.
 - **Black knights** (`knight`: fighter, longsword, one of `attackStyles` per attack: `overhead`, `swordRise`, `thrust`;
-  `hammerKnight`: heavy, war hammer two-handed, 1.1× tall; `rendering/designs/knightSkins.ts`), `armor` =
+  `heavyKnight`: heavy, war hammer two-handed, 1.1× tall; `rendering/designs/knightSkins.ts`), `armor` =
   `KNIGHT_ARMOR` (0.35): `ArrowHits` scales body hits and shows sparks instead of blood; headshots, piercing arrows
-  and blasts deal full damage. Black knight and hammer knight march (`walkStyle: 'march'`).
+  and blasts deal full damage. Black knight and heavy knight march (`walkStyle: 'march'`).
 - **Dark priest** (`priest`, healer, magical) never attacks (`EnemyAI.updatePriest`): walks `PRIEST_FOLLOW_GAP` behind
   the front soldier on its side of the target, never nearer than `PRIEST_STANDOFF` (`priestPost`, pure); with soldiers
   only beyond the target it dashes past it to them; with none it retreats to the enemy keep, and once only priests are

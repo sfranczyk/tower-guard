@@ -17,7 +17,7 @@ export type DamageTarget = 'bowman' | 'keep';
 
 /** Damage range of one `attack` by `type` against `target` (a type without arrows uses the archer's). */
 export const enemyDamage = (type: EnemyType, attack: keyof EnemyDamage, target: DamageTarget): DamageRange => {
-  const range = attack === 'arrow' ? ENEMY_DAMAGE[type].arrow ?? ENEMY_DAMAGE.archer.arrow! : ENEMY_DAMAGE[type].melee;
+  const range = attack === 'arrow' ? ENEMY_DAMAGE[type].arrow ?? ENEMY_DAMAGE.hunter.arrow! : ENEMY_DAMAGE[type].melee;
   const factor = target === 'keep' ? ENEMY_KINDS[type].keepDamage?.[attack] ?? 1 : 1;
   return [range[0] * factor, range[1] * factor];
 };

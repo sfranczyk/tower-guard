@@ -4,21 +4,21 @@ import { rollArrowDamage, ENEMY_DAMAGE, ENEMY_LOOKS, enemyDamage, blowsApart, ex
 
 describe('getEnemyStats', () => {
   it('returns base stats at difficulty 1', () => {
-    expect(getEnemyStats('basic', 1)).toEqual({ health: 35, speed: ENEMY_SPEED });
+    expect(getEnemyStats('bandit', 1)).toEqual({ health: 35, speed: ENEMY_SPEED });
   });
 
   it('makes fast enemies quicker and frailer, tanks slower and tougher', () => {
-    const basic = getEnemyStats('basic', 1);
+    const bandit = getEnemyStats('bandit', 1);
     const fast = getEnemyStats('fast', 1);
     const tank = getEnemyStats('tank', 1);
-    expect(fast.speed).toBeGreaterThan(basic.speed);
-    expect(fast.health).toBeLessThan(basic.health);
-    expect(tank.speed).toBeLessThan(basic.speed);
-    expect(tank.health).toBeGreaterThan(basic.health);
+    expect(fast.speed).toBeGreaterThan(bandit.speed);
+    expect(fast.health).toBeLessThan(bandit.health);
+    expect(tank.speed).toBeLessThan(bandit.speed);
+    expect(tank.health).toBeGreaterThan(bandit.health);
   });
 
   it('scales with difficulty and rounds health', () => {
-    const stats = getEnemyStats('basic', 1.35);
+    const stats = getEnemyStats('bandit', 1.35);
     expect(stats.health).toBe(Math.round(35 * 1.35));
     expect(stats.speed).toBeCloseTo(ENEMY_SPEED * 1.35);
   });
@@ -46,38 +46,38 @@ describe('enemy toughness and damage', () => {
     expect(getEnemyStats('kamikaze', 1).health).toBeGreaterThan(ARROWS.damageMax);
     expect(getEnemyStats('kamikaze', 1).health).toBeLessThanOrEqual(rollArrowDamage(true, 1));
     expect(arrowsToKill('kamikaze', bestBody)).toBe(2);
-    (['fast', 'archer', 'priest'] as const).forEach((type) => {
+    (['fast', 'hunter', 'priest'] as const).forEach((type) => {
       expect(arrowsToKill(type, bestBody)).toBe(2);
       expect(arrowsToKill(type, worstHead)).toBe(1);
     });
-    expect(arrowsToKill('basic', averageBody)).toBe(3);
-    expect(arrowsToKill('basic', worstHead)).toBe(2);
+    expect(arrowsToKill('bandit', averageBody)).toBe(3);
+    expect(arrowsToKill('bandit', worstHead)).toBe(2);
     expect(arrowsToKill('tank', averageBody)).toBe(6);
     expect(arrowsToKill('dragon', averageBody)).toBe(9);
   });
 
   it('hits differently per type: runners least, brutes most', () => {
     const average = ([min, max]: readonly [number, number]): number => (min + max) / 2;
-    const melee = (type: 'basic' | 'fast' | 'tank') => average(ENEMY_DAMAGE[type].melee);
-    expect(melee('fast')).toBeLessThan(melee('basic'));
-    expect(melee('basic')).toBeLessThan(melee('tank'));
-    expect(average(ENEMY_DAMAGE.dragon.arrow!)).toBeGreaterThan(average(ENEMY_DAMAGE.archer.arrow!));
+    const melee = (type: 'bandit' | 'fast' | 'tank') => average(ENEMY_DAMAGE[type].melee);
+    expect(melee('fast')).toBeLessThan(melee('bandit'));
+    expect(melee('bandit')).toBeLessThan(melee('tank'));
+    expect(average(ENEMY_DAMAGE.dragon.arrow!)).toBeGreaterThan(average(ENEMY_DAMAGE.hunter.arrow!));
   });
 
   it('hits the keep as hard as the bowman, except archer arrows (half), brutes (double) and kamikazes (×8)', () => {
     const keepFactor = (type: Parameters<typeof enemyDamage>[0], attack: 'melee' | 'arrow' = 'melee') =>
       enemyDamage(type, attack, 'keep')[1] / enemyDamage(type, attack, 'bowman')[1];
-    (['basic', 'fast', 'zombie'] as const).forEach((type) =>
+    (['bandit', 'fast', 'zombie'] as const).forEach((type) =>
       expect(enemyDamage(type, 'melee', 'keep')).toEqual(enemyDamage(type, 'melee', 'bowman')));
     expect(keepFactor('dragon', 'arrow')).toBe(1);
-    expect(keepFactor('archer', 'arrow')).toBe(0.5);
-    expect(keepFactor('archer')).toBe(1);
+    expect(keepFactor('hunter', 'arrow')).toBe(0.5);
+    expect(keepFactor('hunter')).toBe(1);
     expect(keepFactor('tank')).toBe(2);
     expect(keepFactor('kamikaze')).toBe(8);
   });
 
   it('gives non-shooters the archer arrow', () => {
-    expect(enemyDamage('basic', 'arrow', 'bowman')).toEqual(ENEMY_DAMAGE.archer.arrow);
+    expect(enemyDamage('bandit', 'arrow', 'bowman')).toEqual(ENEMY_DAMAGE.hunter.arrow);
   });
 
   it('rolls damage within the range', () => {
@@ -130,7 +130,7 @@ describe('explosionDamage', () => {
   });
 
   it('kills light enemies with a direct hit, but not a brute', () => {
-    expect(explosionDamage(0)).toBeGreaterThanOrEqual(getEnemyStats('basic', 1).health);
+    expect(explosionDamage(0)).toBeGreaterThanOrEqual(getEnemyStats('bandit', 1).health);
     expect(explosionDamage(0)).toBeLessThan(getEnemyStats('tank', 1).health);
   });
 });
@@ -163,22 +163,22 @@ describe('ENEMY_LOOKS', () => {
   it('makes runners run with an uppercut and brutes 1.5× tall with a two-handed club', () => {
     expect(ENEMY_LOOKS.fast).toMatchObject({ size: 0.75, attackStyle: 'uppercut', runs: true });
     expect(ENEMY_LOOKS.tank).toMatchObject({ size: 1.5, attackStyle: 'twoHanded', runs: false });
-    expect(ENEMY_LOOKS.basic.size).toBe(1);
+    expect(ENEMY_LOOKS.bandit.size).toBe(1);
   });
 });
 
 describe('strike reach', () => {
   it('is longest for the brute and shortest for the runner, all beyond where a swing starts', () => {
-    expect(ENEMY_LOOKS.tank.strikeReach).toBeGreaterThan(ENEMY_LOOKS.basic.strikeReach);
-    expect(ENEMY_LOOKS.basic.strikeReach).toBeGreaterThan(ENEMY_LOOKS.fast.strikeReach);
+    expect(ENEMY_LOOKS.tank.strikeReach).toBeGreaterThan(ENEMY_LOOKS.bandit.strikeReach);
+    expect(ENEMY_LOOKS.bandit.strikeReach).toBeGreaterThan(ENEMY_LOOKS.fast.strikeReach);
     // Swings start within 25 px (CombatSystem MELEE_REACH), so the bowman always has to move to dodge.
-    (['basic', 'fast', 'tank', 'archer'] as const).forEach((type) => expect(ENEMY_LOOKS[type].strikeReach).toBeGreaterThan(25));
+    (['bandit', 'fast', 'tank', 'hunter'] as const).forEach((type) => expect(ENEMY_LOOKS[type].strikeReach).toBeGreaterThan(25));
   });
 });
 
 describe('pinDurationMs', () => {
   it('pins most enemies and zombies for 20 s', () => {
-    (['basic', 'fast', 'archer', 'kamikaze'] as const).forEach((type) => expect(pinDurationMs(type)).toBe(PIN_DURATION_MS));
+    (['bandit', 'fast', 'hunter', 'kamikaze'] as const).forEach((type) => expect(pinDurationMs(type)).toBe(PIN_DURATION_MS));
     expect(PIN_DURATION_MS).toBe(20000);
     expect(pinDurationMs('zombie')).toBe(PIN_DURATION_ZOMBIE_MS);
     expect(PIN_DURATION_ZOMBIE_MS).toBe(20000);

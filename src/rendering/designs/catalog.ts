@@ -18,7 +18,7 @@ import { banditArcherLook, goblinBomberLook, goblinLook, raiderLook, sapperLook 
 import { shamanLook } from './shamanSkin';
 import { dragonArcherLook, dragonKnightLook, drawDragonWithRider, ogreLook, trollLook, zombieLook } from './heavySkins';
 import { ENEMY_DESIGNS } from './ideas';
-import { blackKnightLook, darkPriestLook, hammerKnightLook } from './knightSkins';
+import { blackKnightLook, darkPriestLook, heavyKnightLook } from './knightSkins';
 import { drawMountedKnight } from './warhorse';
 import { HORSE_DEATH_MS, getHorseDeath, type HorseDeathKind } from '../horseDeath';
 import { gaitGroundSpeed, getHorsePose, type HorsePose } from '../horseRider';
@@ -195,17 +195,17 @@ const fixed = (look: HumanoidLook): LookAt => () => look;
 
 const ENEMIES: DesignEntry[] = [
   {
-    id: 'fighter',
-    name: 'Fighter → Raider',
+    id: 'bandit',
+    name: 'Bandit',
     tagline: 'The basic enemy',
-    description: 'The raider from the ideas, now on the fighter\'s own skeleton and moves: tunic, belt, bandana with flapping tails, a stubbled face. The club is now a real one: a gripped handle, a head that thickens towards the end and an iron band, held in the fist exactly where the game holds it.',
+    description: 'The raider from the ideas, now on the bandit\'s own skeleton and moves: tunic, belt, bandana with flapping tails, a stubbled face. The club is now a real one: a gripped handle, a head that thickens towards the end and an iron band, held in the fist exactly where the game holds it.',
     views: [
       walking(raiderLook, FIGHTER_SPEED, 'overhead'),
       swinging('Club swing', raiderLook, 'overhead'),
       falling('Death', raiderLook, 'death'),
       cheering(raiderLook, 'cheerFist', true),
       pinned(raiderLook),
-      blownApart('basic'),
+      blownApart('bandit'),
       now((t) => ({ phase: walkPhase(t, FIGHTER_SPEED), armed: true }), FIGHTER_SPEED),
     ],
   },
@@ -227,16 +227,16 @@ const ENEMIES: DesignEntry[] = [
     ],
   },
   {
-    id: 'archer',
-    name: 'Archer → Hooded bandit',
+    id: 'hunter',
+    name: 'Hunter',
     tagline: 'Shoots from range',
-    description: 'A red hood and shoulder cape (the enemy archers\' red), a dark scarf over the face so only the eyes show, a leather vest and a quiver on the back. Same archer rig as the player: the bow comes up, the string is drawn to the cheek with the arrow on it, then loosed.',
+    description: 'A red hood and shoulder cape (the hunters\' red), a dark scarf over the face so only the eyes show, a leather vest and a quiver on the back. Same archer rig as the player: the bow comes up, the string is drawn to the cheek with the arrow on it, then loosed.',
     views: [
       shooting(fixed(banditArcherLook())),
       posed('Walk', fixed(banditArcherLook()), (t) => archerBody(0, 0, 0, (t * ARCHER_SPEED) / WALK_CYCLE_PX), ARCHER_SPEED),
       falling('Headshot', fixed(banditArcherLook()), 'deathStiff'),
       cheering(fixed(banditArcherLook()), 'cheerWave'),
-      blownApart('archer'),
+      blownApart('hunter'),
       now((t) => {
         const c = (t % SHOT_MS) / SHOT_MS;
         return { phase: 0, idleBlend: 1, archerPose: true, bowReady: Math.min(1, c * 5), bowTension: Math.max(0, Math.min(1, (c - 0.2) / 0.55)), tint: 0xffc2b4 };
@@ -322,7 +322,7 @@ const ENEMIES: DesignEntry[] = [
     id: 'knight',
     name: 'Black knight',
     tagline: 'Armoured: aim for the visor',
-    description: 'Black plate from helm to sabatons: a closed great helm with two embers glowing through the visor slit and a dark red plume, a spiked pauldron, tassets over the thighs and a torn red cape. A longsword with a crossguard where the fighter holds his club. Body hits glance off the plate (only a third gets through); headshots and piercing arrows go through.',
+    description: 'Black plate from helm to sabatons: a closed great helm with two embers glowing through the visor slit and a dark red plume, a spiked pauldron, tassets over the thighs and a torn red cape. A longsword with a crossguard where the bandit holds his club. Body hits glance off the plate (only a third gets through); headshots and piercing arrows go through.',
     views: [
       walking(blackKnightLook, KNIGHT_SPEED, 'overhead', false, 'march'),
       swinging('Sword cut', blackKnightLook, 'overhead'),
@@ -336,17 +336,17 @@ const ENEMIES: DesignEntry[] = [
     ],
   },
   {
-    id: 'hammer-knight',
-    name: 'Hammer knight',
+    id: 'heavy-knight',
+    name: 'Heavy knight',
     tagline: 'Armoured, a head taller',
     description: 'The black knight\'s bigger brother (drawn at normal size here; the game draws him 1.1 times as tall): heavier plate with rivets, broad spiked pauldrons, a horned helm and a long cape, and a war hammer with a spiked iron head swung in both hands like the brute\'s log.',
     views: [
-      walking(hammerKnightLook, HAMMER_KNIGHT_SPEED, 'twoHanded', false, 'march'),
-      swinging('Hammer blow', hammerKnightLook, 'twoHanded'),
-      knockdown(hammerKnightLook),
-      falling('Death', hammerKnightLook, 'deathCrumple'),
-      cheering(hammerKnightLook, 'cheerFist', true),
-      blownApart('hammerKnight'),
+      walking(heavyKnightLook, HAMMER_KNIGHT_SPEED, 'twoHanded', false, 'march'),
+      swinging('Hammer blow', heavyKnightLook, 'twoHanded'),
+      knockdown(heavyKnightLook),
+      falling('Death', heavyKnightLook, 'deathCrumple'),
+      cheering(heavyKnightLook, 'cheerFist', true),
+      blownApart('heavyKnight'),
     ],
   },
   {

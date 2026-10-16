@@ -215,8 +215,8 @@ export interface EnemyKind {
  * brutes smash it and a kamikaze's bomb is made for walls.
  */
 export const ENEMY_KINDS: Readonly<Record<EnemyType, EnemyKind>> = {
-  basic: {
-    label: 'Fighter', archetype: 'fighter', race: 'human', magical: false, arrival: 0,
+  bandit: {
+    label: 'Bandit', archetype: 'fighter', race: 'human', magical: false, arrival: 0,
     stats: { health: 35, speed: ENEMY_SPEED }, damage: { melee: [6, 10] }, build: { size: 1, strikeReach: 55 },
   },
   // Goblins, three quarters of a man's height.
@@ -237,8 +237,8 @@ export const ENEMY_KINDS: Readonly<Record<EnemyType, EnemyKind>> = {
     traits: { burnFactor: TROLL_BURN_FACTOR },
   },
   // Fragile, keeps its distance and shoots.
-  archer: {
-    label: 'Archer', archetype: 'archer', race: 'human', magical: false, arrival: 0.15,
+  hunter: {
+    label: 'Hunter', archetype: 'archer', race: 'human', magical: false, arrival: 0.15,
     stats: { health: 22, speed: ENEMY_SPEED * 0.9 }, damage: { melee: [3, 5], arrow: [7, 10] }, keepDamage: { arrow: 0.5 },
     build: { size: 1, strikeReach: 55 },
   },
@@ -279,8 +279,8 @@ export const ENEMY_KINDS: Readonly<Record<EnemyType, EnemyKind>> = {
     traits: { mass: 1.9 },
   },
   // A head taller, in the same black plate, with a war hammer in both hands.
-  hammerKnight: {
-    label: 'Hammer knight', archetype: 'heavy', race: 'human', magical: false, arrival: 0.35, armor: KNIGHT_ARMOR,
+  heavyKnight: {
+    label: 'Heavy knight', archetype: 'heavy', race: 'human', magical: false, arrival: 0.35, armor: KNIGHT_ARMOR,
     stats: { health: 67, speed: ENEMY_SPEED * 0.7 }, damage: { melee: [16, 24] }, keepDamage: { melee: 2 }, build: { size: 1.1, strikeReach: 75, walkStyle: 'march' },
     traits: { mass: 2.5 },
   },

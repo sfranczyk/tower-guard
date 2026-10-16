@@ -244,7 +244,7 @@ export const LAB_CATEGORIES: readonly LabCategory[] = [
       {
         id: 'club-overhead',
         title: 'Club: overhead',
-        description: 'One-handed: winds up behind the head, strikes down with a lunge and dip, recovers to the stance. Fighters, and the black knights\' downward cut.',
+        description: 'One-handed: winds up behind the head, strikes down with a lunge and dip, recovers to the stance. Bandits, and the black knights\' downward cut.',
         render: swing('overhead'),
       },
       {

@@ -17,13 +17,13 @@ describe('sandbox settings', () => {
       levelCount: 9,
       bowmanHealth: -5,
       keepHealth: 'lots' as unknown as number,
-      levels: [{ enemies: { basic: 99, fast: -2, tank: 1.6, archer: 1, dragon: 0 } as never, battleground: 'moon' as never }],
+      levels: [{ enemies: { bandit: 99, fast: -2, tank: 1.6, hunter: 1, dragon: 0 } as never, battleground: 'moon' as never }],
     });
     expect(settings.levelCount).toBe(MAX_LEVELS);
     expect(settings.bowmanHealth).toBe(20);
     expect(settings.keepHealth).toBe(createDefaultSandbox().keepHealth);
     // Types missing from a stored level (added later) default to none.
-    expect(settings.levels[0].enemies).toEqual({ basic: 20, fast: 0, tank: 2, troll: 0, archer: 1, dragon: 0, fireDragon: 0, kamikaze: 0, goblinKamikaze: 0, zombie: 0, knight: 0, hammerKnight: 0, horseKnight: 0, priest: 0, shaman: 0 });
+    expect(settings.levels[0].enemies).toEqual({ bandit: 20, fast: 0, tank: 2, troll: 0, hunter: 1, dragon: 0, fireDragon: 0, kamikaze: 0, goblinKamikaze: 0, zombie: 0, knight: 0, heavyKnight: 0, horseKnight: 0, priest: 0, shaman: 0 });
     expect(settings.levels[0].battleground).toBe(createDefaultSandbox().levels[0].battleground);
     expect(settings.levels).toHaveLength(MAX_LEVELS);
   });
@@ -31,10 +31,15 @@ describe('sandbox settings', () => {
   it('reads setups stored before levels were renamed (waves, waveCount)', () => {
     const settings = normalizeSandbox({
       waveCount: 2,
-      waves: [{ enemies: { basic: 14, fast: 0, tank: 0, archer: 1, dragon: 0, fireDragon: 0, kamikaze: 0, zombie: 0 }, battleground: 'crimsonPass' }],
+      waves: [{ enemies: { bandit: 14, fast: 0, tank: 0, hunter: 1, dragon: 0, fireDragon: 0, kamikaze: 0, zombie: 0 }, battleground: 'crimsonPass' }],
     } as never);
     expect(settings.levelCount).toBe(2);
-    expect(settings.levels[0]).toEqual({ enemies: { basic: 14, fast: 0, tank: 0, troll: 0, archer: 1, dragon: 0, fireDragon: 0, kamikaze: 0, goblinKamikaze: 0, zombie: 0, knight: 0, hammerKnight: 0, horseKnight: 0, priest: 0, shaman: 0 }, battleground: 'crimsonPass' });
+    expect(settings.levels[0]).toEqual({ enemies: { bandit: 14, fast: 0, tank: 0, troll: 0, hunter: 1, dragon: 0, fireDragon: 0, kamikaze: 0, goblinKamikaze: 0, zombie: 0, knight: 0, heavyKnight: 0, horseKnight: 0, priest: 0, shaman: 0 }, battleground: 'crimsonPass' });
     expect('waves' in settings).toBe(false);
+  });
+
+  it('moves counts stored under renamed enemy ids (basic, archer, hammerKnight) to the new ones', () => {
+    const settings = normalizeSandbox({ levels: [{ enemies: { basic: 7, archer: 2, hammerKnight: 1 }, battleground: 'moon' }] } as never);
+    expect(settings.levels[0].enemies).toMatchObject({ bandit: 7, hunter: 2, heavyKnight: 1, fast: 0 });
   });
 });

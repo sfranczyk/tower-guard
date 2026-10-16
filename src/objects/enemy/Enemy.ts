@@ -91,7 +91,7 @@ export default class Enemy extends Container {
     health = 3,
     speed = 60,
     target: EnemyTarget = 'bowman',
-    public readonly kind: EnemyType = 'basic',
+    public readonly kind: EnemyType = 'bandit',
   ) {
     super();
     this.look = ENEMY_LOOKS[kind];

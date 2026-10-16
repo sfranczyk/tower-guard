@@ -96,7 +96,7 @@ const dragon = (hide: string, wing: string, belly: string, rider: string, extra 
 
 export const ICON_ENEMIES = {
   // Raider: a club raised over the head.
-  basic: figure(`<circle cx="11" cy="6" r="3"/><path d="M11 9v9M11 18l-4 7M11 18l4 7M11 12l-4 4M11 12l5-1"/>${club(16, 11, 19, 4)}`),
+  bandit: figure(`<circle cx="11" cy="6" r="3"/><path d="M11 9v9M11 18l-4 7M11 18l4 7M11 12l-4 4M11 12l5-1"/>${club(16, 11, 19, 4)}`),
   // Goblin: running, leaning in, a dagger in front, speed lines behind.
   fast: figure(`<circle cx="16" cy="6.5" r="2.6"/><path d="M15 9l-3 7M12 16l-1.5 4.5-4.5 1.5M12 16l4 3v4.5M14 11l-4 3M14 11l4 2"/>
     <path d="M18 13l3.5-1.5" stroke="#9aa4ae" stroke-width="1.6"/><path d="M2 10h4M1 14h4.5M2.5 18h3" stroke="#66756f" stroke-width="1.5"/>`),
@@ -107,8 +107,8 @@ export const ICON_ENEMIES = {
   troll: figure(`<circle cx="9.5" cy="8" r="3.4" stroke-width="2.4"/><path d="M12.5 8.5l3 2.5" stroke-width="2"/>
     <path d="M9 11.5l-1 7M8 18.5l-4 7M8 18.5l4.5 7M8.8 13l6.5 3M8.8 13l3.5 6" stroke-width="3"/>
     <path d="M15 16l7-9" stroke="#5a3a20" stroke-width="2.2"/><path d="M20 4.5l4 1 .5 3.5-3 2-3-1.5z" fill="#7d7f7a" stroke="none"/>`),
-  // Bandit archer: drawing the bow, an arrow on the string.
-  archer: figure(`<circle cx="10" cy="6" r="3"/><path d="M10 9v9M10 18l-4 7M10 18l4 7M10 12l7.5 0M10 12.5l3.5 1"/>
+  // Hunter (hooded archer): drawing the bow, an arrow on the string.
+  hunter: figure(`<circle cx="10" cy="6" r="3"/><path d="M10 9v9M10 18l-4 7M10 18l4 7M10 12l7.5 0M10 12.5l3.5 1"/>
     <path d="M18 4c4 4.5 4 11.5 0 16" stroke="#8a6238"/><path d="M18 4 13.5 13.5 18 20" stroke="#9aa4ae" stroke-width=".9"/>
     <path d="M13.5 13.5 25 13.5" stroke="#5a3c23" stroke-width="1.3"/><path d="M25 12v3l2-1.5z" fill="#8c96a0" stroke="none"/>`),
   // Sapper: running in with a bundle of dynamite strapped to the chest, the fuse lit.
@@ -127,8 +127,8 @@ export const ICON_ENEMIES = {
   knight: figure(`<rect x="7.5" y="2.5" width="7.5" height="7.5" rx="2.2" fill="#2a2c33"/><path d="M10 6.2h4" stroke="#ff5a3c" stroke-width="1.3"/>
     <path d="M11 10.5v7.5M11 18l-4 7M11 18l4 7M11 12.5l-4 4M11 12.5l4.5-1.5" stroke-width="2.8"/>
     <path d="M16 11 22.5 2.5" stroke="#a9b0ba" stroke-width="1.9"/><path d="M14.2 9.3l3.6 3" stroke="#5c616c" stroke-width="1.7"/>`, '#2a2c33'),
-  // Hammer knight: bigger, a horned helm, a war hammer in both hands.
-  hammerKnight: figure(`<path d="M8 4.5Q5 3 5.5.8M15 4.5Q18 3 17.5.8" stroke="#c9c0ad" stroke-width="1.5"/>
+  // Heavy knight: bigger, a horned helm, a war hammer in both hands.
+  heavyKnight: figure(`<path d="M8 4.5Q5 3 5.5.8M15 4.5Q18 3 17.5.8" stroke="#c9c0ad" stroke-width="1.5"/>
     <rect x="7" y="3" width="9" height="8" rx="2.4" fill="#2a2c33"/><path d="M10 6.8h4.5" stroke="#ff5a3c" stroke-width="1.3"/>
     <path d="M11.5 11v7.5M11.5 18.5l-5 6.5M11.5 18.5l5 6.5M11.5 13l5.5 1M11.5 13l4 4" stroke-width="3.4"/>
     <path d="M14.5 19.5 22 5" stroke="#5a3a20" stroke-width="1.8"/><path d="M18.4 3.4l6.2 3.2-1.8 3.5-6.2-3.2z" fill="#3d4048" stroke="none"/>`, '#2a2c33'),

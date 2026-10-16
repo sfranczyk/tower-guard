@@ -13,7 +13,7 @@ import {
   turbulenceStrength, vortexPull, vortexRise,
 } from './vortex';
 
-/** The masses of data/enemyKinds.ts: a goblin, a fighter (the reference), the black knight, the hammer knight, an ogre. */
+/** The masses of data/enemyKinds.ts: a goblin, a fighter (the reference), the black knight, the heavy knight, an ogre. */
 const GOBLIN = 0.8;
 const FIGHTER = VORTEX_MASS.reference;
 const KNIGHT = 1.9;

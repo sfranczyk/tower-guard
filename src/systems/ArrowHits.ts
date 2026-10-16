@@ -57,7 +57,7 @@ interface BowmanArrowHit {
 }
 
 /** Damage of a hostile arrow by who shot it (archer arrows if unknown). */
-const arrowDamage = (shooter: EnemyType | undefined, target: DamageTarget) => enemyDamage(shooter ?? 'archer', 'arrow', target);
+const arrowDamage = (shooter: EnemyType | undefined, target: DamageTarget) => enemyDamage(shooter ?? 'hunter', 'arrow', target);
 
 /** What the arrows need of the battle. */
 export interface ArrowHitsWorld {

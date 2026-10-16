@@ -5,7 +5,7 @@ import { at, ellipseIn, shapeIn, torsoFrame, type Frame, type HumanoidLook, type
 import type { BodyPose } from './bodyPoses';
 
 /**
- * The black knights and the dark priest: the black knight (sword), the hammer knight (a head taller, a war hammer in
+ * The black knights and the dark priest: the black knight (sword), the heavy knight (a head taller, a war hammer in
  * both hands), both in black plate with ember eyes behind the visor, and the hooded priest with a skull scepter.
  */
 
@@ -67,7 +67,7 @@ const greatHelm = (g: Graphics, head: Vec2, frame: Frame, timeMs: number): void 
   [-4, -7].forEach((u) => [5, 8, 11].forEach((f) => g.circle(...xy(at(head, frame, u, f)), 0.8).fill({ color: 0x0b0b0e })));
 };
 
-/** The knights' common body: plate limbs, gauntlets and sabatons; `bulk` thickens them for the hammer knight. */
+/** The knights' common body: plate limbs, gauntlets and sabatons; `bulk` thickens them for the heavy knight. */
 const plateLook = (bulk: number): Pick<HumanoidLook, 'arm' | 'armFar' | 'leg' | 'legFar' | 'hand' | 'handFar' | 'handRadius' | 'foot'> => ({
   arm: limbs(PLATE, PLATE_EDGE, [8.5 * bulk, 7 * bulk], [7 * bulk, 6.5 * bulk]),
   armFar: limbs(PLATE_DARK, PLATE_DARK, [8.5 * bulk, 7 * bulk], [7 * bulk, 6.5 * bulk]),
@@ -123,8 +123,8 @@ export const blackKnightLook = (timeMs: number): HumanoidLook => ({
   club: longsword,
 });
 
-/** Hammer knight: heavier plate, broad spiked pauldrons, a horned helm; a war hammer in both hands. */
-export const hammerKnightLook = (timeMs: number): HumanoidLook => ({
+/** Heavy knight: heavier plate, broad spiked pauldrons, a horned helm; a war hammer in both hands. */
+export const heavyKnightLook = (timeMs: number): HumanoidLook => ({
   ...plateLook(1.15),
   back: tornCape(timeMs, 22),
   torso: (g, pose, frame) => {
