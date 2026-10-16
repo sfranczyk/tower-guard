@@ -16,15 +16,16 @@ export interface HitBox {
 }
 
 /** Where an enemy heads for. */
-export type EnemyTarget = 'bowman' | 'tower';
+export type EnemyTarget = 'bowman' | 'tower' | 'ally';
 
 /** What dealt the damage, and from which side, so the right reaction plays. */
 export interface HitInfo {
   /**
    * 'blast' = hit directly by an explosive arrow (a kill blows the body apart); 'burn' = a fire arrow's burn;
-   * 'shatter' = killed while frozen (it bursts into pieces of ice); 'fall' = landing after a vortex threw it.
+   * 'shatter' = killed while frozen (it bursts into pieces of ice); 'fall' = landing after a vortex threw it; 'melee' = a
+   * soldier's blow (reacts like an arrow).
    */
-  cause: 'arrow' | 'headshot' | 'explosion' | 'blast' | 'lightning' | 'burn' | 'shatter' | 'fall';
+  cause: 'arrow' | 'headshot' | 'explosion' | 'blast' | 'lightning' | 'burn' | 'shatter' | 'fall' | 'melee';
   /** World x the hit came from; the enemy turns to face it before falling. */
   fromX: number;
   /** World point of impact (used for 'blast' to throw the pieces away from it). */

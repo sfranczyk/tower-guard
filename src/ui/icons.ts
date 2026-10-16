@@ -159,3 +159,26 @@ export const ICON_ENEMIES = {
   fireDragon: dragon('#b5473a', '#d9785e', '#f0c38a', `<path d="M14.2 11.6 18 13.4"/>`,
     `<path d="M25.6 10.6Q28.4 11.6 27.8 15.6 26.8 14 25.6 14.4 26.6 12.8 25 11.6z" fill="#ff9a2e"/><path d="M25.8 11Q27.2 12 27 13.8 26.4 12.8 25.6 12.6z" fill="#ffd35a"/>`),
 } as const;
+
+/** The player's soldiers in the HUD (squire: short sword; knight: helm and shield; medic: red cross on a satchel). */
+export const ICON_ALLIES = {
+  squire: `<svg class="weapon-art" viewBox="0 0 40 40" aria-hidden="true">
+  <g transform="rotate(-45 20 20)"><rect x="7" y="18.4" width="8" height="3.2" rx="1.4" fill="#5a3a20"/><rect x="15" y="14.5" width="2.6" height="11" rx="1.2" fill="#d8b54a"/>
+  <path d="M17.6 17.2h13.4l4 2.8-4 2.8H17.6z" fill="#c9d0da"/><path d="M18.6 19.4h12" stroke="#eef2f6" stroke-width="1"/></g></svg>`,
+  allyKnight: `<svg class="weapon-art" viewBox="0 0 40 40" aria-hidden="true">
+  <path d="M20 5l12 4v9c0 8-5.5 13-12 17-6.5-4-12-9-12-17V9z" fill="#2f5d9a"/><path d="M20 5l12 4v9c0 8-5.5 13-12 17z" fill="#21416c"/>
+  <path d="M20 10v19M13 17h14" stroke="#d8b54a" stroke-width="3" stroke-linecap="round"/></svg>`,
+  medic: `<svg class="weapon-art" viewBox="0 0 40 40" aria-hidden="true">
+  <path d="M14 12a6 6 0 0 1 12 0" fill="none" stroke="#5a3a20" stroke-width="2.4"/><rect x="7" y="12" width="26" height="20" rx="4" fill="#f2efe6"/>
+  <rect x="7" y="27" width="26" height="5" rx="2" fill="#d8d2c4"/><path d="M20 15.5v11M14.5 21h11" stroke="#c0392b" stroke-width="4" stroke-linecap="round"/></svg>`,
+} as const;
+
+/** The soldiers' order button: a banner (hold the line), an arrow ahead (advance), an arrow back to the keep (fall back). */
+export const ICON_ORDERS = {
+  hold: `<svg class="weapon-art" viewBox="0 0 40 40" aria-hidden="true">
+  <rect x="11" y="6" width="3" height="29" rx="1.4" fill="#5a3c23"/><path d="M14 8h16l-4 6 4 6H14z" fill="#2f5d9a"/><path d="M8 35h12" stroke="#5a3c23" stroke-width="3" stroke-linecap="round"/></svg>`,
+  advance: `<svg class="weapon-art" viewBox="0 0 40 40" aria-hidden="true">
+  <path d="M6 20h20" stroke="#2f5d9a" stroke-width="5" stroke-linecap="round"/><path d="M22 10l12 10-12 10z" fill="#2f5d9a"/></svg>`,
+  retreat: `<svg class="weapon-art" viewBox="0 0 40 40" aria-hidden="true">
+  <path d="M14 20h20" stroke="#8a5a30" stroke-width="5" stroke-linecap="round"/><path d="M18 10L6 20l12 10z" fill="#8a5a30"/></svg>`,
+} as const;

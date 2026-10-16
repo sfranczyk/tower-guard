@@ -7,6 +7,8 @@ const HEALTH_BAR = { width: 30, height: 4, belowFeet: 15 };
 const MANA_BAR = { height: 2.5, gap: 1.5, color: 0x5b8cff, drainedColor: 0x4a5266 };
 /** A mounted knight's horse's health bar, under his, in this colour. */
 const HORSE_BAR = { height: 3, gap: 1.5, color: 0xc8935a };
+/** The player's soldiers' health is blue (red once low), so they read apart from the enemies in a melee. */
+const ALLY_BAR = { color: 0x5fb4ff, lowBelow: 0.3 };
 
 /** The bars under an enemy's feet: its health, a mounted knight's horse's health under it, or a priest's mana. */
 export class EnemyBars {
@@ -15,7 +17,7 @@ export class EnemyBars {
   private readonly horse?: Graphics;
   private readonly mana?: Graphics;
 
-  public constructor(size: number, horse: boolean, mana: boolean) {
+  public constructor(size: number, horse: boolean, mana: boolean, private readonly ally = false) {
     if (horse) {
       this.horse = new Graphics();
       this.horse.y = HEALTH_BAR.height / 2 + 1 + HORSE_BAR.gap + HORSE_BAR.height / 2 + 1;
@@ -29,9 +31,9 @@ export class EnemyBars {
     this.health.scale.set(1 / size);
   }
 
-  /** Dark track, fill from green (full) through yellow to red (low); the horse's in its own colour. */
+  /** Dark track, fill from green (full) through yellow to red (low; a soldier's blue until low); the horse's in its own colour. */
   public draw(ratio: number, horseRatio?: number): void {
-    drawHealthBar(this.health, ratio, HEALTH_BAR.width, HEALTH_BAR.height);
+    drawHealthBar(this.health, ratio, HEALTH_BAR.width, HEALTH_BAR.height, this.ally && ratio > ALLY_BAR.lowBelow ? ALLY_BAR.color : undefined);
     if (this.horse && horseRatio !== undefined) {
       drawHealthBar(this.horse, horseRatio, HEALTH_BAR.width, HORSE_BAR.height, HORSE_BAR.color);
     }

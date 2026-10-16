@@ -12,7 +12,9 @@ import { quiverPage, type PartnerQuiver } from './quiverPage';
 import { editQuiverIn, type QuiverEdit } from './quiverEditing';
 import { TuningPanel } from './TuningPanel';
 import { SoundLabPanel, type SoundLabMusic, type SoundLabMusicState, type SoundLabRow } from './SoundLabPanel';
-import { HUD_BOTTOM_TEMPLATE, HUD_TOP_TEMPLATE, OVERLAY_TEMPLATE, weaponSlots } from './template';
+import { HUD_BOTTOM_TEMPLATE, HUD_TOP_TEMPLATE, OVERLAY_TEMPLATE, allySlots, weaponSlots } from './template';
+import { ICON_ORDERS } from './icons';
+import type { AllyType } from '../types';
 
 /** Breathing room kept around the canvas + HUD stack inside the window. */
 const PAGE_MARGIN = 16;
@@ -27,6 +29,13 @@ export type UiScreen = 'menu' | 'coop' | 'sandbox' | 'animationLab' | 'soundLab'
 export type { CoopView } from './CoopPanel';
 
 export type { HudValues } from './Hud';
+
+/** The soldiers' slots in the HUD now: standing / allowed of each kind, the share of its pause left, the order. */
+export interface AllyHudView {
+  slots: ReadonlyArray<{ type: AllyType; alive: number; limit: number; cooldown: number }>;
+  order: 'hold' | 'advance' | 'retreat';
+  orderLabel: string;
+}
 
 /** What the battle's pause dialog shows. */
 export interface PauseView {
@@ -74,6 +83,8 @@ export interface UiHandlers {
   /** The pause dialog's quiver (shown while the bowman is in the keep) was changed. */
   pauseLoadout?: (loadout: Loadout) => void;
   selectProjectile?: (type: ProjectileType) => void;
+  summonAlly?: (type: AllyType) => void;
+  cycleAllyOrder?: () => void;
   /** `level`: the level being edited (its battleground is shown behind the form). */
   sandboxChange?: (settings: SandboxSettings, level: number) => void;
   sandboxStart?: () => void;
@@ -139,6 +150,8 @@ export class DomUi {
   private readonly soundLabPanel: SoundLabPanel;
   private readonly tuningPanel = new TuningPanel();
   private readonly weaponsRoot: HTMLElement;
+  private readonly alliesRoot: HTMLElement;
+  private shownOrder?: string;
   private readonly trajectoryInput: HTMLInputElement;
   private readonly cursorCircleInput: HTMLInputElement;
   private readonly damageNumbersInput: HTMLInputElement;
@@ -235,6 +248,20 @@ export class DomUi {
     this.onClick('[data-pause-restart]', () => this.handlers.pauseRestart?.());
     this.onClick('[data-pause-settings]', () => this.handlers.toggleOptions?.());
     this.onClick('[data-pause-menu]', () => this.handlers.pauseMenu?.());
+    this.alliesRoot = this.query<HTMLElement>('[data-allies]');
+    this.alliesRoot.addEventListener('click', (event) => {
+      const button = (event.target as HTMLElement).closest<HTMLButtonElement>('[data-ally], [data-ally-order]');
+      if (!button) {
+        return;
+      }
+      if (button.dataset.ally) {
+        this.handlers.summonAlly?.(button.dataset.ally as AllyType);
+      } else {
+        this.handlers.cycleAllyOrder?.();
+      }
+      // Drop focus so Space doesn't press it again.
+      button.blur();
+    });
     this.weaponsRoot.addEventListener('click', (event) => {
       const button = (event.target as HTMLElement).closest<HTMLButtonElement>('[data-projectile]');
       if (button) {
@@ -302,6 +329,38 @@ export class DomUi {
   /** The weapon slots in the HUD, from the battle setup's quiver. */
   public setLoadout(loadout: readonly (ArrowType | null)[]): void {
     this.weaponsRoot.innerHTML = weaponSlots(loadout);
+  }
+
+  /** The soldiers' slots in the HUD (none: hidden, e.g. in online co-op until they're synced). */
+  public setAllies(allies: ReadonlyArray<{ type: AllyType; label: string }>): void {
+    this.alliesRoot.hidden = allies.length === 0;
+    this.alliesRoot.innerHTML = allySlots(allies);
+    this.shownOrder = undefined;
+  }
+
+  /** Each frame: counts, pauses and the order (only what changed is touched). */
+  public updateAllies(view: AllyHudView): void {
+    if (this.alliesRoot.hidden) {
+      return;
+    }
+    view.slots.forEach(({ type, alive, limit, cooldown }) => {
+      const count = this.alliesRoot.querySelector<HTMLElement>(`[data-ally-count="${type}"]`);
+      const text = `${alive}/${limit}`;
+      if (count && count.textContent !== text) {
+        count.textContent = text;
+      }
+      this.alliesRoot.querySelector(`[data-ally="${type}"]`)?.classList.toggle('full', alive >= limit);
+      const wait = this.alliesRoot.querySelector<HTMLElement>(`[data-ally-wait="${type}"]`);
+      if (wait) {
+        wait.style.height = `${Math.round(cooldown * 100)}%`;
+      }
+    });
+    if (this.shownOrder !== view.order) {
+      this.shownOrder = view.order;
+      this.alliesRoot.querySelector('[data-order-icon]')!.innerHTML = ICON_ORDERS[view.order];
+      this.alliesRoot.querySelector('[data-order-label]')!.textContent = view.orderLabel;
+      this.alliesRoot.querySelector('[data-ally-order]')?.setAttribute('title', `Orders: ${view.orderLabel} (V)`);
+    }
   }
 
   public setActiveProjectile(type: ProjectileType): void {

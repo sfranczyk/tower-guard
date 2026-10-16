@@ -27,7 +27,8 @@ import { rangerLook, wardenLook } from './playerSkins';
 import { drawHumanoid, type HumanoidLook } from './skinKit';
 import { drawEnemyGibs } from '../enemyBody';
 import { GibSimulation } from '../stickmanGibs';
-import type { EnemyType } from '../../types';
+import type { UnitType } from '../../types';
+import { allyKnightLook, medicLook, squireLook } from './allySkins';
 
 /** One animation of a design: a tile in the zoomed view. */
 export interface DesignView {
@@ -111,7 +112,7 @@ const pinned = (look: LookAt): DesignView => posed('Pinned by the foot', look, (
 
 /** Blown apart by a direct explosive hit (the game's gib simulation, drawn in the enemy's look), on a loop. */
 const GIB_LOOP_MS = 2800;
-const blownApart = (kind: EnemyType): DesignView => ({
+const blownApart = (kind: UnitType): DesignView => ({
   label: 'Blown apart',
   // The pieces fly far back from a blast at the chest: framed smaller and shifted.
   scale: 0.55,
@@ -522,9 +523,66 @@ const TREES: DesignEntry[] = TREE_DESIGNS.map((design) => ({
   ],
 }));
 
+const SQUIRE_SPEED = (ENEMY_SPEED * 1.2) / 1000;
+const squire = (): HumanoidLook => squireLook();
+
+/** The player's soldiers (scenes/BattleAllies.ts), summoned with Z / X / C. */
+const ALLIES: DesignEntry[] = [
+  {
+    id: 'squire',
+    name: 'Squire',
+    tagline: 'Quick and cheap: the first to the fight',
+    description: 'A young man-at-arms in the bowman\'s blue: a blue tunic over a white shirt, a belt with a brass buckle, a leather cap and a short sword with a brass guard. A raider\'s match: quick on his feet, soon down. Up to five on the field.',
+    views: [
+      walking(squire, SQUIRE_SPEED, 'overhead'),
+      swinging('Sword cut', squire, 'overhead'),
+      falling('Death', squire, 'death'),
+      knockdown(squire),
+      cheering(squire, 'cheerFist', true),
+      blownApart('squire'),
+    ],
+  },
+  {
+    id: 'allyKnight',
+    name: 'Knight',
+    tagline: 'Plate and a longsword: holds the line',
+    description: 'Bright plate under a blue tabard with a gold cross, a round pauldron, an open-faced helm with a blue plume, and a longsword. His plate turns most arrows and blows on the body (only a third gets through), headshots go through. Slow, hits hard. Up to three on the field.',
+    views: [
+      walking(allyKnightLook, KNIGHT_SPEED, 'overhead', false, 'march'),
+      swinging('Sword cut', allyKnightLook, 'overhead'),
+      swinging('Rising cut', allyKnightLook, 'swordRise'),
+      swinging('Thrust', allyKnightLook, 'thrust'),
+      falling('Headshot', allyKnightLook, 'deathStiff'),
+      cheering(allyKnightLook, 'cheerFist', true),
+      blownApart('allyKnight'),
+    ],
+  },
+  {
+    id: 'medic',
+    name: 'Medic',
+    tagline: 'Heals the soldiers and the bowman',
+    description: 'A white robe to the shins with a red cross on the chest, a satchel on a strap, a white coif and a plain wooden staff. Never fights: keeps behind the front soldier and heals the wounded around her, the bowman too when he is out of the keep (the cross glows as she casts). Up to two on the field.',
+    views: [
+      {
+        label: 'Heal',
+        draw: (g, t) => {
+          const progress = Math.min(1, (t % CAST_LOOP_MS) / CAST_MS);
+          g.clear();
+          drawHumanoid(g, castBody(progress), medicLook(t, Math.sin(Math.PI * progress)));
+        },
+      },
+      walking(medicLook, PRIEST_SPEED, 'overhead'),
+      falling('Death', medicLook, 'death'),
+      cheering(medicLook, 'cheerWave', true),
+      blownApart('medic'),
+    ],
+  },
+];
+
 export const DESIGN_SECTIONS: readonly DesignSection[] = [
   { id: 'enemies', tab: 'Enemies', intro: 'Every enemy as it looks in the game now, over its own moves. Click one for all its animations and the old stickman.', entries: ENEMIES },
   { id: 'player', tab: 'Player', intro: 'The player looks: the ranger (player 1) and the keep warden (player 2 in co-op), next to the old armored archer.', entries: PLAYER },
+  { id: 'allies', tab: 'Allies', intro: 'The player\'s soldiers as they look in the game: summoned from beyond the left edge (Z, X, C), they follow the order button (V).', entries: ALLIES },
   { id: 'ideas', tab: 'Ideas', intro: 'Proposals for new enemy looks, from the most human to the least (not tied to an enemy yet).', entries: IDEAS },
   { id: 'trees', tab: 'Trees', intro: 'Proposals for the Green Meadow\'s trees: small variations on the round tree (the first card); the map mixes those weighted in MEADOW_TREES (?tune). Click one for a row of them as on the map.', entries: TREES },
 ];

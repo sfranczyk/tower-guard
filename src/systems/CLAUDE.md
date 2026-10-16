@@ -11,6 +11,15 @@ Kamikaze awareness (`blastAwareness.ts`, pure, tested; tuning `KAMIKAZE_AWARENES
 notices or misses each kamikaze once within `noticeRange` (`missChance`: race `blastAwareness`, zombies 0, low health,
 a shaman's spell, mid-swing), flees a noticed one's zone (`BlastDodge`, "!" = `EffectsSystem.alarm`), then hesitates.
 
+## Allies (the player's soldiers)
+`Enemy` objects of the `side: 'ally'` kinds (squire, allyKnight, medic) in `CombatWorld.allies` (scenes/BattleAllies.ts).
+`AllyAI.ts`: fighters go for the nearest ground enemy their order allows (`allyOrders.ts`, pure, tested: `orderPost`,
+`pickFoe`; hold / advance / retreat), strike with `meleeBlow` (cause `'melee'`, `armor` turns it); the medic follows like
+the priest (`priestPost`) and heals soldiers and bowmen out in the open (`bowmanMissing` / `bowmanHealed` events). Enemies:
+`nearestMeleeTarget` (`targeting.ts`) stops melee enemies at a soldier (`EnemyAI.fightAlly`), archers on foot aim at
+them, hostile arrows (`ArrowHits.hostileHitAlly`), kamikaze blasts and lightning hurt them; players' arrows only with
+friendly fire (`arrowTargets`). Limits and pauses: `allyRoster.ts` (pure, tested), tuning `ALLIES`.
+
 ## Waves (`waveDirector.ts`, pure, tested; not shown in the UI yet)
 `planWaves` spreads each type through the level (tougher types later, by `arrival`, so the first wave of
 `WAVES.firstSize` is light) in waves growing by `WAVES.sizeStep` to `WAVES.maxSize`; `WaveDirector.update` (every frame,
@@ -66,7 +75,7 @@ Enemy | Bowman), pins (`Bowman.pin`). Own shooter spared for `FRIENDLY_FIRE_GRAC
 
 ## Enemy archers
 `CombatSystem.updateArcher` walks them into `ENEMY_ATTACK.archerRange`, fires hostile arrows via `enemyShot`. Hostile arrows
-hit the bowman (not dead), or the keep while he hides, never enemies. `ENEMY_ARCHER_*`, `ENEMY_ARROW_*`.
+hit the bowman (not dead) or a soldier, or the keep while he hides, never enemies. `ENEMY_ARCHER_*`, `ENEMY_ARROW_*`.
 
 ## Burning bowman (`burning.ts`)
 `flamesTouch` (fire dragon puff cores vs the bowman box; not in the keep) → `Bowman.ignite`: `BURN_DAMAGE_PER_S` for

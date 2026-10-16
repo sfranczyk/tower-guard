@@ -2,28 +2,28 @@ import { ARROWS, EXPLOSION_DAMAGE, HORSE_LEG, HORSE_LEG_LAME_CHANCE, KNOCKBACK_P
 import type { AttackStyle } from '../rendering/attackSwing';
 import type { HorseDeathKind } from '../rendering/horseDeath';
 import type { WalkStyle } from '../rendering/walkCycle';
-import type { EnemyType, ProjectileType } from '../types';
+import type { ProjectileType, UnitType } from '../types';
 import { ENEMY_HEALTH, ENEMY_SPEED_BY_TYPE } from './enemyTuning';
-import { ENEMY_KINDS, ENEMY_TYPES, enemyArchetype, enemyTraits, type DamageRange, type EnemyDamage, type EnemyStats } from './enemyKinds';
+import { ENEMY_KINDS, UNIT_TYPES, enemyArchetype, enemyTraits, type DamageRange, type EnemyDamage, type EnemyStats } from './enemyKinds';
 
 export type { DamageRange, EnemyDamage, EnemyStats } from './enemyKinds';
 
 /** Damage per type (data/enemyKinds.ts). */
-export const ENEMY_DAMAGE: Readonly<Record<EnemyType, EnemyDamage>> = Object.fromEntries(
-  ENEMY_TYPES.map((type) => [type, ENEMY_KINDS[type].damage]),
-) as Record<EnemyType, EnemyDamage>;
+export const ENEMY_DAMAGE: Readonly<Record<UnitType, EnemyDamage>> = Object.fromEntries(
+  UNIT_TYPES.map((type) => [type, ENEMY_KINDS[type].damage]),
+) as Record<UnitType, EnemyDamage>;
 
 export type DamageTarget = 'bowman' | 'keep';
 
 /** Damage range of one `attack` by `type` against `target` (a type without arrows uses the archer's). */
-export const enemyDamage = (type: EnemyType, attack: keyof EnemyDamage, target: DamageTarget): DamageRange => {
+export const enemyDamage = (type: UnitType, attack: keyof EnemyDamage, target: DamageTarget): DamageRange => {
   const range = attack === 'arrow' ? ENEMY_DAMAGE[type].arrow ?? ENEMY_DAMAGE.hunter.arrow! : ENEMY_DAMAGE[type].melee;
   const factor = target === 'keep' ? ENEMY_KINDS[type].keepDamage?.[attack] ?? 1 : 1;
   return [range[0] * factor, range[1] * factor];
 };
 
 /** How long a pinning arrow holds this type in place (ms); 0 = it can't be pinned (its race's traits: ogres, dragons). */
-export const pinDurationMs = (type: EnemyType): number => enemyTraits(type).pinMs;
+export const pinDurationMs = (type: UnitType): number => enemyTraits(type).pinMs;
 
 /** A random hit within `range` (`roll` 0..1, passed in so tests can pin it). */
 export const rollDamage = ([min, max]: DamageRange, roll = Math.random()): number => Math.round(min + (max - min) * roll);
@@ -42,7 +42,7 @@ export const rollArrowDamage = (headshot: boolean, roll = Math.random()): number
 };
 
 /** Stats for an enemy type (as tuned, data/enemyTuning.ts) scaled by the level's difficulty multiplier. */
-export const getEnemyStats = (type: EnemyType, difficulty: number): EnemyStats => ({
+export const getEnemyStats = (type: UnitType, difficulty: number): EnemyStats => ({
   health: Math.round(ENEMY_HEALTH[type] * difficulty),
   speed: ENEMY_SPEED_BY_TYPE[type] * difficulty,
 });
@@ -134,7 +134,7 @@ export interface EnemyLook {
   stepMs?: number;
 }
 
-export const ENEMY_LOOKS: Readonly<Record<EnemyType, EnemyLook>> = Object.fromEntries(ENEMY_TYPES.map((type) => {
+export const ENEMY_LOOKS: Readonly<Record<UnitType, EnemyLook>> = Object.fromEntries(UNIT_TYPES.map((type) => {
   const { attackStyle, runs } = enemyArchetype(type);
   return [type, { ...ENEMY_KINDS[type].build, attackStyle, attackStyles: ENEMY_KINDS[type].attackStyles ?? [attackStyle], runs }];
-})) as Record<EnemyType, EnemyLook>;
+})) as Record<UnitType, EnemyLook>;

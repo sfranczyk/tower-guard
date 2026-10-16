@@ -78,7 +78,7 @@ const plateLook = (bulk: number): Pick<HumanoidLook, 'arm' | 'armFar' | 'leg' | 
 });
 
 /** A longsword: leather grip, a crossguard at the fist, a blade with a bright edge. */
-const longsword = (g: Graphics, butt: Vec2, tip: Vec2): void => {
+export const longsword = (g: Graphics, butt: Vec2, tip: Vec2): void => {
   const { length, point } = onLine(butt, tip);
   // The fist sits CLUBS.overhead.butt (8) up the line; the blade reaches a little past the club's tip.
   const guard = 10;

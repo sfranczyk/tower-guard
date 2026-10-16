@@ -1,9 +1,9 @@
 import { tunable } from '../core/tuning';
-import type { EnemyType } from '../types';
-import { ENEMY_KINDS, ENEMY_TYPES } from './enemyKinds';
+import type { UnitType } from '../types';
+import { ENEMY_KINDS, UNIT_TYPES } from './enemyKinds';
 
-const perType = (read: (type: EnemyType) => number): Record<EnemyType, number> =>
-  Object.fromEntries(ENEMY_TYPES.map((type) => [type, Number(read(type).toPrecision(10))])) as Record<EnemyType, number>;
+const perType = (read: (type: UnitType) => number): Record<UnitType, number> =>
+  Object.fromEntries(UNIT_TYPES.map((type) => [type, Number(read(type).toPrecision(10))])) as Record<UnitType, number>;
 
 /**
  * Enemy health and speed per type, tunable (`?tune`), defaults from ENEMY_KINDS (`stats`; the mounted knight's horse
@@ -18,5 +18,5 @@ export const ENEMY_SPEED_BY_TYPE = tunable('ENEMY_SPEED_BY_TYPE', 'Enemy speed',
   { file: 'src/data/enemyTuning.ts', derivedFrom: 'ENEMY_KINDS (data/enemyKinds.ts), stats.speed (px/s; ENEMY_SPEED × factor)' });
 
 /** A rider's horse's health at spawn (its own health if it has none). */
-export const mountHealth = (type: EnemyType, fallback: number): number =>
+export const mountHealth = (type: UnitType, fallback: number): number =>
   type === 'horseKnight' ? ENEMY_HEALTH.horseKnightMount : ENEMY_KINDS[type].mount?.health ?? fallback;

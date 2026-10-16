@@ -1,5 +1,6 @@
 import { ARROW_INFO, type ArrowType } from '../data/loadout';
-import { ICON_LEVEL, ICON_WEAPONS } from './icons';
+import type { AllyType } from '../types';
+import { ICON_ALLIES, ICON_LEVEL, ICON_ORDERS, ICON_WEAPONS } from './icons';
 
 /**
  * Static DOM markup. Elements are looked up by their data-* attributes in DomUi.
@@ -88,9 +89,23 @@ export const weaponSlots = (loadout: readonly (ArrowType | null)[]): string => l
     + `<span class="weapon-ammo" data-ammo="${type}">∞</span></div>`;
 }).join('');
 
+/** The keys that summon each soldier and cycle their order (GameScene). */
+export const ALLY_KEYS: Readonly<Record<AllyType, string>> = { squire: 'Z', allyKnight: 'X', medic: 'C' };
+export const ORDER_KEY = 'V';
+
+/** The soldiers' slots (icon, key, "standing / allowed" under it, a shade for the pause) and the order button. */
+export const allySlots = (allies: ReadonlyArray<{ type: AllyType; label: string }>): string => allies.map(({ type, label }) =>
+  `<div class="weapon"><button class="weapon-slot" data-ally="${type}" title="Summon a ${label.toLowerCase()} (${ALLY_KEYS[type]})" aria-label="Summon a ${label.toLowerCase()}">`
+  + `<span class="weapon-key">${ALLY_KEYS[type]}</span>${ICON_ALLIES[type]}<i class="ally-wait" data-ally-wait="${type}"></i></button>`
+  + `<span class="weapon-ammo" data-ally-count="${type}">0/0</span></div>`).join('')
+  + `<div class="weapon order-slot"><button class="weapon-slot" data-ally-order title="Orders (${ORDER_KEY})" aria-label="Orders">`
+  + `<span class="weapon-key">${ORDER_KEY}</span><span data-order-icon>${ICON_ORDERS.hold}</span></button>`
+  + `<span class="weapon-ammo" data-order-label>Hold</span></div>`;
+
 export const HUD_TOP_TEMPLATE = `
   <div class="hud-chip">${ICON_LEVEL}<div><div class="chip-label">Level <span data-level-number>1 / 1</span></div><div class="pips" data-enemy-pips></div><div class="meter" hidden><i data-level-bar></i></div><div class="chip-value" data-enemy-count>0 of 0 defeated</div></div></div>
   <div class="weapons" data-projectiles></div>
+  <div class="weapons allies" data-allies hidden></div>
 `;
 
 export const HUD_BOTTOM_TEMPLATE = `

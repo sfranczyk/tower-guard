@@ -4,6 +4,10 @@
  */
 export type EnemyType =
   | 'raider' | 'fast' | 'tank' | 'troll' | 'hunter' | 'dragon' | 'fireDragon' | 'kamikaze' | 'goblinKamikaze' | 'zombie' | 'knight' | 'heavyKnight' | 'horseKnight' | 'priest' | 'shaman';
+/** The player's soldiers (summoned from beyond the left edge; data/enemyKinds.ts entries with `side: 'ally'`). */
+export type AllyType = 'squire' | 'allyKnight' | 'medic';
+/** Any stickman kind on the field (an `Enemy` object), foe or ally. */
+export type UnitType = EnemyType | AllyType;
 /** 'fragment' is one of the small arrows a shrapnel arrow bursts into (not selectable). */
 export type ProjectileType = 'normal' | 'explosive' | 'piercing' | 'shrapnel' | 'pinning' | 'fire' | 'frost' | 'vortex' | 'fragment';
 

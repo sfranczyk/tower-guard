@@ -10,7 +10,7 @@ import {
 } from '../config';
 import type { AttackStyle } from '../rendering/attackSwing';
 import type { WalkStyle } from '../rendering/walkCycle';
-import type { EnemyType } from '../types';
+import type { AllyType, EnemyType, UnitType } from '../types';
 
 /**
  * The enemy catalogue (pure, tested). Every enemy (`EnemyType`, the id saved in setups and sent in co-op) is a
@@ -206,6 +206,8 @@ export interface EnemyKind {
   regenerates?: boolean;
   /** A rider's horse: its own health (data/enemies `mountedDamage` says which of them a hit hurts). */
   mount?: { health: number };
+  /** One of the player's soldiers (summoned, fights the enemies: systems/AllyAI.ts); none = an enemy. */
+  side?: 'ally';
 }
 
 /**
@@ -217,7 +219,7 @@ export interface EnemyKind {
  * fighters hit, brutes smash; the dragon rider's arrows hit hardest. Archers' arrows barely scratch the keep's stone,
  * brutes smash it and a kamikaze's bomb is made for walls.
  */
-export const ENEMY_KINDS: Readonly<Record<EnemyType, EnemyKind>> = {
+export const ENEMY_KINDS: Readonly<Record<UnitType, EnemyKind>> = {
   raider: {
     label: 'Raider', archetype: 'fighter', race: 'human', magical: false, arrival: 0,
     stats: { health: 35, speed: ENEMY_SPEED }, damage: { melee: [6, 10] }, build: { size: 1, strikeReach: 55 },
@@ -310,38 +312,65 @@ export const ENEMY_KINDS: Readonly<Record<EnemyType, EnemyKind>> = {
     label: 'Goblin shaman', archetype: 'shaman', race: 'goblin', magical: true, arrival: 0.25,
     stats: { health: 35, speed: ENEMY_SPEED * 1.1 }, damage: { melee: [0, 0] }, build: { size: 0.9, strikeReach: 0 },
   },
+  // The player's soldiers (`side: 'ally'`, summoned from beyond the left edge, scenes/BattleAllies.ts). `damage` is
+  // what their blows deal to the enemies. A squire is a raider's match: cheap, quick and soon down.
+  squire: {
+    label: 'Squire', archetype: 'fighter', race: 'human', magical: false, arrival: 0, side: 'ally',
+    stats: { health: 30, speed: ENEMY_SPEED * 1.2 }, damage: { melee: [6, 10] }, build: { size: 0.95, strikeReach: 55 },
+  },
+  // In plate like the black knight (`armor`: arrows and blows on the body mostly turned), slow, hits hard.
+  allyKnight: {
+    label: 'Knight', archetype: 'fighter', race: 'human', magical: false, arrival: 0, side: 'ally', armor: KNIGHT_ARMOR,
+    attackStyles: ['overhead', 'swordRise', 'thrust'],
+    stats: { health: 45, speed: ENEMY_SPEED * 0.9 }, damage: { melee: [10, 15] }, build: { size: 1, strikeReach: 60, walkStyle: 'march' },
+    traits: { mass: 1.9 },
+  },
+  // Never fights: follows the soldiers and heals them and the bowman (a healer like the dark priest).
+  medic: {
+    label: 'Medic', archetype: 'healer', race: 'human', magical: false, arrival: 0, side: 'ally',
+    stats: { health: 25, speed: ENEMY_SPEED }, damage: { melee: [0, 0] }, build: { size: 1, strikeReach: 0 },
+  },
 };
 
-/** Every enemy, in the battle setup's order. */
-export const ENEMY_TYPES = Object.keys(ENEMY_KINDS) as readonly EnemyType[];
+/** Every stickman kind, foes and allies (for the tables keyed by kind). */
+export const UNIT_TYPES = Object.keys(ENEMY_KINDS) as readonly UnitType[];
 
-export const enemyArchetype = (type: EnemyType): ArchetypeInfo => ARCHETYPES[ENEMY_KINDS[type].archetype];
+/** One of the player's soldiers. */
+export const isAllyType = (type: UnitType): type is AllyType => ENEMY_KINDS[type].side === 'ally';
+
+/** Every enemy, in the battle setup's order. */
+export const ENEMY_TYPES = UNIT_TYPES.filter((type) => !isAllyType(type)) as readonly EnemyType[];
+
+/** The player's soldiers, in the HUD's order. */
+export const ALLY_TYPES = UNIT_TYPES.filter(isAllyType);
+
+export const enemyArchetype = (type: UnitType): ArchetypeInfo => ARCHETYPES[ENEMY_KINDS[type].archetype];
 
 /** Its race's traits with its own overrides. */
 /** Race traits with the variant's overrides; a bomb carrier doesn't burn (fire sets the bomb off or does nothing, systems/kamikazeBomb.ts). */
-export const enemyTraits = (type: EnemyType): EnemyTraits => ({
+export const enemyTraits = (type: UnitType): EnemyTraits => ({
   ...RACES[ENEMY_KINDS[type].race].traits,
   ...ENEMY_KINDS[type].traits,
   ...(enemyArchetype(type).detonates ? { burnFactor: 0 } : {}),
 });
 
 /** Its group (by its race). */
-export const enemyGroup = (type: EnemyType): EnemyGroup => RACES[ENEMY_KINDS[type].race].group;
+export const enemyGroup = (type: UnitType): EnemyGroup => RACES[ENEMY_KINDS[type].race].group;
 
 /** The enemies of a group, in the setup's order. */
 export const enemyTypesOf = (group: EnemyGroup): readonly EnemyType[] => ENEMY_TYPES.filter((type) => enemyGroup(type) === group);
 
 /** How heavy it is (a man 1.2, VORTEX_MASS.reference; race traits with the variant's own). */
-export const enemyMass = (type: EnemyType): number => enemyTraits(type).mass;
+export const enemyMass = (type: UnitType): number => enemyTraits(type).mass;
 
 /** Whether its wounds close by themselves (trolls). */
-export const enemyRegenerates = (type: EnemyType): boolean => ENEMY_KINDS[type].regenerates ?? false;
+export const enemyRegenerates = (type: UnitType): boolean => ENEMY_KINDS[type].regenerates ?? false;
 
 /** The share of an arrow's body hit that gets through its armour (1 = none). */
-export const enemyArmor = (type: EnemyType): number => ENEMY_KINDS[type].armor ?? 1;
+export const enemyArmor = (type: UnitType): number => ENEMY_KINDS[type].armor ?? 1;
 
 /** The enemies that fly (dragons, objects/dragon/DragonEnemy). */
 export type FlyingType = Extract<EnemyType, 'dragon' | 'fireDragon'>;
 
 /** A dragon (DragonEnemy) rather than a ground enemy (its archetype flies). */
-export const isFlyingType = (type: EnemyType): type is FlyingType => enemyArchetype(type).flies;
+export const isFlyingType = (type: UnitType): type is FlyingType => enemyArchetype(type).flies;

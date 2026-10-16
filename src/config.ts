@@ -524,6 +524,27 @@ export const WAVES = tunable('WAVES', 'Waves', {
 });
 
 /**
+ * The player's soldiers (scenes/BattleAllies.ts, systems/AllyAI.ts): how many of each may stand on the field at once
+ * (`*Limit`; a fallen one frees his place), the pause after each summons (`*CooldownMs`), where they come in
+ * (`spawnX`, beyond the left edge), the posts of the orders (`holdX` for "Hold the line", `retreatX` in front of the
+ * keep for "Fall back") and how far from his post a soldier holding the line steps out to fight (`engageRange`).
+ */
+export const ALLIES = tunable('ALLIES', 'Allies', {
+  squireLimit: 5,
+  allyKnightLimit: 3,
+  medicLimit: 2,
+  squireCooldownMs: 1000,
+  allyKnightCooldownMs: 4000,
+  medicCooldownMs: 2000,
+  spawnX: -30,
+  holdX: 420,
+  retreatX: 230,
+  engageRange: 160,
+  /** How far apart (px) soldiers at the same post stand. */
+  spacing: 16,
+});
+
+/**
  * Difficulty levels (battle setup, data/difficulty.ts); the enemy counts are always as set. `*Damage`: how many times
  * harder every enemy hit lands on the bowmen and the keep than on easy; `*Spread`: enemy archers' aim error (dragon
  * riders' too) as a share of easy's ENEMY_ATTACK.archerSpread. On medium and hard a

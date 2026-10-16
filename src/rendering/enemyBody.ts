@@ -1,6 +1,6 @@
 import type { Graphics } from 'pixi.js';
 import { ENEMY_KINDS, enemyArchetype } from '../data/enemyKinds';
-import type { EnemyType } from '../types';
+import type { UnitType } from '../types';
 import type { BodyColors } from './bodyColors';
 import { HUMAN_BODY, ZOMBIE_BODY } from './bodyColors';
 import type { AttackStyle } from './attackSwing';
@@ -10,6 +10,7 @@ import { banditArcherLook, goblinBomberLook, goblinLook, raiderLook, sapperLook 
 import { ogreLook, trollLook, zombieLook } from './designs/heavySkins';
 import { blackKnightLook, darkPriestLook, heavyKnightLook } from './designs/knightSkins';
 import { shamanLook } from './designs/shamanSkin';
+import { allyKnightLook, medicLook, squireLook } from './designs/allySkins';
 import { drawHumanoid, type HumanoidLook } from './designs/skinKit';
 import { drawLookGibs } from './designs/lookGibs';
 import type { GibSimulation } from './stickmanGibs';
@@ -23,7 +24,7 @@ import { drawMountedKnight } from './designs/warhorse';
  * the mounted knight is the black knight on a warhorse (designs/warhorse.ts) in the 'mounted' state.
  */
 
-type GroundEnemy = Exclude<EnemyType, 'dragon' | 'fireDragon'>;
+type GroundEnemy = Exclude<UnitType, 'dragon' | 'fireDragon'>;
 
 interface EnemyBodyLook {
   /** Its look now (`cast` 0..1: how far into a spell, for the priest's glowing scepter). */
@@ -50,12 +51,16 @@ const LOOKS: Readonly<Record<GroundEnemy, EnemyBodyLook>> = {
   horseKnight: { look: blackKnightLook, gibs: { ...HUMAN_BODY, bone: 0x2a2c33, boneRear: 0x18191e } },
   priest: { look: darkPriestLook, club: 'overhead', gibs: { ...HUMAN_BODY, bone: 0x2b1d2e, boneRear: 0xcfc4b0 } },
   shaman: { look: shamanLook, club: 'overhead', gibs: { ...HUMAN_BODY, bone: 0x86b04b, boneRear: 0x6b4a32 } },
+  // The player's soldiers (designs/allySkins.ts).
+  squire: { look: fixed(squireLook()), club: 'overhead', gibs: { ...HUMAN_BODY, bone: 0xe0b48c, boneRear: 0x2f5d9a } },
+  allyKnight: { look: allyKnightLook, club: 'overhead', gibs: { ...HUMAN_BODY, bone: 0xc9d0da, boneRear: 0x2f5d9a } },
+  medic: { look: medicLook, club: 'overhead', gibs: { ...HUMAN_BODY, bone: 0xf2efe6, boneRear: 0xc0392b } },
 };
 
-const lookOf = (kind: EnemyType): EnemyBodyLook => LOOKS[kind as GroundEnemy] ?? LOOKS.raider;
+const lookOf = (kind: UnitType): EnemyBodyLook => LOOKS[kind as GroundEnemy] ?? LOOKS.raider;
 
 /** Blood and the colours of the pieces of a blown-apart enemy. */
-export const enemyGibColors = (kind: EnemyType): BodyColors => lookOf(kind).gibs;
+export const enemyGibColors = (kind: UnitType): BodyColors => lookOf(kind).gibs;
 
 /**
  * Where drawStickman puts the feet relative to the hip (55) and where the BodyPoses do (57): live poses
@@ -80,7 +85,7 @@ type HumanState = Exclude<EnemyBodyState, { mode: 'mounted' }>;
 
 const TWO_PI = Math.PI * 2;
 
-const poseFor = (kind: EnemyType, state: HumanState): BodyPose => {
+const poseFor = (kind: UnitType, state: HumanState): BodyPose => {
   const { club } = lookOf(kind);
   // Grabbers (zombies) walk and stand with their arms held out.
   const zombie = enemyArchetype(kind).attackStyle === 'grab';
@@ -104,7 +109,7 @@ const poseFor = (kind: EnemyType, state: HumanState): BodyPose => {
 };
 
 /** Draws an enemy of `kind` into `sprite` (cleared first); sets the sprite's y like drawStickman would. */
-export const drawEnemyBody = (sprite: Graphics, kind: EnemyType, state: EnemyBodyState, originY: number, timeMs: number): void => {
+export const drawEnemyBody = (sprite: Graphics, kind: UnitType, state: EnemyBodyState, originY: number, timeMs: number): void => {
   sprite.clear();
   sprite.y = state.mode === 'joints' || state.mode === 'mounted' ? originY : originY - LIVE_POSE_LIFT;
   if (state.mode === 'mounted') {
@@ -116,7 +121,7 @@ export const drawEnemyBody = (sprite: Graphics, kind: EnemyType, state: EnemyBod
 };
 
 /** Draws a blown-apart enemy of `kind`: its look's own parts flying (rendering/designs/lookGibs). */
-export const drawEnemyGibs = (sprite: Graphics, kind: EnemyType, simulation: GibSimulation, originY: number, timeMs: number): void => {
+export const drawEnemyGibs = (sprite: Graphics, kind: UnitType, simulation: GibSimulation, originY: number, timeMs: number): void => {
   const { look, gibs } = lookOf(kind);
   drawLookGibs(sprite, simulation, look(timeMs, 0), gibs, originY);
 };

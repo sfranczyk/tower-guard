@@ -14,7 +14,7 @@ const limbs = (upper: number, lower: number, upperWidth: [number, number], lower
   ({ upper, lower, upperWidth, lowerWidth });
 
 /** Top of a head circle (a cap or bandana): the part above `from` along the head's up axis. */
-const capPoints = (radius: number, from: number): Array<[number, number]> => {
+export const capPoints = (radius: number, from: number): Array<[number, number]> => {
   const start = Math.asin(from / radius);
   return Array.from({ length: 13 }, (_, i) => {
     const a = start + ((Math.PI - 2 * start) * i) / 12;

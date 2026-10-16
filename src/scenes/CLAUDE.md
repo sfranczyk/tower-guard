@@ -8,7 +8,9 @@ everything under `ctx.root` on each switch. Scenes never touch the DOM: they cal
   levels.
 - **GameScene** plays one level. Hands arrows to `BattleArrows` (launching, shrapnel, enemy arrows, co-op copies,
   `pruneArrows`, the preview's path), the view to `BattleCamera`, enemies to `BattleEnemies` (waves, spawn, `unhorse`
-  places unhorsed riders, defeated count, O-key hide), bowmen to `BattlePlayers` (creation, per-frame picks/shots/bursts,
+  places unhorsed riders, defeated count, O-key hide), the player's soldiers to `BattleAllies` (summon from `ALLIES.spawnX`
+  beyond the left edge, limits and pauses, `order`; keys Z/X/C summon, V cycles the order; none in online co-op yet; each
+  level starts with none), bowmen to `BattlePlayers` (creation, per-frame picks/shots/bursts,
   falls, `status`), co-op setup to `startBattleSync` (`battleSync.ts`), the end screen to `showLevelEnd`
   (`levelEndScreen.ts`, text from pure `levelEndInfo`), status texts to `battleText.ts` (pure). A
   Esc pauses (`togglePause` / `setPaused`: `update` stops, `DomUi.showPause`; co-op: net/CLAUDE.md). The pause dialog's

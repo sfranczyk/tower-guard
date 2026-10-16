@@ -4,7 +4,7 @@ import { drawBurning } from '../rendering/burning';
 import { NO_AFFLICTIONS, chill, ignite, tickAfflictions, timeScale, type Afflictions } from '../systems/afflictions';
 import { DRAGON_TURBULENCE_MS } from '../config';
 import { turbulenceStrength } from '../systems/vortex';
-import type { EnemyType, Vec2 } from '../types';
+import type { UnitType, Vec2 } from '../types';
 
 /** A burn fades out over its last this many ms. */
 const BURN_FADE_MS = 600;
@@ -52,7 +52,7 @@ export class AfflictionLayer {
   private headwindFactor = 1;
   private headwindMs = 0;
 
-  public constructor(private readonly type: EnemyType, private readonly options: AfflictionOptions = {}) {}
+  public constructor(private readonly type: UnitType, private readonly options: AfflictionOptions = {}) {}
 
   /** How fast the enemy does everything (0 frozen, FROST_SLOW chilled, 1 normal). */
   public get timeScale(): number {

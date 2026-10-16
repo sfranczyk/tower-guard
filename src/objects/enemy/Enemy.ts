@@ -9,12 +9,12 @@ import type { BodyColors } from '../../rendering/bodyColors';
 import { enemyGibColors } from '../../rendering/enemyBody';
 import { fromBodyAnchor, spriteToWorld, toBodyAnchor, type BodyAnchor } from '../../systems/bodyAnchor';
 import { ENEMY_LOOKS, type EnemyLook } from '../../data/enemies';
-import { enemyArchetype } from '../../data/enemyKinds';
+import { enemyArchetype, isAllyType } from '../../data/enemyKinds';
 import { mountHealth } from '../../data/enemyTuning';
 import { groundAt } from '../../systems/terrain';
 import { boundsAround } from '../../utils/math';
 import type { HitBox } from './enemyTypes';
-import type { Bounds, EnemyType, Vec2 } from '../../types';
+import type { Bounds, UnitType, Vec2 } from '../../types';
 import { AfflictionLayer } from '../AfflictionLayer';
 import { EnemyActions } from './enemyActions';
 import { EnemyBars } from './EnemyBars';
@@ -93,7 +93,7 @@ export default class Enemy extends Container {
     health = 3,
     speed = 60,
     target: EnemyTarget = 'bowman',
-    public readonly kind: EnemyType = 'raider',
+    public readonly kind: UnitType = 'raider',
   ) {
     super();
     this.look = ENEMY_LOOKS[kind];
@@ -105,7 +105,7 @@ export default class Enemy extends Container {
     this.figure.drawPlaceholder();
     this.afflictions = new AfflictionLayer(kind);
     this.addChild(this.buffAura.art, this.figure.body, this.afflictions.art);
-    this.bars = new EnemyBars(this.look.size, this.rider !== undefined, enemyArchetype(kind).heals);
+    this.bars = new EnemyBars(this.look.size, this.rider !== undefined, enemyArchetype(kind).heals, isAllyType(kind));
     this.addChild(this.bars.health);
     if (enemyArchetype(kind).heals) {
       this.mana = new ManaPool();
@@ -425,6 +425,11 @@ export default class Enemy extends Container {
   /** How it's drawn now, for its hit shape (enemyHitShape.ts). */
   private shape(): EnemyShape {
     return { transform: this.figure.transform(), size: this.look.size, pose: this.figure.jointPose() };
+  }
+
+  /** Turns (standing) to face world x `x`: a soldier or an enemy about to strike one behind it. */
+  public faceTowards(x: number): void {
+    this.figure.face(x < this.x ? -1 : 1);
   }
 
   /** One frame of walking towards `target` (enemyMotion.walk). */

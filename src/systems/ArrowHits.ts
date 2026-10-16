@@ -64,6 +64,8 @@ export interface ArrowHitsWorld {
   readonly bowmen: readonly Bowman[];
   readonly playerTower: Tower;
   readonly enemyTower: Tower;
+  /** The player's soldiers: enemy arrows hit them (players' arrows only with friendly fire, as `resolve`'s targets). */
+  readonly allies: readonly Enemy[];
   readonly arrows: readonly Arrow[];
   readonly effects: EffectsSystem;
   readonly debug: Graphics;
@@ -110,12 +112,28 @@ export class ArrowHits {
     this.arrowHits.delete(arrow);
   }
 
-  /** Enemy arrows hurt any bowman out in the open, or the keep while everyone left hides inside it. */
+  /**
+   * Enemy arrows hurt any bowman out in the open or soldier on their path (the earliest), or the keep while everyone left
+   * hides inside it.
+   */
   public resolveHostile(arrow: Arrow): void {
     const { start, end } = arrow.getTravelSegment();
     const travel = { x: end.x - start.x, y: end.y - start.y };
     const { bowmen, playerTower, effects } = this.world;
     const exposed = bowmen.filter((bowman) => !bowman.isInTower && !bowman.isDead);
+    const allyHit = this.world.allies
+      .filter((ally) => ally.isAlive())
+      .map((ally) => ArrowHits.hitTest(start, travel, ally))
+      .filter((candidate): candidate is EnemyHit => candidate !== undefined)
+      .sort((first, second) => first.time - second.time)[0];
+    const bowmanTime = exposed
+      .map((bowman) => segmentHitTime(start, travel, bowmanBox(bowman)))
+      .filter((time): time is number => time !== undefined)
+      .sort((first, second) => first - second)[0];
+    if (allyHit && !(allyHit.enemy instanceof DragonEnemy) && (bowmanTime === undefined || allyHit.time < bowmanTime)) {
+      this.hostileHitAlly(arrow, allyHit.enemy, allyHit.headshot, pointAlong(start, travel, allyHit.time), start.x);
+      return;
+    }
 
     if (exposed.length === 0 && bowmen.some((bowman) => !bowman.isDead)) {
       // Follows the keep's silhouette; chips fly off where it lands.
@@ -141,6 +159,20 @@ export class ArrowHits {
       this.events.sound('arrowFlesh', point);
       arrow.deactivate();
     }
+  }
+
+  /** An enemy's arrow in one of the player's soldiers: his plate turns a body hit (sparks), else blood; it falls away. */
+  private hostileHitAlly(arrow: Arrow, ally: Enemy, headshot: boolean, point: Vec2, fromX: number): void {
+    const armor = headshot ? 1 : enemyArmor(ally.kind);
+    const damage = rollDamage(arrowDamage(arrow.shooter, 'bowman')) * this.world.enemyEdge.damage * armor * (headshot ? ARROWS.headshotMultiplier : 1);
+    if (armor < 1) {
+      this.world.effects.impact(point);
+    } else {
+      this.world.effects.bloodBurst(point, ally.bodyColors);
+      this.events.sound('arrowFlesh', point);
+    }
+    ally.takeDamage(damage, { cause: headshot ? 'headshot' : 'arrow', fromX, point });
+    arrow.deactivate();
   }
 
   public resolve(arrow: Arrow, activeEnemies: readonly Foe[], friendly: readonly Bowman[]): void {

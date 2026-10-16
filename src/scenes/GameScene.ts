@@ -28,6 +28,7 @@ import type { EndInfo } from '../net/protocol';
 import Tower from '../objects/Tower';
 import { BattleArrows } from './BattleArrows';
 import { BattleCamera } from './BattleCamera';
+import { BattleAllies } from './BattleAllies';
 import { BattleEnemies } from './BattleEnemies';
 import { BattlePlayers } from './BattlePlayers';
 import { startBattleSync } from './battleSync';
@@ -44,6 +45,10 @@ import { Snow } from '../rendering/Snow';
 import { WeatherSystem } from '../systems/WeatherSystem';
 import { livingBowmen } from '../systems/targeting';
 import { firstArrow, type ArrowType, type Loadout } from '../data/loadout';
+import { ALLY_TYPES, ENEMY_KINDS } from '../data/enemyKinds';
+import type Enemy from '../objects/enemy/Enemy';
+import { ALLY_ORDER_LABELS } from '../systems/allyOrders';
+import { ALLY_KEYS, ORDER_KEY } from '../ui/template';
 import type { Vec2 } from '../types';
 
 /**
@@ -57,6 +62,9 @@ export class GameScene extends Scene {
   /** The level's enemies (also `foes.list`; kept here for the ?debug console: `scene.enemies[0]`). */
   private readonly enemies: Foe[] = [];
   private readonly foes: BattleEnemies;
+  /** The player's soldiers (also `soldiers.list`; for the ?debug console: `scene.allies[0]`). */
+  private readonly allies: Enemy[] = [];
+  private readonly soldiers: BattleAllies;
   /** Every arrow of the level. */
   private readonly shots: BattleArrows;
   private readonly debugGraphics = new Graphics();
@@ -115,6 +123,11 @@ export class GameScene extends Scene {
       wavePacing: wavePacing(difficulty),
       hostSync: () => this.hostSync,
       onDamaged: (foe, amount, hit) => this.damageNumbers.show(foe, amount, hit),
+    });
+    this.soldiers = new BattleAllies({
+      world: this.world,
+      list: this.allies,
+      onDamaged: (ally, amount, hit) => this.damageNumbers.show(ally, amount, hit),
     });
     this.shots = new BattleArrows({
       world: this.world,
@@ -188,6 +201,8 @@ export class GameScene extends Scene {
         playerTower: this.playerTower,
         enemyTower: this.enemyTower,
         enemies: this.enemies,
+        allies: this.allies,
+        allyOrder: () => this.soldiers.order,
         arrows: this.shots.list,
         effects: this.effects,
         debug: this.debugGraphics,
@@ -206,6 +221,11 @@ export class GameScene extends Scene {
         bowmanIgnited: (bowman) => this.team.status(this.team.of(bowman), 'You are on fire! Get out of the flames'),
         enemyShot: (from, angle, speed, shooter) => this.shots.fireEnemy(from, angle, speed, shooter),
         sound: (id, at) => this.playSound(id, at),
+        bowmanMissing: (bowman) => (bowman.isDead ? 0 : Math.max(0, this.ctx.session.sandbox.bowmanHealth - this.team.of(bowman).health)),
+        bowmanHealed: (bowman, amount) => {
+          const player = this.team.of(bowman);
+          player.health = Math.min(this.ctx.session.sandbox.bowmanHealth, player.health + amount);
+        },
       },
     );
 
@@ -270,6 +290,7 @@ export class GameScene extends Scene {
       return;
     }
     this.foes.update(deltaMs);
+    this.soldiers.update(deltaMs);
     const shifted = this.windShifts.update(deltaMs, this.wind);
     if (shifted !== undefined) {
       this.setWind(shifted);
@@ -403,6 +424,13 @@ export class GameScene extends Scene {
 
     ui.handlers.toggleOptions = () => this.toggleOptions();
     ui.handlers.selectProjectile = (type) => this.localInput?.queueProjectile(type);
+    // The player's soldiers: not yet in online co-op (the guest doesn't see them yet).
+    const commandsSoldiers = !this.ctx.session.net;
+    ui.setAllies(commandsSoldiers ? ALLY_TYPES.map((type) => ({ type, label: ENEMY_KINDS[type].label })) : []);
+    if (commandsSoldiers) {
+      ui.handlers.summonAlly = (type) => this.summonAlly(type);
+      ui.handlers.cycleAllyOrder = () => this.cycleAllyOrder();
+    }
     ui.handlers.pauseResume = () => {
       if (this.paused) {
         this.togglePause();
@@ -430,6 +458,9 @@ export class GameScene extends Scene {
       ui.handlers.pauseRestart = undefined;
       ui.handlers.pauseLoadout = undefined;
       ui.handlers.selectProjectile = undefined;
+      ui.handlers.summonAlly = undefined;
+      ui.handlers.cycleAllyOrder = undefined;
+      ui.setAllies([]);
     });
 
     this.listenWindow('keydown', (event) => {
@@ -451,6 +482,15 @@ export class GameScene extends Scene {
       if (projectile) {
         this.localInput?.queueProjectile(projectile);
       }
+      if (commandsSoldiers && !this.gameEnded) {
+        const ally = ALLY_TYPES.find((type) => event.code === `Key${ALLY_KEYS[type]}`);
+        if (ally) {
+          this.summonAlly(ally);
+        }
+        if (event.code === `Key${ORDER_KEY}`) {
+          this.cycleAllyOrder();
+        }
+      }
       if (event.code === 'KeyO') {
         this.foes.toggleVisible();
         this.debugGraphics.clear();
@@ -464,6 +504,26 @@ export class GameScene extends Scene {
         }
       }
     });
+  }
+
+  /** A soldier of `type` comes in from beyond the left edge (if his kind's limit and pause allow). */
+  private summonAlly(type: (typeof ALLY_TYPES)[number]): void {
+    if (this.paused || this.gameEnded) {
+      return;
+    }
+    if (!this.soldiers.summon(type)) {
+      const slot = this.soldiers.slots().find((candidate) => candidate.type === type);
+      if (slot && slot.alive >= slot.limit) {
+        this.ctx.ui.setStatus(`All ${slot.limit} ${ENEMY_KINDS[type].label.toLowerCase()}s are on the field`);
+      }
+    }
+  }
+
+  private cycleAllyOrder(): void {
+    if (this.paused || this.gameEnded) {
+      return;
+    }
+    this.ctx.ui.setStatus(`Soldiers: ${ALLY_ORDER_LABELS[this.soldiers.cycleOrder()]}`);
   }
 
   /** Stops reading this browser's keyboard and mouse (the level ended); the local player stands still. */
@@ -510,6 +570,7 @@ export class GameScene extends Scene {
 
   private updateHud(): void {
     this.players.forEach((player) => player.bowman.setHealthRatio(player.health / this.ctx.session.sandbox.bowmanHealth));
+    this.ctx.ui.updateAllies({ slots: this.soldiers.slots(), order: this.soldiers.order, orderLabel: ALLY_ORDER_LABELS[this.soldiers.order] });
     this.ctx.ui.updateHud({
       defeatedEnemies: this.foes.defeated(),
       totalEnemies: this.foes.total,
@@ -555,6 +616,8 @@ export class GameScene extends Scene {
     if (!won) {
       this.enemies.forEach((enemy) => enemy.celebrate());
       this.hostSync?.push({ e: 'cheer' });
+    } else {
+      this.soldiers.celebrate();
     }
     const { run, sandbox } = this.ctx.session;
     this.endAction = showLevelEnd(this.ctx, {

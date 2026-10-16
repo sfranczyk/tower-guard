@@ -17,6 +17,9 @@ open the one you need:
 - `enemyHitShape.ts` (pure, tested): head/body boxes and the stuck-arrow torso from the drawn pose.
 - `enemyNet.ts`: co-op `getNetState` / `applyNetState`.
 
+- **Allies**: the player's soldiers are `Enemy` objects too (`isAllyType(kind)`, `side: 'ally'` in ENEMY_KINDS;
+  `UnitType` = `EnemyType | AllyType`): blue health bar (`EnemyBars` `ally`), cheer facing right, `faceTowards(x)`.
+
 ## Behaviour
 - `Enemy.takeDamage(amount, { cause, fromX })` picks the reaction: headshot → `deathStiff`, explosion → `knockback`
   (survivors get up), other kills `death` or `deathCrumple` at random; blast kills blow it apart (rendering/CLAUDE.md).

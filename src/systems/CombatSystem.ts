@@ -17,7 +17,7 @@ import type { BowmanHit } from './bowmanDeath';
 import DragonEnemy from '../objects/dragon/DragonEnemy';
 import type Enemy from '../objects/enemy/Enemy';
 import type Tower from '../objects/Tower';
-import type { EnemyType, Vec2 } from '../types';
+import type { EnemyType, UnitType, Vec2 } from '../types';
 import { struckBy } from './lightning';
 import { groundAt } from './terrain';
 import type { EffectsSystem } from './EffectsSystem';
@@ -25,6 +25,8 @@ import { ArrowMagic } from './ArrowMagic';
 import { ArrowHits } from './ArrowHits';
 import { BOWMAN_CHEST, TOWER_HALF_WIDTH, type Foe } from './combatGeometry';
 import { EnemyAI } from './EnemyAI';
+import { AllyAI } from './AllyAI';
+import type { AllyOrder } from './allyOrders';
 import { BombFuses, blastFalloff, bombGoesOff, chainChance } from './kamikazeBomb';
 
 export type { Foe } from './combatGeometry';
@@ -41,7 +43,7 @@ interface ChainStep {
 /** A kamikaze's bomb going off: where, whose (its damage), how big (a shaman's spell), where in its chain. */
 interface Bomb extends ChainStep {
   readonly point: Vec2;
-  readonly kind: EnemyType;
+  readonly kind: UnitType;
   readonly power: number;
 }
 
@@ -51,6 +53,10 @@ export interface CombatWorld {
   readonly playerTower: Tower;
   readonly enemyTower: Tower;
   readonly enemies: readonly Foe[];
+  /** The player's soldiers (scenes/BattleAllies.ts; the fallen stay as corpses). */
+  readonly allies: readonly Enemy[];
+  /** What the soldiers are told now. */
+  allyOrder(): AllyOrder;
   readonly arrows: readonly Arrow[];
   readonly effects: EffectsSystem;
   readonly debug: Graphics;
@@ -74,6 +80,9 @@ export interface CombatEvents {
   sound(id: SoundId, at: Vec2): void;
   /** A hostile arrow loosed by `shooter` (its damage depends on who shot it). */
   enemyShot(from: Vec2, angle: number, speed: number, shooter: EnemyType): void;
+  /** How much health `bowman` is missing (the medic heals him). */
+  bowmanMissing(bowman: Bowman): number;
+  bowmanHealed(bowman: Bowman, amount: number): void;
 }
 
 /**
@@ -85,6 +94,7 @@ export class CombatSystem {
   /** The fire, frost and vortex arrows. */
   private readonly magic: ArrowMagic;
   private readonly ai: EnemyAI;
+  private readonly allyAI: AllyAI;
   private readonly hits: ArrowHits;
   /** Kamikazes killed by a blast: their bombs go off a moment later. */
   private readonly fuses = new BombFuses<Bomb>();
@@ -106,6 +116,7 @@ export class CombatSystem {
     });
     this.magic = magic;
     this.ai = new EnemyAI(world, events, { detonate: (kamikaze) => this.detonate(kamikaze) });
+    this.allyAI = new AllyAI(world, events);
     this.hits = new ArrowHits(world, events, magic, {
       explode: (point, activeEnemies, directHit, power, dragon) => this.explode(point, activeEnemies, directHit, power, dragon),
       detonate: (kamikaze) => this.detonate(kamikaze),
@@ -124,8 +135,11 @@ export class CombatSystem {
   public update(deltaMs: number, enemiesActive = true): void {
     this.fuses.tick(deltaMs).forEach((bomb) => this.blowUp(bomb));
     const activeEnemies = enemiesActive ? this.world.enemies.filter((enemy) => enemy.isAlive()) : [];
+    const livingAllies = this.world.allies.filter((ally) => ally.isAlive());
     this.ai.beginFrame();
     activeEnemies.forEach((enemy) => this.ai.update(enemy, deltaMs));
+    livingAllies.forEach((ally) => this.allyAI.update(ally, deltaMs));
+    this.world.allies.filter((ally) => !ally.isAlive()).forEach((ally) => ally.updateAnimation(deltaMs, false));
     // Burning: steady damage until the burn runs out (each bowman counts it down in his animation); a dragon's fire, so the difficulty's.
     this.world.bowmen
       .filter((bowman) => bowman.isBurning && !bowman.isDead)
@@ -137,7 +151,9 @@ export class CombatSystem {
       }));
     }
     const friendly = this.friendlyTargets();
-    this.magic.update(deltaMs, activeEnemies, friendly);
+    // Friendly fire: the players' arrows and their effects hit the soldiers like the enemies.
+    const arrowTargets: readonly Foe[] = this.world.friendlyFire() ? [...activeEnemies, ...livingAllies] : activeEnemies;
+    this.magic.update(deltaMs, arrowTargets, friendly);
     // Dead enemies finish (then hold) their death animation.
     this.world.enemies.filter((enemy) => !enemy.isAlive()).forEach((enemy) => enemy.updateAnimation(deltaMs, false));
 
@@ -145,7 +161,7 @@ export class CombatSystem {
     arrows.filter((arrow) => arrow.isActive).forEach((arrow) => arrow.update(deltaMs));
     arrows
       .filter((arrow) => arrow.isActive && !arrow.isStuck)
-      .forEach((arrow) => (arrow.hostile ? this.hits.resolveHostile(arrow) : this.hits.resolve(arrow, activeEnemies, friendly)));
+      .forEach((arrow) => (arrow.hostile ? this.hits.resolveHostile(arrow) : this.hits.resolve(arrow, arrowTargets, friendly)));
     // Stuck or gone, an arrow hits nothing more: what it already hit can go.
     arrows.filter((arrow) => !arrow.isActive || arrow.isStuck).forEach((arrow) => this.hits.forget(arrow));
     arrows
@@ -153,7 +169,7 @@ export class CombatSystem {
       .forEach((arrow) => {
         const point = { x: arrow.x, y: groundAt(arrow.x) - 3 };
         if (arrow.type === 'explosive') {
-          this.explode(point, activeEnemies);
+          this.explode(point, arrowTargets);
           arrow.deactivate();
         } else if (arrow.type === 'vortex') {
           // The rune stone becomes the vortex.
@@ -175,7 +191,7 @@ export class CombatSystem {
     effects.lightningStrike(point);
     // Ground strikes don't reach flying dragons.
     // A kamikaze's bomb may go off (KAMIKAZE_BOMB.lightningChance); else it dies silently like the rest.
-    struckBy(point.x, LIGHTNING_RADIUS, enemies.filter((enemy) => enemy.isAlive() && !enemy.isFlying))
+    struckBy(point.x, LIGHTNING_RADIUS, [...enemies, ...this.world.allies].filter((enemy) => enemy.isAlive() && !enemy.isFlying))
       .forEach((enemy) => {
         if (!(enemy instanceof DragonEnemy) && enemyArchetype(enemy.kind).detonates && bombGoesOff('lightning', enemy.afflictions.isFrozen)) {
           this.detonate(enemy);
@@ -228,7 +244,7 @@ export class CombatSystem {
   private blowUp({ point, kind, power, chain, link }: Bomb, self?: Enemy): void {
     const { bowmen, playerTower, effects } = this.world;
     // The bowmen take the kamikaze's own blast below, not the arrows' splash; the kamikazes it catches are the chain's next link.
-    this.explode(point, this.world.enemies.filter((enemy) => enemy.isAlive()), self, power, false, false, { chain, link: link + 1 });
+    this.explode(point, [...this.world.enemies, ...this.world.allies].filter((enemy) => enemy.isAlive()), self, power, false, false, { chain, link: link + 1 });
     const reach = EXPLOSION_RADIUS * KAMIKAZE_REACH * power;
     bowmen.filter((bowman) => !bowman.isInTower && !bowman.isDead).forEach((bowman) => {
       const bowmanDistance = Math.hypot(bowman.x - point.x, bowman.y - BOWMAN_CHEST - point.y);

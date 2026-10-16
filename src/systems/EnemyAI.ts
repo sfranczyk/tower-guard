@@ -36,7 +36,8 @@ import { ShamanSpells } from './ShamanSpells';
 import type { BowmanHit } from './bowmanDeath';
 import { BOWMAN_CHEST, TOWER_HALF_WIDTH, bowmanBox, foeHitBoxes, type Foe } from './combatGeometry';
 import type { EffectsSystem } from './EffectsSystem';
-import { nearestExposedBowman } from './targeting';
+import { meleeBlow } from './AllyAI';
+import { nearestExposedBowman, nearestMeleeTarget } from './targeting';
 import { groundAt } from './terrain';
 
 const MELEE_REACH = 25;
@@ -54,6 +55,8 @@ export interface EnemyAIWorld {
   readonly playerTower: Tower;
   /** Everyone on the field (a priest heals the others). */
   readonly enemies: readonly Foe[];
+  /** The player's soldiers: they stop the melee enemies and draw the archers' arrows like the bowmen. */
+  readonly allies: readonly Enemy[];
   readonly effects: EffectsSystem;
   readonly debug: Graphics;
   /** The level's wind now (px/s² on a normal arrow); archers aim with it. */
@@ -110,8 +113,9 @@ export class EnemyAI {
       if (kamikaze.isPinned || kamikaze.isCelebrating) {
         return [here];
       }
-      const bowman = nearestExposedBowman(this.world.bowmen, kamikaze.x);
-      const blastX = bowman ? bowman.x + Math.sign(kamikaze.x - bowman.x) * MELEE_REACH : this.world.playerTower.x + TOWER_ATTACK_REACH;
+      const target = nearestMeleeTarget(this.world.bowmen, this.world.allies, kamikaze.x);
+      const victim = target?.bowman ?? target?.ally;
+      const blastX = victim ? victim.x + Math.sign(kamikaze.x - victim.x) * MELEE_REACH : this.world.playerTower.x + TOWER_ATTACK_REACH;
       return [here, { owner: kamikaze, x: blastX, radius, fused: true }];
     });
     this.bombs = { kamikazes: new Map(kamikazes.map((kamikaze) => [kamikaze, kamikaze.x])), zones: blastZones(spots) };
@@ -143,8 +147,13 @@ export class EnemyAI {
       return;
     }
     const { playerTower } = this.world;
-    // The nearest bowman out in the open, or the keep when everyone left is hiding in it.
-    const bowman = nearestExposedBowman(this.world.bowmen, enemy.x);
+    // The nearest bowman out in the open or soldier, or the keep when there's nobody out.
+    const melee = nearestMeleeTarget(this.world.bowmen, this.world.allies, enemy.x);
+    if (melee?.ally) {
+      this.fightAlly(enemy, melee.ally, deltaMs);
+      return;
+    }
+    const bowman = melee?.bowman;
     enemy.target = bowman ? 'bowman' : 'tower';
     // A mounted knight stops further off: its horse's head is ahead of it and its lance reaches past it.
     const meleeReach = enemy.reach?.bowman ?? MELEE_REACH;
@@ -215,6 +224,46 @@ export class EnemyAI {
       }
     }
 
+    enemy.clearHitTint();
+  }
+
+  /**
+   * A melee enemy whose nearest foe is one of the player's soldiers: walks up to him and strikes (his plate turns most
+   * of it); a kamikaze blows itself up at him. Kamikaze heed as against the bowman.
+   */
+  private fightAlly(enemy: Enemy, ally: Enemy, deltaMs: number): void {
+    enemy.target = 'ally';
+    const meleeReach = enemy.reach?.bowman ?? MELEE_REACH;
+    const dodge = this.heedBombs(enemy, enemy.x >= ally.x, deltaMs);
+    if (dodge.kind !== 'free') {
+      const toX = dodge.kind === 'flee' ? Math.min(WORLD_WIDTH, Math.max(this.world.playerTower.x, dodge.toX)) : enemy.x;
+      enemy.update(deltaMs, { x: toX, y: groundAt(toX) }, 2);
+      enemy.updateAnimation(deltaMs, enemy.isMoving());
+      this.drawDebugHitboxes(enemy);
+      enemy.clearHitTint();
+      return;
+    }
+    enemy.update(deltaMs, { x: ally.x, y: groundAt(ally.x) }, meleeReach);
+    enemy.updateAnimation(deltaMs, enemy.isMoving());
+    this.drawDebugHitboxes(enemy);
+    if (enemy.isDown || enemy.afflictions.isFrozen || enemy.afflictions.inVortex) {
+      return;
+    }
+    const inReach = Math.abs(enemy.x - ally.x) <= meleeReach + 2;
+    if (enemyArchetype(enemy.kind).detonates) {
+      if (inReach) {
+        this.actions.detonate(enemy);
+      }
+      return;
+    }
+    if (inReach && enemy.canAttack()) {
+      enemy.faceTowards(ally.x);
+      enemy.playAttackAnimation(() => {
+        if (ally.isAlive() && Math.abs(enemy.x - ally.x) <= enemy.strikeReach) {
+          meleeBlow(ally, rollDamage(enemyDamage(enemy.kind, 'melee', 'bowman')) * this.world.enemyEdge.damage, enemy.x, this.world.effects);
+        }
+      });
+    }
     enemy.clearHitTint();
   }
 
@@ -333,7 +382,7 @@ export class EnemyAI {
    * aim with the real ballistics and shoot with a little spread.
    */
   private updateArcher(enemy: Enemy, deltaMs: number): void {
-    const aimPoint = this.aimPointFrom(enemy.x);
+    const aimPoint = this.aimPointFrom(enemy.x, true);
     const inRange = Math.abs(aimPoint.x - enemy.x) <= ENEMY_ATTACK.archerRange;
 
     if (enemy.isDown || !inRange) {
@@ -352,7 +401,7 @@ export class EnemyAI {
       }
       if (enemy.aimBow(angle ?? Math.PI, deltaMs)) {
         const spread = (Math.random() * 2 - 1) * ENEMY_ATTACK.archerSpread * this.world.enemyEdge.aimSpread;
-        this.events.enemyShot(enemy.getBowReleasePoint(), (angle ?? Math.PI) + spread, speed * (0.97 + Math.random() * 0.06), enemy.kind);
+        this.events.enemyShot(enemy.getBowReleasePoint(), (angle ?? Math.PI) + spread, speed * (0.97 + Math.random() * 0.06), enemy.kind as EnemyType);
       }
     }
     enemy.updateAnimation(deltaMs, enemy.isMoving());
@@ -436,10 +485,14 @@ export class EnemyAI {
    * Where ranged enemies at `fromX` aim: the chest of the nearest bowman out in the open, or the keep when
    * everyone left is hiding in it.
    */
-  private aimPointFrom(fromX: number): Vec2 {
-    const bowman = nearestExposedBowman(this.world.bowmen, fromX);
-    return bowman
-      ? { x: bowman.x, y: bowman.y - BOWMAN_CHEST }
+  /** The chest of the nearest bowman out in the open (archers on foot: or soldier), else the keep's wall. */
+  private aimPointFrom(fromX: number, soldiersToo = false): Vec2 {
+    const target = nearestMeleeTarget(this.world.bowmen, soldiersToo ? this.world.allies : [], fromX);
+    if (target?.ally) {
+      return { x: target.ally.x, y: target.ally.y - 25 * target.ally.size };
+    }
+    return target?.bowman
+      ? { x: target.bowman.x, y: target.bowman.y - BOWMAN_CHEST }
       : { x: this.world.playerTower.x, y: GROUND_Y - TOWER_HEIGHT * 0.55 };
   }
 }

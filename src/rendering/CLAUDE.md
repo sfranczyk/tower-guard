@@ -34,7 +34,7 @@ animation gets a row in `scenes/labRows.ts` (or `scenes/labSequences.ts` for one
   (`bowInRearHand`).
 - **Designs** (`designs/`): `bodyPoses.ts` (BodyPose for every animation, pure, tested), `skinKit.ts` (parts in
   torso/head frames), `drawHumanoid` / `HumanoidLook`; looks in `enemySkins.ts`, `heavySkins.ts`, `knightSkins.ts`,
-  `playerSkins.ts`, `warhorse.ts`; ideas in `ideas.ts` (+ `ideaHumanoids.ts`, `ideaFolk.ts`, `ideaUndead.ts`, `ideaBeasts.ts`, `ideaCreatures.ts`, gaits in `designSkeleton.ts`);
+  `playerSkins.ts`, `warhorse.ts`, `allySkins.ts` (the player's soldiers: squire, knight, medic; design-lab tab Allies); ideas in `ideas.ts` (+ `ideaHumanoids.ts`, `ideaFolk.ts`, `ideaUndead.ts`, `ideaBeasts.ts`, `ideaCreatures.ts`, gaits in `designSkeleton.ts`);
   catalogue `catalog.ts`. Green Meadow trees (tab Trees): `treeDesigns.ts`
   (`TREE_DESIGNS`); the map's round-tree row mixes those weighted in `MEADOW_TREES` (`meadowTrees.ts`, `meadowTreeAt`).
 

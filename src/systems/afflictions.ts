@@ -1,6 +1,6 @@
 import { ENEMY_BURN_MS, FROST_CHILL_MS, FROST_FREEZE_HITS, FROST_SLOW } from '../config';
 import { enemyTraits } from '../data/enemyKinds';
-import type { EnemyType } from '../types';
+import type { UnitType } from '../types';
 
 /**
  * What the fire and frost arrows do to an enemy (pure, tested): burning, chilled (slowed) and frozen solid. Timers count down in real time; `timeScale` is how fast everything else the
@@ -34,21 +34,21 @@ export const tickAfflictions = (state: Readonly<Afflictions>, deltaMs: number): 
 };
 
 /** How long a fire arrow (or the fire spreading) sets `type` alight (its traits: the undead burn longer, the fire dragon not at all). */
-export const burnDurationMs = (type: EnemyType): number => ENEMY_BURN_MS * enemyTraits(type).burnFactor;
+export const burnDurationMs = (type: UnitType): number => ENEMY_BURN_MS * enemyTraits(type).burnFactor;
 
 /** Set alight (or relit to the full time, `duration`): fire thaws ice and drives the chill out (also from one that doesn't burn). */
-export const ignite = (state: Readonly<Afflictions>, type: EnemyType, duration = burnDurationMs(type)): Afflictions => {
+export const ignite = (state: Readonly<Afflictions>, type: UnitType, duration = burnDurationMs(type)): Afflictions => {
   return { burnMs: duration > 0 ? Math.max(state.burnMs, duration) : state.burnMs, chillMs: 0, chillHits: 0, frozenMs: 0 };
 };
 
 /** How long a freeze holds `type` (its traits: ogres briefly); 0 for dragons (only chilled). */
-export const freezeDurationMs = (type: EnemyType): number => enemyTraits(type).freezeMs;
+export const freezeDurationMs = (type: UnitType): number => enemyTraits(type).freezeMs;
 
 /**
  * Hit by a frost arrow: puts out a fire and chills (a fresh chill restarts its time). The FROST_FREEZE_HITS-th hit
  * while chilled, or a headshot, freezes it solid (if it can be frozen); a frozen one stays frozen for the full time.
  */
-export const chill = (state: Readonly<Afflictions>, type: EnemyType, headshot: boolean): { state: Afflictions; froze: boolean } => {
+export const chill = (state: Readonly<Afflictions>, type: UnitType, headshot: boolean): { state: Afflictions; froze: boolean } => {
   const chillHits = (state.chillMs > 0 ? state.chillHits : 0) + 1;
   const freezeMs = freezeDurationMs(type);
   const froze = freezeMs > 0 && state.frozenMs <= 0 && (headshot || chillHits >= FROST_FREEZE_HITS);
