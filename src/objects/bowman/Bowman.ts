@@ -28,7 +28,7 @@ const AFFLICTION_SIZE = 1;
 /** Levitating, he's drawn in front of the funnel. */
 const LEVITATE_Z = 4;
 /** Health bar over his head (container space, drawn at 1/3: the enemies' size on screen), `aboveHead` over his top point. */
-const HEALTH_BAR = { width: 60, height: 8, aboveHead: 34 };
+const HEALTH_BAR = { width: 60, height: 8, belowFeet: 10 };
 
 export interface BowmanConfig {
   width?: number;
@@ -399,21 +399,21 @@ export class Bowman extends Container {
     this.placeHealthBar();
   }
 
-  /** His health share (0..1) for the bar over his head. */
+  /** His health share (0..1) for the bar under his feet. */
   public setHealthRatio(ratio: number): void {
     this.healthRatio = ratio;
   }
 
-  /** Over his head as he is now (standing, falling, flailing); hidden once dead. */
+  /** Under his feet as he is now (standing, falling, flailing); hidden once dead. */
   private placeHealthBar(): void {
     this.healthBar.visible = !this.isDead;
     if (!this.healthBar.visible) {
       return;
     }
     const points = this.figure.burnPoints();
-    const top = Math.min(...points.map((point) => point.y));
+    const bottom = Math.max(0, ...points.map((point) => point.y));
     const centre = points.reduce((sum, point) => sum + point.x, 0) / points.length;
-    this.healthBar.position.set(centre, top - HEALTH_BAR.aboveHead);
+    this.healthBar.position.set(centre, bottom + HEALTH_BAR.belowFeet);
     drawHealthBar(this.healthBar, this.healthRatio, HEALTH_BAR.width, HEALTH_BAR.height);
   }
 

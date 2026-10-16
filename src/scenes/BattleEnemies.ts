@@ -24,6 +24,8 @@ export interface BattleEnemiesDeps {
   /** How a wave's enemies come out (one by one, or in groups on medium and hard). */
   wavePacing: WavePacing;
   hostSync(): HostSync | undefined;
+  /** An enemy took a hit (on the host and the co-op guest alike). */
+  onDamaged?(foe: Foe, amount: number, hit?: HitInfo): void;
 }
 
 /** A level's enemies: released in waves, spawned, riders thrown off their horses, and counted for the level's end. */
@@ -101,6 +103,7 @@ export class BattleEnemies {
     }
     this.deps.world.addChild(enemy);
     this.deps.hostSync()?.trackEnemy(enemy, type, place);
+    enemy.onDamaged = (amount: number, hit?: HitInfo) => this.deps.onDamaged?.(enemy, amount, hit);
     if (enemy instanceof Enemy) {
       if (place) {
         // A rider keeps the health he had in the saddle (one with none left is killed by the blow: unhorse).

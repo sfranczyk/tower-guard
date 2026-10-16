@@ -49,6 +49,14 @@ export const AIM_HALO = tunable('AIM_HALO', 'Aim halo', {
   extra: 1,
   alpha: 0.35,
 }, { meta: { alpha: { max: 1 }, extra: { min: 0, max: 4, step: 0.25 } } });
+/** Damage numbers over an enemy's head on an arrow hit (objects/DamageNumbers.ts; settings drawer toggle). */
+export const DAMAGE_NUMBERS = tunable('DAMAGE_NUMBERS', 'Damage numbers', {
+  lifeMs: 900,
+  rise: 36,
+  fontSize: 15,
+  headshotFontSize: 20,
+  aboveHead: 4,
+}, { meta: { lifeMs: { min: 200, max: 3000, step: 50 }, rise: { min: 0, max: 120 } } });
 /**
  * Valley mist of the mountain maps (rendering/landscape.ts): clear at `*Top`, thickening down to `*Alpha` at `*Bottom`
  * (world y), once over the far peaks' feet (the near slopes cover its lower end) and once over the near slopes'

@@ -39,6 +39,7 @@ export class SceneManager {
         showTrajectory: false,
         showCursorCircle: false,
         friendlyFire: true,
+        showDamageNumbers: true,
         arrowTrails: DEFAULT_ARROW_TRAILS,
       },
       goTo: (scene) => this.goTo(scene),
@@ -61,6 +62,9 @@ export class SceneManager {
     ui.handlers.cursorCircleChange = (enabled) => {
       this.ctx.session.showCursorCircle = enabled;
     };
+    ui.handlers.damageNumbersChange = (enabled) => {
+      this.ctx.session.showDamageNumbers = enabled;
+    };
     ui.handlers.friendlyFireChange = (enabled) => {
       this.ctx.session.friendlyFire = enabled;
     };
@@ -72,6 +76,7 @@ export class SceneManager {
     ui.setTrajectoryOption(this.ctx.session.showTrajectory);
     ui.setCursorCircleOption(this.ctx.session.showCursorCircle);
     ui.setFriendlyFireOption(this.ctx.session.friendlyFire);
+    ui.setDamageNumbersOption(this.ctx.session.showDamageNumbers);
     ui.setArrowTrailsOption(this.ctx.session.arrowTrails);
     ui.setAudioOptions(sound.settings);
 

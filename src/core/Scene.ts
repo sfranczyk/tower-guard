@@ -64,6 +64,8 @@ export interface GameSession {
    * enemies. In co-op the host's setting counts.
    */
   friendlyFire: boolean;
+  /** Damage numbers over an enemy's head on an arrow hit (settings drawer, on by default). */
+  showDamageNumbers: boolean;
   /** How many of the latest shots keep their trail (settings drawer, 0 = none, up to MAX_ARROW_TRAILS). */
   arrowTrails: number;
 }

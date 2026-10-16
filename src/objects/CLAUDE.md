@@ -7,7 +7,7 @@ listing its parts.
 Enemies and bowmen have the same `AfflictionLayer` (fire, frost, vortex hold; the bowman's own fire with his duration
 and flame size via `AfflictionOptions`) and the same `BodyMotion` (`systems/bodyMotion.ts`, pure, tested: thrown,
 landing, the co-op guest's driven copy, the pin). Enemy's parts: `enemy/CLAUDE.md`; the bowman's: `bowman/CLAUDE.md` (his
-walking speed and knockdown are `systems/bowmanMotion.ts`). Health bars: `rendering/healthBar.ts`. Combat code takes `Foe = Enemy | DragonEnemy`.
+walking speed and knockdown are `systems/bowmanMotion.ts`). Health bars (under the feet / body / keep): `rendering/healthBar.ts`. Damage numbers over the head on a hit (not burn/fall): `DamageNumbers.ts` (fed by `Enemy`/`DragonEnemy.onDamaged` via `BattleEnemies`, so the co-op guest sees them too; motion `rendering/damagePopup.ts`, tuning `DAMAGE_NUMBERS`). Combat code takes `Foe = Enemy | DragonEnemy`.
 
 ## Arrow
 `Arrow.hostile` (enemy arrows, no trail), `shooter`, `stickToWall`, `stuckTo`, `isGone`, `hideTrail()` / `ageTrail(keep)`.

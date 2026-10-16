@@ -243,7 +243,7 @@ export class EnemyFigure {
     const { enemy } = this;
     const { actions } = enemy;
     this.lookTimeMs += deltaMs;
-    enemy.bars.place(this.body, enemy.rides, this.fall);
+    enemy.bars.place();
     if (this.fall) {
       // Dead enemies keep playing (then holding) their death; survivors get back up.
       this.updateFall(deltaMs);

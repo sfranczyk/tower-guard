@@ -72,6 +72,8 @@ export default class Enemy extends Container {
   private readonly buffAura = new BuffAura();
   /** Walked off the field (a priest left alone, `escape`): no longer alive for the battle. */
   private escaped = false;
+  /** Every hit taken (host and co-op guest alike), after stone skin: the battle shows its damage number. */
+  public onDamaged?: (amount: number, hit: HitInfo) => void;
   /** Co-op host: hears about every hit, swing, heal and spell, to replay them on the guest's screen. */
   public netHooks?: {
     damaged(amount: number, hit: HitInfo): void;
@@ -204,6 +206,7 @@ export default class Enemy extends Container {
       // Stone skin (a shaman's spell) takes the edge off every hit.
       amount *= asSent ? 1 : this.buff.damageFactor;
       this.netHooks?.damaged(amount, hit);
+      this.onDamaged?.(amount, hit);
       applyDamage(this, amount, hit);
     }
     return this.vitals.health;

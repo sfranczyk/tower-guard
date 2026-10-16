@@ -1,17 +1,14 @@
 import { Graphics } from 'pixi.js';
 import { drawHealthBar } from '../../rendering/healthBar';
-import { getFallPose } from '../../rendering/stickmanFall';
-import { fallProgress, type FallState } from './enemyFall';
 
-/** Health bar size and placement in container space (the container is drawn at 2/3 scale). */
-const HEALTH_BAR = { width: 30, height: 4, standingY: -68, aboveHead: 14 };
+/** Health bar size and placement in container space (the container is drawn at 2/3 scale): just under the feet. */
+const HEALTH_BAR = { width: 30, height: 4, belowFeet: 9 };
 /** The priest's mana bar, just under its health bar. */
 const MANA_BAR = { height: 2.5, gap: 1.5, color: 0x5b8cff, drainedColor: 0x4a5266 };
-/** A mounted knight's health bar sits this much higher (over the rider's head); the horse's is under it, this colour. */
-const MOUNTED_BAR_RISE = 24;
+/** A mounted knight's horse's health bar, under his, in this colour. */
 const HORSE_BAR = { height: 3, gap: 1.5, color: 0xc8935a };
 
-/** The bars over an enemy's head: its health, a mounted knight's horse's health under it, or a priest's mana. */
+/** The bars under an enemy's feet: its health, a mounted knight's horse's health under it, or a priest's mana. */
 export class EnemyBars {
   /** The health bar (the others hang under it); added to the enemy's container. */
   public readonly health = new Graphics();
@@ -52,16 +49,8 @@ export class EnemyBars {
       .rect(-width / 2, top + 1, width * ratio, MANA_BAR.height).fill({ color: drained ? MANA_BAR.drainedColor : MANA_BAR.color });
   }
 
-  /** Keeps the bars above the head (of `body`, the drawn sprite), also while knocked down and getting up. */
-  public place(body: Graphics, rides: boolean, fall?: FallState): void {
-    if (!fall) {
-      this.health.position.set(0, HEALTH_BAR.standingY - (rides ? MOUNTED_BAR_RISE : 0));
-      return;
-    }
-    const { head } = getFallPose(fall.kind, fallProgress(fall));
-    this.health.position.set(
-      body.x + head.x * body.scale.x,
-      body.y + head.y * body.scale.y - HEALTH_BAR.aboveHead,
-    );
+  /** Keeps the bars under the feet (standing, mounted, lying or thrown: they go where the enemy goes). */
+  public place(): void {
+    this.health.position.set(0, HEALTH_BAR.belowFeet);
   }
 }

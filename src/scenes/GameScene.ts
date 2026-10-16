@@ -39,6 +39,7 @@ import { AimOverlay } from '../rendering/AimOverlay';
 import { Background } from '../rendering/Background';
 import { CombatSystem, type Foe } from '../systems/CombatSystem';
 import { EffectsSystem } from '../systems/EffectsSystem';
+import { DamageNumbers } from '../objects/DamageNumbers';
 import { Snow } from '../rendering/Snow';
 import { WeatherSystem } from '../systems/WeatherSystem';
 import { livingBowmen } from '../systems/targeting';
@@ -62,6 +63,7 @@ export class GameScene extends Scene {
   private readonly aimOverlay = new AimOverlay();
   private background!: Background;
   private effects!: EffectsSystem;
+  private damageNumbers!: DamageNumbers;
   private combat!: CombatSystem;
   /** Storm battlegrounds only: lightning. */
   private weather?: WeatherSystem;
@@ -112,6 +114,7 @@ export class GameScene extends Scene {
       guest: this.role === 'guest',
       wavePacing: wavePacing(difficulty),
       hostSync: () => this.hostSync,
+      onDamaged: (foe, amount, hit) => this.damageNumbers.show(foe, amount, hit),
     });
     this.shots = new BattleArrows({
       world: this.world,
@@ -151,6 +154,7 @@ export class GameScene extends Scene {
     this.ctx.root.addChild(this.world);
     this.background = new Background(this.world, this.battleground);
     this.effects = new EffectsSystem(this.world);
+    this.damageNumbers = new DamageNumbers(this.world, () => this.ctx.session.showDamageNumbers);
     this.aimOverlay.setColors(aimColorsOf(this.battleground));
 
     const { sandbox, run } = this.ctx.session;
@@ -281,6 +285,7 @@ export class GameScene extends Scene {
 
     this.debugGraphics.clear();
     this.effects.update(deltaMs);
+    this.damageNumbers.update(deltaMs);
     this.shots.updateTrails(deltaMs);
     if (this.guestSync) {
       this.guestSync.update(deltaMs);

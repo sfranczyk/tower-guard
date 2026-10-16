@@ -86,6 +86,8 @@ export interface UiHandlers {
   coopLoadout?: (loadout: Loadout) => void;
   trajectoryChange?: (enabled: boolean) => void;
   cursorCircleChange?: (enabled: boolean) => void;
+  /** Damage numbers over the enemies' heads toggled in the settings drawer. */
+  damageNumbersChange?: (enabled: boolean) => void;
   /** Friendly fire (the players' arrows and their effects hit the bowmen too) toggled in the settings drawer. */
   friendlyFireChange?: (enabled: boolean) => void;
   /** Number of shots that keep their trail (0..3) picked in the settings drawer. */
@@ -139,6 +141,7 @@ export class DomUi {
   private readonly weaponsRoot: HTMLElement;
   private readonly trajectoryInput: HTMLInputElement;
   private readonly cursorCircleInput: HTMLInputElement;
+  private readonly damageNumbersInput: HTMLInputElement;
   private readonly friendlyFireInput: HTMLInputElement;
   private readonly trailButtons: HTMLButtonElement[];
   private readonly soundInput: HTMLInputElement;
@@ -208,6 +211,7 @@ export class DomUi {
     this.weaponsRoot = this.query<HTMLElement>('[data-projectiles]');
     this.trajectoryInput = this.query<HTMLInputElement>('[data-trajectory]');
     this.cursorCircleInput = this.query<HTMLInputElement>('[data-cursor-circle]');
+    this.damageNumbersInput = this.query<HTMLInputElement>('[data-damage-numbers]');
     this.friendlyFireInput = this.query<HTMLInputElement>('[data-friendly-fire]');
     this.trailButtons = Array.from(this.host.querySelectorAll<HTMLButtonElement>('[data-trail-count]'));
     this.soundInput = this.query<HTMLInputElement>('[data-sound]');
@@ -241,6 +245,7 @@ export class DomUi {
     });
     this.trajectoryInput.addEventListener('change', () => this.handlers.trajectoryChange?.(this.trajectoryInput.checked));
     this.cursorCircleInput.addEventListener('change', () => this.handlers.cursorCircleChange?.(this.cursorCircleInput.checked));
+    this.damageNumbersInput.addEventListener('change', () => this.handlers.damageNumbersChange?.(this.damageNumbersInput.checked));
     this.friendlyFireInput.addEventListener('change', () => this.handlers.friendlyFireChange?.(this.friendlyFireInput.checked));
     this.trailButtons.forEach((button) => button.addEventListener('click', () => {
       this.handlers.arrowTrailsChange?.(Number(button.dataset.trailCount));
@@ -337,6 +342,10 @@ export class DomUi {
 
   public setCursorCircleOption(showCursorCircle: boolean): void {
     this.cursorCircleInput.checked = showCursorCircle;
+  }
+
+  public setDamageNumbersOption(enabled: boolean): void {
+    this.damageNumbersInput.checked = enabled;
   }
 
   public setFriendlyFireOption(enabled: boolean): void {

@@ -18,7 +18,7 @@
   (click a slot then an arrow, or drag: `quiverDrag.ts`; editing shared with co-op: `quiverEditing.ts`).
 - **Settings drawer** (handlers in `SceneManager`; menu, and in battle from the pause dialog: "Settings" or I, Esc closes it first): sound/music toggles and volumes
   (persisted), trajectory preview (off by default), arrow trails (0–3, `DEFAULT_ARROW_TRAILS` = 1), cursor circle,
-  friendly fire; these live in `ctx.session` for the browser session.
+  damage numbers (on), friendly fire; these live in `ctx.session` for the browser session.
 - `CoopPanel.ts`: the co-op lobby (net/CLAUDE.md). `SoundLabPanel.ts`: the sound test panel.
 - Dev views (animation, design, sound lab) all have "← Menu" in their panel's top-right corner.
 - **Tuning panel** (`TuningPanel.ts`, `?tune` or menu → Dev tools → "Tuning panel"; a collapsible side panel over the

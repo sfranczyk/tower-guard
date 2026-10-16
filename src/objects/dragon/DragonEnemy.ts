@@ -32,8 +32,8 @@ const AIM_MAX = 1.35;
 const HIT_FLASH_MS = 120;
 /** The fire dragon breathes only hovering, not flying faster than this share of its transit speed. */
 const BREATHE_MAX_FLIGHT = 0.25;
-/** Health bar above the dragon, in local (unscaled) units. */
-const HEALTH_BAR = { width: 70, height: 8, y: -112 };
+/** Health bar under the dragon, in local (unscaled) units. */
+const HEALTH_BAR = { width: 70, height: 8, y: 52 };
 
 /**
  * Flying dragon. The dark dragon archer flies in high, hovers in front of the bowman (systems/dragonFlight),
@@ -45,6 +45,8 @@ const HEALTH_BAR = { width: 70, height: 8, y: -112 };
  */
 export default class DragonEnemy extends Container {
   public readonly kind: DragonKind;
+  /** Every hit taken (host and co-op guest alike): the battle shows its damage number. */
+  public onDamaged?: (amount: number, hit?: HitInfo) => void;
   /** Co-op host: hears about every hit, to replay it on the guest's screen. */
   public netHooks?: { damaged(amount: number, hit?: HitInfo): void };
   public readonly isArcher = false;
@@ -121,6 +123,7 @@ export default class DragonEnemy extends Container {
       return this.health;
     }
     this.netHooks?.damaged(amount, hit);
+    this.onDamaged?.(amount, hit);
     this.health = Math.max(0, this.health - Math.max(0, amount));
     this.drawHealthBar();
     if (this.health === 0) {
