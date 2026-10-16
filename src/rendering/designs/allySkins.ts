@@ -74,9 +74,17 @@ const MAIL = 0x8d96a0;
 const MAIL_DARK = 0x666e78;
 const CREAM = 0xf1ead0;
 
-/** A kite shield held in front of the body on the far fist: steel rim, blue face, a cream cross. */
-const kiteShield = (g: Graphics, pose: BodyPose, frame: Frame): void => {
-  const c = at(pose.rearHand, frame, 2, 4);
+/**
+ * A kite shield on the far fist, in front of the body: steel rim, blue face, a cream cross. Strapped to the forearm, it
+ * stands square to it (its long axis across the forearm, like a sword in the fist), so it turns with the arm.
+ */
+const kiteShield = (g: Graphics, pose: BodyPose): void => {
+  const dx = pose.rearHand.x - pose.rearElbow.x;
+  const dy = pose.rearHand.y - pose.rearElbow.y;
+  const length = Math.hypot(dx, dy) || 1;
+  // `up` square to the forearm (the shield's top), `fwd` along it.
+  const frame: Frame = { up: { x: dy / length, y: -dx / length }, fwd: { x: dx / length, y: dy / length } };
+  const c = at(pose.rearHand, frame, 2, -3);
   const kite = (grow: number): Array<[number, number]> => [[16 + grow, -11 - grow], [16 + grow, 11 + grow], [-2, 11 + grow], [-22 - grow * 1.5, 0], [-2, -11 - grow]];
   shapeIn(g, c, frame, kite(2), STEEL_DARK);
   shapeIn(g, c, frame, kite(0), BLUE);
