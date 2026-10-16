@@ -86,18 +86,25 @@ export const ARROW_RELEASE_Y = 0;
  * fall speed √(gravity / k) ≈ 1180 px/s; keep it small or arrows float). A normal hit deals a random damageMin..damageMax,
  * a headshot a random value from the upper half of that range × headshotMultiplier, a piercing arrow × piercingMultiplier
  * for each body it went through before (data/enemies `rollArrowDamage`).
+ * The player's draw maps to range, not speed (`launchSpeed`): from MIN_SHOT_POWER to a full draw the speed goes from
+ * minSpeedFrac to 1 of the full-draw speed so that the range (∝ v²) grows evenly with the drag (drawCurve 1; above 1
+ * finer control close by, below 1 further). Enemy archers keep the plain `bowSpeed`.
  */
 export const ARROWS = tunable('ARROWS', 'Arrows', {
   baseSpeed: 180,
   forceSpeed: 450,
   speedFactor: 1.6,
+  minSpeedFrac: 0.12,
+  drawCurve: 1,
   gravity: 700,
   drag: 0.0005,
   damageMin: 10,
   damageMax: 20,
   headshotMultiplier: 1.5,
   piercingMultiplier: 0.62,
-}, { meta: { headshotMultiplier: { min: 1, max: 3 }, piercingMultiplier: { max: 1 } } });
+}, { meta: { headshotMultiplier: { min: 1, max: 3 }, piercingMultiplier: { max: 1 }, minSpeedFrac: { min: 0, max: 1, step: 0.01 }, drawCurve: { min: 0.3, max: 3, step: 0.05 } } });
+/** A draw shorter than this (share of the full draw) looses nothing and shows no path. */
+export const MIN_SHOT_POWER = 0.05;
 
 export const ENEMY_SPEED = 30;
 export const EXPLOSION_RADIUS = 72;

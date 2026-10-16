@@ -1,4 +1,4 @@
-import { ARROWS, SHRAPNEL_FRAGMENTS, SHRAPNEL_SPEED_FACTOR, SHRAPNEL_SPREAD } from '../config';
+import { ARROWS, MIN_SHOT_POWER, SHRAPNEL_FRAGMENTS, SHRAPNEL_SPEED_FACTOR, SHRAPNEL_SPREAD } from '../config';
 import type { FlightParams } from '../systems/ballistics';
 import type { ProjectileType, Vec2 } from '../types';
 
@@ -51,10 +51,20 @@ export const shrapnelBurst = (velocity: Vec2): Vec2[] => {
 /** Speed (px/s) the bow gives a mass-1 arrow at a draw power of 0..1 (enemy archers shoot with this). */
 export const bowSpeed = (power: number): number => (ARROWS.baseSpeed + power * ARROWS.forceSpeed) * ARROWS.speedFactor;
 
+/**
+ * Share (0..1) of the full-draw speed the player's bow gives at a draw power of 0..1: the range (∝ v²) runs evenly
+ * from minSpeedFrac² at the shortest shot (MIN_SHOT_POWER) to 1 at a full draw, shaped by drawCurve.
+ */
+export const drawSpeedShare = (power: number): number => {
+  const draw = Math.min(1, Math.max(0, (power - MIN_SHOT_POWER) / (1 - MIN_SHOT_POWER)));
+  const floor = ARROWS.minSpeedFrac ** 2;
+  return Math.sqrt(floor + (1 - floor) * draw ** ARROWS.drawCurve);
+};
+
 /** Launch speed (px/s) of the player's projectile at a draw power of 0..1. */
 export const launchSpeed = (type: ProjectileType, power: number): number => {
   const { mass, speedMultiplier } = PROJECTILE_PHYSICS[type];
-  return (bowSpeed(power) * speedMultiplier) / Math.sqrt(mass);
+  return (bowSpeed(1) * drawSpeedShare(power) * speedMultiplier) / Math.sqrt(mass);
 };
 
 /**

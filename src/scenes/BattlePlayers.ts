@@ -1,5 +1,5 @@
 import type { Container } from 'pixi.js';
-import { BOWMAN_Y, GAME_HEIGHT, WORLD_WIDTH } from '../config';
+import { BOWMAN_Y, GAME_HEIGHT, MIN_SHOT_POWER, WORLD_WIDTH } from '../config';
 import type { GameContext } from '../core/Scene';
 import type { Battleground } from '../data/battlegrounds';
 import { firstArrow } from '../data/loadout';
@@ -17,8 +17,6 @@ import type { ProjectileType } from '../types';
 import type { BattleArrows } from './BattleArrows';
 import { PROJECTILE_LABELS } from './battleText';
 import { playerStartX, type PlayerControl, type Player } from './PlayerControl';
-
-export const MIN_SHOT_POWER = 0.05;
 
 export interface BattlePlayersDeps {
   ctx: GameContext;

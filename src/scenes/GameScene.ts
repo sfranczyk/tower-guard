@@ -6,6 +6,7 @@ import {
   GAME_HEIGHT,
   VIEW_TOP,
   GROUND_Y,
+  MIN_SHOT_POWER,
   PLAYER_TOWER_X,
   SHOW_HITBOX_DEBUG,
   SNOW_WIND_DRIFT,
@@ -28,7 +29,7 @@ import Tower from '../objects/Tower';
 import { BattleArrows } from './BattleArrows';
 import { BattleCamera } from './BattleCamera';
 import { BattleEnemies } from './BattleEnemies';
-import { BattlePlayers, MIN_SHOT_POWER } from './BattlePlayers';
+import { BattlePlayers } from './BattlePlayers';
 import { startBattleSync } from './battleSync';
 import { DEFAULT_STATUS, slotOfKey, windLabel } from './battleText';
 import { rollWind, WindShifts } from '../systems/windShift';

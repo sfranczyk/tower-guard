@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { simulateTrajectory } from '../systems/ballistics';
 import type { ProjectileType } from '../types';
-import { SHRAPNEL_FRAGMENTS, SHRAPNEL_SPEED_FACTOR, SHRAPNEL_SPREAD } from '../config';
-import { bowSpeed, flightParams, launchSpeed, shrapnelBurst } from './projectiles';
+import { ARROWS, MIN_SHOT_POWER, SHRAPNEL_FRAGMENTS, SHRAPNEL_SPEED_FACTOR, SHRAPNEL_SPREAD } from '../config';
+import { bowSpeed, drawSpeedShare, flightParams, launchSpeed, shrapnelBurst } from './projectiles';
 
 const GRAVITY = 700;
 const WORLD = { groundY: 490, minX: -1e6, maxX: 1e6 };
@@ -27,8 +27,21 @@ describe('projectile physics', () => {
   });
 
   it('launches the player normal arrow 10% faster than the plain bow speed (enemy archers)', () => {
-    expect(launchSpeed('normal', 0.6) / bowSpeed(0.6)).toBeCloseTo(1.1);
-    expect(launchSpeed('explosive', 0.6)).toBeLessThan(bowSpeed(0.6));
+    expect(launchSpeed('normal', 1) / bowSpeed(1)).toBeCloseTo(1.1);
+    expect(launchSpeed('explosive', 1)).toBeLessThan(bowSpeed(1));
+  });
+
+  it('maps the draw to range: from minSpeedFrac at the shortest shot to the full speed, range growing evenly', () => {
+    expect(drawSpeedShare(MIN_SHOT_POWER)).toBeCloseTo(ARROWS.minSpeedFrac);
+    expect(drawSpeedShare(0)).toBeCloseTo(ARROWS.minSpeedFrac);
+    expect(drawSpeedShare(1)).toBeCloseTo(1);
+    const rangeShare = (power: number): number => drawSpeedShare(power) ** 2;
+    const step = (from: number): number => rangeShare(from + 0.2) - rangeShare(from);
+    expect(step(0.2)).toBeCloseTo(step(0.6));
+  });
+
+  it('lets the shortest shot land close by', () => {
+    expect(shoot('normal', 45, MIN_SHOT_POWER).range).toBeLessThan(60);
   });
 
   it('carries piercing furthest and explosive shortest', () => {

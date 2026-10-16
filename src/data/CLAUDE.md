@@ -31,6 +31,8 @@ All pure and tested. Tuning numbers live in `config.ts`, sandbox defaults in `sa
 - **Projectiles** (`projectiles.ts`): each type has a mass, head drag and speed multiplier: launch speed
   ∝ speedMultiplier/√mass and drag ∝ dragMultiplier/mass. Gravity is the same for every type (keep it so). Piercing is
   light (fast, flat, long), explosive heavy (short high arc). Behaviour in systems/CLAUDE.md.
+  The player's draw maps to range, not speed (`drawSpeedShare`: `ARROWS.minSpeedFrac` at `MIN_SHOT_POWER`, full speed at
+  a full draw, `drawCurve`); enemy archers use the plain `bowSpeed`.
 - **Battlegrounds** (`battlegrounds.ts`): map themes (sky, sun, hills, tree style, ground colors, `ui: { accent,
   backdrop }`, `player` ArmorPalette picked to contrast with the map, tested; aim colours via
   `aimColorsOf(battleground)`, `DEFAULT_AIM_COLORS`, an optional `halo`). Add a map by adding an entry. `weather`:
