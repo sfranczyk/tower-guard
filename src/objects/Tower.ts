@@ -28,7 +28,7 @@ export interface KeepOptions {
 }
 
 /** Health bar just under the keep's base (like the enemies'), on the ground in front of it, in world px. */
-const HEALTH_BAR = { width: 86, height: 8, y: 16 };
+const HEALTH_BAR = { width: 86, height: 8, y: 20 };
 
 /** Stone chips knocked off by a hit: how many (by damage), how they fly and how long they lie before fading. */
 const CHIPS = { min: 3, max: 16, perDamage: 1 / 6, gravity: 900, bounce: 0.3, lifeMs: { min: 1400, max: 2200 }, fadeMs: 400 };

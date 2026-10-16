@@ -70,6 +70,7 @@ export class MenuScene extends Scene {
     ];
     this.bowman = new Bowman(MENU_BOWMAN_X, groundAt(MENU_BOWMAN_X), { x: 0, y: 0, width: BACKDROP_WIDTH, height: GAME_HEIGHT }, {
       armorColors: battleground.player,
+      showHealth: false,
     });
     world.addChild(...this.keeps, this.bowman);
     this.range = new MenuRange(world, this.bowman, this.ctx.textures, MENU_TARGETS);

@@ -34,6 +34,4 @@ export const drawArcheryTarget = (g: Graphics): void => {
     const share = 0.86 - index * 0.17;
     g.ellipse(0, cy, rx * share, ry * share).fill({ color });
   });
-  // A cross bar holding the boss on the easel.
-  g.roundRect(-rx - 1, cy + ry * 0.55, rx * 2 + depth + 2, 3, 1.5).fill({ color: WOOD.dark });
 };

@@ -33,7 +33,7 @@ const HIT_FLASH_MS = 120;
 /** The fire dragon breathes only hovering, not flying faster than this share of its transit speed. */
 const BREATHE_MAX_FLIGHT = 0.25;
 /** Health bar under the dragon, in local (unscaled) units. */
-const HEALTH_BAR = { width: 70, height: 8, y: 52 };
+const HEALTH_BAR = { width: 70, height: 8, y: 62 };
 
 /**
  * Flying dragon. The dark dragon archer flies in high, hovers in front of the bowman (systems/dragonFlight),

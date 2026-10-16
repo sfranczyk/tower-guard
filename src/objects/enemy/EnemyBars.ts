@@ -2,7 +2,7 @@ import { Graphics } from 'pixi.js';
 import { drawHealthBar } from '../../rendering/healthBar';
 
 /** Health bar size and placement in container space (the container is drawn at 2/3 scale): just under the feet. */
-const HEALTH_BAR = { width: 30, height: 4, belowFeet: 9 };
+const HEALTH_BAR = { width: 30, height: 4, belowFeet: 15 };
 /** The priest's mana bar, just under its health bar. */
 const MANA_BAR = { height: 2.5, gap: 1.5, color: 0x5b8cff, drainedColor: 0x4a5266 };
 /** A mounted knight's horse's health bar, under his, in this colour. */

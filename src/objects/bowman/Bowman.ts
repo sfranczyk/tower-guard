@@ -28,9 +28,11 @@ const AFFLICTION_SIZE = 1;
 /** Levitating, he's drawn in front of the funnel. */
 const LEVITATE_Z = 4;
 /** Health bar over his head (container space, drawn at 1/3: the enemies' size on screen), `aboveHead` over his top point. */
-const HEALTH_BAR = { width: 60, height: 8, belowFeet: 10 };
+const HEALTH_BAR = { width: 60, height: 8, belowFeet: 22 };
 
 export interface BowmanConfig {
+  /** The health bar under his feet (off in the menu). */
+  showHealth?: boolean;
   width?: number;
   height?: number;
   movementSpeed?: number;
@@ -79,6 +81,7 @@ export class Bowman extends Container {
   public readonly motion = new BodyMotion();
   /** The health bar over his head (`setHealthRatio`; players' health lives in the battle's Player). */
   private readonly healthBar = new Graphics();
+  private readonly showHealth: boolean;
   private healthRatio = 1;
   /** Co-op host: told when he's knocked down or catches fire, to replay it on the guest's screen. */
   public netHooks?: { knockedBack(fromX: number, strength: number): void; ignited(): void };
@@ -94,6 +97,7 @@ export class Bowman extends Container {
     this.footing = new BowmanFooting(boardBounds, config.width ?? 32);
     this.movementSpeed = config.movementSpeed ?? BOWMAN_WALK_SPEED;
     this.maxHealth = config.maxHealth ?? 100;
+    this.showHealth = config.showHealth ?? true;
     this.health = this.maxHealth;
     this.figure = new BowmanFigure(this, config.look ?? 'ranger', config.armorColors);
     this.afflictions = new AfflictionLayer('raider', { burnMs: config.burnMs ?? relight(), flameSize: BURN_FLAME_SIZE, burnFadeMs: BURN_FADE_MS });
@@ -406,7 +410,7 @@ export class Bowman extends Container {
 
   /** Under his feet as he is now (standing, falling, flailing); hidden once dead. */
   private placeHealthBar(): void {
-    this.healthBar.visible = !this.isDead;
+    this.healthBar.visible = this.showHealth && !this.isDead;
     if (!this.healthBar.visible) {
       return;
     }
