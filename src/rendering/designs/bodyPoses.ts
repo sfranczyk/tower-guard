@@ -271,7 +271,8 @@ export const bandageBody = (kneel: number, timeMs: number): BodyPose => {
  */
 export const withShieldRaised = (pose: BodyPose): BodyPose => {
   const lean = Math.atan2(pose.shoulder.x - pose.hip.x, pose.hip.y - pose.shoulder.y);
-  const rear = arm(pose.shoulder, 0.15 + lean, 1.75);
+  // The fist about 24 above the hip, 21 ahead: the shield it holds reaches just under the eyes.
+  const rear = arm(pose.shoulder, 0.15 + lean, 1.93);
   return { ...pose, rearElbow: rear.elbow, rearHand: rear.hand };
 };
 

@@ -74,10 +74,11 @@ const MAIL = 0x8d96a0;
 const MAIL_DARK = 0x666e78;
 const CREAM = 0xf1ead0;
 /**
- * The knight's shield: drawn this many times its base size, its top this far above the hip along the body (the visor's
- * slit is at about 53): as much of him behind it as he can, while he still sees over it.
+ * The knight's shield: `scale` times its base size, `thickness` of its base depth (seen edge-on), held by the fist
+ * `gripFromTop` of its height down from the top (a little above the middle). The arm (withShieldRaised) puts the fist
+ * where the top then sits just under the visor's slit.
  */
-const SHIELD = { scale: 4 / 3, topAboveHip: 49 };
+const SHIELD = { scale: 4 / 3, thickness: 0.75, gripFromTop: 0.45 };
 
 /**
  * A kite shield strapped to the far forearm, its face turned to the enemy: seen from the side, a tall, slightly bowed
@@ -85,19 +86,20 @@ const SHIELD = { scale: 4 / 3, topAboveHip: 49 };
  * weight on the bent arm, so it stands with the body (the torso's frame), at the forearm.
  */
 const kiteShield = (g: Graphics, pose: BodyPose, frame: Frame): void => {
-  // Where it rides on the forearm (along the body), raised so its top sits just under the visor's slit.
-  const grip = { x: (pose.rearElbow.x + pose.rearHand.x * 2) / 3, y: (pose.rearElbow.y + pose.rearHand.y * 2) / 3 };
-  const gripUp = (grip.x - pose.hip.x) * frame.up.x + (grip.y - pose.hip.y) * frame.up.y;
-  const c = at(grip, frame, SHIELD.topAboveHip - SHIELD.scale * 17 - gripUp, 0);
+  const { scale, thickness, gripFromTop } = SHIELD;
+  // The fist holds the grip a little above the middle and never moves on the shield: the shield hangs from it.
+  const top = 17 * scale;
+  const c = at(pose.rearHand, frame, (17 + 24) * scale * gripFromTop - top, 0);
+  const shape = ([u, f]: [number, number]): [number, number] => [u * scale, f * scale * thickness];
   // Its profile: the face bows out towards the enemy, the back is flatter; the kite's point at the bottom.
   const slab = (grow: number): Array<[number, number]> => ([
     [17 + grow, 1 - grow], [17 + grow, 5 + grow], [8, 8.5 + grow], [-6, 8.5 + grow], [-16, 6.5 + grow], [-24 - grow, 3],
     [-16, 1 - grow], [-6, 2 - grow], [8, 2 - grow],
-  ] as Array<[number, number]>).map(([u, f]) => [u * SHIELD.scale, f * SHIELD.scale]);
+  ] as Array<[number, number]>).map(shape);
   shapeIn(g, c, frame, slab(1.2), STEEL_DARK);
   shapeIn(g, c, frame, slab(0), BLUE);
-  limb(g, at(c, frame, 15 * SHIELD.scale, 6.5 * SHIELD.scale), at(c, frame, -15 * SHIELD.scale, 7 * SHIELD.scale), 1.8, 1.8, CREAM);
-  ellipseIn(g, at(c, frame, 4 * SHIELD.scale, 9 * SHIELD.scale), frame, 2.6, 3.6, STEEL);
+  limb(g, at(c, frame, ...shape([15, 6.5])), at(c, frame, ...shape([-15, 7])), 1.6, 1.6, CREAM);
+  ellipseIn(g, at(c, frame, ...shape([4, 9])), frame, 2.2, 3.4, STEEL);
 };
 
 /**
