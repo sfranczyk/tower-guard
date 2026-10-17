@@ -1,6 +1,6 @@
 import type { Graphics } from 'pixi.js';
 import type { Vec2 } from '../../types';
-import type { BodyPose } from './bodyPoses';
+import { withShieldRaised, type BodyPose } from './bodyPoses';
 import { limb, shape } from './designShapes';
 
 /**
@@ -99,6 +99,8 @@ export interface HumanoidLook {
   armsSwapped?: boolean;
   /** Over everything (with `armsSwapped`: the shield on the front fist). */
   front?: (g: Graphics, pose: BodyPose, frame: Frame) => void;
+  /** Holds the far arm up in front while upright (withShieldRaised: the knight's shield). */
+  raiseFarArm?: boolean;
 }
 
 export type BowLayer = 'back' | 'front';
@@ -113,7 +115,9 @@ const drawLimb = (g: Graphics, root: Vec2, joint: Vec2, end: Vec2, look: LimbLoo
  * arm is the far one (as in drawStickman) with the bow in it, behind the body; the arrow goes over the
  * body and the string hand last.
  */
-export const drawHumanoid = (g: Graphics, pose: BodyPose, look: HumanoidLook): void => {
+export const drawHumanoid = (g: Graphics, posed: BodyPose, look: HumanoidLook): void => {
+  const upright = posed.shoulder.y < posed.hip.y - 28;
+  const pose = look.raiseFarArm && upright ? withShieldRaised(posed) : posed;
   const frame = torsoFrame(pose);
   const farArm = (): void => {
     drawLimb(g, pose.shoulder, pose.rearElbow, pose.rearHand, look.armFar);

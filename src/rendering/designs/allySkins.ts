@@ -106,6 +106,7 @@ export const allyKnightLook = (timeMs: number): HumanoidLook => ({
   legFar: limbs(MAIL_DARK, MAIL_DARK, [10, 8], [8, 7]),
   hand: MAIL_DARK, handFar: STEEL_DARK, handRadius: 4,
   armsSwapped: true,
+  raiseFarArm: true,
   foot: { color: 0x3a3433, colorFar: 0x262120, length: 16, height: 8 },
   torso: (g, pose, frame) => {
     // The tabard from the shoulders to the thighs, the breastplate over it, a belt.

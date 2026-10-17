@@ -264,6 +264,16 @@ export const bandageBody = (kneel: number, timeMs: number): BodyPose => {
   };
 };
 
+/**
+ * The far arm holding a shield up in front (the knight): upper arm a little forward, forearm level ahead, so a shield
+ * square to it stands upright; follows the torso's lean. Only for upright poses (walk, stand, swing), not falls.
+ */
+export const withShieldRaised = (pose: BodyPose): BodyPose => {
+  const lean = Math.atan2(pose.shoulder.x - pose.hip.x, pose.hip.y - pose.shoulder.y);
+  const rear = arm(pose.shoulder, 0.45 + lean, 1.1);
+  return { ...pose, rearElbow: rear.elbow, rearHand: rear.hand };
+};
+
 /** Standing still, arms hanging (the end of an attack, a pause in the walk). */
 export const standBody = (club?: AttackStyle): BodyPose => (club ? attackBody(0, club) : { ...attackBody(0, 'overhead'), club: undefined });
 

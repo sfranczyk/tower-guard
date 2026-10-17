@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Vec2 } from '../../types';
-import { BODY_FOOT_Y, archerBody, attackBody, bandageBody, bowmanBody, castBody, runBody, standBody, walkBody, type BodyPose } from './bodyPoses';
+import { BODY_FOOT_Y, archerBody, attackBody, bandageBody, withShieldRaised, bowmanBody, castBody, runBody, standBody, walkBody, type BodyPose } from './bodyPoses';
 
 const distance = (a: Vec2, b: Vec2): number => Math.hypot(a.x - b.x, a.y - b.y);
 
@@ -135,5 +135,14 @@ describe('body poses for new looks', () => {
     expect(down.club).toBeUndefined();
     expect(bandageBody(0, 0).club).toBeDefined();
     expect(distance(bandageBody(1, 0).frontHand, bandageBody(1, 350).frontHand)).toBeGreaterThan(3);
+  });
+
+  it('raises the shield arm: forearm level ahead, lengths kept', () => {
+    for (const p of progressSteps) {
+      const pose = withShieldRaised(walkBody(p, { club: 'overhead', style: 'march' }));
+      expectStickmanProportions(pose);
+      expect(Math.abs(pose.rearHand.y - pose.rearElbow.y)).toBeLessThan(6);
+      expect(pose.rearHand.x).toBeGreaterThan(pose.rearElbow.x);
+    }
   });
 });
