@@ -75,17 +75,12 @@ const MAIL_DARK = 0x666e78;
 const CREAM = 0xf1ead0;
 
 /**
- * A kite shield on the far fist, its face turned to the enemy: seen from the side, so it shows as a tall, slightly
- * bowed slab in front of the fist (steel rim, a strip of the blue face, the cream cross's bar along it, the boss), square
- * to the forearm, so it turns with the arm.
+ * A kite shield strapped to the far forearm, its face turned to the enemy: seen from the side, a tall, slightly bowed
+ * slab (steel rim, a strip of the blue face, the cream cross's bar along it, the boss). Held upright and close, its
+ * weight on the bent arm, so it stands with the body (the torso's frame), at the forearm.
  */
-const kiteShield = (g: Graphics, pose: BodyPose): void => {
-  const dx = pose.rearHand.x - pose.rearElbow.x;
-  const dy = pose.rearHand.y - pose.rearElbow.y;
-  const length = Math.hypot(dx, dy) || 1;
-  // `up` square to the forearm (the shield's top), `fwd` along it, towards the enemy.
-  const frame: Frame = { up: { x: dy / length, y: -dx / length }, fwd: { x: dx / length, y: dy / length } };
-  const c = at(pose.rearHand, frame, 2, 0);
+const kiteShield = (g: Graphics, pose: BodyPose, frame: Frame): void => {
+  const c = at({ x: (pose.rearElbow.x + pose.rearHand.x * 2) / 3, y: (pose.rearElbow.y + pose.rearHand.y * 2) / 3 }, frame, 0, 0);
   // Its profile: the face bows out towards the enemy, the back is flatter; the kite's point at the bottom.
   const slab = (grow: number): Array<[number, number]> => [
     [17 + grow, 1 - grow], [17 + grow, 5 + grow], [8, 8.5 + grow], [-6, 8.5 + grow], [-16, 6.5 + grow], [-24 - grow, 3],

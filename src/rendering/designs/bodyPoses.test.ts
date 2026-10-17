@@ -137,12 +137,13 @@ describe('body poses for new looks', () => {
     expect(distance(bandageBody(1, 0).frontHand, bandageBody(1, 350).frontHand)).toBeGreaterThan(3);
   });
 
-  it('raises the shield arm: forearm level ahead, lengths kept', () => {
+  it('carries the shield on a bent arm: elbow by the side, forearm rising ahead, lengths kept', () => {
     for (const p of progressSteps) {
       const pose = withShieldRaised(walkBody(p, { club: 'overhead', style: 'march' }));
       expectStickmanProportions(pose);
-      expect(Math.abs(pose.rearHand.y - pose.rearElbow.y)).toBeLessThan(6);
-      expect(pose.rearHand.x).toBeGreaterThan(pose.rearElbow.x);
+      expect(Math.abs(pose.rearElbow.x - pose.shoulder.x)).toBeLessThan(8);
+      expect(pose.rearHand.x).toBeGreaterThan(pose.rearElbow.x + 15);
+      expect(pose.rearHand.y).toBeLessThan(pose.rearElbow.y);
     }
   });
 });
