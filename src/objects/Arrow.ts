@@ -10,6 +10,8 @@ import type { EnemyType, ProjectileType, Vec2 } from '../types';
 export interface AnchorTarget {
   toBodyAnchor(point: Vec2, angle: number): BodyAnchor;
   resolveBodyAnchor(anchor: BodyAnchor): { position: Vec2; rotation: number };
+  /** Where the blast was, once it has been blown apart (or shattered): the arrows in it break. */
+  readonly blownApartAt?: Vec2;
 }
 
 export default class Arrow extends Sprite {
@@ -209,8 +211,9 @@ export default class Arrow extends Sprite {
     this.trail.alpha = 1 - this.trailAge / keep;
   }
 
-  public deactivate(): this {
-    if (this.activeProjectile) {
+  /** Gone (hidden, no longer flying or stuck); `silent` doesn't tell the co-op guest (it breaks its own copy). */
+  public deactivate(silent = false): this {
+    if (this.activeProjectile && !silent) {
       this.netHooks?.gone();
     }
     this.stuck = false;

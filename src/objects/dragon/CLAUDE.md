@@ -33,7 +33,7 @@ Its parts:
   Everyone in the keep (its fire can't hurt it): it waits (`DragonLook.waits` = `FIRE_DRAGON_WAIT`, tunable: far from the
   keep, high), no fire or strafes; a pass or breath still winding up is called off, one already pouring is finished. Breath drawn into `fireArt`, `getFlames` gives hot puffs in
   world space. Killed by a direct explosive hit it blows up: `explode` with `FIRE_DRAGON_BLAST_POWER` (3),
-  `EffectsSystem.dragonBlast`, `DragonGibSimulation` chunks and rider gibs (`DragonDeath.dragonGibs`), stuck arrows gone
-  (`Arrow.stuckTo`).
+  `EffectsSystem.dragonBlast`, `DragonGibSimulation` chunks and rider gibs (`DragonDeath.dragonGibs`), stuck arrows break
+  (`blownApartAt`, objects/CLAUDE.md).
 - Settled corpses: `DragonEnemy.deathSettled` (`DragonCorpse.settled`) after `DRAGON_SETTLE_MS`; enemies `EnemyFigure.isSettledCorpse` (drawn once
   more, then not redrawn).

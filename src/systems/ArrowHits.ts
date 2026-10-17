@@ -422,11 +422,10 @@ export class ArrowHits {
     arrow.registerImpact();
 
     if (explosive && enemy instanceof DragonEnemy && enemyArchetype(enemy.kind).breathesFire && !enemy.isAlive()) {
-      // A fire dragon killed by a direct explosive hit blows up: FIRE_DRAGON_BLAST_POWER times the blast, centred on its body, and the
-      // arrows stuck in it go with it.
+      // A fire dragon killed by a direct explosive hit blows up: FIRE_DRAGON_BLAST_POWER times the blast, centred on its body (the
+      // arrows stuck in it break: BattleArrows).
       const body = enemy.getPhysicsBounds();
       this.actions.explode({ x: body.x + body.width / 2, y: body.y + body.height / 2 }, activeEnemies, enemy, FIRE_DRAGON_BLAST_POWER, true);
-      this.world.arrows.filter((stuck) => stuck.stuckTo === enemy).forEach((stuck) => stuck.deactivate());
       arrow.deactivate();
     } else if (explosive) {
       // A kamikaze it kills (not frozen: that one shatters) lights its bomb's fuse, the first link of the blast's chain.

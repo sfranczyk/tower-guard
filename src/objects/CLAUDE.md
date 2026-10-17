@@ -11,6 +11,9 @@ walking speed and knockdown are `systems/bowmanMotion.ts`). Health bars (under t
 
 ## Arrow
 `Arrow.hostile` (enemy arrows, no trail), `shooter`, `stickToWall`, `stuckTo`, `isGone`, `hideTrail()` / `ageTrail(keep)`.
+Stuck in something blown apart or shattered (`AnchorTarget.blownApartAt`: Enemy, fire DragonEnemy) it breaks in two
+(`BattleArrows.update` → `ArrowShards.ts`, halves cut from its texture; physics `systems/arrowShards.ts`, tuning `ARROW_SHARDS`);
+host and guest each break their own copy (`deactivate(true)`, no `gone`).
 
 ## Tower (keep)
 Drawn by `rendering/keep.ts`; `Tower` redraws only when `keepDamageStage` changes and animates torch, fire, smoke in

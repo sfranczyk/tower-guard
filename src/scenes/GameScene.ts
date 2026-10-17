@@ -307,7 +307,7 @@ export class GameScene extends Scene {
     this.debugGraphics.clear();
     this.effects.update(deltaMs);
     this.damageNumbers.update(deltaMs);
-    this.shots.updateTrails(deltaMs);
+    this.shots.update(deltaMs);
     if (this.guestSync) {
       this.guestSync.update(deltaMs);
     } else {

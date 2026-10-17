@@ -74,6 +74,8 @@ export default class DragonEnemy extends Container {
   private pose: DragonPose;
   private flashMs = 0;
   private corpse?: DragonCorpse;
+  /** Where the blast was once a fire dragon has blown up (the arrows in it break). */
+  public blownApartAt?: Vec2;
   private cheering = false;
   private paused = false;
   /** Hovers and flights between them, side and turn, gusts and jolts, wing beat (DragonMotion). */
@@ -136,6 +138,9 @@ export default class DragonEnemy extends Container {
       // The fire dragon's burning gut goes up with it (CombatSystem doubles the blast): it bursts into chunks.
       const blast = hit?.cause === 'blast' ? { breathesFire: enemyArchetype(this.kind).breathesFire === true } : undefined;
       this.corpse = new DragonCorpse(this.pose, startY, this.look, blast);
+      if (blast?.breathesFire) {
+        this.blownApartAt = hit?.point ?? { x: this.x, y: this.y };
+      }
       this.healthBar.visible = false;
       this.bow.tension = 0;
       this.afflictions.extinguish();

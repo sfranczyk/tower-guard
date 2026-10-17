@@ -8,6 +8,7 @@ import type { AimInput } from '../managers/InputManager';
 import type { GuestSync } from '../net/GuestSync';
 import type { ArrowLaunch, HostSync } from '../net/HostSync';
 import Arrow from '../objects/Arrow';
+import { ArrowShards } from '../objects/ArrowShards';
 import type { EffectsSystem } from '../systems/EffectsSystem';
 import { isMagicArrow } from '../systems/ArrowMagic';
 import { simulateTrajectory } from '../systems/ballistics';
@@ -36,18 +37,33 @@ export interface BattleArrowsDeps {
 
 /**
  * Every arrow of a level (`list`, which CombatSystem flies and resolves): the players' shots with their trails, the
- * shrapnel bursts, the enemies' arrows, a co-op guest's copies of the host's, and dropping the ones no longer seen.
+ * shrapnel bursts, the enemies' arrows, a co-op guest's copies of the host's, the ones broken by a blast, and dropping
+ * the ones no longer seen.
  */
 export class BattleArrows {
   public readonly list: Arrow[] = [];
+  private readonly shards: ArrowShards;
 
-  public constructor(private readonly deps: BattleArrowsDeps) {}
+  public constructor(private readonly deps: BattleArrowsDeps) {
+    this.shards = new ArrowShards(deps.world);
+  }
 
-  /** Fire, frost and vortex arrows leave flames, glints or motes behind them as they fly. */
-  public updateTrails(deltaMs: number): void {
+  /**
+   * Fire, frost and vortex arrows leave flames, glints or motes behind them as they fly; arrows stuck in something blown
+   * apart break in two and fall away (host and co-op guest each break their own, so it isn't sent).
+   */
+  public update(deltaMs: number): void {
     this.list
       .filter((arrow) => arrow.isActive && !arrow.isStuck && isMagicArrow(arrow.type))
       .forEach((arrow) => this.deps.effects().arrowTrail(arrow.type, { x: arrow.x, y: arrow.y }, deltaMs));
+    this.list.forEach((arrow) => {
+      const blast = arrow.stuckTo?.blownApartAt;
+      if (blast) {
+        this.shards.break(arrow, blast);
+        arrow.deactivate(true);
+      }
+    });
+    this.shards.update(deltaMs);
   }
 
   /** Guest: an arrow the host launched (its sound comes as its own event). */

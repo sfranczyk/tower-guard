@@ -141,6 +141,22 @@ export const ARROWS = tunable('ARROWS', 'Arrows', {
   headshotMultiplier: 1.5,
   piercingMultiplier: 0.62,
 }, { meta: { headshotMultiplier: { min: 1, max: 3 }, piercingMultiplier: { max: 1 }, minSpeedFrac: { min: 0, max: 1, step: 0.01 }, drawCurve: { min: 0.3, max: 3, step: 0.05 } } });
+/**
+ * Arrows stuck in something that blows apart (or shatters) snap in two (`breakMin..breakMax` of the shaft), the halves
+ * thrown from the blast (`speedMin..speedMax` px/s, `lift` up), spinning up to `spin` rad/s, falling at `gravity`; they
+ * lie where they land and are gone after `lifeMs`, fading over the last `fadeMs` (systems/arrowShards.ts).
+ */
+export const ARROW_SHARDS = tunable('ARROW_SHARDS', 'Arrow shards', {
+  breakMin: 0.35,
+  breakMax: 0.65,
+  speedMin: 90,
+  speedMax: 240,
+  lift: 120,
+  spin: 14,
+  gravity: 700,
+  lifeMs: 1400,
+  fadeMs: 500,
+});
 /** A draw shorter than this (share of the full draw) looses nothing and shows no path. */
 export const MIN_SHOT_POWER = 0.05;
 

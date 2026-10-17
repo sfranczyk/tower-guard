@@ -490,6 +490,11 @@ export default class Enemy extends Container {
     }
   }
 
+  /** Where the blast was once it has been blown apart or shattered (the arrows in it break). */
+  public get blownApartAt(): Vec2 | undefined {
+    return this.figure.blownApartAt;
+  }
+
   /** Pins a world point/angle (e.g. an arrow hit) to this enemy's torso. */
   public toBodyAnchor(point: Vec2, angle: number): BodyAnchor {
     return toBodyAnchor(point, angle, this.figure.transform(), this.figure.torso());

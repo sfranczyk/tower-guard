@@ -52,6 +52,8 @@ export class EnemyFigure {
   public fall?: FallState;
   /** Set when blown apart (or shattered). */
   public gibs?: GibSimulation;
+  /** Where the blast that blew it apart was (world; the arrows stuck in it break). */
+  public blownApartAt?: Vec2;
   private animationTime = 0;
   /** Always-running clock for the look's own motion (a burning fuse, flapping cloth). */
   private lookTimeMs = Math.random() * 1000;
@@ -326,6 +328,7 @@ export class EnemyFigure {
     enemy.actions.interrupt();
     enemy.motion.endFlight();
     this.shattered = shattered;
+    this.blownApartAt = point;
     const facing = fromX >= enemy.x ? 1 : -1;
     this.fall = undefined;
     this.body.rotation = 0;
