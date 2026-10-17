@@ -27,7 +27,7 @@ const RANGE = {
   /** Share of shots that go wide of the face (into the ground or past). */
   missChance: 0.15,
   /** How far an arrow's centre stays back from its tip in the straw. */
-  sink: 9.5,
+  sink: 7.5,
   /** He stands this far before a target's face to look at it. */
   standOff: 26,
   lookMs: 1100,

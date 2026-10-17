@@ -33,10 +33,10 @@ import type { EffectsSystem } from './EffectsSystem';
 /** Damage of the fire and frost arrows' hit, × a normal arrow's (`rollArrowDamage`) (their effect does the rest; a vortex arrow does none). */
 const MAGIC_HIT_DAMAGE: Partial<Record<ProjectileType, number>> = { fire: FIRE_ARROW_DAMAGE, frost: FROST_ARROW_DAMAGE };
 const PIERCING_MAX_IMPACTS = 5;
-/** A pinning arrow's centre sits this far back from where its tip goes into the ground (the sprite is ~31 px long). */
-const PIN_SINK = 11.5;
+/** A pinning arrow's centre sits this far back from where its tip goes into the ground (the sprite is ~27 px long). */
+const PIN_SINK = 9.5;
 /** An arrow hitting a keep sticks into the stone with its centre this far back from the point of impact. */
-const WALL_SINK = 12.5;
+const WALL_SINK = 10.5;
 /** A player arrow hitting a bowman (friendly fire) in the top this many px of him is a headshot. */
 const BOWMAN_HEAD = 10;
 

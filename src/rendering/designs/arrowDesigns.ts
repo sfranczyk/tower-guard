@@ -34,7 +34,7 @@ export const ARROW_STYLES: readonly ArrowStyle[] = [
     fletch: { shape: 'shield', length: 11, halfHeight: 3.4, stripes: true },
   },
   {
-    id: 'needle', name: 'Needle', length: 58, shaft: { outline: 2.4, core: 1 }, head: 0.5,
+    id: 'needle', name: 'Needle', length: 50, shaft: { outline: 2.4, core: 1 }, head: 0.5,
     fletch: { shape: 'swept', length: 12, halfHeight: 2.6, stripes: false },
   },
   {
