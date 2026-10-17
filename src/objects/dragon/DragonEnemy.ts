@@ -137,7 +137,7 @@ export default class DragonEnemy extends Container {
       const startY = GIB_GROUND_Y - (groundAt(this.x) - this.y) / DRAGON_SCALE;
       // The fire dragon's burning gut goes up with it (CombatSystem doubles the blast): it bursts into chunks.
       const blast = hit?.cause === 'blast' ? { breathesFire: enemyArchetype(this.kind).breathesFire === true } : undefined;
-      this.corpse = new DragonCorpse(this.pose, startY, this.look, blast);
+      this.corpse = new DragonCorpse(this.pose, startY, this.look, blast, this.motion.wingMs);
       if (blast?.breathesFire) {
         this.blownApartAt = hit?.point ?? { x: this.x, y: this.y };
       }

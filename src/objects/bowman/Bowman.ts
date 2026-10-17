@@ -388,7 +388,10 @@ export class Bowman extends Container {
    * him when thrown, and draws the burn, frost and vortex glow over him.
    */
   public updateAnimation(deltaMs: number, moving: boolean, sprinting = false): void {
-    this.figure.lookTimeMs += deltaMs;
+    // Dead, his look holds still (no cape waving on the body).
+    if (this.deathMs === undefined) {
+      this.figure.lookTimeMs += deltaMs;
+    }
     this.afflictions.tick(deltaMs);
     this.motion.tickPin(deltaMs);
     this.zIndex = this.afflictions.levitating ? LEVITATE_Z : this.inTower ? 0 : 2;

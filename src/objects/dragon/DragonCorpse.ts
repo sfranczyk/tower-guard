@@ -32,6 +32,8 @@ export class DragonCorpse {
     private readonly startY: number,
     private readonly look: DragonLook,
     blast: { breathesFire: boolean } | undefined,
+    /** The rider's look clock when it was killed: his cape holds still from then on. */
+    private readonly lookMs = 0,
   ) {
     if (blast) {
       const force = RIDER_GIB_FORCE.min + Math.random() * (RIDER_GIB_FORCE.max - RIDER_GIB_FORCE.min);
@@ -71,7 +73,7 @@ export class DragonCorpse {
       art.position.set(0, fall.y - startY);
       art.rotation = fall.rotation;
     }
-    const riderLook = thrownRiderLook(this.look.rider, this.timeMs);
+    const riderLook = thrownRiderLook(this.look.rider, this.lookMs);
     if (this.riderGibs) {
       this.riderGibs.step(deltaMs);
       drawLookGibs(riderArt, this.riderGibs, riderLook, RIDER_GIB_COLORS[this.look.rider], -startY);

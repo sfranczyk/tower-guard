@@ -396,6 +396,12 @@ export default class Enemy extends Container {
     this.halt();
   }
 
+  /** Killed (not yet while it is being built: its figure draws before it has health). */
+  public get isDead(): boolean {
+    const vitals: Vitals | undefined = this.vitals;
+    return vitals !== undefined && vitals.health <= 0;
+  }
+
   /** Health left (e.g. whether a hit will kill it). */
   public get currentHealth(): number {
     return this.vitals.health;

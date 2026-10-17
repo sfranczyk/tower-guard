@@ -57,6 +57,8 @@ export class EnemyFigure {
   private animationTime = 0;
   /** Always-running clock for the look's own motion (a burning fuse, flapping cloth). */
   private lookTimeMs = Math.random() * 1000;
+  /** The look's clock when it died: cloth, plumes and glows stop with the body (lookClock). */
+  private deathLookMs?: number;
   /** Walk/run cycle phase: advances with the distance covered, so the feet stay planted at any speed. */
   private stridePhase = 0;
   /** Clock of the pinned struggle (stickmanPinned), from when the pin went in. */
@@ -82,7 +84,21 @@ export class EnemyFigure {
 
   /** Draws the body in this enemy's look (rendering/enemyBody) in the given state. */
   public draw(state: EnemyBodyState): void {
-    drawEnemyBody(this.body, this.enemy.kind, state, BODY_ORIGIN_Y, this.lookTimeMs);
+    drawEnemyBody(this.body, this.enemy.kind, state, BODY_ORIGIN_Y, this.lookClock);
+  }
+
+  /**
+   * The clock the look is drawn at: held from the moment of death (or a horse's), so nothing on a corpse moves by itself
+   * while it falls, flies apart or burns. A horse bolting with its rider killed is alive and keeps it running.
+   */
+  private get lookClock(): number {
+    const mount = this.enemy.rider?.mount;
+    if ((!this.enemy.isDead || mount?.bolting) && !mount?.death) {
+      this.deathLookMs = undefined;
+      return this.lookTimeMs;
+    }
+    this.deathLookMs ??= this.lookTimeMs;
+    return this.deathLookMs;
   }
 
   /** The first drawing, standing (on its horse) and facing left. */
@@ -150,7 +166,7 @@ export class EnemyFigure {
       this.dropToGround(deltaMs);
       this.gibs.step(deltaMs);
       this.lookTimeMs += deltaMs;
-      drawEnemyGibs(this.body, enemy.kind, this.gibs, BODY_ORIGIN_Y, this.lookTimeMs);
+      drawEnemyGibs(this.body, enemy.kind, this.gibs, BODY_ORIGIN_Y, this.lookClock);
       this.body.tint = this.shattered ? FROZEN_TINT : 0xffffff;
       afflictions.art.clear();
       return;
@@ -339,7 +355,7 @@ export class EnemyFigure {
     const bomb = enemyArchetype(enemy.kind).detonates ? KAMIKAZE_GIB_FORCE : 1;
     const force = (GIB_FORCE_MIN + Math.random() * (GIB_FORCE_MAX - GIB_FORCE_MIN)) * bomb;
     this.gibs = new GibSimulation(blast, Math.floor(Math.random() * 1e9), force);
-    drawEnemyGibs(this.body, enemy.kind, this.gibs, BODY_ORIGIN_Y, this.lookTimeMs);
+    drawEnemyGibs(this.body, enemy.kind, this.gibs, BODY_ORIGIN_Y, this.lookClock);
   }
 
   /** Turns to face the hit (so backwards falls go away from it) and starts a fall animation. */
