@@ -39,6 +39,8 @@ animation gets a row in `scenes/labRows.ts` (or `scenes/labSequences.ts` for one
   `bandageBody(kneel, timeMs)` (timing `bandaging.ts`, lab `bandage`); ideas in `ideas.ts` (+ `ideaHumanoids.ts`, `ideaFolk.ts`, `ideaUndead.ts`, `ideaBeasts.ts`, `ideaCreatures.ts`, gaits in `designSkeleton.ts`);
   catalogue `catalog.ts`. Green Meadow trees (tab Trees): `treeDesigns.ts`
   (`TREE_DESIGNS`); the map's round-tree row mixes those weighted in `MEADOW_TREES` (`meadowTrees.ts`, `meadowTreeAt`).
+  Smaller-arrow proposals (tab Arrows): `arrowDesigns.ts` builds each arrow's SVG in `ARROW_STYLES` (pure, tested;
+  heads in `ARROW_KINDS`), `arrowTiles.ts` shows them next to today's `src/assets/arrow*.svg`.
 
 ## Dragons
 - `dragon.ts`: `getDragonPose` (pure; wing beat, bob, neck and tail), `DRAGON_PALETTES` (`dark`, `red`),

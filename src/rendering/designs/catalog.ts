@@ -30,6 +30,7 @@ import { GibSimulation } from '../stickmanGibs';
 import type { UnitType } from '../../types';
 import { allyKnightLook, medicLook, squireLook } from './allySkins';
 import { BANDAGE_LOOP_MS, bandageKneel } from '../bandaging';
+import { ARROW_ENTRIES } from './arrowTiles';
 
 /** One animation of a design: a tile in the zoomed view. */
 export interface DesignView {
@@ -585,4 +586,5 @@ export const DESIGN_SECTIONS: readonly DesignSection[] = [
   { id: 'allies', tab: 'Allies', intro: 'The player\'s soldiers as they look in the game: summoned from beyond the left edge (Z, X, C), they follow the order button (V).', entries: ALLIES },
   { id: 'ideas', tab: 'Ideas', intro: 'Proposals for new enemy looks, from the most human to the least (not tied to an enemy yet).', entries: IDEAS },
   { id: 'trees', tab: 'Trees', intro: 'Proposals for the Green Meadow\'s trees: small variations on the round tree (the first card); the map mixes those weighted in MEADOW_TREES (?tune). Click one for a row of them as on the map.', entries: TREES },
+  { id: 'arrows', tab: 'Arrows', intro: 'Proposals for smaller arrows: each card shows today\'s arrow on top, then five styles with smaller heads. Click one to see them at the game\'s size next to a raider.', entries: ARROW_ENTRIES },
 ];
