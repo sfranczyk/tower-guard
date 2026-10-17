@@ -75,22 +75,26 @@ const MAIL_DARK = 0x666e78;
 const CREAM = 0xf1ead0;
 
 /**
- * A kite shield on the far fist, in front of the body: steel rim, blue face, a cream cross. Strapped to the forearm, it
- * stands square to it (its long axis across the forearm, like a sword in the fist), so it turns with the arm.
+ * A kite shield on the far fist, its face turned to the enemy: seen from the side, so it shows as a tall, slightly
+ * bowed slab in front of the fist (steel rim, a strip of the blue face, the cream cross's bar along it, the boss), square
+ * to the forearm, so it turns with the arm.
  */
 const kiteShield = (g: Graphics, pose: BodyPose): void => {
   const dx = pose.rearHand.x - pose.rearElbow.x;
   const dy = pose.rearHand.y - pose.rearElbow.y;
   const length = Math.hypot(dx, dy) || 1;
-  // `up` square to the forearm (the shield's top), `fwd` along it.
+  // `up` square to the forearm (the shield's top), `fwd` along it, towards the enemy.
   const frame: Frame = { up: { x: dy / length, y: -dx / length }, fwd: { x: dx / length, y: dy / length } };
-  const c = at(pose.rearHand, frame, 2, -3);
-  const kite = (grow: number): Array<[number, number]> => [[16 + grow, -11 - grow], [16 + grow, 11 + grow], [-2, 11 + grow], [-22 - grow * 1.5, 0], [-2, -11 - grow]];
-  shapeIn(g, c, frame, kite(2), STEEL_DARK);
-  shapeIn(g, c, frame, kite(0), BLUE);
-  shapeIn(g, c, frame, [[15, 1], [15, 10], [-2, 10], [-12, 4]], 0x3d72b8, 0.7);
-  limb(g, at(c, frame, 12, 0), at(c, frame, -14, 0), 3, 3, CREAM);
-  limb(g, at(c, frame, 5, -8), at(c, frame, 5, 8), 3, 3, CREAM);
+  const c = at(pose.rearHand, frame, 2, 0);
+  // Its profile: the face bows out towards the enemy, the back is flatter; the kite's point at the bottom.
+  const slab = (grow: number): Array<[number, number]> => [
+    [17 + grow, 1 - grow], [17 + grow, 5 + grow], [8, 8.5 + grow], [-6, 8.5 + grow], [-16, 6.5 + grow], [-24 - grow, 3],
+    [-16, 1 - grow], [-6, 2 - grow], [8, 2 - grow],
+  ];
+  shapeIn(g, c, frame, slab(1.2), STEEL_DARK);
+  shapeIn(g, c, frame, slab(0), BLUE);
+  limb(g, at(c, frame, 15, 6.5), at(c, frame, -15, 7), 1.6, 1.6, CREAM);
+  ellipseIn(g, at(c, frame, 4, 9), frame, 2.2, 3, STEEL);
 };
 
 /**

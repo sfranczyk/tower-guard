@@ -270,7 +270,7 @@ export const bandageBody = (kneel: number, timeMs: number): BodyPose => {
  */
 export const withShieldRaised = (pose: BodyPose): BodyPose => {
   const lean = Math.atan2(pose.shoulder.x - pose.hip.x, pose.hip.y - pose.shoulder.y);
-  const rear = arm(pose.shoulder, 0.45 + lean, 1.1);
+  const rear = arm(pose.shoulder, 0.25 + lean, 1.3);
   return { ...pose, rearElbow: rear.elbow, rearHand: rear.hand };
 };
 
