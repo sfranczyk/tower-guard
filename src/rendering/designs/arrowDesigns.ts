@@ -34,7 +34,7 @@ export const ARROW_STYLES: readonly ArrowStyle[] = [
     fletch: { shape: 'shield', length: 11, halfHeight: 3.4, stripes: true },
   },
   {
-    id: 'needle', name: 'Needle', length: 64, shaft: { outline: 2.4, core: 1 }, head: 0.5,
+    id: 'needle', name: 'Needle', length: 58, shaft: { outline: 2.4, core: 1 }, head: 0.5,
     fletch: { shape: 'swept', length: 12, halfHeight: 2.6, stripes: false },
   },
   {
@@ -61,8 +61,10 @@ const NS = 'vector-effect="non-scaling-stroke"';
 /** Today's heads, cut out of the assets and moved so the tip is at the origin. */
 export const ARROW_KINDS: Record<ArrowLook, ArrowKind> = {
   normal: {
-    name: 'Arrow', shaft: '#d9a84f', fletch: { fill: '#f4d78c', edge: '#4b3a4e', stripe: '#b9863b' }, headLength: 14,
-    head: `<path d="M-14 -4L0 0 -14 4 -11 0z" fill="#f4d78c" stroke="#4b3a4e" stroke-width="1.5" stroke-linejoin="round" ${NS}/>`,
+    // Plain steel head on an ash shaft, undyed goose fletching.
+    name: 'Arrow', shaft: '#b98a52', fletch: { fill: '#eceae2', edge: '#3f4650', stripe: '#a7aab0' }, headLength: 14,
+    head: `<path d="M-14 -4L0 0 -14 4 -11 0z" fill="#c9d1d9" stroke="#3a4450" stroke-width="1.5" stroke-linejoin="round" ${NS}/>`
+      + `<path d="M-12 -1.2L-2 0" stroke="#f3f7fa" stroke-width=".8" stroke-linecap="round" ${NS}/>`,
   },
   piercing: {
     name: 'Piercing', shaft: '#b8c7d6', shaftScale: 0.86, fletch: { fill: '#a9e4f5', edge: '#3b4a5e', stripe: '#5f9fb5' }, headLength: 19,
