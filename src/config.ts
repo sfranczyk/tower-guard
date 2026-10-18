@@ -570,6 +570,9 @@ export const BANNERS = tunable('BANNERS', 'Banners', {
   pickupRadius: 26,
   deliverReach: 30,
   riderSpeedFactor: 0.6,
+  /** Enemies escorting their bearer walk this far apart behind him and fight what comes within `escortRange` of their post. */
+  escortSpacing: 18,
+  escortRange: 140,
 });
 
 /**

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Vec2 } from '../../types';
-import { BODY_FOOT_Y, archerBody, attackBody, bandageBody, withShieldRaised, bowmanBody, castBody, runBody, standBody, walkBody, type BodyPose } from './bodyPoses';
+import { BODY_FOOT_Y, archerBody, attackBody, bandageBody, withShieldRaised, bowmanBody, castBody, runBody, standBody, walkBody, withBanner, BANNER_GRIP, type BodyPose } from './bodyPoses';
 
 const distance = (a: Vec2, b: Vec2): number => Math.hypot(a.x - b.x, a.y - b.y);
 
@@ -144,6 +144,23 @@ describe('body poses for new looks', () => {
       expect(Math.abs(pose.rearElbow.x - pose.shoulder.x)).toBeLessThan(8);
       expect(pose.rearHand.x).toBeGreaterThan(pose.rearElbow.x + 15);
       expect(pose.rearHand.y).toBeLessThan(pose.rearElbow.y);
+    }
+  });
+});
+
+describe('withBanner', () => {
+  it('holds the pole upright in both hands in front, elbows down, arms whole, legs walking on', () => {
+    for (const p of progressSteps) {
+      for (const base of [walkBody(p, { club: 'overhead' }), runBody(p), standBody('overhead')]) {
+        const pose = withBanner(base);
+        expectStickmanProportions(pose);
+        expect(pose.frontHand.x).toBeCloseTo(pose.hip.x + BANNER_GRIP.x, 6);
+        expect(pose.rearHand.x).toBeCloseTo(pose.frontHand.x, 6);
+        expect(pose.frontHand.y).toBeLessThan(pose.rearHand.y);
+        expect(pose.frontElbow.y).toBeGreaterThan(pose.shoulder.y);
+        expect(pose.club).toBeUndefined();
+        expect(pose.frontFoot).toEqual(base.frontFoot);
+      }
     }
   });
 });

@@ -1,5 +1,6 @@
 import type { Graphics } from 'pixi.js';
 import {
+  BANNERS,
   BOWMAN_Y,
   DRAGON_RANGE,
   DRAGON_FLIGHT,
@@ -18,7 +19,7 @@ import {
 } from '../config';
 import type { EnemyEdge } from '../data/difficulty';
 import { enemyDamage, rollDamage } from '../data/enemies';
-import { enemyArchetype, enemyRegenerates, enemyTraits } from '../data/enemyKinds';
+import { ENEMY_KINDS, enemyArchetype, enemyRegenerates, enemyTraits } from '../data/enemyKinds';
 import { bowSpeed } from '../data/projectiles';
 import Arrow from '../objects/Arrow';
 import type Bowman from '../objects/bowman/Bowman';
@@ -28,7 +29,7 @@ import { TOWER_HEIGHT } from '../objects/Tower';
 import type Tower from '../objects/Tower';
 import type { EnemyType, Vec2 } from '../types';
 import { solveLaunchAngle } from './ballistics';
-import type { Banners } from './banners';
+import { enemyEscortPost, escortsBanner, type Banners } from './banners';
 import { BlastDodge, blastZones, missChance, type BlastZone, type BombSpot, type DodgeStep } from './blastAwareness';
 import { flamesTouch } from './burning';
 import { planHeals, priestPost } from './healing';
@@ -93,6 +94,8 @@ export class EnemyAI {
   private readonly dodges = new WeakMap<Enemy, BlastDodge<Enemy>>();
   /** The kamikazes on the field this frame (their x) and the ground their bombs are about to blast (beginFrame). */
   private bombs: { kamikazes: Map<Enemy, number>; zones: BlastZone<Enemy>[] } = { kamikazes: new Map(), zones: [] };
+  /** Banners: this frame's escort of the enemies' bearer, each with his rank (nearest to the bearer first). */
+  private escortRanks = new Map<Enemy, number>();
 
   public constructor(
     private readonly world: EnemyAIWorld,
@@ -122,6 +125,23 @@ export class EnemyAI {
       return [here, { owner: kamikaze, x: blastX, radius, fused: true }];
     });
     this.bombs = { kamikazes: new Map(kamikazes.map((kamikaze) => [kamikaze, kamikaze.x])), zones: blastZones(spots) };
+    this.escortRanks = new Map();
+    const { banners } = this.world;
+    const bearer = banners?.bearer('enemy');
+    if (banners && bearer) {
+      this.world.enemies
+        .filter((enemy): enemy is Enemy => !(enemy instanceof DragonEnemy) && enemy.isAlive() && enemy !== bearer
+          && escortsBanner(ENEMY_KINDS[enemy.kind].archetype) && banners.fetchX(enemy) === undefined)
+        .sort((a, b) => Math.abs(a.x - bearer.x) - Math.abs(b.x - bearer.x))
+        .forEach((enemy, rank) => this.escortRanks.set(enemy, rank));
+    }
+  }
+
+  /** Banners: where `enemy` walks escorting his team's bearer, if it is one of the escort. */
+  private escortPost(enemy: Enemy): number | undefined {
+    const rank = this.escortRanks.get(enemy);
+    const bearer = this.world.banners?.bearer('enemy');
+    return rank === undefined || !bearer ? undefined : enemyEscortPost(bearer.x, rank);
   }
 
   /** One living enemy's frame. */
@@ -162,6 +182,25 @@ export class EnemyAI {
       if (thief) {
         this.fightAlly(enemy, thief, deltaMs);
         return;
+      }
+      // Escorting their bearer: they walk with him and fight only what comes near their post.
+      const post = this.escortPost(enemy);
+      if (post !== undefined) {
+        const near = nearestMeleeTarget(this.world.bowmen, this.world.allies, enemy.x);
+        const foe = near?.ally ?? near?.bowman;
+        if (near?.ally && Math.abs(near.ally.x - post) <= BANNERS.escortRange) {
+          this.fightAlly(enemy, near.ally, deltaMs);
+          return;
+        }
+        if (!foe || Math.abs(foe.x - post) > BANNERS.escortRange) {
+          enemy.target = 'bowman';
+          enemy.update(deltaMs, { x: post, y: groundAt(post) }, 4);
+          enemy.updateAnimation(deltaMs, enemy.isMoving());
+          this.drawDebugHitboxes(enemy);
+          enemy.clearHitTint();
+          return;
+        }
+        // A bowman near the post: fought as ever below.
       }
     }
     // The nearest bowman out in the open or soldier, or the keep when there's nobody out.
@@ -294,6 +333,12 @@ export class EnemyAI {
     const reach = (enemy.reach?.bowman ?? MELEE_REACH) + 2;
     const engaged = foe !== undefined && Math.abs(foe.x - enemy.x) <= reach && Math.abs(foe.y - enemy.y) <= 45;
     const toX = engaged ? enemy.x : goalX;
+    // A carrier sets his banner in the ground to fight and takes it up again once he's done.
+    if (engaged) {
+      enemy.plantBanner(foe.x);
+    } else if (!enemy.isAttacking) {
+      enemy.liftBanner();
+    }
     enemy.target = melee?.ally ? 'ally' : 'bowman';
     enemy.update(deltaMs, { x: toX, y: groundAt(toX) }, 2);
     enemy.updateAnimation(deltaMs, enemy.isMoving());
@@ -442,9 +487,13 @@ export class EnemyAI {
     const thief = this.world.banners?.thief('enemy');
     const aimPoint = thief ? { x: thief.x, y: thief.y - 25 * thief.size } : this.aimPointFrom(enemy.x, true);
     const inRange = Math.abs(aimPoint.x - enemy.x) <= ENEMY_ATTACK.archerRange;
+    // Escorting their bearer, an archer keeps to its post and shoots what comes in range from there.
+    const post = thief ? undefined : this.escortPost(enemy);
+    const strayed = post !== undefined && Math.abs(enemy.x - post) > BANNERS.escortRange;
 
-    if (enemy.isDown || !inRange) {
-      enemy.update(deltaMs, { x: aimPoint.x, y: GROUND_Y }, 0);
+    if (enemy.isDown || !inRange || strayed) {
+      const toX = post ?? aimPoint.x;
+      enemy.update(deltaMs, { x: toX, y: GROUND_Y }, post === undefined ? 0 : 4);
       enemy.relaxBow(deltaMs);
       this.archerAim.delete(enemy);
     } else {

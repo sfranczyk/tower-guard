@@ -1,8 +1,9 @@
-import { Graphics, type Container } from 'pixi.js';
+import { Graphics, Point, type Container } from 'pixi.js';
 import { BANNERS } from '../config';
 import { ENEMY_KINDS, isAllyType } from '../data/enemyKinds';
 import type Enemy from '../objects/enemy/Enemy';
 import { BANNER_POLE, bannerColors, drawBanner } from '../rendering/banner';
+import { BANNER_GRIP } from '../rendering/designs/bodyPoses';
 import { BANNER_SIDES, Banners, canCarryBanner, type BannerAt, type BannerEvent, type BannerSide } from '../systems/banners';
 import { groundAt } from '../systems/terrain';
 
@@ -21,11 +22,12 @@ export interface BattleBannersDeps {
 /** How far in from the view's edge a marker sits, and its size. */
 const MARKER_INSET = 14;
 const MARKER_SIZE = 9;
-/** Where a carried banner's pole stands on its carrier: behind the back, the foot this high above the feet (× size). */
-const CARRY_BACK = 7;
-const CARRY_FOOT = 16;
-/** Above a mounted carrier the pole rises from the saddle. */
+/** A rider's banner rises from behind the saddle: this far back and this high above the hooves (× size). */
+const MOUNTED_BACK = 7;
 const MOUNTED_FOOT = 46;
+/** A banner in a man's hands: the pole's foot this far (body px) below his lower hand; drawn at this share of its size. */
+const POLE_BELOW_HAND = 14;
+const CARRIED_SCALE = 0.9;
 /** A fallen banner's cloth, squashed flat on the ground. */
 const DROPPED_FLAT = 0.35;
 
@@ -52,6 +54,7 @@ export class BattleBanners {
       team: (unit) => (isAllyType(unit.kind) ? 'player' : 'enemy'),
       canCarry: (unit) => unit.isAlive() && !unit.isDown && !unit.isCelebrating && canCarryBanner(ENEMY_KINDS[unit.kind].archetype),
       alive: (unit) => unit.isAlive(),
+      dropX: (unit) => (unit.bannerHold === 'planted' ? unit.bannerPlantX : unit.x),
     });
     this.flags = { player: new Graphics(), enemy: new Graphics() };
     BANNER_SIDES.forEach((side) => {
@@ -77,7 +80,9 @@ export class BattleBanners {
     this.clockMs += deltaMs;
     this.field.step(this.deps.units()).forEach((event) => {
       if (event.by) {
-        event.by.carrySpeed = event.kind === 'taken' && event.by.rider ? BANNERS.riderSpeedFactor : 1;
+        const taken = event.kind === 'taken';
+        event.by.carrySpeed = taken && event.by.rider ? BANNERS.riderSpeedFactor : 1;
+        event.by.bannerHold = taken ? 'held' : 'none';
       }
       this.deps.status(STATUS[event.kind][event.side]);
     });
@@ -92,11 +97,25 @@ export class BattleBanners {
     if (place.at === 'carried') {
       const { by } = place;
       const facing = by.figure.facing;
-      flag.position.set(by.x - facing * CARRY_BACK * by.size, by.y - (by.rider ? MOUNTED_FOOT : CARRY_FOOT) * by.size);
-      // The cloth streams behind him.
-      flag.scale.set(-facing * by.size * 0.9, by.size * 0.9);
-      flag.rotation = -facing * 0.12;
-      flag.zIndex = by.zIndex;
+      flag.rotation = 0;
+      if (by.bannerHold === 'planted') {
+        // Stuck in the ground beside him while he fights.
+        flag.position.set(by.bannerPlantX, groundAt(by.bannerPlantX));
+        flag.scale.set(-facing * CARRIED_SCALE * by.size, CARRIED_SCALE * by.size);
+        flag.zIndex = 1;
+        return;
+      }
+      // The cloth streams behind him: from the saddle on horseback, else upright in both hands (withBanner).
+      const foot = by.rider
+        ? { x: by.x - facing * MOUNTED_BACK * by.size, y: by.y - MOUNTED_FOOT * by.size }
+        : this.deps.world.toLocal(by.figure.body.toGlobal(new Point(BANNER_GRIP.x, BANNER_GRIP.lower + POLE_BELOW_HAND)));
+      flag.position.set(foot.x, foot.y);
+      flag.scale.set(-facing * CARRIED_SCALE * by.size, CARRIED_SCALE * by.size);
+      if (by.rider) {
+        flag.rotation = -facing * 0.12;
+      }
+      // Held in front of him.
+      flag.zIndex = by.zIndex + 0.5;
       return;
     }
     const x = this.field.x(side);

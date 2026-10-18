@@ -168,6 +168,12 @@ export class AllyAI {
       .filter((candidate) => Math.abs(candidate.x - ally.x) <= IN_REACH)
       .reduce<Enemy | undefined>((best, candidate) => (!best || Math.abs(candidate.x - ally.x) < Math.abs(best.x - ally.x) ? candidate : best), undefined);
     const toX = foe ? ally.x : goalX;
+    // A carrier sets his banner in the ground to fight and takes it up again once he's done.
+    if (foe) {
+      ally.plantBanner(foe.x);
+    } else if (!ally.isAttacking) {
+      ally.liftBanner();
+    }
     ally.update(deltaMs, { x: toX, y: groundAt(toX) }, 2);
     ally.updateAnimation(deltaMs, ally.isMoving());
     if (!foe || ally.isDown || ally.afflictions.isFrozen || ally.afflictions.inVortex || !ally.canAttack()) {

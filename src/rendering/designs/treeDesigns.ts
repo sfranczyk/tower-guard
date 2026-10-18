@@ -2,18 +2,14 @@ import type { Graphics } from 'pixi.js';
 import { mixColor } from '../clouds';
 
 /**
- * Tree proposals for the Green Meadow (design lab, tab Trees): variations on the map's round tree (three circles on a
+ * Trees for the Green Meadow: variations on the map's round tree (three circles on a
  * trunk), in its colours. Those named in MEADOW_TREES stand on the map (rendering/landscape.ts, meadowTrees.ts).
  */
 
-/** Ground y in the lab's sprite space (as drawStickman). */
-const GROUND = 58;
 const MAIN = 0x2d594f;
 const LIGHT = 0x35695a;
 const DARK = 0x264e4b;
 const TRUNK = 0x584d42;
-/** Spacing of the trees on the map. */
-const SPACING = 92;
 
 /** Draws one tree with its foot at (x, ground); `height` as on the map (38, 52 or 66), `index` its place in the row. */
 export type TreeDrawer = (g: Graphics, x: number, ground: number, height: number, index: number) => void;
@@ -171,22 +167,6 @@ const designs: TreeDesign[] = [
   },
 ];
 
-const HEIGHTS = [38, 52, 66];
-
 export const TREE_DESIGNS: readonly TreeDesign[] = designs;
 
 export const treeDesign = (id: string): TreeDesign => designs.find((design) => design.id === id) ?? designs[0];
-
-/** One tree, middle height. */
-export const drawTreeSingle = (design: TreeDesign) => (g: Graphics): void => {
-  g.clear();
-  design.draw(g, 0, GROUND, 52, 0);
-};
-
-/** Five trees as on the map: every SPACING px, heights cycling 38/52/66. */
-export const drawTreeRow = (design: TreeDesign) => (g: Graphics): void => {
-  g.clear();
-  for (let index = 0; index < 5; index += 1) {
-    design.draw(g, (index - 2) * SPACING, GROUND, HEIGHTS[index % 3], index);
-  }
-};

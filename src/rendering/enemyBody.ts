@@ -5,7 +5,7 @@ import type { BodyColors } from './bodyColors';
 import { HUMAN_BODY, ZOMBIE_BODY } from './bodyColors';
 import type { AttackStyle } from './attackSwing';
 import type { JointPose } from './stickmanPose';
-import { archerBody, attackBody, bandageBody, castBody, runBody, standBody, walkBody, withClub, type BodyPose } from './designs/bodyPoses';
+import { archerBody, attackBody, bandageBody, castBody, runBody, standBody, walkBody, withBanner, withClub, type BodyPose } from './designs/bodyPoses';
 import { banditArcherLook, goblinBomberLook, goblinLook, raiderLook, sapperLook } from './designs/enemySkins';
 import { ogreLook, trollLook, zombieLook } from './designs/heavySkins';
 import { blackKnightLook, darkPriestLook, heavyKnightLook } from './designs/knightSkins';
@@ -70,8 +70,8 @@ const LIVE_POSE_LIFT = 2;
 
 /** What the enemy is doing, in drawStickman's terms (phase in radians, one cycle = 2π). */
 export type EnemyBodyState =
-  | { mode: 'walk'; phase: number; running: boolean }
-  | { mode: 'stand'; phase: number }
+  | { mode: 'walk'; phase: number; running: boolean; banner?: boolean }
+  | { mode: 'stand'; phase: number; banner?: boolean }
   | { mode: 'attack'; progress: number; style: AttackStyle }
   | { mode: 'archer'; localAngle: number; tension: number; ready: number; walkPhase?: number }
   /** A spell (the priest's heal), progress 0..1. */
@@ -87,7 +87,13 @@ type HumanState = Exclude<EnemyBodyState, { mode: 'mounted' }>;
 
 const TWO_PI = Math.PI * 2;
 
+/** Walking or standing with a banner in both hands (withBanner), else the plain pose. */
 const poseFor = (kind: UnitType, state: HumanState): BodyPose => {
+  const pose = plainPoseFor(kind, state);
+  return (state.mode === 'walk' || state.mode === 'stand') && state.banner ? withBanner(pose) : pose;
+};
+
+const plainPoseFor = (kind: UnitType, state: HumanState): BodyPose => {
   const { club } = lookOf(kind);
   // Grabbers (zombies) walk and stand with their arms held out.
   const zombie = enemyArchetype(kind).attackStyle === 'grab';

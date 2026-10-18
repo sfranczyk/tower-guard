@@ -18,7 +18,6 @@ import { banditArcherLook, goblinBomberLook, goblinLook, raiderLook, sapperLook 
 import { shamanLook } from './shamanSkin';
 import { dragonArcherLook, dragonKnightLook, drawDragonWithRider, ogreLook, trollLook, zombieLook } from './heavySkins';
 import { ENEMY_DESIGNS } from './ideas';
-import { TREE_DESIGNS, drawTreeRow, drawTreeSingle } from './treeDesigns';
 import { blackKnightLook, darkPriestLook, heavyKnightLook } from './knightSkins';
 import { drawMountedKnight } from './warhorse';
 import { HORSE_DEATH_MS, getHorseDeath, type HorseDeathKind } from '../horseDeath';
@@ -30,8 +29,7 @@ import { GibSimulation } from '../stickmanGibs';
 import type { UnitType } from '../../types';
 import { allyKnightLook, medicLook, squireLook } from './allySkins';
 import { BANDAGE_LOOP_MS, bandageKneel } from '../bandaging';
-import { ARROW_ENTRIES } from './arrowTiles';
-import { drawBanner } from '../banner';
+import { BANNER_STYLES } from './bannerDesigns';
 
 /** One animation of a design: a tile in the zoomed view. */
 export interface DesignView {
@@ -515,37 +513,39 @@ const IDEAS: DesignEntry[] = ENEMY_DESIGNS.map((design) => ({
   views: [{ label: 'Walk', draw: design.draw, speed: design.speed }],
 }));
 
-const TREES: DesignEntry[] = TREE_DESIGNS.map((design) => ({
-  id: `tree-${design.id}`,
-  name: design.name,
-  tagline: design.tagline,
-  description: design.description,
+/** Banner proposals (rendering/designs/bannerDesigns.ts): ours and theirs, and a close-up of ours. */
+const BANNER_GROUND = 58;
+const BANNER_ENTRIES: DesignEntry[] = BANNER_STYLES.map((style) => ({
+  id: `banner-${style.id}`,
+  name: style.name,
+  tagline: style.tagline,
+  description: style.description,
   views: [
-    { label: 'One tree', draw: drawTreeSingle(design), scale: 1.6 },
-    { label: 'A row, as on the map', draw: drawTreeRow(design), scale: 0.26 },
+    {
+      label: 'Ours and theirs',
+      draw: (g: Graphics, timeMs: number) => {
+        g.clear();
+        style.draw(g, 'player', timeMs / 1000, { x: -18, y: BANNER_GROUND, flip: -1 });
+        style.draw(g, 'enemy', timeMs / 1000 + 0.7, { x: 18, y: BANNER_GROUND, flip: 1 });
+      },
+      scale: 1.3,
+    },
+    {
+      label: 'Close-up',
+      draw: (g: Graphics, timeMs: number) => {
+        g.clear();
+        style.draw(g, 'player', timeMs / 1000, { x: -10, y: BANNER_GROUND, flip: 1 });
+      },
+      scale: 2.2,
+    },
   ],
 }));
-
-/** Banners (the run's Banners option): both keeps' banners, standing and waving. */
-const BANNER_GROUND = 58;
-const bannerPair = (g: Graphics, timeMs: number): void => {
-  g.clear();
-  drawBanner(g, 'player', timeMs / 1000, { x: -40, y: BANNER_GROUND, flip: 1 }, false);
-  drawBanner(g, 'enemy', timeMs / 1000 + 0.7, { x: 40, y: BANNER_GROUND, flip: -1 }, false);
-};
 
 const SQUIRE_SPEED = (ENEMY_SPEED * 1.2) / 1000;
 const squire = (): HumanoidLook => squireLook();
 
 /** The player's soldiers (scenes/BattleAllies.ts), summoned with Z / X / C. */
 const ALLIES: DesignEntry[] = [
-  {
-    id: 'banner',
-    name: 'Banners',
-    tagline: 'Bring theirs home, keep ours',
-    description: 'With Banners on in the battle setup each keep has a banner by its gate: an ash pole with a gilt knob and a swallow-tailed cloth in the keep\'s colours (blue ours, red theirs) with a gold lozenge. A soldier or a foot fighter or rider of the other side takes it and carries it on his back to his own keep; killed, he drops it where he fell.',
-    views: [{ label: 'Ours and theirs', draw: bannerPair, scale: 1.3 }],
-  },
   {
     id: 'squire',
     name: 'Squire',
@@ -600,7 +600,6 @@ export const DESIGN_SECTIONS: readonly DesignSection[] = [
   { id: 'enemies', tab: 'Enemies', intro: 'Every enemy as it looks in the game now, over its own moves. Click one for all its animations and the old stickman.', entries: ENEMIES },
   { id: 'player', tab: 'Player', intro: 'The player looks: the ranger (player 1) and the keep warden (player 2 in co-op), next to the old armored archer.', entries: PLAYER },
   { id: 'allies', tab: 'Allies', intro: 'The player\'s soldiers as they look in the game: summoned from beyond the left edge (Z, X, C), they follow the order button (V).', entries: ALLIES },
+  { id: 'banners', tab: 'Banners', intro: 'Five proposals for the keeps\' banners (the Banners option): blue ours, red theirs. The game draws BANNER_STYLE (rendering/banner.ts); today\'s is the swallowtail.', entries: BANNER_ENTRIES },
   { id: 'ideas', tab: 'Ideas', intro: 'Proposals for new enemy looks, from the most human to the least (not tied to an enemy yet).', entries: IDEAS },
-  { id: 'trees', tab: 'Trees', intro: 'Proposals for the Green Meadow\'s trees: small variations on the round tree (the first card); the map mixes those weighted in MEADOW_TREES (?tune). Click one for a row of them as on the map.', entries: TREES },
-  { id: 'arrows', tab: 'Arrows', intro: 'Proposals for smaller arrows: each card shows today\'s arrow on top, then five styles with smaller heads. Click one to see them at the game\'s size next to a raider.', entries: ARROW_ENTRIES },
 ];

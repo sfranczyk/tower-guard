@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { BANNERS, ENEMY_TOWER_X, PLAYER_TOWER_X } from '../config';
-import { Banners, bannerHomeX, canCarryBanner, type BannerSide } from './banners';
+import { Banners, bannerHomeX, canCarryBanner, enemyEscortPost, escortsBanner, type BannerSide } from './banners';
 
 interface Unit {
   x: number;
@@ -103,5 +103,20 @@ describe('Banners', () => {
     expect(enemyBanner.at === 'carried' && enemyBanner.by).toBe(squire);
     expect(field.bearer('player')).toBe(squire);
     expect(field.thief('player')).toBeUndefined();
+  });
+});
+
+describe('enemy escort', () => {
+  it('fighters and archers escort, bombers, zombies and casters do not', () => {
+    expect(escortsBanner('fighter')).toBe(true);
+    expect(escortsBanner('archer')).toBe(true);
+    expect(escortsBanner('kamikaze')).toBe(false);
+    expect(escortsBanner('grabber')).toBe(false);
+    expect(escortsBanner('healer')).toBe(false);
+  });
+
+  it('walks behind the bearer, rank by rank, on the player\'s side', () => {
+    expect(enemyEscortPost(1500, 0)).toBe(1500 - BANNERS.escortSpacing);
+    expect(enemyEscortPost(1500, 2)).toBe(1500 - 3 * BANNERS.escortSpacing);
   });
 });

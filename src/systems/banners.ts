@@ -28,6 +28,14 @@ export const bannerHomeX = (side: BannerSide): number =>
 export const reachedKeep = (team: BannerSide, x: number): boolean =>
   team === 'player' ? x <= PLAYER_TOWER_X + BANNERS.deliverReach : x >= ENEMY_TOWER_X - BANNERS.deliverReach;
 
+/** Who walks with his team's bearer to guard him: fighters and archers, not bombers, zombies, casters or dragons. */
+const ESCORT_ARCHETYPES: readonly EnemyArchetype[] = ['fighter', 'runner', 'heavy', 'cavalry', 'archer'];
+
+export const escortsBanner = (archetype: EnemyArchetype): boolean => ESCORT_ARCHETYPES.includes(archetype);
+
+/** Where the `rank`-th enemy (0 = nearest) escorting a bearer at `bearerX` walks: behind him, towards the player's side. */
+export const enemyEscortPost = (bearerX: number, rank: number): number => bearerX - (rank + 1) * BANNERS.escortSpacing;
+
 export type BannerPlace<U> = { at: 'home' } | { at: 'carried'; by: U } | { at: 'dropped'; x: number };
 
 /** Where a banner is, as the HUD tells it. */
@@ -54,6 +62,8 @@ export interface BannerRules<U> {
   canCarry(unit: U): boolean;
   /** Still alive (a fallen carrier drops the banner). */
   alive(unit: U): boolean;
+  /** Where his banner falls when he does (default: where he stands; one set in the ground stays there). */
+  dropX?(unit: U): number;
 }
 
 export class Banners<U extends BannerUnit> {
@@ -113,8 +123,9 @@ export class Banners<U extends BannerUnit> {
       if (place.at === 'carried') {
         const { by } = place;
         if (!this.rules.alive(by)) {
-          this.places[side] = { at: 'dropped', x: by.x };
-          events.push({ kind: 'dropped', side, by, x: by.x });
+          const x = this.rules.dropX?.(by) ?? by.x;
+          this.places[side] = { at: 'dropped', x };
+          events.push({ kind: 'dropped', side, by, x });
         } else if (reachedKeep(this.rules.team(by), by.x)) {
           if (this.rules.team(by) === side) {
             this.places[side] = { at: 'home' };

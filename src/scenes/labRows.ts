@@ -12,7 +12,7 @@ import { drawStickmanCheer } from '../rendering/stickmanCheer';
 import { getFlailPose } from '../rendering/stickmanFlail';
 import { drawPinnedStruggle } from '../rendering/stickmanPinned';
 import { drawJointPose } from '../rendering/stickmanPose';
-import { bandageBody } from '../rendering/designs/bodyPoses';
+import { BANNER_GRIP, bandageBody, walkBody, withBanner } from '../rendering/designs/bodyPoses';
 import { BANDAGE_LOOP_MS, bandageKneel } from '../rendering/bandaging';
 import { FallClock, GibReplay, RUN_PHASE_MS, WALK_PHASE_MS } from './labSequences';
 
@@ -181,6 +181,18 @@ export const LAB_CATEGORIES: readonly LabCategory[] = [
         title: 'Zombie shuffle',
         description: 'Leaning forward with both arms held out in front, swaying a little while it shuffles.',
         render: (sprite, clock) => drawStickman(sprite, clock.timeMs / 240, { zombie: true, originY: 0 }),
+      },
+      {
+        id: 'banner-carry',
+        title: 'Banner carry',
+        description: 'Banners: the carrier walks with the pole upright in both hands in front of him, one hand under the chin, the other at the belt; the legs walk as usual. Fighting, he sets it in the ground instead and fights as ever.',
+        render: (sprite, clock) => {
+          const pose = withBanner(walkBody(clock.timeMs / WALK_PHASE_MS / (Math.PI * 2)));
+          drawJointPose(sprite, pose);
+          const x = pose.hip.x + BANNER_GRIP.x;
+          sprite.moveTo(x, pose.hip.y + BANNER_GRIP.lower + 14).lineTo(x, pose.hip.y + BANNER_GRIP.lower - 62).stroke({ color: 0x8a6238, width: 3 });
+          sprite.poly([x, pose.hip.y - 72, x + 24, pose.hip.y - 68, x, pose.hip.y - 56]).fill({ color: 0x34489f });
+        },
       },
       {
         id: 'horse-walk',

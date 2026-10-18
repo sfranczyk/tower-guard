@@ -340,3 +340,25 @@ export const withClub = (pose: JointPose): BodyPose => {
   const d = { x: (hand.x - elbow.x) / length, y: (hand.y - elbow.y) / length };
   return { ...pose, club: { butt: { x: hand.x - d.x * 8, y: hand.y - d.y * 8 }, tip: { x: hand.x + d.x * 28, y: hand.y + d.y * 28 } } };
 };
+
+/**
+ * Where a banner bearer grips the pole (body space, from the hip: x forward, y down): the upper hand under the chin,
+ * the lower at the belt, both on the pole held upright in front of him (scenes/BattleBanners.ts stands the banner there).
+ */
+export const BANNER_GRIP = { x: 13, upper: -24, lower: -10 } as const;
+
+/** `pose` carrying a banner: both hands on the upright pole in front (no club), elbows down. The legs walk on. */
+export const withBanner = (pose: BodyPose): BodyPose => {
+  const grip = (y: number): Vec2 => ({ x: pose.hip.x + BANNER_GRIP.x, y: pose.hip.y + y });
+  const frontHand = grip(BANNER_GRIP.upper);
+  const rearHand = grip(BANNER_GRIP.lower);
+  return {
+    ...pose,
+    frontHand,
+    frontElbow: solveJoint(pose.shoulder, frontHand, ARM, ARM, -1),
+    rearHand,
+    rearElbow: solveJoint(pose.shoulder, rearHand, ARM, ARM, -1),
+    club: undefined,
+    bow: undefined,
+  };
+};

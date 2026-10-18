@@ -26,8 +26,9 @@ friendly fire (`arrowTargets`). Limits and pauses: `allyRoster.ts` (pure, tested
 The run's Banners option (`SandboxSettings.banners`, solo only): `Banners<Enemy>` (`CombatWorld.banners`) holds each
 keep's banner (`home` / `carried` / `dropped`, never goes back by itself). Carriers: `canCarryBanner` (fighter, runner, heavy,
 grabber, cavalry; squire, allyKnight). `step` takes, drops, returns or captures (`outcome`); `thief`, `bearer`, `fetchX`.
-AI: carriers and fetchers `walkOnGuard` (EnemyAI / AllyAI: fight only what reaches them, standing); enemies but kamikazes go
-for the `thief`, archers shoot him; soldiers on Advance go to the enemy banner, escort a `bearer` (`escortPost`), chase the thief.
+AI: carriers and fetchers `walkOnGuard` (EnemyAI / AllyAI: fight only what reaches them, the banner planted beside them,
+`Enemy.plantBanner` / `liftBanner`); enemies but kamikazes go for the `thief`, archers shoot him; `escortsBanner` kinds walk
+behind their bearer (`enemyEscortPost`, `EnemyAI.escortRanks`, `BANNERS.escortRange`); soldiers on Advance go to the enemy banner, escort a `bearer` (`escortPost`), chase the thief.
 
 ## Waves (`waveDirector.ts`, pure, tested; not shown in the UI yet)
 `planWaves` spreads each type through the level (tougher types later, by `arrival`, so the first wave of
