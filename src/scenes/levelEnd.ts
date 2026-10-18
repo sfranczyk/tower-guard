@@ -13,6 +13,8 @@ export interface LevelOutcome {
   keep: { health: number; max: number };
   enemyKeepDestroyed: boolean;
   playerKeepDestroyed: boolean;
+  /** Banners: the enemy's brought to our keep (won, counts as cleared) or ours to theirs (lost). */
+  banner?: 'captured' | 'lost';
   /** Each player's health, player 1 first. */
   playerHealths: readonly number[];
 }
@@ -36,10 +38,10 @@ export const levelEndInfo = (outcome: LevelOutcome, sandbox: SandboxSettings): {
     return {
       next: true,
       info: {
-        title: `Level ${levelIndex + 1} cleared!`,
+        title: outcome.banner === 'captured' ? 'Banner captured!' : `Level ${levelIndex + 1} cleared!`,
         outcome: 'win',
         stats,
-        copy: `Next: level ${levelIndex + 2} of ${sandbox.levelCount} at ${BATTLEGROUNDS[sandbox.levels[levelIndex + 1].battleground].name}.`,
+        copy: `${outcome.banner === 'captured' ? `Level ${levelIndex + 1} won. ` : ''}Next: level ${levelIndex + 2} of ${sandbox.levelCount} at ${BATTLEGROUNDS[sandbox.levels[levelIndex + 1].battleground].name}.`,
       },
     };
   }
@@ -50,8 +52,8 @@ export const levelEndInfo = (outcome: LevelOutcome, sandbox: SandboxSettings): {
       outcome: won ? 'win' : 'loss',
       stats,
       copy: won
-        ? (outcome.enemyKeepDestroyed ? 'The enemy keep has fallen.' : sandbox.levelCount === 1 ? 'The level is held off.' : `All ${sandbox.levelCount} levels held off.`)
-        : `${outcome.playerKeepDestroyed ? 'The keep has fallen' : coop ? 'Both bowmen have fallen' : 'The bowman has fallen'}. Adjust the sandbox and try again.`,
+        ? (outcome.enemyKeepDestroyed ? 'The enemy keep has fallen.' : outcome.banner === 'captured' ? 'The enemy banner is ours.' : sandbox.levelCount === 1 ? 'The level is held off.' : `All ${sandbox.levelCount} levels held off.`)
+        : `${outcome.playerKeepDestroyed ? 'The keep has fallen' : outcome.banner === 'lost' ? 'The enemy has carried off our banner' : coop ? 'Both bowmen have fallen' : 'The bowman has fallen'}. Adjust the sandbox and try again.`,
     },
   };
 };

@@ -8,14 +8,14 @@
   play field. Keep and bowman health are bars in the world (Tower, `Bowman.setHealthRatio`), not in the HUD. Weapons are square slots (`LOADOUT_SLOTS` = 5,
   `weaponSlots`): icon only (name in the tooltip), key in the corner, ammo underneath (∞ for now); built from the quiver
   (`DomUi.setLoadout`). Right of them the soldiers' slots (`allySlots`, `ICON_ALLIES`: key, `alive/limit`, a shade for
-  the pause) and the order button (`ICON_ORDERS`): `DomUi.setAllies` once, `updateAllies` every frame.
+  the pause) and the order button (`ICON_ORDERS`): `DomUi.setAllies` once, `updateAllies` every frame. Banners: a line under the level chip (`DomUi.updateBanners`, `ICON_BANNERS`), off with the drawer's "Banner markers" (`session.bannerMarkers`).
 - **Overlays on the canvas** (menu, sandbox/sound panels, end screen, pause dialog `[data-pause]` (`PauseView`: restart button, the quiver editor while in the keep) placed under the
   settings drawer and the tuning panel, settings drawer) are laid out for a canvas at
   scale 1 and zoom with it (`--ui-scale`, set in `fitCanvas`, `UI_SCALE` limits); the sandbox's buttons stay pinned
   at the bottom of its card.
 - **Sandbox form** (`SandboxForm.ts`): level tabs (map thumbnail, enemy count, add/remove, 1–5), the selected level's
   battleground (map cards, `mapThumbnail.ts`: a tiny SVG landscape from the palette) and enemies (a card per type with
-  − / +, type icons), bowman/keep health under the top bar. Second page, Quiver (`quiverPage.ts`): fill the five slots
+  − / +, type icons), bowman/keep health, difficulty and Banners on/off under the top bar. Second page, Quiver (`quiverPage.ts`): fill the five slots
   (click a slot then an arrow, or drag: `quiverDrag.ts`; editing shared with co-op: `quiverEditing.ts`).
 - **Settings drawer** (handlers in `SceneManager`; menu, and in battle from the pause dialog: "Settings" or I, Esc closes it first): sound/music toggles and volumes
   (persisted), trajectory preview (off by default), arrow trails (0–3, `DEFAULT_ARROW_TRAILS` = 1), cursor circle,

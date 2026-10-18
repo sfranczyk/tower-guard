@@ -1,12 +1,13 @@
 import type { Graphics } from 'pixi.js';
-import { ALLIES, MEDIC, PRIEST_POST_SLACK, SHOW_HITBOX_DEBUG } from '../config';
+import { ALLIES, MEDIC, PLAYER_TOWER_X, PRIEST_POST_SLACK, SHOW_HITBOX_DEBUG } from '../config';
 import { enemyDamage, rollDamage } from '../data/enemies';
 import { enemyArchetype, enemyArmor, enemyTraits } from '../data/enemyKinds';
 import type Bowman from '../objects/bowman/Bowman';
 import DragonEnemy from '../objects/dragon/DragonEnemy';
 import type Enemy from '../objects/enemy/Enemy';
 import type { Vec2 } from '../types';
-import { orderPost, pickFoe, type AllyOrder } from './allyOrders';
+import { escortPost, orderPost, pickFoe, type AllyOrder } from './allyOrders';
+import { bannerHomeX, type Banners } from './banners';
 import { foeHitBoxes, type Foe } from './combatGeometry';
 import type { EffectsSystem } from './EffectsSystem';
 import { bandageHeal, pickPatient } from './bandaging';
@@ -42,6 +43,8 @@ export interface AllyAIWorld {
   readonly debug: Graphics;
   /** What the soldiers are told now (scenes/BattleAllies.ts). */
   allyOrder(): AllyOrder;
+  /** Banners (systems/banners.ts): on Advance they take the enemy's, bring it home under escort and go for ours. */
+  readonly banners?: Banners<Enemy>;
 }
 
 export interface AllyAIEvents {
@@ -111,11 +114,27 @@ export class AllyAI {
   }
 
   private updateFighter(ally: Enemy, deltaMs: number): void {
-    const order = this.world.allyOrder();
-    const post = orderPost(order, Math.max(0, this.rankOf(ally)));
+    const { banners } = this.world;
+    const goal = banners?.carriedBy(ally) ? PLAYER_TOWER_X : banners?.fetchX(ally);
+    if (goal !== undefined) {
+      this.walkOnGuard(ally, goal, deltaMs);
+      return;
+    }
+    const rank = Math.max(0, this.rankOf(ally));
+    let order = this.world.allyOrder();
+    let post = orderPost(order, rank);
+    const bearer = banners?.bearer('player');
+    if (bearer) {
+      // A comrade carries a banner home: the others walk with him, between him and the enemy.
+      order = 'hold';
+      post = escortPost(bearer.x, rank);
+    } else if (banners && order === 'advance' && banners.place('enemy').at === 'home') {
+      post = bannerHomeX('enemy') - rank * ALLIES.spacing;
+    }
     const foes = this.groundFoes();
     const pick = pickFoe(ally.x, post, order, foes.map((foe) => foe.x), IN_REACH);
-    const foe = pick === undefined ? undefined : foes[pick];
+    // An enemy carrying our banner off comes first.
+    const foe = banners?.thief('player') ?? (pick === undefined ? undefined : foes[pick]);
     if (foe) {
       ally.update(deltaMs, { x: foe.x, y: groundAt(foe.x) }, ALLY_MELEE_REACH);
     } else {
@@ -138,6 +157,28 @@ export class AllyAI {
         }
       });
     }
+  }
+
+  /**
+   * Banners: walks to `goalX` (home with a banner, or to a fallen one) fighting only in defence: an enemy within reach
+   * stops him, and he strikes it standing where he is.
+   */
+  private walkOnGuard(ally: Enemy, goalX: number, deltaMs: number): void {
+    const foe = this.groundFoes()
+      .filter((candidate) => Math.abs(candidate.x - ally.x) <= IN_REACH)
+      .reduce<Enemy | undefined>((best, candidate) => (!best || Math.abs(candidate.x - ally.x) < Math.abs(best.x - ally.x) ? candidate : best), undefined);
+    const toX = foe ? ally.x : goalX;
+    ally.update(deltaMs, { x: toX, y: groundAt(toX) }, 2);
+    ally.updateAnimation(deltaMs, ally.isMoving());
+    if (!foe || ally.isDown || ally.afflictions.isFrozen || ally.afflictions.inVortex || !ally.canAttack()) {
+      return;
+    }
+    ally.faceTowards(foe.x);
+    ally.playAttackAnimation(() => {
+      if (foe.isAlive() && Math.abs(ally.x - foe.x) <= ally.strikeReach) {
+        meleeBlow(foe, rollDamage(enemyDamage(ally.kind, 'melee', 'bowman')), ally.x, this.world.effects);
+      }
+    });
   }
 
   /**

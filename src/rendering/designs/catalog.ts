@@ -31,6 +31,7 @@ import type { UnitType } from '../../types';
 import { allyKnightLook, medicLook, squireLook } from './allySkins';
 import { BANDAGE_LOOP_MS, bandageKneel } from '../bandaging';
 import { ARROW_ENTRIES } from './arrowTiles';
+import { drawBanner } from '../banner';
 
 /** One animation of a design: a tile in the zoomed view. */
 export interface DesignView {
@@ -525,11 +526,26 @@ const TREES: DesignEntry[] = TREE_DESIGNS.map((design) => ({
   ],
 }));
 
+/** Banners (the run's Banners option): both keeps' banners, standing and waving. */
+const BANNER_GROUND = 58;
+const bannerPair = (g: Graphics, timeMs: number): void => {
+  g.clear();
+  drawBanner(g, 'player', timeMs / 1000, { x: -40, y: BANNER_GROUND, flip: 1 }, false);
+  drawBanner(g, 'enemy', timeMs / 1000 + 0.7, { x: 40, y: BANNER_GROUND, flip: -1 }, false);
+};
+
 const SQUIRE_SPEED = (ENEMY_SPEED * 1.2) / 1000;
 const squire = (): HumanoidLook => squireLook();
 
 /** The player's soldiers (scenes/BattleAllies.ts), summoned with Z / X / C. */
 const ALLIES: DesignEntry[] = [
+  {
+    id: 'banner',
+    name: 'Banners',
+    tagline: 'Bring theirs home, keep ours',
+    description: 'With Banners on in the battle setup each keep has a banner by its gate: an ash pole with a gilt knob and a swallow-tailed cloth in the keep\'s colours (blue ours, red theirs) with a gold lozenge. A soldier or a foot fighter or rider of the other side takes it and carries it on his back to his own keep; killed, he drops it where he fell.',
+    views: [{ label: 'Ours and theirs', draw: bannerPair, scale: 1.3 }],
+  },
   {
     id: 'squire',
     name: 'Squire',

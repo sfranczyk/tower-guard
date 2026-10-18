@@ -182,3 +182,9 @@ export const ICON_ORDERS = {
   retreat: `<svg class="weapon-art" viewBox="0 0 40 40" aria-hidden="true">
   <path d="M14 20h20" stroke="#8a5a30" stroke-width="5" stroke-linecap="round"/><path d="M18 10L6 20l12 10z" fill="#8a5a30"/></svg>`,
 } as const;
+
+/** The two keeps' banners in the HUD's banner line: a small flag on a pole in each keep's colours (rendering/keep.ts). */
+const bannerIcon = (cloth: string): string => `<svg class="icon banner-icon" viewBox="0 0 28 28" aria-hidden="true">
+  <rect x="7" y="4" width="2.5" height="21" rx="1" fill="#8a6238"/><circle cx="8.2" cy="4" r="2" fill="#e2b44c"/>
+  <path d="M9.5 6h13l-3.5 4.5 3.5 4.5h-13z" fill="${cloth}"/><path d="M14 8l2 2.5-2 2.5-2-2.5z" fill="#e2b44c"/></svg>`;
+export const ICON_BANNERS = { player: bannerIcon('#34489f'), enemy: bannerIcon('#9a2c37') } as const;

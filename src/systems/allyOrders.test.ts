@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ALLIES, ENEMY_TOWER_X } from '../config';
-import { nextOrder, orderPost, pickFoe } from './allyOrders';
+import { escortPost, nextOrder, orderPost, pickFoe } from './allyOrders';
 
 describe('orderPost', () => {
   it('holds the line, falls back to the keep or advances to the enemy keep, rank by rank', () => {
@@ -37,5 +37,12 @@ describe('pickFoe', () => {
   it('falling back, fights only what reaches him', () => {
     expect(pickFoe(230, ALLIES.retreatX, 'retreat', [400], 40)).toBeUndefined();
     expect(pickFoe(230, ALLIES.retreatX, 'retreat', [400, 260], 40)).toBe(1);
+  });
+});
+
+describe('escortPost', () => {
+  it('puts the escort between the bearer and the enemy, rank by rank', () => {
+    expect(escortPost(500)).toBe(500 + ALLIES.spacing);
+    expect(escortPost(500, 2)).toBe(500 + 3 * ALLIES.spacing);
   });
 });

@@ -55,3 +55,9 @@ export const pickFoe = (allyX: number, post: number, order: AllyOrder, foeXs: re
   });
   return best;
 };
+
+/**
+ * Banners: where the `rank`-th soldier (0 = front) stands escorting a comrade at `bearerX` who carries a banner home:
+ * between him and the enemy, a little ahead of him.
+ */
+export const escortPost = (bearerX: number, rank = 0): number => bearerX + (rank + 1) * ALLIES.spacing;

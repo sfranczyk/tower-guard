@@ -13,7 +13,8 @@ import { editQuiverIn, type QuiverEdit } from './quiverEditing';
 import { TuningPanel } from './TuningPanel';
 import { SoundLabPanel, type SoundLabMusic, type SoundLabMusicState, type SoundLabRow } from './SoundLabPanel';
 import { HUD_BOTTOM_TEMPLATE, HUD_TOP_TEMPLATE, OVERLAY_TEMPLATE, allySlots, weaponSlots } from './template';
-import { ICON_ORDERS } from './icons';
+import { ICON_BANNERS, ICON_ORDERS } from './icons';
+import { BANNER_STATE_LABELS, type BannerAt } from '../systems/banners';
 import type { AllyType } from '../types';
 
 /** Breathing room kept around the canvas + HUD stack inside the window. */
@@ -99,6 +100,7 @@ export interface UiHandlers {
   cursorCircleChange?: (enabled: boolean) => void;
   /** Damage numbers over the enemies' heads toggled in the settings drawer. */
   damageNumbersChange?: (enabled: boolean) => void;
+  bannerMarkersChange?: (enabled: boolean) => void;
   /** Friendly fire (the players' arrows and their effects hit the bowmen too) toggled in the settings drawer. */
   friendlyFireChange?: (enabled: boolean) => void;
   /** Number of shots that keep their trail (0..3) picked in the settings drawer. */
@@ -155,6 +157,9 @@ export class DomUi {
   private readonly trajectoryInput: HTMLInputElement;
   private readonly cursorCircleInput: HTMLInputElement;
   private readonly damageNumbersInput: HTMLInputElement;
+  private readonly bannerMarkersInput: HTMLInputElement;
+  private readonly bannersLine: HTMLElement;
+  private shownBanners = '';
   private readonly friendlyFireInput: HTMLInputElement;
   private readonly trailButtons: HTMLButtonElement[];
   private readonly soundInput: HTMLInputElement;
@@ -225,6 +230,8 @@ export class DomUi {
     this.trajectoryInput = this.query<HTMLInputElement>('[data-trajectory]');
     this.cursorCircleInput = this.query<HTMLInputElement>('[data-cursor-circle]');
     this.damageNumbersInput = this.query<HTMLInputElement>('[data-damage-numbers]');
+    this.bannerMarkersInput = this.query<HTMLInputElement>('[data-banner-markers]');
+    this.bannersLine = this.query<HTMLElement>('[data-banners]');
     this.friendlyFireInput = this.query<HTMLInputElement>('[data-friendly-fire]');
     this.trailButtons = Array.from(this.host.querySelectorAll<HTMLButtonElement>('[data-trail-count]'));
     this.soundInput = this.query<HTMLInputElement>('[data-sound]');
@@ -273,6 +280,7 @@ export class DomUi {
     this.trajectoryInput.addEventListener('change', () => this.handlers.trajectoryChange?.(this.trajectoryInput.checked));
     this.cursorCircleInput.addEventListener('change', () => this.handlers.cursorCircleChange?.(this.cursorCircleInput.checked));
     this.damageNumbersInput.addEventListener('change', () => this.handlers.damageNumbersChange?.(this.damageNumbersInput.checked));
+    this.bannerMarkersInput.addEventListener('change', () => this.handlers.bannerMarkersChange?.(this.bannerMarkersInput.checked));
     this.friendlyFireInput.addEventListener('change', () => this.handlers.friendlyFireChange?.(this.friendlyFireInput.checked));
     this.trailButtons.forEach((button) => button.addEventListener('click', () => {
       this.handlers.arrowTrailsChange?.(Number(button.dataset.trailCount));
@@ -401,6 +409,21 @@ export class DomUi {
 
   public setCursorCircleOption(showCursorCircle: boolean): void {
     this.cursorCircleInput.checked = showCursorCircle;
+  }
+
+  public setBannerMarkersOption(enabled: boolean): void {
+    this.bannerMarkersInput.checked = enabled;
+  }
+
+  /** Each frame: where both banners are (undefined: no banners, or markers off); touched only when it changes. */
+  public updateBanners(view: { player: BannerAt; enemy: BannerAt } | undefined): void {
+    const text = view ? `${ICON_BANNERS.player} Ours: ${BANNER_STATE_LABELS[view.player]} · ${ICON_BANNERS.enemy} Theirs: ${BANNER_STATE_LABELS[view.enemy]}` : '';
+    if (text === this.shownBanners) {
+      return;
+    }
+    this.shownBanners = text;
+    this.bannersLine.hidden = !view;
+    this.bannersLine.innerHTML = text;
   }
 
   public setDamageNumbersOption(enabled: boolean): void {

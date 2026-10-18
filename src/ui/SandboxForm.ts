@@ -100,6 +100,9 @@ export class SandboxForm {
           <div class="health-field" title="How hard enemies hit and how well their archers aim (fixed for the battle)"><span>Difficulty</span><div class="segmented" role="radiogroup" aria-label="Difficulty">
             ${DIFFICULTY_LEVELS.map((level) => `<button type="button" class="chip-button${level === settings.difficulty ? ' active' : ''}" role="radio" aria-checked="${level === settings.difficulty}" data-difficulty="${level}">${DIFFICULTY_LABELS[level]}</button>`).join('')}
           </div></div>
+          <div class="health-field" title="Each keep has a banner: bring the enemy's to your keep to win the level, lose yours and the level is lost (solo only)"><span>Banners</span><div class="segmented" role="radiogroup" aria-label="Banners">
+            ${[false, true].map((on) => `<button type="button" class="chip-button${on === settings.banners ? ' active' : ''}" role="radio" aria-checked="${on === settings.banners}" data-banners="${on}">${on ? 'On' : 'Off'}</button>`).join('')}
+          </div></div>
         </div>
       </div>
       <div class="panel-body">
@@ -181,6 +184,8 @@ export class SandboxForm {
       this.update({ ...settings, levels, levelCount: settings.levelCount - 1 }, Math.max(0, this.selected - 1));
     } else if (isDifficultyLevel(difficulty)) {
       this.update({ ...settings, difficulty }, this.selected);
+    } else if (target.closest('[data-banners]')) {
+      this.update({ ...settings, banners: target.closest<HTMLElement>('[data-banners]')!.dataset.banners === 'true' }, this.selected);
     } else if (map) {
       this.update(this.withLevel(settings, { battleground: map.dataset.map as BattlegroundId }), this.selected);
     } else if (step) {

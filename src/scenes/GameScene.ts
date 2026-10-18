@@ -29,6 +29,7 @@ import Tower from '../objects/Tower';
 import { BattleArrows } from './BattleArrows';
 import { BattleCamera } from './BattleCamera';
 import { BattleAllies } from './BattleAllies';
+import { BattleBanners } from './BattleBanners';
 import { BattleEnemies } from './BattleEnemies';
 import { BattlePlayers } from './BattlePlayers';
 import { startBattleSync } from './battleSync';
@@ -47,6 +48,7 @@ import { livingBowmen } from '../systems/targeting';
 import { firstArrow, type ArrowType, type Loadout } from '../data/loadout';
 import { ALLY_TYPES, ENEMY_KINDS } from '../data/enemyKinds';
 import type Enemy from '../objects/enemy/Enemy';
+import DragonEnemy from '../objects/dragon/DragonEnemy';
 import { ALLY_ORDER_LABELS } from '../systems/allyOrders';
 import { ALLY_KEYS, ORDER_KEY } from '../ui/template';
 import type { Vec2 } from '../types';
@@ -65,6 +67,8 @@ export class GameScene extends Scene {
   /** The player's soldiers (also `soldiers.list`; for the ?debug console: `scene.allies[0]`). */
   private readonly allies: Enemy[] = [];
   private readonly soldiers: BattleAllies;
+  /** The run's Banners option (solo only; scenes/BattleBanners.ts). */
+  private banners?: BattleBanners;
   /** Every arrow of the level. */
   private readonly shots: BattleArrows;
   private readonly debugGraphics = new Graphics();
@@ -195,6 +199,16 @@ export class GameScene extends Scene {
       leftTower: (player) => this.team.status(player, DEFAULT_STATUS),
     });
 
+    // Banners: solo only (the guest doesn't see the soldiers yet, net/CLAUDE.md).
+    if (sandbox.banners && !this.ctx.session.net) {
+      this.banners = new BattleBanners({
+        world: this.world,
+        units: () => [...this.allies, ...this.enemies.filter((foe): foe is Enemy => !(foe instanceof DragonEnemy))],
+        view: () => ({ left: this.camera.x, width: viewWidth() }),
+        markers: () => this.ctx.session.bannerMarkers,
+        status: (text) => this.ctx.ui.setStatus(text),
+      });
+    }
     this.combat = new CombatSystem(
       {
         bowmen: this.team.bowmen,
@@ -210,6 +224,7 @@ export class GameScene extends Scene {
         friendlyFire: () => this.ctx.session.friendlyFire,
         reinforcementsDue: () => this.foes.reinforcementsDue,
         enemyEdge: enemyEdge(this.ctx.session.sandbox.difficulty),
+        banners: this.banners?.field,
       },
       {
         bowmanDamaged: (bowman, amount, hit) => {
@@ -312,6 +327,7 @@ export class GameScene extends Scene {
       this.guestSync.update(deltaMs);
     } else {
       this.combat.update(deltaMs, this.foes.visible);
+      this.banners?.update(deltaMs);
     }
 
     this.shots.prune();
@@ -577,6 +593,9 @@ export class GameScene extends Scene {
       level: this.ctx.session.run.levelIndex + 1,
       levelCount: this.ctx.session.sandbox.levelCount,
     });
+    this.ctx.ui.updateBanners(this.banners && this.ctx.session.bannerMarkers
+      ? { player: this.banners.state('player'), enemy: this.banners.state('enemy') }
+      : undefined);
   }
 
   /** The camera follows the local bowman and slides towards where he's aiming (BattleCamera). */
@@ -595,12 +614,17 @@ export class GameScene extends Scene {
   /** The level is lost once every bowman has fallen, or the keep; won with the enemy keep or every enemy down. */
   private checkEndConditions(): void {
     this.team.handleFallen();
-    if (livingBowmen(this.team.bowmen).length === 0 || this.playerTower.isDestroyed()) {
+    if (livingBowmen(this.team.bowmen).length === 0 || this.playerTower.isDestroyed() || this.banners?.outcome === 'lost') {
       this.endGame(false);
       return;
     }
     if (this.enemyTower.isDestroyed()) {
       this.endGame(true);
+      return;
+    }
+    // A captured banner wins the level like clearing it.
+    if (this.banners?.outcome === 'won') {
+      this.endGame(true, true);
       return;
     }
     if (this.foes.allDefeated()) {
@@ -629,6 +653,7 @@ export class GameScene extends Scene {
       keep: { health: this.playerTower.getHealth(), max: this.playerTower.maxHealth },
       enemyKeepDestroyed: this.enemyTower.isDestroyed(),
       playerKeepDestroyed: this.playerTower.isDestroyed(),
+      banner: this.banners?.outcome === 'won' ? 'captured' : this.banners?.outcome === 'lost' ? 'lost' : undefined,
       playerHealths: this.players.map((player) => player.health),
     }, () => ({
       levelIndex: run.levelIndex + 1,

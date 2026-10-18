@@ -22,9 +22,9 @@ export const KEEP_SMOKE_SPOT = { x: 102, y: 18 } as const;
 export const KEEP_TURRET = { left: 146, right: 194, top: 196, cornice: 184 } as const;
 
 const PENNANT = [0x8a2a3c, 0xb04a5e] as const;
-const PLAYER_BANNER = [0x34489f, 0x24357a] as const;
-const ENEMY_BANNER = [0x9a2c37, 0x6e1f28] as const;
-const BANNER_EMBLEM = 0xe2b44c;
+export const PLAYER_BANNER = [0x34489f, 0x24357a] as const;
+export const ENEMY_BANNER = [0x9a2c37, 0x6e1f28] as const;
+export const BANNER_EMBLEM = 0xe2b44c;
 const WOOD = [0x8a6238, 0x6b4a2e, 0x5a3c23] as const;
 const IRON = 0x4c4c55;
 

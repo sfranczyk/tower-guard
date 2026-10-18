@@ -28,6 +28,7 @@ import { TOWER_HEIGHT } from '../objects/Tower';
 import type Tower from '../objects/Tower';
 import type { EnemyType, Vec2 } from '../types';
 import { solveLaunchAngle } from './ballistics';
+import type { Banners } from './banners';
 import { BlastDodge, blastZones, missChance, type BlastZone, type BombSpot, type DodgeStep } from './blastAwareness';
 import { flamesTouch } from './burning';
 import { planHeals, priestPost } from './healing';
@@ -65,6 +66,8 @@ export interface EnemyAIWorld {
   readonly reinforcementsDue: () => boolean;
   /** The difficulty's edge (data/difficulty.ts): enemy hits × `damage`, enemy archers' aim error × `aimSpread`. */
   readonly enemyEdge: EnemyEdge;
+  /** Banners (systems/banners.ts): carriers walk home fighting only what reaches them; a soldier carrying ours is the target. */
+  readonly banners?: Banners<Enemy>;
 }
 
 export interface EnemyAIEvents {
@@ -146,7 +149,21 @@ export class EnemyAI {
       this.drawDebugHitboxes(enemy);
       return;
     }
-    const { playerTower } = this.world;
+    const { playerTower, banners } = this.world;
+    if (banners && !enemyArchetype(enemy.kind).detonates) {
+      // Banners: a carrier takes his banner home, the one sent for a fallen banner goes to pick it up, the rest go
+      // for the soldier carrying ours off (kamikazes keep to their own business).
+      const goal = banners.carriedBy(enemy) ? ENEMY_TOWER_X : banners.fetchX(enemy);
+      if (goal !== undefined) {
+        this.walkOnGuard(enemy, goal, deltaMs);
+        return;
+      }
+      const thief = banners.thief('enemy');
+      if (thief) {
+        this.fightAlly(enemy, thief, deltaMs);
+        return;
+      }
+    }
     // The nearest bowman out in the open or soldier, or the keep when there's nobody out.
     const melee = nearestMeleeTarget(this.world.bowmen, this.world.allies, enemy.x);
     if (melee?.ally) {
@@ -268,6 +285,45 @@ export class EnemyAI {
   }
 
   /**
+   * Banners: walks to `goalX` (home with a banner, or to a fallen one) fighting only in defence: a soldier or bowman
+   * within reach stops it, and it strikes him standing where it is.
+   */
+  private walkOnGuard(enemy: Enemy, goalX: number, deltaMs: number): void {
+    const melee = nearestMeleeTarget(this.world.bowmen, this.world.allies, enemy.x);
+    const foe = melee?.ally ?? melee?.bowman;
+    const reach = (enemy.reach?.bowman ?? MELEE_REACH) + 2;
+    const engaged = foe !== undefined && Math.abs(foe.x - enemy.x) <= reach && Math.abs(foe.y - enemy.y) <= 45;
+    const toX = engaged ? enemy.x : goalX;
+    enemy.target = melee?.ally ? 'ally' : 'bowman';
+    enemy.update(deltaMs, { x: toX, y: groundAt(toX) }, 2);
+    enemy.updateAnimation(deltaMs, enemy.isMoving());
+    this.drawDebugHitboxes(enemy);
+    if (!engaged || enemy.isDown || enemy.afflictions.isFrozen || enemy.afflictions.inVortex || !enemy.canAttack()) {
+      enemy.clearHitTint();
+      return;
+    }
+    enemy.faceTowards(foe.x);
+    const damage = rollDamage(enemyDamage(enemy.kind, 'melee', 'bowman')) * this.world.enemyEdge.damage;
+    if (melee?.ally) {
+      const ally = melee.ally;
+      enemy.playAttackAnimation(() => {
+        if (ally.isAlive() && Math.abs(enemy.x - ally.x) <= enemy.strikeReach) {
+          meleeBlow(ally, damage, enemy.x, this.world.effects);
+        }
+      });
+    } else if (melee?.bowman) {
+      const bowman = melee.bowman;
+      enemy.playAttackAnimation(() => {
+        if (!bowman.isInTower && !bowman.isDead && Math.abs(enemy.x - bowman.x) <= enemy.strikeReach && Math.abs(enemy.y - bowman.y) <= 45 * enemy.size) {
+          this.events.bowmanDamaged(bowman, damage, { cause: 'melee', fromX: enemy.x });
+          this.world.effects.bloodBurst({ x: bowman.x, y: bowman.y - 20 });
+        }
+      });
+    }
+    enemy.clearHitTint();
+  }
+
+  /**
    * A soldier (not a kamikaze) facing the bombs about to go off (beginFrame): one it noticed sends it beyond their blast
    * (`awayRight`: to the right of it), shouting "!"; one it missed it never heeds (systems/blastAwareness.ts).
    */
@@ -382,7 +438,9 @@ export class EnemyAI {
    * aim with the real ballistics and shoot with a little spread.
    */
   private updateArcher(enemy: Enemy, deltaMs: number): void {
-    const aimPoint = this.aimPointFrom(enemy.x, true);
+    // Banners: a soldier carrying ours off is the one to shoot.
+    const thief = this.world.banners?.thief('enemy');
+    const aimPoint = thief ? { x: thief.x, y: thief.y - 25 * thief.size } : this.aimPointFrom(enemy.x, true);
     const inRange = Math.abs(aimPoint.x - enemy.x) <= ENEMY_ATTACK.archerRange;
 
     if (enemy.isDown || !inRange) {

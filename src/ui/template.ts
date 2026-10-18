@@ -49,6 +49,7 @@ export const OVERLAY_TEMPLATE = `
         <label class="field toggle-field"><span>Trajectory preview</span><input data-trajectory type="checkbox"></label>
         <label class="field toggle-field"><span>Aim circle at cursor</span><input data-cursor-circle type="checkbox"></label>
         <label class="field toggle-field" title="How much each arrow hit takes off, over the enemy's head"><span>Damage numbers</span><input data-damage-numbers type="checkbox" checked></label>
+        <label class="field toggle-field" title="With Banners on: where both banners are, in the HUD, and a marker at the edge for one carried out of view"><span>Banner markers</span><input data-banner-markers type="checkbox" checked></label>
         <label class="field toggle-field" title="Your arrows, their blasts, fire, frost, vortices and pins hit bowmen too"><span>Friendly fire</span><input data-friendly-fire type="checkbox" checked></label>
         <div class="field toggle-field"><span>Arrow trails</span><div class="segmented" data-arrow-trails role="radiogroup" aria-label="Arrow trails">
           <button class="chip-button" data-trail-count="0" role="radio">0</button><button class="chip-button" data-trail-count="1" role="radio">1</button><button class="chip-button" data-trail-count="2" role="radio">2</button><button class="chip-button" data-trail-count="3" role="radio">3</button>
@@ -103,7 +104,7 @@ export const allySlots = (allies: ReadonlyArray<{ type: AllyType; label: string 
   + `<span class="weapon-ammo" data-order-label>Hold</span></div>`;
 
 export const HUD_TOP_TEMPLATE = `
-  <div class="hud-chip">${ICON_LEVEL}<div><div class="chip-label">Level <span data-level-number>1 / 1</span></div><div class="pips" data-enemy-pips></div><div class="meter" hidden><i data-level-bar></i></div><div class="chip-value" data-enemy-count>0 of 0 defeated</div></div></div>
+  <div class="hud-chip">${ICON_LEVEL}<div><div class="chip-label">Level <span data-level-number>1 / 1</span></div><div class="pips" data-enemy-pips></div><div class="meter" hidden><i data-level-bar></i></div><div class="chip-value" data-enemy-count>0 of 0 defeated</div><div class="chip-value banner-line" data-banners hidden></div></div></div>
   <div class="weapons" data-projectiles></div>
   <div class="weapons allies" data-allies hidden></div>
 `;

@@ -561,6 +561,18 @@ export const ALLIES = tunable('ALLIES', 'Allies', {
 });
 
 /**
+ * Banners (the run's Banners option, systems/banners.ts): each keep's banner stands `standOffset` px in front of it;
+ * a carrier-to-be takes one within `pickupRadius`, and wins (or brings his own back) within `deliverReach` of his own
+ * keep. A mounted carrier rides at `riderSpeedFactor` of his pace.
+ */
+export const BANNERS = tunable('BANNERS', 'Banners', {
+  standOffset: 34,
+  pickupRadius: 26,
+  deliverReach: 30,
+  riderSpeedFactor: 0.6,
+});
+
+/**
  * The medic's bandaging (systems/AllyAI.ts, systems/bandaging.ts): she picks one patient (the bowman first while he is
  * below `bowmanFirstBelow` of his health, else the lowest share of health; only one missing at least `minMissing`),
  * walks up beside him (`reach` px), kneels and heals `healPerSecond` for up to `bandageMs`, then rests `restMs` before

@@ -40,6 +40,8 @@ export interface SandboxSettings {
   loadout: Loadout;
   /** How many enemies each wave brings and how they come out (data/difficulty.ts); fixed for the run. */
   difficulty: DifficultyLevel;
+  /** Banners (systems/banners.ts): each keep has one; bringing the enemy's home wins a level, losing ours loses it. Solo only. */
+  banners: boolean;
 }
 
 /** Default levels get a little harder each time and alternate battlegrounds. */
@@ -61,6 +63,7 @@ export const createDefaultSandbox = (): SandboxSettings => ({
   keepHealth: 1000,
   loadout: [...DEFAULT_LOADOUT],
   difficulty: DEFAULT_DIFFICULTY,
+  banners: false,
 });
 
 const clampInt = (value: unknown, min: number, max: number, fallback: number): number => {
@@ -108,6 +111,7 @@ export const normalizeSandbox = (input: (Partial<SandboxSettings> & LegacySandbo
     keepHealth: clampInt(input.keepHealth, HEALTH_LIMITS.keep.min, HEALTH_LIMITS.keep.max, defaults.keepHealth),
     loadout: normalizeLoadout(input.loadout),
     difficulty: isDifficultyLevel(input.difficulty) ? input.difficulty : defaults.difficulty,
+    banners: typeof input.banners === 'boolean' ? input.banners : defaults.banners,
   };
 };
 

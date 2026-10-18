@@ -43,4 +43,10 @@ describe('sandbox settings', () => {
     expect(settings.levels[0].enemies).toMatchObject({ raider: 7, hunter: 2, heavyKnight: 1, fast: 0 });
     expect(normalizeSandbox({ levels: [{ enemies: { bandit: 3 }, battleground: 'moon' }] } as never).levels[0].enemies.raider).toBe(3);
   });
+
+  it('keeps the banners option, off by default', () => {
+    expect(normalizeSandbox(undefined).banners).toBe(false);
+    expect(normalizeSandbox({ banners: true }).banners).toBe(true);
+    expect(normalizeSandbox({ banners: 'yes' } as never).banners).toBe(false);
+  });
 });

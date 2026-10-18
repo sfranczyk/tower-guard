@@ -70,6 +70,8 @@ export default class Enemy extends Container {
   public readonly mana?: ManaPool;
   /** A goblin shaman's lasting spell on it (haste, stone skin, quick draw, bigger bomb; systems/shamanBuffs.ts). */
   public readonly buff = new ActiveBuff();
+  /** Its pace while carrying a banner (scenes/BattleBanners.ts: BANNERS.riderSpeedFactor on horseback, else 1). */
+  public carrySpeed = 1;
   private readonly buffAura = new BuffAura();
   /** Walked off the field (a priest left alone, `escape`): no longer alive for the battle. */
   private escaped = false;

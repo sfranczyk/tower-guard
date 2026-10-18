@@ -66,6 +66,8 @@ export interface GameSession {
   friendlyFire: boolean;
   /** Damage numbers over an enemy's head on an arrow hit (settings drawer, on by default). */
   showDamageNumbers: boolean;
+  /** Banners: their state in the HUD and markers at the view's edge for a carried one out of view (settings drawer, on). */
+  bannerMarkers: boolean;
   /** How many of the latest shots keep their trail (settings drawer, 0 = none, up to MAX_ARROW_TRAILS). */
   arrowTrails: number;
 }

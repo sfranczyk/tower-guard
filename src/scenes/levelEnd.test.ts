@@ -26,6 +26,7 @@ describe('levelEndInfo', () => {
     expect(lost({}).copy).toMatch(/^The bowman has fallen/);
     expect(lost({ playerKeepDestroyed: true }).copy).toMatch(/^The keep has fallen/);
     expect(lost({ playerHealths: [0, 0] }).copy).toMatch(/^Both bowmen have fallen/);
+    expect(lost({ banner: 'lost' }).copy).toMatch(/^The enemy has carried off our banner/);
     expect(lost({}).outcome).toBe('loss');
   });
 
@@ -36,5 +37,10 @@ describe('levelEndInfo', () => {
       { label: 'bowman', value: '64 / 100' },
     ]);
     expect(levelEndInfo(outcome({ playerHealths: [10, 20] }), sandbox).info.stats.slice(2).map((stat) => stat.label)).toEqual(['player 1', 'player 2']);
+  });
+
+  it('names a captured banner', () => {
+    expect(levelEndInfo(outcome({ banner: 'captured' }), sandbox).info.title).toBe('Banner captured!');
+    expect(levelEndInfo(outcome({ banner: 'captured', levelIndex: 2 }), sandbox).info.copy).toBe('The enemy banner is ours.');
   });
 });

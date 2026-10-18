@@ -62,6 +62,7 @@ animation gets a row in `scenes/labRows.ts` (or `scenes/labSequences.ts` for one
 ## Effects and world
 - Burning flames (`burning.ts`: `burnFlames`, `burnSmoke`, `BURN_FLAME_SIZE`). Affliction art (`afflictionArt.ts`),
   vortex (`vortexArt.ts`).
+- **Banner** (`banner.ts`): `drawBanner` (pole, swallow-tailed cloth in the keep's `PLAYER_BANNER` / `ENEMY_BANNER`); design lab Allies → `banner`.
 - **Keep** (`keep.ts`): flat tower, 200×406 at half size (`TOWER_HEIGHT`), stone tinted by `keepTones`,
   `keepDamageStage` (cracks ≤60%, broken merlons/banners/rubble ≤30%, fire ≤10%), `keepHitParts` (pure).
 - **Background** (`Background.ts`, `landscape.ts`): hills drawing is one `BACKDROP_WIDTH` stretch repeated, every other

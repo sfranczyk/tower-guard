@@ -43,6 +43,7 @@ All pure and tested. Tuning numbers live in `config.ts`, sandbox defaults in `sa
 - **Sandbox** (`sandbox.ts`, `loadout.ts`): settings are pure data, `normalizeSandbox` clamps everything and still reads
   pre-rename setups (`waves`, `waveCount`; old enemy ids via `RENAMED_TYPES`). `SandboxSettings.loadout`: five weapon slots (`LOADOUT_SLOTS`), any arrows,
   each at most once, slots may stay empty. Persisted by `core/sandboxStorage.ts`.
+  `SandboxSettings.banners` (off by default; battle setup, solo only): systems/CLAUDE.md Banners.
   `SandboxSettings.difficulty` (`difficulty.ts`, medium by default): wave scale and pacing, picked in the battle setup. Between levels `healAfterLevel` heals the bowmen (easy full, medium +50%, hard +10% of max; `DIFFICULTY_SCALE.*LevelHeal`); the keep starts every level whole.
 - **Arrow tree** (`arrowTree.ts`): every arrow has a `path` (archer, craftsman, mage) and a `parent`, all growing out of
   normal (`ARROW_TREE`, `arrowLineage`, `arrowsOnPath`); the Quiver page shows one column per path. Whole tree open for

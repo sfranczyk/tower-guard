@@ -27,6 +27,7 @@ import { BOWMAN_CHEST, TOWER_HALF_WIDTH, type Foe } from './combatGeometry';
 import { EnemyAI } from './EnemyAI';
 import { AllyAI } from './AllyAI';
 import type { AllyOrder } from './allyOrders';
+import type { Banners } from './banners';
 import { BombFuses, blastFalloff, bombGoesOff, chainChance } from './kamikazeBomb';
 
 export type { Foe } from './combatGeometry';
@@ -68,6 +69,8 @@ export interface CombatWorld {
   readonly reinforcementsDue: () => boolean;
   /** The difficulty's edge (data/difficulty.ts): enemy hits × `damage`, enemy archers' aim error × `aimSpread`. */
   readonly enemyEdge: EnemyEdge;
+  /** The run's Banners option (systems/banners.ts; scenes/BattleBanners.ts steps it): who carries what. */
+  readonly banners?: Banners<Enemy>;
 }
 
 export interface CombatEvents {
