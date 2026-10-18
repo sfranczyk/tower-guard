@@ -97,7 +97,7 @@ export const ORDER_KEY = 'V';
 /** The soldiers' slots (icon, key, "standing / allowed" under it, a shade for the pause) and the order button. */
 export const allySlots = (allies: ReadonlyArray<{ type: AllyType; label: string }>): string => allies.map(({ type, label }) =>
   `<div class="weapon"><button class="weapon-slot" data-ally="${type}" title="Summon a ${label.toLowerCase()} (${ALLY_KEYS[type]})" aria-label="Summon a ${label.toLowerCase()}">`
-  + `<span class="weapon-key">${ALLY_KEYS[type]}</span>${ICON_ALLIES[type]}<i class="ally-wait" data-ally-wait="${type}"></i></button>`
+  + `<span class="weapon-key">${ALLY_KEYS[type]}</span>${ICON_ALLIES[type]}<span class="ally-shade"><i class="ally-wait" data-ally-wait="${type}"></i></span></button>`
   + `<span class="weapon-ammo" data-ally-count="${type}">0/0</span></div>`).join('')
   + `<div class="weapon order-slot"><button class="weapon-slot" data-ally-order title="Orders (${ORDER_KEY})" aria-label="Orders">`
   + `<span class="weapon-key">${ORDER_KEY}</span><span data-order-icon>${ICON_ORDERS.hold}</span></button>`

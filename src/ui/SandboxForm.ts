@@ -94,13 +94,17 @@ export class SandboxForm {
         <div class="sandbox-pages" role="tablist" aria-label="Setup pages">
           ${PAGES.map(({ id, label }) => `<button type="button" class="sandbox-page${id === this.page ? ' active' : ''}" role="tab" aria-selected="${id === this.page}" data-page="${id}">${label}</button>`).join('')}
         </div>
-        <div class="sandbox-health">
-          <label class="health-field" title="Bowman health">${ICON_BOWMAN}<span>Bowman</span>${numberInput('data-bowman-health', settings.bowmanHealth, HEALTH_LIMITS.bowman)}</label>
-          <label class="health-field" title="Keep health">${ICON_KEEP}<span>Keep</span>${numberInput('data-keep-health', settings.keepHealth, HEALTH_LIMITS.keep)}</label>
-          <div class="health-field" title="How hard enemies hit and how well their archers aim (fixed for the battle)"><span>Difficulty</span><div class="segmented" role="radiogroup" aria-label="Difficulty">
+      </div>
+      <div class="sandbox-options">
+        <div class="option-group" aria-label="Health">
+          <label class="option-field" title="Bowman health">${ICON_BOWMAN}<span>Bowman</span>${numberInput('data-bowman-health', settings.bowmanHealth, HEALTH_LIMITS.bowman)}</label>
+          <label class="option-field" title="Keep health">${ICON_KEEP}<span>Keep</span>${numberInput('data-keep-health', settings.keepHealth, HEALTH_LIMITS.keep)}</label>
+        </div>
+        <div class="option-group" aria-label="Rules">
+          <div class="option-field" title="How hard enemies hit and how well their archers aim (fixed for the battle)"><span>Difficulty</span><div class="segmented" role="radiogroup" aria-label="Difficulty">
             ${DIFFICULTY_LEVELS.map((level) => `<button type="button" class="chip-button${level === settings.difficulty ? ' active' : ''}" role="radio" aria-checked="${level === settings.difficulty}" data-difficulty="${level}">${DIFFICULTY_LABELS[level]}</button>`).join('')}
           </div></div>
-          <div class="health-field" title="Each keep has a banner: bring the enemy's to your keep to win the level, lose yours and the level is lost (solo only)"><span>Banners</span><div class="segmented" role="radiogroup" aria-label="Banners">
+          <div class="option-field" title="Each keep has a banner: bring the enemy's to your keep to win the level, lose yours and the level is lost (solo only)"><span>Banners</span><div class="segmented" role="radiogroup" aria-label="Banners">
             ${[false, true].map((on) => `<button type="button" class="chip-button${on === settings.banners ? ' active' : ''}" role="radio" aria-checked="${on === settings.banners}" data-banners="${on}">${on ? 'On' : 'Off'}</button>`).join('')}
           </div></div>
         </div>
