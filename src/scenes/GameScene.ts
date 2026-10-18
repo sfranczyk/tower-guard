@@ -207,6 +207,7 @@ export class GameScene extends Scene {
         view: () => ({ left: this.camera.x, width: viewWidth() }),
         markers: () => this.ctx.session.bannerMarkers,
         status: (text) => this.ctx.ui.setStatus(text),
+        wind: () => this.wind,
       });
     }
     this.combat = new CombatSystem(

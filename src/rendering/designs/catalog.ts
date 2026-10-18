@@ -515,6 +515,8 @@ const IDEAS: DesignEntry[] = ENEMY_DESIGNS.map((design) => ({
 
 /** Banner proposals (rendering/designs/bannerDesigns.ts): ours and theirs, and a close-up of ours. */
 const BANNER_GROUND = 58;
+/** The lab's breeze turns round once in this long. */
+const BREEZE_TURN_MS = 9000;
 const BANNER_ENTRIES: DesignEntry[] = BANNER_STYLES.map((style) => ({
   id: `banner-${style.id}`,
   name: style.name,
@@ -522,13 +524,23 @@ const BANNER_ENTRIES: DesignEntry[] = BANNER_STYLES.map((style) => ({
   description: style.description,
   views: [
     {
-      label: 'Ours and theirs',
+      label: 'Ours and theirs, one breeze',
       draw: (g: Graphics, timeMs: number) => {
         g.clear();
-        style.draw(g, 'player', timeMs / 1000, { x: -18, y: BANNER_GROUND, flip: -1 });
-        style.draw(g, 'enemy', timeMs / 1000 + 0.7, { x: 18, y: BANNER_GROUND, flip: 1 });
+        style.draw(g, 'player', timeMs / 1000, { x: -38, y: BANNER_GROUND, flip: 1 });
+        style.draw(g, 'enemy', timeMs / 1000 + 0.7, { x: 12, y: BANNER_GROUND, flip: 1 });
       },
       scale: 1.3,
+    },
+    {
+      label: 'Lull and turn',
+      draw: (g: Graphics, timeMs: number) => {
+        // The breeze dies down, turns and picks up again (as systems/bannerBreeze.ts eases it).
+        const lean = Math.cos((timeMs / BREEZE_TURN_MS) * Math.PI * 2);
+        g.clear();
+        style.draw(g, 'player', timeMs / 1000, { x: 0, y: BANNER_GROUND, flip: lean < 0 ? -1 : 1 }, Math.abs(lean));
+      },
+      scale: 1.6,
     },
     {
       label: 'Close-up',
@@ -600,6 +612,6 @@ export const DESIGN_SECTIONS: readonly DesignSection[] = [
   { id: 'enemies', tab: 'Enemies', intro: 'Every enemy as it looks in the game now, over its own moves. Click one for all its animations and the old stickman.', entries: ENEMIES },
   { id: 'player', tab: 'Player', intro: 'The player looks: the ranger (player 1) and the keep warden (player 2 in co-op), next to the old armored archer.', entries: PLAYER },
   { id: 'allies', tab: 'Allies', intro: 'The player\'s soldiers as they look in the game: summoned from beyond the left edge (Z, X, C), they follow the order button (V).', entries: ALLIES },
-  { id: 'banners', tab: 'Banners', intro: 'Five proposals for the keeps\' banners (the Banners option): blue ours, red theirs. The game draws BANNER_STYLE (rendering/banner.ts); today\'s is the swallowtail.', entries: BANNER_ENTRIES },
+  { id: 'banners', tab: 'Banners', intro: 'Five proposals for the keeps\' banners (the Banners option): blue ours, red theirs, both in one breeze. The game draws BANNER_STYLE (rendering/banner.ts): the pennon.', entries: BANNER_ENTRIES },
   { id: 'ideas', tab: 'Ideas', intro: 'Proposals for new enemy looks, from the most human to the least (not tied to an enemy yet).', entries: IDEAS },
 ];

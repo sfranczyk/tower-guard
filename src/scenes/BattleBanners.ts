@@ -4,6 +4,7 @@ import { ENEMY_KINDS, isAllyType } from '../data/enemyKinds';
 import type Enemy from '../objects/enemy/Enemy';
 import { BANNER_POLE, bannerColors, drawBanner } from '../rendering/banner';
 import { BANNER_GRIP } from '../rendering/designs/bodyPoses';
+import { BannerBreeze } from '../systems/bannerBreeze';
 import { BANNER_SIDES, Banners, canCarryBanner, type BannerAt, type BannerEvent, type BannerSide } from '../systems/banners';
 import { groundAt } from '../systems/terrain';
 
@@ -17,6 +18,8 @@ export interface BattleBannersDeps {
   markers(): boolean;
   /** A status line for what happened to a banner. */
   status(text: string): void;
+  /** The level's wind now (its sign turns the banners; calm: their own breeze). */
+  wind(): number;
 }
 
 /** How far in from the view's edge a marker sits, and its size. */
@@ -47,6 +50,8 @@ export class BattleBanners {
   public readonly field: Banners<Enemy>;
   private readonly flags: Record<BannerSide, Graphics>;
   private readonly markers = new Graphics();
+  /** One breeze for both: every banner flies the same way (systems/bannerBreeze.ts). */
+  private readonly breeze = new BannerBreeze();
   private clockMs = 0;
 
   public constructor(private readonly deps: BattleBannersDeps) {
@@ -78,6 +83,7 @@ export class BattleBanners {
 
   public update(deltaMs: number): void {
     this.clockMs += deltaMs;
+    this.breeze.update(deltaMs, Math.sign(this.deps.wind()));
     this.field.step(this.deps.units()).forEach((event) => {
       if (event.by) {
         const taken = event.kind === 'taken';
@@ -93,7 +99,10 @@ export class BattleBanners {
   private place(side: BannerSide): void {
     const flag = this.flags[side];
     const place = this.field.place(side);
-    drawBanner(flag, side, this.clockMs / 1000);
+    const lying = place.at === 'dropped';
+    // Lying on the ground it lies flat; standing or carried it flies with the breeze.
+    drawBanner(flag, side, this.clockMs / 1000, undefined, true, lying ? 1 : this.breeze.strength);
+    const wind = this.breeze.direction;
     if (place.at === 'carried') {
       const { by } = place;
       const facing = by.figure.facing;
@@ -101,16 +110,16 @@ export class BattleBanners {
       if (by.bannerHold === 'planted') {
         // Stuck in the ground beside him while he fights.
         flag.position.set(by.bannerPlantX, groundAt(by.bannerPlantX));
-        flag.scale.set(-facing * CARRIED_SCALE * by.size, CARRIED_SCALE * by.size);
+        flag.scale.set(wind * CARRIED_SCALE * by.size, CARRIED_SCALE * by.size);
         flag.zIndex = 1;
         return;
       }
-      // The cloth streams behind him: from the saddle on horseback, else upright in both hands (withBanner).
+      // From the saddle on horseback, else upright in both hands (withBanner).
       const foot = by.rider
         ? { x: by.x - facing * MOUNTED_BACK * by.size, y: by.y - MOUNTED_FOOT * by.size }
         : this.deps.world.toLocal(by.figure.body.toGlobal(new Point(BANNER_GRIP.x, BANNER_GRIP.lower + POLE_BELOW_HAND)));
       flag.position.set(foot.x, foot.y);
-      flag.scale.set(-facing * CARRIED_SCALE * by.size, CARRIED_SCALE * by.size);
+      flag.scale.set(wind * CARRIED_SCALE * by.size, CARRIED_SCALE * by.size);
       if (by.rider) {
         flag.rotation = -facing * 0.12;
       }
@@ -128,7 +137,7 @@ export class BattleBanners {
       return;
     }
     flag.position.set(x, groundAt(x));
-    flag.scale.set(side === 'player' ? 1 : -1, 1);
+    flag.scale.set(wind, 1);
     flag.rotation = 0;
   }
 

@@ -573,6 +573,13 @@ export const BANNERS = tunable('BANNERS', 'Banners', {
   /** Enemies escorting their bearer walk this far apart behind him and fight what comes within `escortRange` of their post. */
   escortSpacing: 18,
   escortRange: 140,
+  /** The breeze the banners fly in (systems/bannerBreeze.ts): a new aim every min..max ms, the odds of a turn and of a lull. */
+  breezeChangeMinMs: 5000,
+  breezeChangeMaxMs: 11000,
+  breezeFlipChance: 0.25,
+  breezeLullChance: 0.2,
+  /** How fast the cloth follows (lean units per second; 1 = limp to stiff in a second). */
+  breezeEasePerS: 0.7,
 });
 
 /**

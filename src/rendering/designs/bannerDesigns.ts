@@ -20,7 +20,8 @@ export interface BannerStyle {
   name: string;
   tagline: string;
   description: string;
-  draw(g: Graphics, side: BannerSide, wave: number, at: BannerAt): void;
+  /** `strength`: how stiffly the breeze holds it out (1, default) … 0 limp; styles that hang anyway ignore it. */
+  draw(g: Graphics, side: BannerSide, wave: number, at: BannerAt, strength?: number): void;
 }
 
 /** Pole height (px) of every style: what carriers and markers place it by. */
@@ -79,8 +80,11 @@ const gonfalon: BannerStyle['draw'] = (g, side, wave, at) => {
   lozenge(g, at, 11.5 + sway * 0.5, top + 15, 5);
 };
 
-/** A pennon: a long tapering streamer from the pole's top, with a gold stripe, snaking in the wind. */
-const pennon: BannerStyle['draw'] = (g, side, wave, at) => {
+/**
+ * A pennon: a long tapering streamer from the pole's top, with a gold stripe, snaking in the wind. In a weak breeze
+ * (`strength` → 0) it curls down along the pole, the tip first.
+ */
+const pennon: BannerStyle['draw'] = (g, side, wave, at, strength = 1) => {
   const [cloth, shade] = bannerColors(side);
   const pts = mapper(at);
   pole(g, at);
@@ -88,30 +92,33 @@ const pennon: BannerStyle['draw'] = (g, side, wave, at) => {
   g.poly(pts([-2, -BANNER_POLE, 2, -BANNER_POLE, 0, -BANNER_POLE - 7])).fill({ color: 0xc9ccd4 });
   const top = -BANNER_POLE + 1;
   const len = 40;
-  const wavy = (t: number): number => Math.sin(wave * 6 - t * 4) * 2.4 * t;
-  // Upper edge from the pole to the tip, then the lower edge back.
-  const edge = (sign: number, from: number, to: number, step: number): number[] => {
-    const points: number[] = [];
-    for (let i = from; step > 0 ? i <= to : i >= to; i += step) {
-      const t = i / 8;
-      points.push(1.5 + t * len, top + 7 + sign * (7 * (1 - t) + 0.6) + wavy(t));
-    }
-    return points;
-  };
-  const upper = edge(-1, 0, 8, 1);
-  const lowerPairs = edge(1, 8, 0, -1);
-  g.poly(pts([...upper, ...lowerPairs])).fill({ color: cloth });
-  const stripe: number[] = [];
-  for (let i = 0; i <= 6; i += 1) {
-    const t = (i / 6) * 0.75;
-    stripe.push(1.5 + t * len, top + 7 - 1.2 + wavy(t));
+  const steps = 8;
+  const flutter = 0.3 + 0.7 * strength;
+  const droop = (1 - strength) * 1.45;
+  // The centre line from the pole, bending down more towards the tip the weaker the breeze; snaking across it.
+  const line: Array<{ x: number; y: number; nx: number; ny: number }> = [];
+  let x = 1.5;
+  let y = top + 7;
+  for (let i = 0; i <= steps; i += 1) {
+    const t = i / steps;
+    const angle = droop * (0.35 + 0.65 * t);
+    const nx = -Math.sin(angle);
+    const ny = Math.cos(angle);
+    const snake = Math.sin(wave * 6 - t * 4) * 2.4 * t * flutter;
+    line.push({ x: x + nx * snake, y: y + ny * snake, nx, ny });
+    x += Math.cos(angle) * (len / steps);
+    y += Math.sin(angle) * (len / steps);
   }
-  for (let i = 6; i >= 0; i -= 1) {
-    const t = (i / 6) * 0.75;
-    stripe.push(1.5 + t * len, top + 7 + 1.2 + wavy(t));
-  }
-  g.poly(pts(stripe)).fill({ color: BANNER_EMBLEM });
-  g.poly(pts([1.5, top, 5, top + wavy(0.08), 5, top + 14 + wavy(0.08), 1.5, top + 14])).fill({ color: shade });
+  const across = (i: number, offset: number): number[] => [line[i].x + line[i].nx * offset, line[i].y + line[i].ny * offset];
+  const half = (t: number): number => 7 * (1 - t) + 0.6;
+  const upper = line.flatMap((_, i) => across(i, -half(i / steps)));
+  const lower = line.map((_, i) => across(i, half(i / steps))).reverse().flat();
+  g.poly(pts([...upper, ...lower])).fill({ color: cloth });
+  const stripeEnd = 6;
+  const stripeUpper = line.slice(0, stripeEnd + 1).flatMap((_, i) => across(i, -1.2));
+  const stripeLower = line.slice(0, stripeEnd + 1).map((_, i) => across(i, 1.2)).reverse().flat();
+  g.poly(pts([...stripeUpper, ...stripeLower])).fill({ color: BANNER_EMBLEM });
+  g.poly(pts([...across(0, -half(0)), ...across(1, -half(0.125)), ...across(1, half(0.125)), ...across(0, half(0))])).fill({ color: shade });
 };
 
 /** A square standard: a stiff square flag with a gold border band and a gold cross, a fringe along the fly. */
