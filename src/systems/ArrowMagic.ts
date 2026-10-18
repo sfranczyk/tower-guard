@@ -150,15 +150,13 @@ export class ArrowMagic {
     }
   }
 
-  /** A magic arrow in the ground: the fire keeps burning there, frost puffs, a vortex opens. */
+  /** A magic arrow in the ground: the fire may keep burning there, frost puffs, a vortex opens. */
   public groundImpact(type: ProjectileType, point: Vec2): void {
     if (type === 'fire') {
-      // The ground catches only now and then; else the arrow just flares up.
+      // The ground catches only now and then; else nothing happens.
       if (Math.random() < FIRE_PATCH.chance) {
         this.effects.firePatch(point);
         this.patches.push({ x: point.x, msLeft: FIRE_PATCH.ms });
-      } else {
-        this.effects.fireBurst(point);
       }
     } else if (type === 'frost') {
       this.effects.frostBurst(point);

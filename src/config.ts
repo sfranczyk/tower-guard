@@ -295,7 +295,7 @@ export const FIRE_SPREAD = tunable('FIRE_SPREAD', 'Fire spreading', {
   fireproofMs: 3500,
 }, { meta: { chance: { max: 1 }, genFactor: { max: 1 }, maxGen: { min: 0, max: 5, step: 1 }, fireproofMs: { max: 10000, step: 100 } } });
 /**
- * A fire arrow in the ground (ArrowMagic.groundImpact) sets it burning only with `chance` (else a puff of flame): a
+ * A fire arrow in the ground (ArrowMagic.groundImpact) sets it burning only with `chance` (else nothing happens): a
  * fire `radius` px wide for `ms`, which sets alight whoever walks through it (as fire caught from another).
  */
 export const FIRE_PATCH = tunable('FIRE_PATCH', 'Fire in the ground', {
