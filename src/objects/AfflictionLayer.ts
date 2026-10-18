@@ -1,7 +1,7 @@
 import { Graphics } from 'pixi.js';
 import { CHILL_TINT, FROZEN_TINT, LEVITATE_TINT, drawAirVortex, drawArcaneAura, drawFrostGlints, drawIceBlock } from '../rendering/afflictionArt';
 import { drawBurning } from '../rendering/burning';
-import { NO_AFFLICTIONS, chill, ignite, tickAfflictions, timeScale, type Afflictions } from '../systems/afflictions';
+import { NO_AFFLICTIONS, chill, fireSpreads, ignite, tickAfflictions, timeScale, type Afflictions } from '../systems/afflictions';
 import { DRAGON_TURBULENCE_MS } from '../config';
 import { turbulenceStrength } from '../systems/vortex';
 import type { UnitType, Vec2 } from '../types';
@@ -106,10 +106,20 @@ export class AfflictionLayer {
     this.turbulenceMs = DRAGON_TURBULENCE_MS;
   }
 
-  /** Set alight; returns true if it just caught fire. */
-  public ignite(): boolean {
+  /** How many times the fire burning on it has spread since the arrow. */
+  public get fireGen(): number {
+    return this.state.fireGen;
+  }
+
+  /** Whether its fire may still spread to others (see systems/afflictions.ts). */
+  public get fireSpreads(): boolean {
+    return fireSpreads(this.state);
+  }
+
+  /** Set alight (`gen` > 0: caught from another fire, see systems/afflictions.ts); returns true if it just caught fire. */
+  public ignite(gen = 0): boolean {
     const caught = this.state.burnMs <= 0;
-    this.state = ignite(this.state, this.type, this.options.burnMs);
+    this.state = ignite(this.state, this.type, this.options.burnMs, gen);
     return caught && this.state.burnMs > 0;
   }
 
@@ -211,7 +221,7 @@ export class AfflictionLayer {
 
   /** Co-op guest: the host's afflictions (its timers keep counting down here until the next snapshot). */
   public applyNetState(net: AfflictionNet | undefined): void {
-    this.state = { burnMs: net?.burn ?? 0, chillMs: net?.chill ?? 0, chillHits: 0, frozenMs: net?.frozen ?? 0 };
+    this.state = { ...NO_AFFLICTIONS, burnMs: net?.burn ?? 0, chillMs: net?.chill ?? 0, chillHits: 0, frozenMs: net?.frozen ?? 0 };
     this.turbulenceMs = net?.turb ?? 0;
     if (net?.lift !== undefined || net?.lean !== undefined) {
       this.holdInVortex(net.lift ?? 0, net.lean ?? 0, net.lev ?? false);

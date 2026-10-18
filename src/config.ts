@@ -273,8 +273,7 @@ export const ENEMY_TOWER_DAMAGE = 16;
  * Fire arrow (systems/afflictions.ts, systems/ArrowMagic.ts): hits for FIRE_ARROW_DAMAGE × a normal arrow's hit and
  * sets the enemy alight for ENEMY_BURN_MS (zombies × ENEMY_BURN_ZOMBIE_FACTOR, trolls × TROLL_BURN_FACTOR; the fire
  * dragon doesn't burn),
- * ENEMY_BURN_DPS dealt every BURN_TICK_MS. Each tick a burning enemy may set others within FIRE_SPREAD_RADIUS
- * alight (FIRE_SPREAD_CHANCE). In the ground it leaves a fire FIRE_PATCH_RADIUS wide for FIRE_PATCH_MS.
+ * ENEMY_BURN_DPS dealt every BURN_TICK_MS.
  */
 export const FIRE_ARROW_DAMAGE = 0.3;
 export const ENEMY_BURN_MS = 6000;
@@ -282,10 +281,28 @@ export const ENEMY_BURN_ZOMBIE_FACTOR = 1.5;
 export const TROLL_BURN_FACTOR = 1.2;
 export const ENEMY_BURN_DPS = 5;
 export const BURN_TICK_MS = 250;
-export const FIRE_SPREAD_RADIUS = 32;
-export const FIRE_SPREAD_CHANCE = 0.12;
-export const FIRE_PATCH_MS = 3500;
-export const FIRE_PATCH_RADIUS = 28;
+/**
+ * Fire spreading (systems/afflictions.ts, ArrowMagic.burnTick): each burn tick a burning enemy may set others within
+ * `radius` px alight (`chance`). A fire that caught from another burns `genFactor` as long for every step away from the
+ * arrow and spreads only while fewer than `maxGen` steps away, so a chain dies out. One whose fire just went out can't
+ * catch from another (or from fire in the ground) for `fireproofMs`; a fire arrow still sets it alight.
+ */
+export const FIRE_SPREAD = tunable('FIRE_SPREAD', 'Fire spreading', {
+  radius: 32,
+  chance: 0.12,
+  genFactor: 0.6,
+  maxGen: 2,
+  fireproofMs: 3500,
+}, { meta: { chance: { max: 1 }, genFactor: { max: 1 }, maxGen: { min: 0, max: 5, step: 1 }, fireproofMs: { max: 10000, step: 100 } } });
+/**
+ * A fire arrow in the ground (ArrowMagic.groundImpact) sets it burning only with `chance` (else a puff of flame): a
+ * fire `radius` px wide for `ms`, which sets alight whoever walks through it (as fire caught from another).
+ */
+export const FIRE_PATCH = tunable('FIRE_PATCH', 'Fire in the ground', {
+  chance: 0.05,
+  radius: 14,
+  ms: 3500,
+}, { meta: { chance: { max: 1 }, radius: { max: 60 }, ms: { max: 10000, step: 100 } } });
 /**
  * Frost arrow: hits for FROST_ARROW_DAMAGE × a normal arrow's hit and chills for FROST_CHILL_MS (everything it does
  * runs at FROST_SLOW speed). The FROST_FREEZE_HITS-th hit in a row (while still chilled), or a headshot, freezes it solid for

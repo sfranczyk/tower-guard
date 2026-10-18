@@ -1,5 +1,5 @@
 import { Graphics, type Container } from 'pixi.js';
-import { FIRE_PATCH_MS, FIRE_PATCH_RADIUS, VORTEX } from '../config';
+import { FIRE_PATCH, VORTEX } from '../config';
 import { drawBurning } from '../rendering/burning';
 import { drawVortex } from '../rendering/vortexArt';
 import type { ProjectileType, Vec2 } from '../types';
@@ -74,17 +74,17 @@ export class MagicVisuals {
     this.iceChips(point, 22, 320);
   }
 
-  /** A fire arrow in the ground: flames along a stretch of it for FIRE_PATCH_MS, and a scorch mark. */
+  /** A fire arrow in the ground: flames along a stretch of it for FIRE_PATCH.ms, and a scorch mark. */
   public firePatch(point: Vec2): void {
     const art = new Graphics();
     art.zIndex = 2;
     this.container.addChild(art);
     const points = Array.from({ length: PATCH_FLAMES }, (_, index) => {
-      const x = point.x + (index / (PATCH_FLAMES - 1) - 0.5) * FIRE_PATCH_RADIUS * 1.6;
+      const x = point.x + (index / (PATCH_FLAMES - 1) - 0.5) * FIRE_PATCH.radius * 1.6;
       return { x, y: groundAt(x) };
     });
     this.lasting.push({
-      art, point, ageMs: 0, lifeMs: FIRE_PATCH_MS,
+      art, point, ageMs: 0, lifeMs: FIRE_PATCH.ms,
       draw: ({ art: g, ageMs, lifeMs }) => {
         // Flares up, burns, dies down.
         const intensity = Math.min(1, ageMs / 200, (lifeMs - ageMs) / 700);
@@ -95,7 +95,7 @@ export class MagicVisuals {
         }
       },
     });
-    const scorch = new Graphics().ellipse(0, 0, FIRE_PATCH_RADIUS, 4).fill({ color: 0x2b2420, alpha: 0.4 });
+    const scorch = new Graphics().ellipse(0, 0, FIRE_PATCH.radius, 4).fill({ color: 0x2b2420, alpha: 0.4 });
     scorch.position.set(point.x, groundAt(point.x) + 1);
     scorch.zIndex = 0;
     this.container.addChild(scorch);

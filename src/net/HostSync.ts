@@ -94,7 +94,7 @@ export class HostSync {
     this.world.players.forEach(({ bowman, index }) => {
       bowman.netHooks = {
         knockedBack: (fromX, strength) => this.push({ e: 'knock', player: index, fromX, strength }),
-        ignited: () => this.push({ e: 'ignite', player: index }),
+        ignited: (gen) => this.push({ e: 'ignite', player: index, gen: gen || undefined }),
       };
     });
   }

@@ -54,11 +54,11 @@ shoot at the plain `bowSpeed`. Per-type mass/drag/speed in `data/projectiles.ts`
 - Explosive: only the blast hurts; `explosionDamage` falls off from `EXPLOSION_DAMAGE.centre` to `.edge` at
   `EXPLOSION_RADIUS`; `HitInfo.blastDistance` drives the splash gib chance. `explode(…, power)` scales radius and damage.
 
-## Fire, frost and vortex (`ArrowMagic.ts`, host only; tuning `FIRE_*`, `ENEMY_BURN_*`, `FROST_*`, `VORTEX_*`, `THROW_GRAVITY`, `FALL_DAMAGE`)
+## Fire, frost and vortex (`ArrowMagic.ts`, host only; tuning `FIRE_SPREAD`, `FIRE_PATCH`, `FIRE_ARROW_DAMAGE`, `ENEMY_BURN_*`, `FROST_*`, `VORTEX_*`, `THROW_GRAVITY`, `FALL_DAMAGE`)
 Fire and frost hit weaker (`MAGIC_HIT_DAMAGE`), vortex not at all. State in `AfflictionLayer` (logic `afflictions.ts`,
-pure): burning (`BURN_TICK_MS`, cause `'burn'`, spreads), chilled (`timeScale`), frozen (ice block; a killing hit or any
+pure): burning (`BURN_TICK_MS`, cause `'burn'`, spreads: `fireGen` steps from the arrow, shorter each, `fireproofMs` after going out; `FIRE_SPREAD`), chilled (`timeScale`), frozen (ice block; a killing hit or any
 blast shatters it, cause `'shatter'`). Fire thaws, frost puts fire out; the fire dragon doesn't burn, dragons are only
-chilled. A fire arrow in the ground leaves a fire patch.
+chilled. A fire arrow in the ground leaves a fire patch only with `FIRE_PATCH.chance` (else `fireBurst`).
 Vortex (`vortex.ts`, pure): pulls ground enemies in, lifts them (`Enemy.holdInVortex`, flailing) and throws them
 (`Enemy.throwInAir`, `flight.ts`); landing = knockback + `onLanded` fall damage (cause `'fall'`; a kamikaze the fall would kill goes off,
 frozen shatters). A direct hit levitates (`Levitation`, own clock of `VORTEX.ms`, then drops with the full fall); a further

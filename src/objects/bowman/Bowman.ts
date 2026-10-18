@@ -84,7 +84,7 @@ export class Bowman extends Container {
   private readonly showHealth: boolean;
   private healthRatio = 1;
   /** Co-op host: told when he's knocked down or catches fire, to replay it on the guest's screen. */
-  public netHooks?: { knockedBack(fromX: number, strength: number): void; ignited(): void };
+  public netHooks?: { knockedBack(fromX: number, strength: number): void; ignited(gen: number): void };
 
   public constructor(
     x: number,
@@ -140,11 +140,11 @@ export class Bowman extends Container {
 
   /**
    * Touched by fire: catches (or keeps) burning for the full `burnMs` (BURN_DURATION_MS by difficulty); it thaws the ice and drives the chill
-   * out. Returns true if he just caught fire.
+   * out (`gen` > 0: caught from another fire, shorter, see systems/afflictions.ts). Returns true if he just caught fire.
    */
-  public ignite(): boolean {
-    this.netHooks?.ignited();
-    return this.afflictions.ignite();
+  public ignite(gen = 0): boolean {
+    this.netHooks?.ignited(gen);
+    return this.afflictions.ignite(gen);
   }
 
   /** Host: told when he lands from a throw, with the speed he hit the ground at (for the fall damage). */

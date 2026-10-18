@@ -2,10 +2,8 @@ import {
   BOWMAN_MASS,
   BURN_TICK_MS,
   ENEMY_BURN_DPS,
-  FIRE_PATCH_MS,
-  FIRE_PATCH_RADIUS,
-  FIRE_SPREAD_CHANCE,
-  FIRE_SPREAD_RADIUS,
+  FIRE_PATCH,
+  FIRE_SPREAD,
   VORTEX,
 } from '../config';
 import type { SoundId } from '../audio/SoundManager';
@@ -155,8 +153,13 @@ export class ArrowMagic {
   /** A magic arrow in the ground: the fire keeps burning there, frost puffs, a vortex opens. */
   public groundImpact(type: ProjectileType, point: Vec2): void {
     if (type === 'fire') {
-      this.effects.firePatch(point);
-      this.patches.push({ x: point.x, msLeft: FIRE_PATCH_MS });
+      // The ground catches only now and then; else the arrow just flares up.
+      if (Math.random() < FIRE_PATCH.chance) {
+        this.effects.firePatch(point);
+        this.patches.push({ x: point.x, msLeft: FIRE_PATCH.ms });
+      } else {
+        this.effects.fireBurst(point);
+      }
     } else if (type === 'frost') {
       this.effects.frostBurst(point);
     } else if (type === 'vortex') {
@@ -182,11 +185,11 @@ export class ArrowMagic {
       ...living.filter((enemy): enemy is Enemy => !(enemy instanceof DragonEnemy) && enemy.isAlive()),
       ...bowmen.filter((bowman) => !bowman.isDead && !bowman.isInTower),
     ];
-    // Fire in the ground sets alight whoever walks through it.
+    // Fire in the ground sets alight whoever walks through it (as fire caught from another).
     this.patches = this.patches.filter((patch) => {
       patch.msLeft -= deltaMs;
-      walkers.filter((walker) => Math.abs(walker.x - patch.x) <= FIRE_PATCH_RADIUS && !walker.afflictions.isBurning)
-        .forEach((walker) => this.ignite(walker));
+      walkers.filter((walker) => Math.abs(walker.x - patch.x) <= FIRE_PATCH.radius && !walker.afflictions.isBurning)
+        .forEach((walker) => this.ignite(walker, 1));
       return patch.msLeft > 0;
     });
     this.vortices = this.vortices.filter((vortex) => this.updateVortex(vortex, deltaMs, walkers));
@@ -201,26 +204,30 @@ export class ArrowMagic {
     }
   }
 
-  /** Every BURN_TICK_MS: the burning take their damage, and the fire may catch on those right next to them (a bowman burns by his own clock). */
+  /**
+   * Every BURN_TICK_MS: the burning take their damage, and a fire not yet spread too far may catch on those right next
+   * to them, one step farther from the arrow (a bowman burns by his own clock).
+   */
   private burnTick(living: readonly Foe[], walkers: readonly Walker[]): void {
     const burning = living.filter((enemy) => enemy.isAlive() && enemy.afflictions.isBurning);
     burning.forEach((enemy) => enemy.takeDamage((ENEMY_BURN_DPS * BURN_TICK_MS) / 1000, { cause: 'burn', fromX: enemy.x }));
-    burning.filter((enemy): enemy is Enemy => !(enemy instanceof DragonEnemy)).forEach((source) => {
+    burning.filter((enemy): enemy is Enemy => !(enemy instanceof DragonEnemy) && enemy.afflictions.fireSpreads).forEach((source) => {
+      const gen = source.afflictions.fireGen + 1;
       walkers
-        .filter((other) => other !== source && !other.afflictions.isBurning && Math.abs(other.x - source.x) <= FIRE_SPREAD_RADIUS)
+        .filter((other) => other !== source && !other.afflictions.isBurning && Math.abs(other.x - source.x) <= FIRE_SPREAD.radius)
         .forEach((other) => {
-          if (Math.random() < FIRE_SPREAD_CHANCE) {
-            this.ignite(other);
+          if (Math.random() < FIRE_SPREAD.chance) {
+            this.ignite(other, gen);
           }
         });
     });
   }
 
-  /** Sets an enemy (a corpse too) or a bowman alight. */
-  private ignite(body: Foe | Bowman): void {
+  /** Sets an enemy (a corpse too) or a bowman alight (`gen` > 0: caught from another fire). */
+  private ignite(body: Foe | Bowman, gen = 0): void {
     if (!(body instanceof Bowman)) {
-      body.afflictions.ignite();
-    } else if (!body.isDead && body.ignite()) {
+      body.afflictions.ignite(gen);
+    } else if (!body.isDead && body.ignite(gen)) {
       this.hooks.bowmanIgnited(body);
     }
   }

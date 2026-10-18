@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { FROST_CHILL_MS, FROST_FREEZE_BRUTE_MS, FROST_FREEZE_HITS, FROST_FREEZE_MS, FROST_SLOW } from '../config';
-import { NO_AFFLICTIONS, chill, ignite, tickAfflictions, timeScale } from './afflictions';
+import { FIRE_SPREAD, FROST_CHILL_MS, FROST_FREEZE_BRUTE_MS, FROST_FREEZE_HITS, FROST_FREEZE_MS, FROST_SLOW } from '../config';
+import { NO_AFFLICTIONS, chill, fireSpreads, ignite, tickAfflictions, timeScale } from './afflictions';
 
 describe('afflictions', () => {
   it('chills, then freezes on the FROST_FREEZE_HITS-th hit while chilled', () => {
@@ -41,5 +41,25 @@ describe('afflictions', () => {
     // A kamikaze doesn't burn, but fire still thaws its ice.
     expect(ignite(chill(NO_AFFLICTIONS, 'kamikaze', true).state, 'kamikaze')).toEqual(NO_AFFLICTIONS);
     expect(ignite(NO_AFFLICTIONS, 'zombie').burnMs).toBeGreaterThan(ignite(NO_AFFLICTIONS, 'raider').burnMs);
+  });
+
+  it('a spread fire burns shorter each step and stops spreading after FIRE_SPREAD.maxGen', () => {
+    const arrow = ignite(NO_AFFLICTIONS, 'raider');
+    const caught = ignite(NO_AFFLICTIONS, 'raider', undefined, 1);
+    expect(caught.burnMs).toBeCloseTo(arrow.burnMs * FIRE_SPREAD.genFactor);
+    expect(fireSpreads(arrow)).toBe(true);
+    expect(fireSpreads(ignite(NO_AFFLICTIONS, 'raider', undefined, FIRE_SPREAD.maxGen))).toBe(false);
+    // The arrow relights a caught fire to its own, nearest generation.
+    expect(ignite(caught, 'raider').fireGen).toBe(0);
+  });
+
+  it('a fire just gone out leaves it fireproof against spread, not against the arrow', () => {
+    const out = tickAfflictions(ignite(NO_AFFLICTIONS, 'raider'), 1e6);
+    expect(out.burnMs).toBe(0);
+    expect(out.fireproofMs).toBe(FIRE_SPREAD.fireproofMs);
+    expect(ignite(out, 'raider', undefined, 1).burnMs).toBe(0);
+    expect(ignite(out, 'raider').burnMs).toBeGreaterThan(0);
+    const later = tickAfflictions(out, FIRE_SPREAD.fireproofMs);
+    expect(ignite(later, 'raider', undefined, 1).burnMs).toBeGreaterThan(0);
   });
 });

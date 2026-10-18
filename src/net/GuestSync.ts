@@ -234,7 +234,7 @@ export class GuestSync {
         players[event.player]?.bowman.knockBack(event.fromX, event.strength);
         break;
       case 'ignite':
-        players[event.player]?.bowman.ignite();
+        players[event.player]?.bowman.ignite(event.gen ?? 0);
         break;
       case 'die':
         players[event.player]?.bowman.die({ kind: event.kind, fromX: event.fromX });
