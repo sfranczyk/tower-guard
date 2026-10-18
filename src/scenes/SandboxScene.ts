@@ -4,7 +4,7 @@ import { Scene, newRun } from '../core/Scene';
 import { centeredCameraX } from '../core/viewport';
 import { saveSandbox } from '../core/sandboxStorage';
 import { BATTLEGROUNDS } from '../data/battlegrounds';
-import { normalizeSandbox, type SandboxSettings } from '../data/sandbox';
+import { normalizeSandbox, runBattleground, runLevelCount, type SandboxSettings } from '../data/sandbox';
 import { partnerLoadout, setPartnerLoadoutListener, shareLoadout } from '../net/coopLink';
 import { Background } from '../rendering/Background';
 
@@ -65,7 +65,7 @@ export class SandboxScene extends Scene {
 
   /** Draws the battleground of the level being edited behind the form. */
   private showPreview(settings: SandboxSettings, level = 0): void {
-    const id = settings.levels[Math.min(level, settings.levelCount - 1)].battleground;
+    const id = runBattleground(settings, Math.min(level, runLevelCount(settings) - 1));
     if (id === this.previewId) {
       return;
     }

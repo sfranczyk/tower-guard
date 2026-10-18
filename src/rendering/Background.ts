@@ -4,6 +4,7 @@ import type { Battleground } from '../data/battlegrounds';
 import { layoutClouds, mixColor, type CloudLayer, type CloudShape } from './clouds';
 import { drawHills, drawVegetation } from './landscape';
 import { groundAt, useTerrain } from '../systems/terrain';
+import { NightSky } from './NightSky';
 
 
 type Cloud = {
@@ -34,6 +35,8 @@ export class Background {
   private readonly clouds: Cloud[];
   private readonly left: number;
   private readonly right: number;
+  /** Maps where night falls (`nightCycle`): moon, dawn and sunrise (rendering/NightSky.ts). */
+  public readonly night?: NightSky;
 
   public constructor(container: Container, battleground: Battleground, width = WORLD_WIDTH) {
     this.left = -SCENERY_MARGIN;
@@ -45,6 +48,10 @@ export class Background {
     container.y = -VIEW_TOP;
     container.addChild(new Graphics().rect(this.left, VIEW_TOP, sceneryWidth, GAME_HEIGHT).fill({ color: 0x10233a }));
     container.addChild(this.createSky(battleground));
+    if (battleground.nightCycle) {
+      this.night = new NightSky(battleground, this.left, this.right);
+      container.addChild(this.night.sky);
+    }
 
     const { sun } = battleground;
     if (sun) {
@@ -67,6 +74,9 @@ export class Background {
       return { sprite: cloud, speed, width: shape.width };
     });
     container.addChild(...this.tiledHills(drawHills(battleground)), drawVegetation(battleground, this.left, this.right));
+    if (this.night) {
+      container.addChild(this.night.shade);
+    }
     container.addChild(this.createTerrain(battleground));
   }
 

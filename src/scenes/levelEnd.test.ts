@@ -44,3 +44,23 @@ describe('levelEndInfo', () => {
     expect(levelEndInfo(outcome({ banner: 'captured', levelIndex: 2 }), sandbox).info.copy).toBe('The enemy banner is ours.');
   });
 });
+
+describe('levelEndInfo in survival', () => {
+  const survival = { ...sandbox, mode: 'survival' as const, survival: { ...sandbox.survival, levelCount: 2 } };
+  const held = (changes: Partial<LevelOutcome> = {}) => levelEndInfo(outcome({ survivedMs: 180_000, ...changes }), survival);
+
+  it('greets the dawn and moves on to the next night', () => {
+    const { info, next } = held();
+    expect(next).toBe(true);
+    expect(info.title).toBe('Dawn breaks!');
+    expect(info.copy).toMatch(/Next: level 2 of 2 at Moonlit Hollow/);
+    expect(info.stats[0]).toEqual({ label: 'held out', value: '3:00' });
+    expect(info.stats[1]).toEqual({ label: 'enemies defeated', value: '12' });
+  });
+
+  it('ends the run after the last night, or says how long was left on a defeat', () => {
+    expect(held({ levelIndex: 1 }).info).toMatchObject({ title: 'Victory!', copy: 'You held out all 2 nights.' });
+    const minutes = survival.survival.levels[0].minutes;
+    expect(held({ won: false, levelCleared: false, survivedMs: minutes * 60_000 - 75_000 }).info.copy).toMatch(/with 1:15 to dawn/);
+  });
+});

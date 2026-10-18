@@ -19,6 +19,8 @@ export interface HostWorld {
   readonly enemies: readonly Foe[];
   readonly playerTower: Tower;
   readonly enemyTower: Tower;
+  /** Survival: the time left on the level's clock. */
+  readonly clock?: () => number;
 }
 
 /** A launched arrow, as the guest needs it to fly the same arrow. */
@@ -186,6 +188,7 @@ export class HostSync {
       })),
       keep: playerTower.getHealth(),
       enemyKeep: enemyTower.getHealth(),
+      clock: this.world.clock ? Math.round(this.world.clock()) : undefined,
     };
   }
 }

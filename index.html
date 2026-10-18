@@ -119,6 +119,8 @@
         .hud-chip .icon { width: 28px; height: 28px; flex-shrink: 0; }
         .chip-label { font-family: var(--display); font-weight: 600; font-size: 13px; white-space: nowrap; }
         .chip-value { font-size: 11px; color: var(--ink-soft); white-space: nowrap; margin-top: 2px; }
+        .survival-clock { font-family: var(--display); font-weight: 600; font-size: 15px; font-variant-numeric: tabular-nums; margin-top: 1px; }
+        .survival-clock small { font-family: inherit; font-weight: 500; font-size: 11px; color: var(--ink-soft); margin-left: 4px; }
         .banner-line { display: flex; align-items: center; gap: 3px; }
         .banner-line .banner-icon { width: 15px; height: 15px; }
         .meter { width: 86px; height: 10px; margin-top: 4px; border-radius: 6px; background: var(--panel-sunk); overflow: hidden; }
@@ -192,7 +194,7 @@
         .level-editor-head .sandbox-section-label { margin: 0; }
         .sandbox-section-label { margin: 10px 0 6px; color: var(--ink-soft); font-family: var(--display); font-size: 12px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; }
         .sandbox-section-label span { margin-left: 4px; padding: 1px 7px; border-radius: 8px; background: var(--accent); color: #fff; letter-spacing: 0; }
-        .map-cards { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+        .map-cards { display: grid; grid-template-columns: repeat(var(--maps, 5), 1fr); gap: 8px; }
         .map-card { display: flex; align-items: center; gap: 7px; padding: 5px 8px 5px 5px; text-align: left; line-height: 1.15; border-radius: 12px; background: var(--panel-sunk); color: var(--ink); font-family: var(--display); font-weight: 500; font-size: 12px; box-shadow: 0 3px 0 var(--panel-edge); outline: 3px solid transparent; outline-offset: 1px; transition: transform .08s ease, outline-color .15s ease; pointer-events: auto; }
         .map-card .map-thumb { flex-shrink: 0; width: 44px; height: 33px; border-radius: 7px; }
         .map-card:hover { transform: translateY(-1px); }
@@ -202,6 +204,14 @@
         .enemy-card { display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto; align-items: center; column-gap: 8px; padding: 6px 8px; border-radius: 12px; background: var(--panel-sunk); transition: opacity .15s ease; }
         .enemy-card .icon { grid-row: span 2; width: 30px; height: 30px; }
         .enemy-card.empty { opacity: .55; }
+        .kind-toggle { text-align: left; color: var(--ink); box-shadow: 0 2px 0 var(--panel-edge); pointer-events: auto; }
+        .kind-toggle:not(.empty) { outline: 2px solid var(--accent); }
+        .kind-toggle:disabled { cursor: default; }
+        .kind-state { font-size: 11px; color: var(--ink-soft); }
+        .survival-time { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+        .survival-time output { min-width: 56px; }
+        .survival-time small { color: var(--ink-soft); font-size: 12px; }
+        .sandbox-modes { margin-left: auto; }
         .enemy-name { font-family: var(--display); font-weight: 600; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .stepper { display: flex; align-items: center; gap: 4px; }
         .stepper button { width: 24px; height: 24px; border-radius: 8px; background: var(--panel); color: var(--ink); font-family: var(--display); font-weight: 700; font-size: 16px; line-height: 1; box-shadow: 0 2px 0 var(--panel-edge); pointer-events: auto; }

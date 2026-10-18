@@ -557,6 +557,27 @@ export const WAVES = tunable('WAVES', 'Waves', {
 });
 
 /**
+ * Survival mode (systems/survivalWaves.ts): a wave every `waveEveryMs` (the first after `startDelayMs`), the n-th
+ * (from 0) `firstSize + growth × n` enemies, × `levelGrowth` per level after the first and × the difficulty's
+ * `*Scale`; never more than `maxAlive` standing (the rest wait). No new wave in the last `quietEndMs`. The night
+ * cycle (systems/nightCycle.ts): dawn starts at `dawnAt` of the time, the moon has set by `moonSetAt`.
+ */
+export const SURVIVAL = tunable('SURVIVAL', 'Survival', {
+  startDelayMs: 3000,
+  waveEveryMs: 25000,
+  firstSize: 3,
+  growth: 1.5,
+  levelGrowth: 1.25,
+  easyScale: 0.8,
+  mediumScale: 1,
+  hardScale: 1.3,
+  maxAlive: 24,
+  quietEndMs: 8000,
+  dawnAt: 0.72,
+  moonSetAt: 0.86,
+});
+
+/**
  * The player's soldiers (scenes/BattleAllies.ts, systems/AllyAI.ts): how many of each may stand on the field at once
  * (`*Limit`; a fallen one frees his place), the pause after each summons (`*CooldownMs`), where they come in
  * (`spawnX`, beyond the left edge), the posts of the orders (`holdX` for "Hold the line", `retreatX` in front of the

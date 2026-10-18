@@ -95,6 +95,8 @@ export default class Enemy extends Container {
   private readonly buffAura = new BuffAura();
   /** Walked off the field (a priest left alone, `escape`): no longer alive for the battle. */
   private escaped = false;
+  /** Survival: the night is over, it runs off the field's right edge (EnemyAI) and escapes. */
+  public fleeing = false;
   /** Every hit taken (host and co-op guest alike), after stone skin: the battle shows its damage number. */
   public onDamaged?: (amount: number, hit: HitInfo) => void;
   /** Co-op host: hears about every hit, swing, heal and spell, to replay them on the guest's screen. */
@@ -410,6 +412,13 @@ export default class Enemy extends Container {
   /** Out of the battle: dead, or a priest that walked off the field (escape). */
   public isAlive(): boolean {
     return this.vitals.alive && !this.escaped;
+  }
+
+  /** Survival's end: it stops fighting and runs off right (EnemyAI.runOff). */
+  public flee(): void {
+    if (this.isAlive()) {
+      this.fleeing = true;
+    }
   }
 
   /** A priest left alone walked off the field's edge (EnemyAI): gone for good, counted as defeated. */

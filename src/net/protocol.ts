@@ -120,6 +120,8 @@ export interface Snapshot {
   dragons: DragonSnap[];
   keep: number;
   enemyKeep: number;
+  /** Survival: ms left on the level's clock. */
+  clock?: number;
 }
 
 export type { EffectKind };

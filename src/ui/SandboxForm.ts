@@ -1,5 +1,5 @@
 import { DIFFICULTY_LABELS, DIFFICULTY_LEVELS, isDifficultyLevel } from '../data/difficulty';
-import { BATTLEGROUNDS, BATTLEGROUND_IDS, type BattlegroundId } from '../data/battlegrounds';
+import { BATTLEGROUNDS, type BattlegroundId } from '../data/battlegrounds';
 import { ENEMY_GROUPS, ENEMY_GROUP_IDS, enemyTypesOf } from '../data/enemyKinds';
 import {
   ENEMY_TYPE_LABELS,
@@ -7,9 +7,17 @@ import {
   MAX_ENEMIES_PER_TYPE,
   MAX_LEVELS,
   MIN_LEVELS,
+  RUN_MODES,
+  RUN_MODE_LABELS,
+  SURVIVAL_MINUTES,
+  battlegroundsFor,
   levelEnemyTotal,
+  runBattleground,
+  runLevelCount,
+  type RunMode,
   type SandboxSettings,
   type LevelSetup,
+  type SurvivalLevel,
 } from '../data/sandbox';
 import type { EnemyType } from '../types';
 import { ICON_BOWMAN, ICON_ENEMIES, ICON_KEEP } from './icons';
@@ -17,6 +25,7 @@ import { mapThumbnail } from './mapThumbnail';
 import { panelTop, renderPanel } from './panelLayout';
 import { editQuiverIn } from './quiverEditing';
 import { quiverPage, type PartnerQuiver } from './quiverPage';
+import { survivalEditor, survivalTabText } from './survivalEditor';
 
 /** The form's pages: the levels (maps and enemies) and the quiver (the arrows in the weapon slots). */
 type SandboxPage = 'levels' | 'quiver';
@@ -79,7 +88,8 @@ export class SandboxForm {
 
   public render(settings: SandboxSettings): void {
     this.settings = settings;
-    this.selected = Math.min(this.selected, settings.levelCount - 1);
+    this.selected = Math.min(this.selected, runLevelCount(settings) - 1);
+    const survival = settings.mode === 'survival';
     const numberInput = (attribute: string, value: number, limits: { min: number; max: number; step: number }): string =>
       `<input type="number" ${attribute} value="${value}" min="${limits.min}" max="${limits.max}" step="${limits.step}">`;
 
@@ -94,6 +104,9 @@ export class SandboxForm {
         <div class="sandbox-pages" role="tablist" aria-label="Setup pages">
           ${PAGES.map(({ id, label }) => `<button type="button" class="sandbox-page${id === this.page ? ' active' : ''}" role="tab" aria-selected="${id === this.page}" data-page="${id}">${label}</button>`).join('')}
         </div>
+        <div class="sandbox-pages sandbox-modes" role="radiogroup" aria-label="Mode" title="Battle: clear each level's enemies. Survival: hold out each level until dawn">
+          ${RUN_MODES.map((mode) => `<button type="button" class="sandbox-page${mode === settings.mode ? ' active' : ''}" role="radio" aria-checked="${mode === settings.mode}" data-mode="${mode}">${RUN_MODE_LABELS[mode]}</button>`).join('')}
+        </div>
       </div>
       <div class="sandbox-options">
         <div class="option-group" aria-label="Health">
@@ -104,9 +117,9 @@ export class SandboxForm {
           <div class="option-field" title="How hard enemies hit and how well their archers aim (fixed for the battle)"><span>Difficulty</span><div class="segmented" role="radiogroup" aria-label="Difficulty">
             ${DIFFICULTY_LEVELS.map((level) => `<button type="button" class="chip-button${level === settings.difficulty ? ' active' : ''}" role="radio" aria-checked="${level === settings.difficulty}" data-difficulty="${level}">${DIFFICULTY_LABELS[level]}</button>`).join('')}
           </div></div>
-          <div class="option-field" title="Each keep has a banner: bring the enemy's to your keep to win the level, lose yours and the level is lost (solo only)"><span>Banners</span><div class="segmented" role="radiogroup" aria-label="Banners">
+          ${survival ? '' : `<div class="option-field" title="Each keep has a banner: bring the enemy's to your keep to win the level, lose yours and the level is lost (solo only)"><span>Banners</span><div class="segmented" role="radiogroup" aria-label="Banners">
             ${[false, true].map((on) => `<button type="button" class="chip-button${on === settings.banners ? ' active' : ''}" role="radio" aria-checked="${on === settings.banners}" data-banners="${on}">${on ? 'On' : 'Off'}</button>`).join('')}
-          </div></div>
+          </div></div>`}
         </div>
       </div>
       <div class="panel-body">
@@ -114,36 +127,43 @@ export class SandboxForm {
       </div>`);
   }
 
+  /** The selected level's map, enemies (battle: counts; survival: time and kinds, ui/survivalEditor.ts) and the level tabs. */
   private levelsPage(settings: SandboxSettings): string {
+    const count = runLevelCount(settings);
+    const battleground = runBattleground(settings, this.selected);
+    const maps = battlegroundsFor(settings.mode);
     const level = settings.levels[this.selected];
     return `
       <div class="level-tabs" role="tablist" aria-label="Levels">
-        ${settings.levels.slice(0, settings.levelCount).map((level, index) => this.levelTab(level, index)).join('')}
-        ${settings.levelCount < MAX_LEVELS ? '<button type="button" class="level-add" data-level-add>+ Add level</button>' : ''}
+        ${Array.from({ length: count }, (_, index) => this.levelTab(settings, index)).join('')}
+        ${count < MAX_LEVELS ? '<button type="button" class="level-add" data-level-add>+ Add level</button>' : ''}
       </div>
       <div class="level-editor">
         <div class="level-editor-head">
           <div class="sandbox-section-label">Level ${this.selected + 1} · Battleground</div>
-          ${settings.levelCount > MIN_LEVELS ? '<button type="button" class="level-remove" data-level-remove>Remove level</button>' : ''}
+          ${count > MIN_LEVELS ? '<button type="button" class="level-remove" data-level-remove>Remove level</button>' : ''}
         </div>
-        <div class="map-cards">
-          ${BATTLEGROUND_IDS.map((id) => `<button type="button" class="map-card${id === level.battleground ? ' active' : ''}" data-map="${id}" aria-pressed="${id === level.battleground}">
+        <div class="map-cards" style="--maps: ${maps.length}">
+          ${maps.map((id) => `<button type="button" class="map-card${id === battleground ? ' active' : ''}" data-map="${id}" aria-pressed="${id === battleground}">
             ${mapThumbnail(BATTLEGROUNDS[id])}<span>${BATTLEGROUNDS[id].name}</span></button>`).join('')}
         </div>
+        ${settings.mode === 'survival' ? survivalEditor(settings.survival.levels[this.selected]) : `
         <div class="sandbox-section-label">Enemies <span data-level-total>${levelEnemyTotal(level.enemies)}</span></div>
         ${ENEMY_GROUP_IDS.map((group) => `<div class="enemy-group-label">${ENEMY_GROUPS[group].label}</div>
         <div class="enemy-cards">
           ${enemyTypesOf(group).map((type) => this.enemyCard(type, level.enemies[type])).join('')}
-        </div>`).join('')}
+        </div>`).join('')}`}
       </div>`;
   }
 
-  private levelTab(level: LevelSetup, index: number): string {
+  private levelTab(settings: SandboxSettings, index: number): string {
     const active = index === this.selected;
-    const total = levelEnemyTotal(level.enemies);
-    return `<button type="button" class="level-tab${active ? ' active' : ''}" role="tab" aria-selected="${active}" data-level="${index}" title="${BATTLEGROUNDS[level.battleground].name}">
-      ${mapThumbnail(BATTLEGROUNDS[level.battleground])}
-      <span class="level-tab-text"><strong>Level ${index + 1}</strong><small data-tab-total="${index}">${total} ${total === 1 ? 'enemy' : 'enemies'}</small></span>
+    const battleground = BATTLEGROUNDS[runBattleground(settings, index)];
+    const total = levelEnemyTotal(settings.levels[index].enemies);
+    const text = settings.mode === 'survival' ? survivalTabText(settings.survival.levels[index]) : `${total} ${total === 1 ? 'enemy' : 'enemies'}`;
+    return `<button type="button" class="level-tab${active ? ' active' : ''}" role="tab" aria-selected="${active}" data-level="${index}" title="${battleground.name}">
+      ${mapThumbnail(battleground)}
+      <span class="level-tab-text"><strong>Level ${index + 1}</strong><small data-tab-total="${index}">${text}</small></span>
     </button>`;
   }
 
@@ -169,6 +189,11 @@ export class SandboxForm {
     const step = target.closest<HTMLButtonElement>('[data-step]');
     const page = target.closest<HTMLElement>('[data-page]');
     const difficulty = target.closest<HTMLElement>('[data-difficulty]')?.dataset.difficulty;
+    const mode = target.closest<HTMLElement>('[data-mode]')?.dataset.mode as RunMode | undefined;
+    const kind = target.closest<HTMLButtonElement>('[data-survival-kind]');
+    const minutes = target.closest<HTMLButtonElement>('[data-minutes]');
+    const survival = settings.mode === 'survival';
+    const count = runLevelCount(settings);
     // (The quiver's own clicks are editQuiverIn's.)
     if (page) {
       this.page = page.dataset.page as SandboxPage;
@@ -177,21 +202,38 @@ export class SandboxForm {
       this.selected = Number(tab.dataset.level);
       this.render(settings);
       this.emit();
-    } else if (target.closest('[data-level-add]') && settings.levelCount < MAX_LEVELS) {
+    } else if (mode && RUN_MODES.includes(mode) && mode !== settings.mode) {
+      this.update({ ...settings, mode }, 0);
+    } else if (target.closest('[data-level-add]') && count < MAX_LEVELS) {
       // The new level is the next stored one (it keeps whatever it was last set up with).
-      this.update({ ...settings, levelCount: settings.levelCount + 1 }, settings.levelCount);
-    } else if (target.closest('[data-level-remove]') && settings.levelCount > MIN_LEVELS) {
+      this.update(survival
+        ? { ...settings, survival: { ...settings.survival, levelCount: count + 1 } }
+        : { ...settings, levelCount: count + 1 }, count);
+    } else if (target.closest('[data-level-remove]') && count > MIN_LEVELS) {
       // Later levels move up; the removed one goes to the end, out of the run.
-      const levels = [...settings.levels];
-      const [removed] = levels.splice(this.selected, 1);
-      levels.push(removed);
-      this.update({ ...settings, levels, levelCount: settings.levelCount - 1 }, Math.max(0, this.selected - 1));
+      const removeSelected = <T>(list: readonly T[]): T[] => {
+        const levels = [...list];
+        levels.push(...levels.splice(this.selected, 1));
+        return levels;
+      };
+      this.update(survival
+        ? { ...settings, survival: { levels: removeSelected(settings.survival.levels), levelCount: count - 1 } }
+        : { ...settings, levels: removeSelected(settings.levels), levelCount: count - 1 }, Math.max(0, this.selected - 1));
+    } else if (kind && !kind.disabled) {
+      const type = kind.dataset.survivalKind as EnemyType;
+      const { kinds } = settings.survival.levels[this.selected];
+      this.update(this.withSurvivalLevel(settings, { kinds: kinds.includes(type) ? kinds.filter((other) => other !== type) : [...kinds, type] }), this.selected);
+    } else if (minutes && !minutes.disabled) {
+      const level = settings.survival.levels[this.selected];
+      const next = Math.max(SURVIVAL_MINUTES.min, Math.min(SURVIVAL_MINUTES.max, level.minutes + Number(minutes.dataset.minutes)));
+      this.update(this.withSurvivalLevel(settings, { minutes: next }), this.selected);
     } else if (isDifficultyLevel(difficulty)) {
       this.update({ ...settings, difficulty }, this.selected);
     } else if (target.closest('[data-banners]')) {
       this.update({ ...settings, banners: target.closest<HTMLElement>('[data-banners]')!.dataset.banners === 'true' }, this.selected);
     } else if (map) {
-      this.update(this.withLevel(settings, { battleground: map.dataset.map as BattlegroundId }), this.selected);
+      const battleground = map.dataset.map as BattlegroundId;
+      this.update(survival ? this.withSurvivalLevel(settings, { battleground }) : this.withLevel(settings, { battleground }), this.selected);
     } else if (step) {
       const type = step.dataset.step as EnemyType;
       const level = settings.levels[this.selected];
@@ -209,6 +251,11 @@ export class SandboxForm {
 
   private withLevel(settings: SandboxSettings, change: Partial<LevelSetup>): SandboxSettings {
     return { ...settings, levels: settings.levels.map((level, index) => (index === this.selected ? { ...level, ...change } : level)) };
+  }
+
+  private withSurvivalLevel(settings: SandboxSettings, change: Partial<SurvivalLevel>): SandboxSettings {
+    const levels = settings.survival.levels.map((level, index) => (index === this.selected ? { ...level, ...change } : level));
+    return { ...settings, survival: { ...settings.survival, levels } };
   }
 
   private update(settings: SandboxSettings, selected: number): void {

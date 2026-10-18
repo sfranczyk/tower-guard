@@ -5,7 +5,7 @@ import type { ArmorPalette } from '../rendering/armor';
  * weather. Pure data; rendering/Background.ts draws them and systems/WeatherSystem.ts adds lightning.
  */
 
-export type BattlegroundId = 'greenMeadow' | 'crimsonPass' | 'sunscorchDunes' | 'thunderRidge' | 'frostpeakPass';
+export type BattlegroundId = 'greenMeadow' | 'crimsonPass' | 'sunscorchDunes' | 'thunderRidge' | 'frostpeakPass' | 'moonlitHollow';
 
 /** fair: drifting clouds; clear: cloudless sky; storm: dark clouds, rain, lightning; snow: grey sky, snowfall. */
 export type Weather = 'fair' | 'clear' | 'storm' | 'snow';
@@ -58,6 +58,13 @@ export interface Battleground {
   ui: { accent: string; backdrop: string };
   /** The bowman's armor colours, picked to stand out against this map. */
   player: ArmorPalette;
+  /** Only offered for survival levels. */
+  survivalOnly?: boolean;
+  /**
+   * Night falls on this map: `sky` is the night sky; a moon crosses it and dawn (`dawn` bands, then `day`) comes as the
+   * survival level's time runs out, the sun rising at its end (systems/nightCycle.ts, rendering/NightSky.ts).
+   */
+  nightCycle?: { dawn: readonly number[]; day: readonly number[]; moon: number; sun: number; shade: number };
 }
 
 /**
@@ -89,6 +96,11 @@ const PLAYER_COLORS: Readonly<Record<BattlegroundId, ArmorPalette>> = {
   frostpeakPass: {
     limb: 0xb8432a, limbRear: 0x8b3220, outline: 0x1d1820, plate: 0x566074, plateLight: 0x8790a4,
     gold: 0xf2b632, leather: 0x4e3426, face: 0x2b1a14, bow: 0x2b1d17, bowString: 0x4a3a33,
+  },
+  // Warm amber cloth, bright steel and a pale bow against the blue night (and still clear of the dawn's pinks).
+  moonlitHollow: {
+    limb: 0xd9932f, limbRear: 0xa86f22, outline: 0x22160b, plate: 0xd6dce3, plateLight: 0xffffff,
+    gold: 0xffd75a, leather: 0x8a5a33, face: 0x3a2610, bow: 0xe9c48a, bowString: 0xf6e7c8,
   },
 };
 
@@ -196,6 +208,30 @@ export const BATTLEGROUNDS: Readonly<Record<BattlegroundId, Battleground>> = {
       halo: 0xeef3f7,
     },
     ui: { accent: '#5b6f8c', backdrop: '#1c2533' },
+  },
+  moonlitHollow: {
+    id: 'moonlitHollow',
+    player: PLAYER_COLORS.moonlitHollow,
+    name: 'Moonlit Hollow',
+    // Survival: hold out the night. Deep blue sky, a moon crossing it; dawn pinks the horizon, then the sun rises.
+    sky: [0x0a1024, 0x111a38, 0x19264c, 0x22335f, 0x2d4270],
+    weather: 'clear',
+    cloudColor: 0xffffff,
+    cloudAlpha: 0,
+    hills: [0x22364d, 0x182a3c],
+    hillShape: 'hills',
+    trees: { style: 'round', colors: [0x143026, 0x1a3a2e, 0x10261f], trunk: 0x2c2620 },
+    ground: { fill: 0x3a5a44, edge: 0x5f8466, tufts: 0x2c4836 },
+    ui: { accent: '#4a6a9c', backdrop: '#0c1224' },
+    survivalOnly: true,
+    nightCycle: {
+      dawn: [0x2b3a6e, 0x4f4f86, 0x8a6390, 0xd88a84, 0xf4b98a],
+      day: [0x6fa8d0, 0x8cbcd8, 0xaccfdc, 0xcfe0d8, 0xf1e2b8],
+      moon: 0xeef1e4,
+      sun: 0xffd890,
+      // Night shade over the hills and trees (fades at dawn).
+      shade: 0x070c1e,
+    },
   },
 };
 

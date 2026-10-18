@@ -72,5 +72,7 @@ animation gets a row in `scenes/labRows.ts` (or `scenes/labSequences.ts` for one
   per map, cached as textures, higher = slower). Rain (`Rain.ts`, `RAIN_*`) and snow (`Snow.ts`, `SNOW_*`) are screen
   space and cover `MAX_VIEW_WIDTH`. Mountains: valley mist (`drawMist`, horizon colour, thickening downwards) over the
   far peaks' and near slopes' feet, tunable in `MOUNTAIN_MIST`; planes step down in lightness, darkest in front.
+- **Night** (`NightSky.ts`, `Background.night` on `nightCycle` maps): dawn/day bands, stars, moon and sun placed across
+  the view, shade over hills and trees; `show(progress, viewLeft, viewWidth)`. Design lab tab Night (`designs/nightDesigns.ts`).
 - **Aim overlay** (`AimOverlay.ts`): circles at the drag start (off by default, `session.showCursorCircle`) and at the
   bow; a ghost of the last shot stays where it was loosed.

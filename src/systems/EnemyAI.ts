@@ -151,6 +151,11 @@ export class EnemyAI {
       this.drawDebugHitboxes(enemy);
       return;
     }
+    if (enemy.fleeing) {
+      this.runOff(enemy, deltaMs);
+      this.drawDebugHitboxes(enemy);
+      return;
+    }
     if (!(enemy instanceof DragonEnemy) && enemyRegenerates(enemy.kind)) {
       this.regenerate(enemy, deltaMs);
     }
@@ -393,6 +398,23 @@ export class EnemyAI {
     this.regen.set(enemy, step.state);
     if (step.heal > 0 && enemy.missingHealth > 0) {
       enemy.heal(step.heal);
+    }
+  }
+
+  /** Survival's end: it runs (or flies) off the field's right edge without a fight and escapes there. */
+  private runOff(enemy: Foe, deltaMs: number): void {
+    if (enemy instanceof DragonEnemy) {
+      enemy.flyOff(deltaMs);
+      enemy.updateAnimation(deltaMs);
+      return;
+    }
+    const escapeX = WORLD_WIDTH + PRIEST_ESCAPE_BEYOND;
+    enemy.target = 'bowman';
+    enemy.update(deltaMs, { x: escapeX + PRIEST_POST_SLACK, y: groundAt(WORLD_WIDTH) });
+    enemy.updateAnimation(deltaMs, enemy.isMoving());
+    enemy.clearHitTint();
+    if (enemy.x >= escapeX) {
+      enemy.escape();
     }
   }
 

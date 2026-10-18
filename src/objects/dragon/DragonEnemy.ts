@@ -1,5 +1,5 @@
 import { Container, Graphics } from 'pixi.js';
-import { DRAGON_SCALE, FIRE_DRAGON_STRAFE } from '../../config';
+import { DRAGON_SCALE, FIRE_DRAGON_STRAFE, WORLD_WIDTH } from '../../config';
 import { dragonHitZones, type DragonHitZone, type DragonPose } from '../../rendering/dragon';
 import { dragonKnightLook, drawDragonWithRider } from '../../rendering/designs/heavySkins';
 import { HUMAN_BODY } from '../../rendering/bodyColors';
@@ -43,6 +43,9 @@ const HEALTH_BAR = { width: 70, height: 8, y: 62 };
  * head, and stick into it. A killed dragon falls out of the sky (DragonCorpse). Offers the same interface as Enemy where
  * the combat code shares it.
  */
+/** How a fleeing dragon leaves: × its speed, climbing px/s up to world y `topY`, gone `beyond` the right edge. */
+const DRAGON_FLEE = { speedFactor: 1.8, climb: 60, topY: 40, beyond: 260 };
+
 export default class DragonEnemy extends Container {
   public readonly kind: DragonKind;
   /** Every hit taken (host and co-op guest alike): the battle shows its damage number. */
@@ -77,6 +80,9 @@ export default class DragonEnemy extends Container {
   /** Where the blast was once a fire dragon has blown up (the arrows in it break). */
   public blownApartAt?: Vec2;
   private cheering = false;
+  /** Survival: the night is over, it turns and flies off right (`flee`, `flyOff`); `escaped` once out of sight. */
+  public fleeing = false;
+  private escaped = false;
   private paused = false;
   /** Hovers and flights between them, side and turn, gusts and jolts, wing beat (DragonMotion). */
   private readonly motion: DragonMotion;
@@ -100,7 +106,27 @@ export default class DragonEnemy extends Container {
   }
 
   public isAlive(): boolean {
-    return this.health > 0;
+    return this.health > 0 && !this.escaped;
+  }
+
+  /** Survival's end: it gives up, turns round and flies off (EnemyAI calls `flyOff` each frame). */
+  public flee(): void {
+    if (this.isAlive()) {
+      this.fleeing = true;
+      this.breath.stop();
+      this.bow.tension = 0;
+      this.motion.side = -1;
+    }
+  }
+
+  /** Flies away right and up, faster than it hunts; past the field's edge it is gone (counts as defeated). */
+  public flyOff(realDeltaMs: number): void {
+    const seconds = (realDeltaMs * this.afflictions.timeScale) / 1000;
+    this.x += this.speed * DRAGON_FLEE.speedFactor * seconds;
+    this.y = Math.max(DRAGON_FLEE.topY, this.y - DRAGON_FLEE.climb * seconds);
+    if (this.x > WORLD_WIDTH + DRAGON_FLEE.beyond) {
+      this.escaped = true;
+    }
   }
 
   /** Health left (as Enemy.currentHealth). */

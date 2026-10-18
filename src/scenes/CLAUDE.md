@@ -13,6 +13,8 @@ everything under `ctx.root` on each switch. Scenes never touch the DOM: they cal
   level starts with none), bowmen to `BattlePlayers` (creation, per-frame picks/shots/bursts,
   falls, `status`), co-op setup to `startBattleSync` (`battleSync.ts`), the end screen to `showLevelEnd`
   (`levelEndScreen.ts`, text from pure `levelEndInfo`), banners to `BattleBanners` (Banners option, solo: steps `systems/banners.ts`, draws them (`rendering/banner.ts`), edge markers; a captured banner = level cleared, ours lost = defeat), status texts to `battleText.ts` (pure). A
+  Survival (`sandbox.mode`): `BattleSurvival.ts` (clock, `background.night`, `fleeAll` at dawn = level held; ?debug
+  `scene.survival.skip(ms)`), enemy keep `Tower` `absent`, no Banners; end texts in `levelEnd.ts` (`survivedMs`).
   Esc pauses (`togglePause` / `setPaused`: `update` stops, `DomUi.showPause`; co-op: net/CLAUDE.md). The pause dialog's
   "Restart level" (`restartLevel`, solo/host) starts the level over: bowmen at full health, keeps as they are; in the keep
   it edits the quiver (`changeLoadout`: saved, shared in co-op, HUD rebuilt). A

@@ -30,6 +30,7 @@ import type { UnitType } from '../../types';
 import { allyKnightLook, medicLook, squireLook } from './allySkins';
 import { BANDAGE_LOOP_MS, bandageKneel } from '../bandaging';
 import { BANNER_STYLES } from './bannerDesigns';
+import { NIGHT_ENTRIES } from './nightDesigns';
 
 /** One animation of a design: a tile in the zoomed view. */
 export interface DesignView {
@@ -613,5 +614,6 @@ export const DESIGN_SECTIONS: readonly DesignSection[] = [
   { id: 'player', tab: 'Player', intro: 'The player looks: the ranger (player 1) and the keep warden (player 2 in co-op), next to the old armored archer.', entries: PLAYER },
   { id: 'allies', tab: 'Allies', intro: 'The player\'s soldiers as they look in the game: summoned from beyond the left edge (Z, X, C), they follow the order button (V).', entries: ALLIES },
   { id: 'banners', tab: 'Banners', intro: 'Five proposals for the keeps\' banners (the Banners option): blue ours, red theirs, both in one breeze. The game draws BANNER_STYLE (rendering/banner.ts): the pennon.', entries: BANNER_ENTRIES },
+  { id: 'night', tab: 'Night', intro: 'The survival map\'s night, from nightfall to sunrise.', entries: NIGHT_ENTRIES },
   { id: 'ideas', tab: 'Ideas', intro: 'Proposals for new enemy looks, from the most human to the least (not tied to an enemy yet).', entries: IDEAS },
 ];

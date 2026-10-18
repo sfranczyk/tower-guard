@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { slotOfKey, windLabel } from './battleText';
+import { clockText, slotOfKey, windLabel } from './battleText';
 
 describe('slotOfKey', () => {
   it('maps digit keys to quiver slots', () => {
@@ -23,5 +23,14 @@ describe('windLabel', () => {
   it('says when there is no wind (a calm map, or a windy one calmed down)', () => {
     expect(windLabel(0, 0)).toBe('no wind');
     expect(windLabel(0, 300)).toBe('no wind');
+  });
+});
+
+describe('clockText', () => {
+  it('shows minutes and seconds, rounded up', () => {
+    expect(clockText(180_000)).toBe('3:00');
+    expect(clockText(161_200)).toBe('2:42');
+    expect(clockText(500)).toBe('0:01');
+    expect(clockText(-5)).toBe('0:00');
   });
 });

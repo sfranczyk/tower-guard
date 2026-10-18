@@ -41,6 +41,8 @@ export interface GuestWorld {
   setStatus(text: string): void;
   /** The host's wind changed mid-level. */
   setWind(wind: number): void;
+  /** Survival: the host's clock. */
+  setClock(remainingMs: number): void;
   showEnd(info: EndInfo): void;
   /** The host started the next level (or a new battle). */
   restart(message: Extract<NetMessage, { t: 'start' }>): void;
@@ -317,6 +319,9 @@ export class GuestSync {
     }
     if (latest.enemyKeep !== enemyTower.getHealth()) {
       enemyTower.setHealth(latest.enemyKeep);
+    }
+    if (latest.clock !== undefined) {
+      this.world.setClock(latest.clock);
     }
   }
 

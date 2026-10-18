@@ -17,7 +17,7 @@ import { Scene, type GameContext } from '../core/Scene';
 import { viewWidth } from '../core/viewport';
 import { BATTLEGROUNDS, aimColorsOf, type Battleground } from '../data/battlegrounds';
 import { enemyEdge, healAfterLevel, wavePacing } from '../data/difficulty';
-import type { LevelSetup } from '../data/sandbox';
+import { runBattleground, runLevelCount, survivalLevel, type SurvivalLevel } from '../data/sandbox';
 import InputManager from '../managers/InputManager';
 import { LocalInput, ManualInput, RecordingInput } from '../input/PlayerInput';
 import { leaveCoop, loadoutOf, shareLoadout } from '../net/coopLink';
@@ -31,9 +31,10 @@ import { BattleCamera } from './BattleCamera';
 import { BattleAllies } from './BattleAllies';
 import { BattleBanners } from './BattleBanners';
 import { BattleEnemies } from './BattleEnemies';
+import { BattleSurvival } from './BattleSurvival';
 import { BattlePlayers } from './BattlePlayers';
 import { startBattleSync } from './battleSync';
-import { DEFAULT_STATUS, slotOfKey, windLabel } from './battleText';
+import { DEFAULT_STATUS, clockText, slotOfKey, windLabel } from './battleText';
 import { rollWind, WindShifts } from '../systems/windShift';
 import { showLevelEnd } from './levelEndScreen';
 import { PlayerControl, type Player } from './PlayerControl';
@@ -58,8 +59,10 @@ import type { Vec2 } from '../types';
  * the level moves on to the next one (health carries over); destroying the enemy keep wins the run.
  */
 export class GameScene extends Scene {
-  private readonly level: LevelSetup;
   private readonly battleground: Battleground;
+  /** Survival runs: the level's kinds and time; its clock and night once entered (`survival`; ?debug: `scene.survival.skip(ms)`). */
+  private readonly survivalSetup?: SurvivalLevel;
+  private survival?: BattleSurvival;
   private readonly world = new Container();
   /** The level's enemies (also `foes.list`; kept here for the ?debug console: `scene.enemies[0]`). */
   private readonly enemies: Foe[] = [];
@@ -110,8 +113,8 @@ export class GameScene extends Scene {
   public constructor(ctx: GameContext) {
     super(ctx);
     const { sandbox, run } = ctx.session;
-    this.level = sandbox.levels[run.levelIndex];
-    this.battleground = BATTLEGROUNDS[this.level.battleground];
+    this.survivalSetup = survivalLevel(sandbox, run.levelIndex);
+    this.battleground = BATTLEGROUNDS[runBattleground(sandbox, run.levelIndex)];
     this.role = ctx.session.net?.role ?? 'solo';
     this.localIndex = this.role === 'guest' ? 1 : 0;
     // Windy maps roll a fresh wind for every level (direction and strength); a co-op guest takes the host's.
@@ -120,7 +123,10 @@ export class GameScene extends Scene {
     this.windShifts = new WindShifts(this.role === 'guest' ? 0 : strongest);
     // Part of the battle setup (in co-op the host's sandbox), so it holds for the whole run.
     const { difficulty } = sandbox;
-    this.foes = new BattleEnemies(this.level, {
+    const survival = this.survivalSetup;
+    this.foes = new BattleEnemies(survival
+      ? { survival: { kinds: survival.kinds, durationMs: survival.minutes * 60_000, levelIndex: run.levelIndex, difficulty } }
+      : { counts: sandbox.levels[run.levelIndex].enemies }, {
       world: this.world,
       list: this.enemies,
       guest: this.role === 'guest',
@@ -179,7 +185,11 @@ export class GameScene extends Scene {
     // Co-op: the keep gets a second, lower tower for the second bowman.
     const twin = this.ctx.session.playerCount > 1;
     this.playerTower = new Tower(PLAYER_TOWER_X, GROUND_Y, { hillColor, enemy: false, twin }, sandbox.keepHealth, run.keepHealth);
-    this.enemyTower = new Tower(ENEMY_TOWER_X, GROUND_Y, { hillColor, enemy: true }, ENEMY_KEEP_HEALTH, run.enemyKeepHealth);
+    // Survival: the enemy has no keep (they come from beyond the field).
+    this.enemyTower = new Tower(ENEMY_TOWER_X, GROUND_Y, { hillColor, enemy: true, absent: !!this.survivalSetup }, ENEMY_KEEP_HEALTH, run.enemyKeepHealth);
+    if (this.survivalSetup) {
+      this.survival = new BattleSurvival(this.survivalSetup, this.background);
+    }
     this.debugGraphics.zIndex = 4;
     this.world.addChild(this.playerTower, this.enemyTower, this.aimOverlay, this.debugGraphics);
     this.team = new BattlePlayers({
@@ -200,7 +210,7 @@ export class GameScene extends Scene {
     });
 
     // Banners: solo only (the guest doesn't see the soldiers yet, net/CLAUDE.md).
-    if (sandbox.banners && !this.ctx.session.net) {
+    if (sandbox.banners && !this.ctx.session.net && !this.survival) {
       this.banners = new BattleBanners({
         world: this.world,
         units: () => [...this.allies, ...this.enemies.filter((foe): foe is Enemy => !(foe instanceof DragonEnemy))],
@@ -263,6 +273,8 @@ export class GameScene extends Scene {
       showGuestEnd: (info) => this.showGuestEnd(info),
       guestPaused: (paused) => this.setPaused(paused, !this.pauseAsked),
       windChanged: (wind) => this.setWind(wind),
+      survivalClock: this.survival && (() => this.survival!.remainingMs),
+      setSurvivalClock: (ms) => this.survival?.sync(ms),
     }));
     if (this.hostSync) {
       this.hostSync.onPauseRequest = (paused) => {
@@ -291,8 +303,9 @@ export class GameScene extends Scene {
     if (this.battleground.weather === 'snow') {
       this.snow = new Snow(this.ctx.root, this.wind * SNOW_WIND_DRIFT);
     }
-    const hint = this.battleground.weather === 'storm' ? 'beware of lightning' : this.wind !== 0 ? windLabel(this.wind, this.battleground.wind ?? 0) : 'defend your keep';
-    ui.setStatus(`Level ${run.levelIndex + 1} of ${sandbox.levelCount} · ${this.battleground.name} · ${hint}`);
+    const hint = this.battleground.weather === 'storm' ? 'beware of lightning' : this.wind !== 0 ? windLabel(this.wind, this.battleground.wind ?? 0)
+      : this.survival ? `hold out for ${clockText(this.survival.durationMs)}` : 'defend your keep';
+    ui.setStatus(`Level ${run.levelIndex + 1} of ${runLevelCount(sandbox)} · ${this.battleground.name} · ${hint}`);
   }
 
   /** The world keeps running after the level ends; the end screen just overlays it. */
@@ -313,6 +326,7 @@ export class GameScene extends Scene {
       this.hostSync?.push({ e: 'wind', wind: shifted });
     }
     this.background.update(deltaMs);
+    this.survival?.update(deltaMs, this.camera.x, !this.gameEnded, this.role === 'guest');
     this.weather?.update(deltaMs, this.camera.x);
     this.snow?.update(deltaMs, this.camera.x);
     // A co-op guest moves only its own bowman; the host's comes from the host.
@@ -592,7 +606,8 @@ export class GameScene extends Scene {
       defeatedEnemies: this.foes.defeated(),
       totalEnemies: this.foes.total,
       level: this.ctx.session.run.levelIndex + 1,
-      levelCount: this.ctx.session.sandbox.levelCount,
+      levelCount: runLevelCount(this.ctx.session.sandbox),
+      clockMs: this.survival?.remainingMs,
     });
     this.ctx.ui.updateBanners(this.banners && this.ctx.session.bannerMarkers
       ? { player: this.banners.state('player'), enemy: this.banners.state('enemy') }
@@ -630,6 +645,12 @@ export class GameScene extends Scene {
     }
     if (this.foes.allDefeated()) {
       this.endGame(true, true);
+      return;
+    }
+    // Survival: dawn. Whoever is still on the field runs off, and the level is held.
+    if (this.survival?.timeUp) {
+      BattleSurvival.fleeAll(this.enemies);
+      this.endGame(true, true);
     }
   }
 
@@ -639,7 +660,7 @@ export class GameScene extends Scene {
     this.destroyInput();
     this.foes.stopWaves();
     if (!won) {
-      this.enemies.forEach((enemy) => enemy.celebrate());
+      this.enemies.filter((enemy) => !enemy.fleeing).forEach((enemy) => enemy.celebrate());
       this.hostSync?.push({ e: 'cheer' });
     } else {
       this.soldiers.celebrate();
@@ -656,6 +677,7 @@ export class GameScene extends Scene {
       playerKeepDestroyed: this.playerTower.isDestroyed(),
       banner: this.banners?.outcome === 'won' ? 'captured' : this.banners?.outcome === 'lost' ? 'lost' : undefined,
       playerHealths: this.players.map((player) => player.health),
+      survivedMs: this.survival && this.survival.durationMs - this.survival.remainingMs,
     }, () => ({
       levelIndex: run.levelIndex + 1,
       // Bowmen heal by the difficulty; the keep starts every level whole.

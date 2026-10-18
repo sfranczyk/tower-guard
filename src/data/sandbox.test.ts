@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { BATTLEGROUND_IDS } from './battlegrounds';
-import { MAX_ENEMIES_PER_TYPE, MAX_LEVELS, createDefaultSandbox, normalizeSandbox, levelEnemyTotal } from './sandbox';
+import { DEFAULT_SURVIVAL_MINUTES, MAX_ENEMIES_PER_TYPE, MAX_LEVELS, SURVIVAL_MINUTES, battlegroundsFor, createDefaultSandbox, normalizeSandbox, levelEnemyTotal, runBattleground, runLevelCount } from './sandbox';
 
 describe('sandbox settings', () => {
   it('defaults to one level with five prepared levels that get harder', () => {
@@ -48,5 +48,36 @@ describe('sandbox settings', () => {
     expect(normalizeSandbox(undefined).banners).toBe(false);
     expect(normalizeSandbox({ banners: true }).banners).toBe(true);
     expect(normalizeSandbox({ banners: 'yes' } as never).banners).toBe(false);
+  });
+});
+
+describe('survival setup', () => {
+  it('defaults to battle mode with survival levels at night', () => {
+    const settings = createDefaultSandbox();
+    expect(settings.mode).toBe('battle');
+    expect(settings.survival.levels).toHaveLength(MAX_LEVELS);
+    settings.survival.levels.forEach((level) => {
+      expect(level.kinds.length).toBeGreaterThan(0);
+      expect(level.minutes).toBe(DEFAULT_SURVIVAL_MINUTES);
+    });
+    expect(runBattleground({ ...settings, mode: 'survival' }, 0)).toBe('moonlitHollow');
+    // Battle levels never get the survival-only map.
+    settings.levels.forEach((level) => expect(battlegroundsFor('battle')).toContain(level.battleground));
+  });
+
+  it('clamps stored survival levels', () => {
+    const settings = normalizeSandbox({
+      mode: 'survival',
+      survival: { levelCount: 3, levels: [{ battleground: 'nowhere' as never, kinds: ['basic', 'tank', 'ghost' as never, 'raider'] as never, minutes: 99 }, { kinds: [], minutes: 0 } as never] },
+      levels: [{ enemies: {} as never, battleground: 'moonlitHollow' }],
+    });
+    expect(settings.mode).toBe('survival');
+    expect(runLevelCount(settings)).toBe(3);
+    expect(settings.survival.levels[0]).toEqual({ battleground: 'moonlitHollow', kinds: ['raider', 'tank'], minutes: SURVIVAL_MINUTES.max });
+    expect(settings.survival.levels[1].kinds).toEqual(createDefaultSandbox().survival.levels[1].kinds);
+    expect(settings.survival.levels[1].minutes).toBe(SURVIVAL_MINUTES.min);
+    // The survival-only map isn't kept for a battle level.
+    expect(settings.levels[0].battleground).toBe(createDefaultSandbox().levels[0].battleground);
+    expect(normalizeSandbox({ mode: 'siege' as never }).mode).toBe('battle');
   });
 });

@@ -17,6 +17,8 @@
   battleground (map cards, `mapThumbnail.ts`: a tiny SVG landscape from the palette) and enemies (a card per type with
   − / +, type icons), bowman/keep health, difficulty and Banners on/off in one strip under the page tabs (`.sandbox-options`: two pairs that wrap only whole). Second page, Quiver (`quiverPage.ts`): fill the five slots
   (click a slot then an arrow, or drag: `quiverDrag.ts`; editing shared with co-op: `quiverEditing.ts`).
+  Mode switch Battle / Survival right of the page tabs (`data-mode`); survival levels: time stepper and kind toggles
+  (`survivalEditor.ts`), no Banners. HUD in survival: the clock "m:ss to dawn" (`HudValues.clockMs`) and the defeated count.
 - **Settings drawer** (handlers in `SceneManager`; menu, and in battle from the pause dialog: "Settings" or I, Esc closes it first): sound/music toggles and volumes
   (persisted), trajectory preview (off by default), arrow trails (0–3, `DEFAULT_ARROW_TRAILS` = 1), cursor circle,
   damage numbers (on), friendly fire; these live in `ctx.session` for the browser session.

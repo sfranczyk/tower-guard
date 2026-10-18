@@ -25,6 +25,8 @@ export interface KeepOptions {
   showHealth?: boolean;
   /** A cold ruin (the menu's enemy keep): no torch, fire or smoke at any damage stage. */
   abandoned?: boolean;
+  /** No keep here (survival: the enemy has none): not drawn, can't be hit, never falls. */
+  absent?: boolean;
 }
 
 /** Health bar just under the keep's base (like the enemies'), on the ground in front of it, in world px. */
@@ -93,6 +95,7 @@ export default class Tower extends Container {
     this.addChild(art, this.chipsArt, this.healthBar);
     this.position.set(x, y);
     this.zIndex = 1;
+    this.visible = !options.absent;
     this.redraw();
   }
 
@@ -105,7 +108,7 @@ export default class Tower extends Container {
 
   /** Takes a hit (at a world point, where the chips fly off; somewhere on its enemy-facing side if not given). */
   public takeDamage(amount: number, at?: Vec2): number {
-    if (this.isDestroyed()) {
+    if (this.isDestroyed() || this.options.absent) {
       return this.health;
     }
     this.health = Math.max(0, this.health - Math.max(0, amount));
@@ -116,6 +119,9 @@ export default class Tower extends Container {
 
   /** The keep's silhouette in world space (rendering/keep.ts `keepHitParts`). */
   public hitParts(): AxisBounds[] {
+    if (this.options.absent) {
+      return [];
+    }
     const { x, groundY } = this;
     return keepHitParts(this.options.twin).map((part) => ({
       left: x + (part.left - KEEP_BASE.x) * KEEP_SCALE,

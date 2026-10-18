@@ -41,6 +41,12 @@ enemy counts. `data/difficulty.ts` `enemyEdge` (`CombatWorld.enemyEdge`; easy 1,
 every enemy hit on bowmen and keep × `damage` (melee, arrows, kamikaze, dragon burn), archer aim error × `aimSpread`; `wavePacing`: medium/hard send a wave in
 groups of `DIFFICULTY_SCALE.groupSize` (kinds together, `groupByKind`), `groupSpawnIntervalMs` apart, `groupGapMs` between.
 
+## Survival (`survivalWaves.ts`, `nightCycle.ts`, pure, tested; tuning `SURVIVAL`)
+`SurvivalDirector` (BattleEnemies in survival): a wave every `waveEveryMs` (sooner on a cleared field), `survivalWaveSize`
+growing per wave, level and difficulty, kinds by `arrival` (`kindsArrived`, `drawWave`), at most `maxAlive` standing, quiet
+before the end. `nightSky(progress)`: moon, stars, dawn/day weights, shade, `sunRise`. Time up: `Enemy`/`DragonEnemy.flee`,
+`EnemyAI.runOff` (off the right edge, `escape`).
+
 ## Arrow flight (`ballistics.ts`)
 Gravity + quadratic drag `ARROWS.drag`, wind in `FlightParams`. The trajectory preview, the aim camera and enemy archer
 aim (`solveLaunchAngle`, cached ~250 ms) simulate with the same functions: any flight change goes here. Enemy archers

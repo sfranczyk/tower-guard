@@ -1,5 +1,5 @@
 import { DEFAULT_DIFFICULTY, isDifficultyLevel, type DifficultyLevel } from './difficulty';
-import { BATTLEGROUND_IDS, type BattlegroundId } from './battlegrounds';
+import { BATTLEGROUNDS, BATTLEGROUND_IDS, type BattlegroundId } from './battlegrounds';
 import type { EnemyType } from '../types';
 import { ENEMY_KINDS, ENEMY_TYPES } from './enemyKinds';
 import { DEFAULT_LOADOUT, normalizeLoadout, type Loadout } from './loadout';
@@ -30,7 +30,32 @@ export interface LevelSetup {
   battleground: BattlegroundId;
 }
 
+/** A battle run clears each level's enemies; a survival run holds out each level for its time (no enemy keep). */
+export type RunMode = 'battle' | 'survival';
+export const RUN_MODES: readonly RunMode[] = ['battle', 'survival'];
+export const RUN_MODE_LABELS: Readonly<Record<RunMode, string>> = { battle: 'Battle', survival: 'Survival' };
+
+export const SURVIVAL_MINUTES = { min: 1, max: 15 } as const;
+
+/** A survival level: where, which kinds come (how many is up to systems/survivalWaves.ts) and for how long. */
+export interface SurvivalLevel {
+  battleground: BattlegroundId;
+  /** In catalogue order, at least one. */
+  kinds: EnemyType[];
+  minutes: number;
+}
+
+/** The survival run's own levels (its own row, apart from the battle levels). */
+export interface SurvivalSetup {
+  levelCount: number;
+  /** Always MAX_LEVELS entries; only the first `levelCount` are played. */
+  levels: SurvivalLevel[];
+}
+
 export interface SandboxSettings {
+  /** Which of the two setups is played. */
+  mode: RunMode;
+  survival: SurvivalSetup;
   levelCount: number;
   /** Always MAX_LEVELS entries; only the first `levelCount` are played. */
   levels: LevelSetup[];
@@ -53,11 +78,31 @@ const DEFAULT_LEVEL_ENEMIES: readonly LevelEnemyCounts[] = [
   { raider: 6, fast: 4, tank: 3, troll: 0, hunter: 3, dragon: 1, fireDragon: 1, kamikaze: 1, goblinKamikaze: 2, zombie: 3, knight: 2, heavyKnight: 1, horseKnight: 1, priest: 1, shaman: 0 },
 ];
 
+/** Default survival levels: more kinds each level, all at night in the Moonlit Hollow but one. */
+const DEFAULT_SURVIVAL_KINDS: readonly EnemyType[][] = [
+  ['raider', 'hunter'],
+  ['raider', 'fast', 'hunter', 'zombie'],
+  ['raider', 'fast', 'hunter', 'zombie', 'tank', 'goblinKamikaze'],
+  ['raider', 'fast', 'hunter', 'zombie', 'knight', 'priest', 'dragon'],
+  ['raider', 'fast', 'hunter', 'zombie', 'tank', 'troll', 'knight', 'horseKnight', 'shaman', 'fireDragon'],
+];
+export const DEFAULT_SURVIVAL_MINUTES = 3;
+const SURVIVAL_BATTLEGROUND: BattlegroundId = 'moonlitHollow';
+
+/** The maps a level of this mode may be fought on (survival-only maps are left out of battle runs). */
+export const battlegroundsFor = (mode: RunMode): BattlegroundId[] =>
+  BATTLEGROUND_IDS.filter((id) => mode === 'survival' || !BATTLEGROUNDS[id].survivalOnly);
+
 export const createDefaultSandbox = (): SandboxSettings => ({
+  mode: 'battle',
+  survival: {
+    levelCount: MIN_LEVELS,
+    levels: DEFAULT_SURVIVAL_KINDS.map((kinds) => ({ battleground: SURVIVAL_BATTLEGROUND, kinds: [...kinds], minutes: DEFAULT_SURVIVAL_MINUTES })),
+  },
   levelCount: MIN_LEVELS,
   levels: DEFAULT_LEVEL_ENEMIES.map((enemies, index) => ({
     enemies: { ...enemies },
-    battleground: BATTLEGROUND_IDS[index % BATTLEGROUND_IDS.length],
+    battleground: battlegroundsFor('battle')[index % battlegroundsFor('battle').length],
   })),
   bowmanHealth: 150,
   keepHealth: 1000,
@@ -84,6 +129,24 @@ const RENAMED_TYPES: Readonly<Record<string, EnemyType>> = { basic: 'raider', ba
 const renameTypes = (enemies: Partial<Record<string, unknown>> | undefined): Partial<Record<string, unknown>> | undefined =>
   enemies && Object.fromEntries(Object.entries(enemies).map(([type, count]) => [RENAMED_TYPES[type] ?? type, count]));
 
+const isBattleground = (value: unknown, mode: RunMode): value is BattlegroundId =>
+  battlegroundsFor(mode).includes(value as BattlegroundId);
+
+/** Stored survival levels, clamped: known kinds only (catalogue order, renamed ids moved), at least one, 1–15 minutes. */
+const normalizeSurvival = (input: Partial<SurvivalSetup> | undefined, defaults: SurvivalSetup): SurvivalSetup => ({
+  levelCount: clampInt(input?.levelCount, MIN_LEVELS, MAX_LEVELS, defaults.levelCount),
+  levels: defaults.levels.map((fallback, index) => {
+    const level = input?.levels?.[index];
+    const stored = Array.isArray(level?.kinds) ? level.kinds.map((kind) => RENAMED_TYPES[kind] ?? kind) : undefined;
+    const kinds = stored ? ENEMY_TYPES.filter((type) => stored.includes(type)) : fallback.kinds;
+    return {
+      battleground: isBattleground(level?.battleground, 'survival') ? level.battleground : fallback.battleground,
+      kinds: kinds.length > 0 ? kinds : fallback.kinds,
+      minutes: clampInt(level?.minutes, SURVIVAL_MINUTES.min, SURVIVAL_MINUTES.max, fallback.minutes),
+    };
+  }),
+});
+
 /** Fills gaps and clamps every field, so stored or hand-edited settings are always playable. */
 export const normalizeSandbox = (input: (Partial<SandboxSettings> & LegacySandbox) | undefined): SandboxSettings => {
   const defaults = createDefaultSandbox();
@@ -92,6 +155,8 @@ export const normalizeSandbox = (input: (Partial<SandboxSettings> & LegacySandbo
   }
   const storedLevels = input.levels ?? input.waves;
   return {
+    mode: RUN_MODES.includes(input.mode as RunMode) ? (input.mode as RunMode) : defaults.mode,
+    survival: normalizeSurvival(input.survival, defaults.survival),
     levelCount: clampInt(input.levelCount ?? input.waveCount, MIN_LEVELS, MAX_LEVELS, defaults.levelCount),
     levels: defaults.levels.map((fallback, index) => {
       const level = storedLevels?.[index];
@@ -102,9 +167,7 @@ export const normalizeSandbox = (input: (Partial<SandboxSettings> & LegacySandbo
           type,
           clampInt(enemies?.[type], 0, MAX_ENEMIES_PER_TYPE, enemies && !(type in enemies) ? 0 : fallback.enemies[type]),
         ])) as LevelEnemyCounts,
-        battleground: BATTLEGROUND_IDS.includes(level?.battleground as BattlegroundId)
-          ? (level?.battleground as BattlegroundId)
-          : fallback.battleground,
+        battleground: isBattleground(level?.battleground, 'battle') ? level.battleground : fallback.battleground,
       };
     }),
     bowmanHealth: clampInt(input.bowmanHealth, HEALTH_LIMITS.bowman.min, HEALTH_LIMITS.bowman.max, defaults.bowmanHealth),
@@ -117,3 +180,15 @@ export const normalizeSandbox = (input: (Partial<SandboxSettings> & LegacySandbo
 
 export const levelEnemyTotal = (enemies: LevelEnemyCounts): number =>
   ENEMY_TYPES.reduce((sum, type) => sum + enemies[type], 0);
+
+/** How many levels the run has, in its mode. */
+export const runLevelCount = (sandbox: SandboxSettings): number =>
+  (sandbox.mode === 'survival' ? sandbox.survival.levelCount : sandbox.levelCount);
+
+/** The map of the run's level `index`, in its mode. */
+export const runBattleground = (sandbox: SandboxSettings, index: number): BattlegroundId =>
+  (sandbox.mode === 'survival' ? sandbox.survival.levels : sandbox.levels)[index].battleground;
+
+/** The survival level `index` of the run, if it's a survival run. */
+export const survivalLevel = (sandbox: SandboxSettings, index: number): SurvivalLevel | undefined =>
+  (sandbox.mode === 'survival' ? sandbox.survival.levels[index] : undefined);

@@ -1,3 +1,4 @@
+import { clockText } from '../scenes/battleText';
 import { ICON_ENEMY_PIP } from './icons';
 
 export interface HudValues {
@@ -5,6 +6,8 @@ export interface HudValues {
   totalEnemies: number;
   level: number;
   levelCount: number;
+  /** Survival: ms left on the clock (the chip shows it and the defeated count instead of pips). */
+  clockMs?: number;
 }
 
 /** Up to this many enemies the level shows one pip each; bigger levels get a progress bar. */
@@ -16,6 +19,7 @@ export class Hud {
   private readonly pips: HTMLElement;
   private readonly levelBar: HTMLElement;
   private readonly enemyCount: HTMLElement;
+  private readonly clock: HTMLElement;
   private pipCount = -1;
 
   public constructor(root: HTMLElement) {
@@ -30,10 +34,21 @@ export class Hud {
     this.pips = query('[data-enemy-pips]');
     this.levelBar = query('[data-level-bar]');
     this.enemyCount = query('[data-enemy-count]');
+    this.clock = query('[data-survival-clock]');
   }
 
   public update(values: HudValues): void {
     this.level.textContent = `${values.level} / ${values.levelCount}`;
+    const survival = values.clockMs !== undefined;
+    this.clock.hidden = !survival;
+    if (survival) {
+      // Survival: the time to dawn instead of the level's progress.
+      this.clock.innerHTML = `${clockText(values.clockMs!)}<small>to dawn</small>`;
+      this.enemyCount.textContent = `${values.defeatedEnemies} defeated`;
+      this.pips.hidden = true;
+      this.levelBar.parentElement!.hidden = true;
+      return;
+    }
     this.enemyCount.textContent = `${values.defeatedEnemies} of ${values.totalEnemies} defeated`;
 
     const usePips = values.totalEnemies <= MAX_PIPS;

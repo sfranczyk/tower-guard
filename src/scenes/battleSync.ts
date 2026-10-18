@@ -29,6 +29,10 @@ export interface BattleSyncSetup {
   guestPaused(paused: boolean): void;
   /** Guest: the host's wind changed mid-level. */
   windChanged(wind: number): void;
+  /** Host, survival: the time left (sent in every snapshot). */
+  survivalClock?: () => number;
+  /** Guest, survival: the host's time left. */
+  setSurvivalClock(remainingMs: number): void;
 }
 
 /**
@@ -42,7 +46,7 @@ export const startBattleSync = (setup: BattleSyncSetup): { hostSync?: HostSync; 
     return {};
   }
   if (role === 'host') {
-    const hostSync = new HostSync(net.transport, { players: players.list, enemies, playerTower, enemyTower }, players.list[1].input as ManualInput);
+    const hostSync = new HostSync(net.transport, { players: players.list, enemies, playerTower, enemyTower, clock: setup.survivalClock }, players.list[1].input as ManualInput);
     hostSync.watch(setup.effects);
     const { sandbox, run } = ctx.session;
     net.transport.send({ t: 'start', sandbox, run, wind: setup.wind });
@@ -61,6 +65,7 @@ export const startBattleSync = (setup: BattleSyncSetup): { hostSync?: HostSync; 
     playSound: setup.playSound,
     setStatus: (text) => ctx.ui.setStatus(text),
     setWind: setup.windChanged,
+    setClock: setup.setSurvivalClock,
     showEnd: setup.showGuestEnd,
     restart: (message) => restartAsGuest(ctx, message),
     setPaused: setup.guestPaused,

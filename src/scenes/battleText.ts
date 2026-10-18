@@ -28,3 +28,9 @@ export const windLabel = (wind: number, strongest: number): string => {
   const arrows = (wind < 0 ? '←' : '→').repeat(strength);
   return `wind ${arrows} ${['light', 'moderate', 'strong'][strength - 1]}`;
 };
+
+/** A survival clock as shown: "2:41" (minutes and seconds, rounded up). */
+export const clockText = (ms: number): string => {
+  const seconds = Math.ceil(Math.max(0, ms) / 1000);
+  return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
+};

@@ -1,20 +1,26 @@
 import { shownDamage } from '../rendering/damagePopup';
 import type { Container } from 'pixi.js';
 import { WORLD_WIDTH } from '../config';
-import type { WavePacing } from '../data/difficulty';
+import type { DifficultyLevel, WavePacing } from '../data/difficulty';
 import { getEnemyStats } from '../data/enemies';
 import { ENEMY_KINDS, isFlyingType } from '../data/enemyKinds';
-import { levelEnemyTotal, type LevelSetup } from '../data/sandbox';
+import { levelEnemyTotal, type LevelEnemyCounts } from '../data/sandbox';
 import type { HostSync } from '../net/HostSync';
 import type { SpawnPlace } from '../net/protocol';
 import DragonEnemy from '../objects/dragon/DragonEnemy';
 import Enemy, { type HitInfo, type RiderOff } from '../objects/enemy/Enemy';
 import type { Foe } from '../systems/CombatSystem';
+import { SurvivalDirector } from '../systems/survivalWaves';
 import { WaveDirector } from '../systems/waveDirector';
 import type { EnemyType } from '../types';
 
 /** Enemies come in from beyond the right edge of the battlefield (out of view), past the enemy keep. */
 const ENEMY_SPAWN_X = WORLD_WIDTH + 60;
+
+/** What a level sends: set counts (battle) or as many as survivalWaves decides of some kinds for a while (survival). */
+export type LevelEnemies =
+  | { counts: LevelEnemyCounts }
+  | { survival: { kinds: readonly EnemyType[]; durationMs: number; levelIndex: number; difficulty: DifficultyLevel } };
 
 export interface BattleEnemiesDeps {
   world: Container;
@@ -36,12 +42,22 @@ export class BattleEnemies {
   /** Debug toggle (O key): hides and freezes all enemies. */
   public visible = true;
   private spawned = 0;
-  private director?: WaveDirector;
+  private director?: WaveDirector | SurvivalDirector;
+  /** Survival: the total grows with every enemy that comes, and more are due until the time is up. */
+  private readonly survival: boolean;
+  private stopped = false;
 
-  public constructor(level: LevelSetup, private readonly deps: BattleEnemiesDeps) {
-    this.total = levelEnemyTotal(level.enemies);
-    if (!deps.guest) {
-      this.director = new WaveDirector(level.enemies, deps.wavePacing);
+  public constructor(level: LevelEnemies, private readonly deps: BattleEnemiesDeps) {
+    this.survival = 'survival' in level;
+    this.total = 'counts' in level ? levelEnemyTotal(level.counts) : 0;
+    if (deps.guest) {
+      return;
+    }
+    if ('counts' in level) {
+      this.director = new WaveDirector(level.counts, deps.wavePacing);
+    } else {
+      const { kinds, durationMs, levelIndex, difficulty } = level.survival;
+      this.director = new SurvivalDirector(kinds, durationMs, { levelIndex, difficulty, pacing: deps.wavePacing });
     }
   }
 
@@ -63,6 +79,7 @@ export class BattleEnemies {
   /** The level is over: no more waves. */
   public stopWaves(): void {
     this.director = undefined;
+    this.stopped = true;
   }
 
   /**
@@ -75,10 +92,17 @@ export class BattleEnemies {
 
   /** More enemies still to come: waves not yet released, or a rider about to come off his dead horse. */
   public get reinforcementsDue(): boolean {
+    if (this.survival && !this.stopped) {
+      return true;
+    }
     return this.spawned < this.total || this.list.some((enemy) => enemy instanceof Enemy && enemy.riderPending);
   }
 
+  /** Every enemy of the level down (never in survival: more keep coming until the time is up). */
   public allDefeated(): boolean {
+    if (this.survival) {
+      return false;
+    }
     return this.spawned >= this.total && this.defeated() >= this.total;
   }
 
@@ -99,7 +123,7 @@ export class BattleEnemies {
     enemy.visible = this.visible;
     this.list.push(enemy);
     this.spawned += 1;
-    if (place) {
+    if (place || this.survival) {
       this.total += 1;
     }
     this.deps.world.addChild(enemy);
