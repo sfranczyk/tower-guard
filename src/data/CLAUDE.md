@@ -1,6 +1,6 @@
 # Game data (src/data)
 
-All pure and tested. Tuning numbers live in `config.ts`, sandbox defaults in `sandbox.ts`.
+All pure and tested. Tuning numbers live in `config/`, sandbox defaults in `sandbox.ts`.
 
 - **Enemy catalogue** (`enemyKinds.ts`): every enemy (`EnemyType`, the id saved in setups and sent in co-op) is an entry
   in `ENEMY_KINDS`: an **archetype** (how it fights: `fighter`, `runner`, `heavy`, `archer`, `kamikaze`, `grabber`,

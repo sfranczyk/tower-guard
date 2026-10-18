@@ -3,8 +3,6 @@ import {
   ARROWS,
   ENEMY_KEEP_HEALTH,
   ENEMY_TOWER_X,
-  GAME_HEIGHT,
-  VIEW_TOP,
   GROUND_Y,
   MIN_SHOT_POWER,
   PLAYER_TOWER_X,
@@ -16,27 +14,25 @@ import { spatialMix } from '../audio/spatial';
 import { Scene, type GameContext } from '../core/Scene';
 import { viewWidth } from '../core/viewport';
 import { BATTLEGROUNDS, aimColorsOf, type Battleground } from '../data/battlegrounds';
-import { enemyEdge, healAfterLevel, wavePacing } from '../data/difficulty';
+import { enemyEdge, wavePacing } from '../data/difficulty';
 import { runBattleground, runLevelCount, survivalLevel, type SurvivalLevel } from '../data/sandbox';
-import InputManager from '../managers/InputManager';
-import { LocalInput, ManualInput, RecordingInput } from '../input/PlayerInput';
-import { leaveCoop, loadoutOf, shareLoadout } from '../net/coopLink';
-import { loadSandbox, saveSandbox } from '../core/sandboxStorage';
+import type { ManualInput } from '../input/PlayerInput';
+import { loadoutOf } from '../net/coopLink';
 import type { GuestSync } from '../net/GuestSync';
 import type { HostSync } from '../net/HostSync';
-import type { EndInfo } from '../net/protocol';
 import Tower from '../objects/Tower';
 import { BattleArrows } from './BattleArrows';
 import { BattleCamera } from './BattleCamera';
 import { BattleAllies } from './BattleAllies';
 import { BattleBanners } from './BattleBanners';
+import { BattleControls } from './BattleControls';
 import { BattleEnemies } from './BattleEnemies';
+import { BattleOutcome } from './BattleOutcome';
 import { BattleSurvival } from './BattleSurvival';
 import { BattlePlayers } from './BattlePlayers';
 import { startBattleSync } from './battleSync';
-import { DEFAULT_STATUS, clockText, slotOfKey, windLabel } from './battleText';
+import { DEFAULT_STATUS, clockText, windLabel } from './battleText';
 import { rollWind, WindShifts } from '../systems/windShift';
-import { showLevelEnd } from './levelEndScreen';
 import { PlayerControl, type Player } from './PlayerControl';
 import { AimOverlay } from '../rendering/AimOverlay';
 import { Background } from '../rendering/Background';
@@ -45,13 +41,10 @@ import { EffectsSystem } from '../systems/EffectsSystem';
 import { DamageNumbers } from '../objects/DamageNumbers';
 import { Snow } from '../rendering/Snow';
 import { WeatherSystem } from '../systems/WeatherSystem';
-import { livingBowmen } from '../systems/targeting';
-import { firstArrow, type ArrowType, type Loadout } from '../data/loadout';
-import { ALLY_TYPES, ENEMY_KINDS } from '../data/enemyKinds';
+import { firstArrow, type Loadout } from '../data/loadout';
 import type Enemy from '../objects/enemy/Enemy';
 import DragonEnemy from '../objects/dragon/DragonEnemy';
 import { ALLY_ORDER_LABELS } from '../systems/allyOrders';
-import { ALLY_KEYS, ORDER_KEY } from '../ui/template';
 import type { Vec2 } from '../types';
 
 /**
@@ -91,7 +84,9 @@ export class GameScene extends Scene {
   /** One per player (co-op: two; the host is player 1, the guest player 2). */
   private team!: BattlePlayers;
   private control!: PlayerControl;
-  private localInput?: LocalInput;
+  /** The local player's keyboard, mouse, pause and soldier commands (scenes/BattleControls.ts). */
+  private controls?: BattleControls;
+  private outcome!: BattleOutcome;
   /** Co-op online: this browser's role, and the sync with the other browser. */
   private readonly role: 'solo' | 'host' | 'guest';
   private readonly localIndex: number;
@@ -101,14 +96,6 @@ export class GameScene extends Scene {
   private readonly camera = new BattleCamera();
   /** Where the local player's drawn shot would land (x), while aiming. */
   private aimLandingX?: number;
-  private optionsVisible = false;
-  /** Esc pauses the battle (co-op: on both screens, the host decides); the world stands still until Esc again. */
-  private paused = false;
-  /** Guest: this player's Esc asked the host to pause (so the dialog doesn't say the partner did). */
-  private pauseAsked = false;
-  private gameEnded = false;
-  /** What the end screen's button (and Space) does. */
-  private endAction?: () => void;
 
   public constructor(ctx: GameContext) {
     super(ctx);
@@ -255,9 +242,40 @@ export class GameScene extends Scene {
       },
     );
 
+    this.outcome = new BattleOutcome({
+      ctx: this.ctx,
+      team: this.team,
+      foes: this.foes,
+      enemies: this.enemies,
+      soldiers: this.soldiers,
+      playerTower: this.playerTower,
+      enemyTower: this.enemyTower,
+      banners: this.banners,
+      survival: this.survival,
+      hostSync: () => this.hostSync,
+      stopInput: () => this.controls?.destroy(),
+    });
+
     ui.setStatus(DEFAULT_STATUS);
     ui.setTheme(this.battleground.ui);
-    this.bindInput();
+    this.controls = new BattleControls({
+      ctx: this.ctx,
+      role: this.role,
+      localIndex: this.localIndex,
+      team: this.team,
+      soldiers: this.soldiers,
+      foes: this.foes,
+      cameraX: () => this.camera.x,
+      hostSync: () => this.hostSync,
+      guestSync: () => this.guestSync,
+      ended: () => this.outcome.ended,
+      endAction: () => this.outcome.endAction,
+      enemyKeepHealth: () => this.enemyTower.getHealth(),
+      foesToggled: () => this.debugGraphics.clear(),
+      onKeyDown: (handler) => this.listenWindow('keydown', handler),
+      onExit: (dispose) => this.onExit(dispose),
+    });
+    const controls = this.controls;
     ({ hostSync: this.hostSync, guestSync: this.guestSync } = startBattleSync({
       ctx: this.ctx,
       role: this.role,
@@ -270,15 +288,15 @@ export class GameScene extends Scene {
       enemyTower: this.enemyTower,
       spawnEnemy: (type, place) => this.foes.spawn(type, place),
       playSound: (id, at) => this.playSound(id, at),
-      showGuestEnd: (info) => this.showGuestEnd(info),
-      guestPaused: (paused) => this.setPaused(paused, !this.pauseAsked),
+      showGuestEnd: (info) => this.outcome.showGuestEnd(info),
+      guestPaused: (paused) => controls.setPaused(paused, !controls.pauseAsked),
       windChanged: (wind) => this.setWind(wind),
       survivalClock: this.survival && (() => this.survival!.remainingMs),
       setSurvivalClock: (ms) => this.survival?.sync(ms),
     }));
     if (this.hostSync) {
       this.hostSync.onPauseRequest = (paused) => {
-        this.setPaused(paused, true);
+        controls.setPaused(paused, true);
         this.hostSync?.sendPause(paused);
       };
     }
@@ -293,7 +311,7 @@ export class GameScene extends Scene {
       this.weather = new WeatherSystem(this.world, this.ctx.root, this.background, {
         // After the level is decided lightning still flashes but no longer hurts anyone.
         // A co-op guest's own bolts are only for show (the host's strikes arrive as effects).
-        groundStrike: (point) => (this.gameEnded || this.role === 'guest' ? this.effects.lightningStrike(point) : this.combat.lightningStrike(point)),
+        groundStrike: (point) => (this.outcome.ended || this.role === 'guest' ? this.effects.lightningStrike(point) : this.combat.lightningStrike(point)),
         thunder: (at, close) => {
           const mix = spatialMix(at.x, this.camera.x, viewWidth());
           this.ctx.sound.play('thunder', { ...mix, gain: mix.gain * (close ? 1 : 0.45) });
@@ -315,7 +333,7 @@ export class GameScene extends Scene {
       this.hostSync = undefined;
       (this.players[1]?.input as ManualInput | undefined)?.set({ direction: 0, sprint: false, aim: undefined });
     }
-    if (this.paused) {
+    if (this.controls?.paused) {
       return;
     }
     this.foes.update(deltaMs);
@@ -326,7 +344,7 @@ export class GameScene extends Scene {
       this.hostSync?.push({ e: 'wind', wind: shifted });
     }
     this.background.update(deltaMs);
-    this.survival?.update(deltaMs, this.camera.x, !this.gameEnded, this.role === 'guest');
+    this.survival?.update(deltaMs, this.camera.x, !this.outcome.ended, this.role === 'guest');
     this.weather?.update(deltaMs, this.camera.x);
     this.snow?.update(deltaMs, this.camera.x);
     // A co-op guest moves only its own bowman; the host's comes from the host.
@@ -349,8 +367,8 @@ export class GameScene extends Scene {
     this.updateAim();
     this.updateHud();
     this.updateCamera(deltaMs);
-    if (!this.gameEnded && this.role !== 'guest') {
-      this.checkEndConditions();
+    if (!this.outcome.ended && this.role !== 'guest') {
+      this.outcome.check();
     }
     this.hostSync?.update(deltaMs);
   }
@@ -364,225 +382,15 @@ export class GameScene extends Scene {
     this.ctx.ui.setStatus(`The wind shifts · ${windLabel(wind, this.battleground.wind ?? 0)}`);
   }
 
-  /** Esc: pauses or resumes (a co-op guest asks the host, which pauses both screens). */
-  private togglePause(): void {
-    const paused = !this.paused;
-    if (this.guestSync) {
-      this.pauseAsked = paused;
-      this.guestSync.requestPause(paused);
-      return;
-    }
-    this.setPaused(paused, false);
-    this.hostSync?.sendPause(paused);
-  }
-
-  private setPaused(paused: boolean, byPartner: boolean): void {
-    if (this.gameEnded) {
-      return;
-    }
-    this.paused = paused;
-    this.pauseAsked = false;
-    if (!paused) {
-      this.setOptionsVisible(false);
-    }
-    this.localInput?.cancelAim();
-    this.ctx.ui.showPause(paused ? {
-      byPartner,
-      coop: this.role !== 'solo',
-      canRestart: this.role !== 'guest',
-      quiver: this.localPlayer.bowman.isInTower ? this.localLoadout : undefined,
-    } : undefined);
-  }
-
-  /**
-   * The pause dialog's "Restart level" (alone or the co-op host): the level starts over with the same enemies and
-   * every bowman and the player's keep at full health; the enemy keep keeps its damage. A co-op guest follows the
-   * host's new `start`.
-   */
-  private restartLevel(): void {
-    const { session } = this.ctx;
-    session.run = {
-      ...session.run,
-      bowmanHealths: this.players.map(() => session.sandbox.bowmanHealth),
-      keepHealth: session.sandbox.keepHealth,
-      enemyKeepHealth: this.enemyTower.getHealth(),
-    };
-    this.ctx.goTo('game');
-  }
-
-  /** The quiver changed in the pause dialog (only while in the keep): kept for the run and for the next setup. */
-  private changeLoadout(loadout: Loadout): void {
-    const { session, ui } = this.ctx;
-    if (this.role === 'guest') {
-      // The guest's own quiver lives with this browser's stored setup, not the host's sandbox.
-      saveSandbox({ ...loadSandbox(), loadout });
-    } else {
-      session.sandbox = { ...session.sandbox, loadout };
-      saveSandbox(session.sandbox);
-    }
-    shareLoadout(session, loadout);
-    const { projectile } = this.localPlayer;
-    const kept = loadout.includes(projectile as ArrowType);
-    ui.setLoadout(loadout);
-    ui.setActiveProjectile(kept ? projectile : firstArrow(loadout));
-    if (!kept) {
-      this.localInput?.queueProjectile(firstArrow(loadout));
-    }
-  }
-
-  /** Guest: the host decides what comes after the level. */
-  private showGuestEnd(info: EndInfo): void {
-    this.gameEnded = true;
-    this.destroyInput();
-    this.ctx.ui.showEndScreen({ ...info, buttonLabel: 'Waiting for the host…', onButton: () => {} });
-  }
-
   public exit(): void {
     super.exit();
-    this.destroyInput();
-  }
-
-  private bindInput(): void {
-    const { ui } = this.ctx;
-    this.localInput = new LocalInput(new InputManager({
-      eventTarget: this.ctx.app.canvas,
-      worldPointFromScreen: (point) => ({ x: point.x + this.camera.x, y: point.y + VIEW_TOP }),
-      maxDragDistance: 200,
-      screenSize: () => ({ x: viewWidth(), y: GAME_HEIGHT }),
-    }));
-    // A co-op guest also sends its presses to the host.
-    this.team.setLocalInput(this.role === 'guest' ? new RecordingInput(this.localInput) : this.localInput);
-
-    ui.handlers.toggleOptions = () => this.toggleOptions();
-    ui.handlers.selectProjectile = (type) => this.localInput?.queueProjectile(type);
-    // The player's soldiers: not yet in online co-op (the guest doesn't see them yet).
-    const commandsSoldiers = !this.ctx.session.net;
-    ui.setAllies(commandsSoldiers ? ALLY_TYPES.map((type) => ({ type, label: ENEMY_KINDS[type].label })) : []);
-    if (commandsSoldiers) {
-      ui.handlers.summonAlly = (type) => this.summonAlly(type);
-      ui.handlers.cycleAllyOrder = () => this.cycleAllyOrder();
-    }
-    ui.handlers.pauseResume = () => {
-      if (this.paused) {
-        this.togglePause();
-      }
-    };
-    ui.handlers.pauseRestart = () => {
-      if (this.paused && this.role !== 'guest') {
-        this.restartLevel();
-      }
-    };
-    ui.handlers.pauseLoadout = (loadout) => {
-      if (this.paused && this.localPlayer.bowman.isInTower) {
-        this.changeLoadout(loadout);
-      }
-    };
-    ui.handlers.pauseMenu = () => {
-      // Leaving a co-op battle leaves the room (the partner is told).
-      leaveCoop(this.ctx);
-      this.ctx.goTo('menu');
-    };
-    this.onExit(() => {
-      ui.handlers.toggleOptions = undefined;
-      ui.handlers.pauseResume = undefined;
-      ui.handlers.pauseMenu = undefined;
-      ui.handlers.pauseRestart = undefined;
-      ui.handlers.pauseLoadout = undefined;
-      ui.handlers.selectProjectile = undefined;
-      ui.handlers.summonAlly = undefined;
-      ui.handlers.cycleAllyOrder = undefined;
-      ui.setAllies([]);
-    });
-
-    this.listenWindow('keydown', (event) => {
-      if (event.code === 'Escape') {
-        if (this.optionsVisible) {
-          this.setOptionsVisible(false);
-        } else if (!this.gameEnded) {
-          this.togglePause();
-        }
-        return;
-      }
-      if (event.code === 'KeyI') {
-        this.toggleOptions();
-      }
-      if (this.paused) {
-        return;
-      }
-      const projectile = this.localLoadout[slotOfKey(event.code)];
-      if (projectile) {
-        this.localInput?.queueProjectile(projectile);
-      }
-      if (commandsSoldiers && !this.gameEnded) {
-        const ally = ALLY_TYPES.find((type) => event.code === `Key${ALLY_KEYS[type]}`);
-        if (ally) {
-          this.summonAlly(ally);
-        }
-        if (event.code === `Key${ORDER_KEY}`) {
-          this.cycleAllyOrder();
-        }
-      }
-      if (event.code === 'KeyO') {
-        this.foes.toggleVisible();
-        this.debugGraphics.clear();
-      }
-      if (event.code === 'Space') {
-        event.preventDefault();
-        if (this.gameEnded) {
-          this.endAction?.();
-        } else {
-          this.localInput?.queueBurst();
-        }
-      }
-    });
-  }
-
-  /** A soldier of `type` comes in from beyond the left edge (if his kind's limit and pause allow). */
-  private summonAlly(type: (typeof ALLY_TYPES)[number]): void {
-    if (this.paused || this.gameEnded) {
-      return;
-    }
-    if (!this.soldiers.summon(type)) {
-      const slot = this.soldiers.slots().find((candidate) => candidate.type === type);
-      if (slot && slot.alive >= slot.limit) {
-        this.ctx.ui.setStatus(`All ${slot.limit} ${ENEMY_KINDS[type].label.toLowerCase()}s are on the field`);
-      }
-    }
-  }
-
-  private cycleAllyOrder(): void {
-    if (this.paused || this.gameEnded) {
-      return;
-    }
-    this.ctx.ui.setStatus(`Soldiers: ${ALLY_ORDER_LABELS[this.soldiers.cycleOrder()]}`);
-  }
-
-  /** Stops reading this browser's keyboard and mouse (the level ended); the local player stands still. */
-  private destroyInput(): void {
-    this.localInput?.destroy();
-    this.localInput = undefined;
-    if (this.team) {
-      this.team.setLocalInput(new ManualInput());
-    }
+    this.controls?.destroy();
   }
 
   /** Panned and faded by where it happens relative to the camera (co-op host: the guest hears it too). */
   private playSound(id: SoundId, at: Vec2): void {
     this.ctx.sound.play(id, spatialMix(at.x, this.camera.x, viewWidth()));
     this.hostSync?.sound(id, at);
-  }
-
-  /** The settings drawer opens from the pause dialog only (its button or I while paused); Esc closes it first. */
-  private toggleOptions(): void {
-    if (this.paused || this.optionsVisible) {
-      this.setOptionsVisible(!this.optionsVisible);
-    }
-  }
-
-  private setOptionsVisible(visible: boolean): void {
-    this.optionsVisible = visible;
-    this.ctx.ui.setOptionsVisible(visible);
-    this.localInput?.cancelAim();
   }
 
   /**
@@ -625,65 +433,5 @@ export class GameScene extends Scene {
       aimLandingX: aim ? this.aimLandingX : undefined,
     }, this.effects.cameraShake);
     this.world.position.set(position.x, position.y);
-  }
-
-  /** The level is lost once every bowman has fallen, or the keep; won with the enemy keep or every enemy down. */
-  private checkEndConditions(): void {
-    this.team.handleFallen();
-    if (livingBowmen(this.team.bowmen).length === 0 || this.playerTower.isDestroyed() || this.banners?.outcome === 'lost') {
-      this.endGame(false);
-      return;
-    }
-    if (this.enemyTower.isDestroyed()) {
-      this.endGame(true);
-      return;
-    }
-    // A captured banner wins the level like clearing it.
-    if (this.banners?.outcome === 'won') {
-      this.endGame(true, true);
-      return;
-    }
-    if (this.foes.allDefeated()) {
-      this.endGame(true, true);
-      return;
-    }
-    // Survival: dawn. Whoever is still on the field runs off, and the level is held.
-    if (this.survival?.timeUp) {
-      BattleSurvival.fleeAll(this.enemies);
-      this.endGame(true, true);
-    }
-  }
-
-  /** Ends this level (levelEndScreen decides between the next level and the end of the run). */
-  private endGame(won: boolean, levelCleared = false): void {
-    this.gameEnded = true;
-    this.destroyInput();
-    this.foes.stopWaves();
-    if (!won) {
-      this.enemies.filter((enemy) => !enemy.fleeing).forEach((enemy) => enemy.celebrate());
-      this.hostSync?.push({ e: 'cheer' });
-    } else {
-      this.soldiers.celebrate();
-    }
-    const { run, sandbox } = this.ctx.session;
-    this.endAction = showLevelEnd(this.ctx, {
-      won,
-      levelCleared,
-      levelIndex: run.levelIndex,
-      defeated: this.foes.defeated(),
-      totalEnemies: this.foes.total,
-      keep: { health: this.playerTower.getHealth(), max: this.playerTower.maxHealth },
-      enemyKeepDestroyed: this.enemyTower.isDestroyed(),
-      playerKeepDestroyed: this.playerTower.isDestroyed(),
-      banner: this.banners?.outcome === 'won' ? 'captured' : this.banners?.outcome === 'lost' ? 'lost' : undefined,
-      playerHealths: this.players.map((player) => player.health),
-      survivedMs: this.survival && this.survival.durationMs - this.survival.remainingMs,
-    }, () => ({
-      levelIndex: run.levelIndex + 1,
-      // Bowmen heal by the difficulty; the keep starts every level whole.
-      bowmanHealths: this.players.map((player) => healAfterLevel(sandbox.difficulty, player.health, sandbox.bowmanHealth)),
-      keepHealth: sandbox.keepHealth,
-      enemyKeepHealth: this.enemyTower.getHealth(),
-    }), this.hostSync);
   }
 }

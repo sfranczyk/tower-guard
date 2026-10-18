@@ -28,5 +28,5 @@
   canvas's right edge): every `tunable` group from `core/tuning.ts` (registry, pure, tested) as sliders + numbers,
   reset per value/group, changed marks, saved in localStorage, "Copy changes" gives paste-ready source. Local only.
   To make a constant tunable: move it into a group (`export const WAVES = tunable('WAVES', 'Waves', { ... })` in
-  config.ts), read `WAVES.key` at use time, never copy it into a module-level const. Enemy health/speed per type:
+  config/), read `WAVES.key` at use time, never copy it into a module-level const. Enemy health/speed per type:
   `data/enemyTuning.ts` (read at spawn).

@@ -21,7 +21,7 @@ Each directory with a `CLAUDE.md` describes its features in detail; it loads whe
 ```
 src/
   main.ts       bootstrap: Pixi app, textures, canvas fit, DomUi, SceneManager
-  config.ts     all tuning constants
+  config/       all tuning constants by area (world, scenery, arrows, enemies, bowman, battle, audio); import `config`
   core/         Scene, SceneManager, GameContext/GameSession, viewport, camera, sandboxStorage, urlState
   scenes/       Menu, Sandbox, Game (+ BattleArrows, BattleCamera, levelEnd, PlayerControl), labs, Coop lobby
   systems/      gameplay logic: CombatSystem (+ EnemyAI, ArrowHits, ArrowMagic), waves, ballistics, vortex, …
@@ -56,7 +56,7 @@ src/
 ## Conventions
 
 - Pure logic (math, collision, data) has no Pixi/DOM imports and a `*.test.ts` next to it.
-- New tuning numbers go in `config.ts`, sandbox defaults in `data/sandbox.ts`.
+- New tuning numbers go in `config/<area>.ts`, sandbox defaults in `data/sandbox.ts`.
 - Files of roughly 150–400 lines; split by responsibility rather than growing `GameScene` or `Enemy`.
 - Game text in the UI is English.
 - Commit straight to master.

@@ -19,7 +19,7 @@ Read only what each step names; grep for the neighbouring entry (e.g. `priest`, 
 - `src/data/enemies.ts`: `ENEMY_LOOKS` entry if it differs from its archetype's.
 - `src/data/sandbox.ts`: add the id with 0 to every default level row (and `sandbox.test.ts`).
 - `src/systems/waveDirector.test.ts` if it enumerates types.
-- Tuning numbers → `src/config.ts`.
+- Tuning numbers → `src/config/enemies.ts`.
 
 ## 3. Look (always)
 - `src/rendering/enemyBody.ts`: the `look` / `club` / `gibs` entry. A new look goes in `rendering/designs/*Skins.ts`

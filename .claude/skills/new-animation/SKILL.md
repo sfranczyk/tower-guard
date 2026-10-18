@@ -17,5 +17,5 @@ description: Checklist for adding or changing a stickman, dragon or horse animat
 5. **Game hook-up**: the state that plays it (`objects/enemy/EnemyFigure.ts` body state, `objects/bowman/BowmanFigure.ts`), and co-op if the host
    triggers it (`src/net/CLAUDE.md`).
 6. **Verify**: `npm run verify`, then open `?lab=<id>` in a background tab, one screenshot at scale 0.5. For timing
-   tweaks give the user the numbers in `config.ts` / the tuning panel instead of iterating on screenshots.
+   tweaks give the user the numbers in `config/` / the tuning panel instead of iterating on screenshots.
 7. 1–3 lines in `src/rendering/CLAUDE.md`; commit.
