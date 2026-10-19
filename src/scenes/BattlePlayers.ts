@@ -2,7 +2,7 @@ import type { Container } from 'pixi.js';
 import { ARROW_COOLDOWN_SLACK_MS, BOWMAN_Y, GAME_HEIGHT, MIN_SHOT_POWER, WORLD_WIDTH } from '../config';
 import type { GameContext } from '../core/Scene';
 import type { Battleground } from '../data/battlegrounds';
-import { ARROW_INFO, firstArrow, type ArrowType } from '../data/loadout';
+import { firstArrow, type ArrowType } from '../data/loadout';
 import { ManualInput, type PlayerInput } from '../input/PlayerInput';
 import { loadoutOf } from '../net/coopLink';
 import type { GuestSync } from '../net/GuestSync';
@@ -124,12 +124,8 @@ export class BattlePlayers {
       const slack = player.local || !this.deps.hostSync() ? 0 : ARROW_COOLDOWN_SLACK_MS;
       // Knocked down by a blast (or fallen), or the arrow still cooling down: the draw is lost.
       const loosed = aim.power > MIN_SHOT_POWER && !bowman.isStunned && !bowman.isDead;
-      if (loosed && !player.cooldowns.ready(arrow, slack)) {
-        if (player.local) {
-          ctx.ui.setStatus(`${ARROW_INFO[arrow].name} not ready`);
-        }
-      } else if (loosed) {
-        player.cooldowns.start(arrow);
+      if (loosed && player.cooldowns.ready(arrow, slack)) {
+        player.cooldowns.spend(arrow);
         if (player.local) {
           this.deps.aimOverlay.recordRelease(aim, bowman.getBowReleasePoint());
         }
@@ -143,7 +139,7 @@ export class BattlePlayers {
       bowman.setAim(aim.direction, 0);
     });
     if (player.local) {
-      ctx.ui.updateWeaponCooldowns((type) => player.cooldowns.remaining(type));
+      ctx.ui.updateWeaponCooldowns(player.cooldowns);
     }
     if (input.takeBurst()) {
       if (guestSync) {

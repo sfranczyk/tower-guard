@@ -25,6 +25,12 @@ const PAGE_MARGIN = 16;
  */
 const UI_SCALE = { min: 0.6, max: 1.15, boost: 1.12 };
 
+/** What the weapon slots show of the local player's arrows (systems/arrowCooldowns). */
+export interface WeaponCharges {
+  charges(type: ArrowType): number;
+  max(type: ArrowType): number;
+  remaining(type: ArrowType): number;
+}
 export type UiScreen = 'menu' | 'coop' | 'sandbox' | 'animationLab' | 'soundLab' | 'game';
 
 export type { CoopView } from './CoopPanel';
@@ -339,10 +345,17 @@ export class DomUi {
     this.weaponsRoot.innerHTML = weaponSlots(loadout);
   }
 
-  /** Each frame: the shade over each weapon slot, `remaining` 1 just after a shot down to 0 when ready. */
-  public updateWeaponCooldowns(remaining: (type: ArrowType) => number): void {
+  /** Each frame: shots ready / held under each weapon slot, and the shade over it while none is ready. */
+  public updateWeaponCooldowns(cooldowns: WeaponCharges): void {
     this.weaponsRoot.querySelectorAll<HTMLButtonElement>('[data-projectile]').forEach((button) => {
-      const share = Math.round(remaining(button.dataset.projectile as ArrowType) * 1000) / 1000;
+      const type = button.dataset.projectile as ArrowType;
+      const charges = cooldowns.charges(type);
+      const count = button.parentElement?.querySelector<HTMLElement>('[data-ammo]');
+      const text = `${charges}/${cooldowns.max(type)}`;
+      if (count && count.textContent !== text) {
+        count.textContent = text;
+      }
+      const share = charges > 0 ? 0 : Math.round(cooldowns.remaining(type) * 1000) / 1000;
       const shown = share > 0 ? String(share) : '';
       if (button.style.getPropertyValue('--cooldown') !== shown) {
         if (shown) {

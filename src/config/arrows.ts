@@ -45,19 +45,30 @@ export const ARROWS = tunable('ARROWS', 'Arrows', {
   piercingMultiplier: 0.62,
 }, { meta: { headshotMultiplier: { min: 1, max: 3 }, piercingMultiplier: { max: 1 }, minSpeedFrac: { min: 0, max: 1, step: 0.01 }, drawCurve: { min: 0.3, max: 3, step: 0.05 } } });
 /**
- * Seconds before an arrow type can be loosed again after a shot (per player and type; switching to another type is
- * free). The host gives a co-op guest's shots ARROW_COOLDOWN_SLACK_MS of network leeway (BattlePlayers).
+ * Each arrow type holds up to ARROW_CHARGES[type] shots (full at the start of a level); a shot spends one and the
+ * missing ones come back one at a time, ARROW_COOLDOWN[type] seconds each (per player; switching type is free). The
+ * host gives a co-op guest's shots ARROW_COOLDOWN_SLACK_MS of network leeway (BattlePlayers).
  */
 export const ARROW_COOLDOWN = tunable('ARROW_COOLDOWN', 'Arrow cooldowns (s)', {
   normal: 0.5,
   piercing: 2,
   fire: 4,
-  frost: 5,
-  pinning: 6,
-  shrapnel: 7,
-  explosive: 9,
+  frost: 4,
+  pinning: 4,
+  shrapnel: 5,
+  explosive: 10,
   vortex: 15,
 }, { meta: { normal: { min: 0, max: 5, step: 0.1 } } });
+export const ARROW_CHARGES = tunable('ARROW_CHARGES', 'Arrow charges', {
+  normal: 1,
+  piercing: 1,
+  fire: 1,
+  frost: 1,
+  pinning: 1,
+  shrapnel: 1,
+  explosive: 1,
+  vortex: 4,
+}, { meta: Object.fromEntries(['normal', 'piercing', 'fire', 'frost', 'pinning', 'shrapnel', 'explosive', 'vortex'].map((type) => [type, { min: 1, max: 10, step: 1 }])) });
 export const ARROW_COOLDOWN_SLACK_MS = 250;
 /**
  * Arrows stuck in something that blows apart (or shatters) snap in two (`breakMin..breakMax` of the shaft), the halves

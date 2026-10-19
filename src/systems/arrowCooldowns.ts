@@ -1,37 +1,62 @@
-import { ARROW_COOLDOWN } from '../config';
+import { ARROW_CHARGES, ARROW_COOLDOWN } from '../config';
 import type { ArrowType } from '../data/loadout';
 
 /**
- * One player's arrow cooldowns: after a shot that type waits ARROW_COOLDOWN[type] seconds (read at the shot, so
- * `?tune` changes apply to the next one). Ticks with the battle (stops while paused).
+ * One player's arrow charges: each type holds up to ARROW_CHARGES[type] shots, a shot spends one, and the missing
+ * ones come back one at a time, ARROW_COOLDOWN[type] seconds each (both read live, so `?tune` changes apply).
+ * Ticks with the battle (stops while paused).
  */
 export class ArrowCooldowns {
-  private readonly left = new Map<ArrowType, { ms: number; total: number }>();
+  /** Types short of shots: how many are spent and how long until the next one is back. */
+  private readonly spent = new Map<ArrowType, { count: number; ms: number }>();
 
   public tick(deltaMs: number): void {
-    this.left.forEach((entry, type) => {
+    this.spent.forEach((entry, type) => {
       entry.ms -= deltaMs;
-      if (entry.ms <= 0) {
-        this.left.delete(type);
+      while (entry.ms <= 0 && entry.count > 0) {
+        entry.count -= 1;
+        entry.ms += ARROW_COOLDOWN[type] * 1000;
+      }
+      if (entry.count <= 0) {
+        this.spent.delete(type);
       }
     });
   }
 
-  /** Ready to loose, or at most `slackMs` from it. */
-  public ready(type: ArrowType, slackMs = 0): boolean {
-    return (this.left.get(type)?.ms ?? 0) <= slackMs;
+  public max(type: ArrowType): number {
+    return Math.max(1, Math.round(ARROW_CHARGES[type]));
   }
 
-  public start(type: ArrowType): void {
+  /** Shots ready now. */
+  public charges(type: ArrowType): number {
+    return Math.max(0, this.max(type) - (this.spent.get(type)?.count ?? 0));
+  }
+
+  /** A shot ready, or the next one at most `slackMs` away. */
+  public ready(type: ArrowType, slackMs = 0): boolean {
+    return this.charges(type) > 0 || (this.spent.get(type)?.ms ?? 0) <= slackMs;
+  }
+
+  /** Spends a shot (a shot let through on slack spends the one coming back). */
+  public spend(type: ArrowType): void {
     const total = ARROW_COOLDOWN[type] * 1000;
-    if (total > 0) {
-      this.left.set(type, { ms: total, total });
+    if (total <= 0) {
+      return;
+    }
+    const entry = this.spent.get(type);
+    if (!entry) {
+      this.spent.set(type, { count: 1, ms: total });
+    } else if (entry.count < this.max(type)) {
+      entry.count += 1;
+    } else {
+      // On slack: the shot coming back is used up at once, the next one starts.
+      entry.ms += total;
     }
   }
 
-  /** Share of the cooldown still to wait: 1 just after the shot, 0 when ready. */
+  /** Share of the wait for the next shot still to go (1 just after it was spent, 0 when all are back). */
   public remaining(type: ArrowType): number {
-    const entry = this.left.get(type);
-    return entry ? entry.ms / entry.total : 0;
+    const entry = this.spent.get(type);
+    return entry ? Math.min(1, entry.ms / (ARROW_COOLDOWN[type] * 1000)) : 0;
   }
 }
