@@ -197,10 +197,22 @@
         .level-tab strong { font-family: var(--display); font-weight: 600; font-size: 15px; }
         .level-tab small { color: var(--ink-soft); font-size: 11px; }
         .level-tab.active { background: #fffaf0; box-shadow: inset 0 3px 0 var(--gold); }
-        .level-add, .level-remove { padding: 6px 12px; border-radius: 12px; background: none; color: var(--accent); font-family: var(--display); font-weight: 600; font-size: 14px; pointer-events: auto; }
-        .level-add { align-self: center; border: 2px dashed var(--panel-edge); }
-        .level-add:hover, .level-remove:hover { background: var(--panel-sunk); }
-        .level-remove { color: var(--bad); }
+        .level-add { align-self: center; padding: 6px 12px; border: 2px dashed var(--panel-edge); border-radius: 12px; background: none; color: var(--accent); font-family: var(--display); font-weight: 600; font-size: 14px; pointer-events: auto; }
+        .level-add:hover { background: var(--panel-sunk); }
+        /* A level's bin: a small round button on the tab's top-right corner; asks first (SandboxForm.removeDialog). */
+        .level-tab-wrap { position: relative; display: flex; }
+        .level-remove { position: absolute; top: -7px; right: -7px; display: grid; place-items: center; width: 24px; height: 24px; padding: 0; border-radius: 12px; background: var(--panel); color: var(--ink-soft); box-shadow: 0 2px 0 var(--panel-edge); pointer-events: auto; transition: color .12s ease, transform .08s ease; }
+        .level-remove .icon { width: 16px; height: 16px; }
+        .level-remove:hover { color: var(--bad); transform: scale(1.1); }
+        /* Confirmation over the setup card (remove a level). */
+        .panel-card[data-sandbox-form] { position: relative; }
+        .confirm-overlay { position: absolute; inset: 0; z-index: 5; display: grid; place-items: center; padding: 20px; border-radius: inherit; background: rgba(20, 30, 32, .35); pointer-events: auto; }
+        .confirm-card { width: min(360px, 100%); padding: 20px 22px; border-radius: 18px; background: #fffaf0; text-align: center; box-shadow: 0 5px 0 var(--panel-edge), 0 18px 40px rgba(0, 0, 0, .25); }
+        .confirm-card h3 { font-family: var(--display); font-weight: 600; font-size: 22px; }
+        .confirm-card p { margin: 8px 0 16px; color: var(--ink-soft); font-size: 14px; line-height: 1.4; }
+        .confirm-actions { display: flex; justify-content: center; gap: 10px; }
+        .danger-button { display: inline-flex; align-items: center; gap: 6px; background: var(--bad); color: #fff; box-shadow: 0 5px 0 color-mix(in srgb, var(--bad) 60%, #000), 0 10px 18px rgba(0, 0, 0, .18); }
+        .danger-button .icon { width: 18px; height: 18px; }
         .level-editor { padding: 8px 14px 14px; border-radius: 0 14px 14px 14px; background: #fffaf0; box-shadow: 0 3px 0 var(--panel-edge); }
         .level-editor-head { display: flex; align-items: center; justify-content: space-between; min-height: 28px; }
         .level-editor-head .sandbox-section-label { margin: 0; }

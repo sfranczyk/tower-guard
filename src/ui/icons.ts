@@ -10,6 +10,11 @@ export const ICON_BOWMAN = `<svg class="icon" viewBox="0 0 28 28" aria-hidden="t
   <path d="M8.5 10a5.5 5.5 0 0 1 11 0z" fill="#4a5568"/>
   <path d="M21 4c4 5 4 13 0 18" fill="none" stroke="#8a6238" stroke-width="2" stroke-linecap="round"/></svg>`;
 
+/** Remove (a level in the battle setup): a bin with a lid. */
+export const ICON_TRASH = `<svg class="icon" viewBox="0 0 28 28" aria-hidden="true">
+  <path d="M8 10h12l-1.2 13.2a2 2 0 0 1-2 1.8h-5.6a2 2 0 0 1-2-1.8z" fill="currentColor"/>
+  <rect x="5.5" y="6.5" width="17" height="3" rx="1.5" fill="currentColor"/><path d="M11 6.5V5a1.5 1.5 0 0 1 1.5-1.5h3A1.5 1.5 0 0 1 17 5v1.5" fill="none" stroke="currentColor" stroke-width="2"/>
+  <path d="M12 13v8M16 13v8" stroke="#fffaf0" stroke-width="1.6" stroke-linecap="round"/></svg>`;
 export const ICON_LEVEL = `<svg class="icon" viewBox="0 0 28 28" aria-hidden="true">
   <rect x="7" y="4" width="2.5" height="21" rx="1.2" fill="#5a3c23"/><path d="M9.5 5h12l-3 4 3 4h-12z" fill="#d8614f"/></svg>`;
 

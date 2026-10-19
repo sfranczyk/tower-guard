@@ -22,7 +22,7 @@ import {
   type SurvivalLevel,
 } from '../data/sandbox';
 import type { EnemyType } from '../types';
-import { ICON_BOWMAN, ICON_ENEMIES, ICON_KEEP } from './icons';
+import { ICON_BOWMAN, ICON_ENEMIES, ICON_KEEP, ICON_TRASH } from './icons';
 import { mapThumbnail } from './mapThumbnail';
 import { panelTop, renderPanel } from './panelLayout';
 import { editQuiverIn } from './quiverEditing';
@@ -57,6 +57,8 @@ export class SandboxForm {
   /** The mode picker first, then the setup of the picked mode. */
   private step: 'mode' | 'setup' = 'mode';
   private page: SandboxPage = 'levels';
+  /** The level whose removal waits for the player's confirmation (the dialog over the form). */
+  private confirmRemove?: number;
   /** The quiver slot the next picked arrow goes into. */
   private selectedSlot = 0;
   /** Co-op: the partner's quiver, shown (not editable) on the Quiver page. */
@@ -94,13 +96,17 @@ export class SandboxForm {
   /** Shows the form from its start, the mode picker. */
   public open(settings: SandboxSettings): void {
     this.step = 'mode';
+    this.confirmRemove = undefined;
     this.page = 'levels';
     this.render(settings);
   }
 
   /** Back (the button or Esc): from the setup to the mode picker, from there out of the form. */
   public back(): void {
-    if (this.step === 'setup' && this.settings) {
+    if (this.confirmRemove !== undefined && this.settings) {
+      this.confirmRemove = undefined;
+      this.render(this.settings);
+    } else if (this.step === 'setup' && this.settings) {
       this.step = 'mode';
       this.render(this.settings);
     } else {
@@ -135,7 +141,26 @@ export class SandboxForm {
       </div>
       <div class="panel-body">
         ${this.page === 'levels' ? this.levelsPage(settings) : this.page === 'rules' ? this.rulesPage(settings) : quiverPage(settings.loadout, this.selectedSlot, this.partner)}
-      </div>`);
+      </div>
+      ${this.confirmRemove !== undefined ? this.removeDialog(settings, this.confirmRemove) : ''}`);
+  }
+
+  /** "Remove level N?" with what goes with it (its map and enemies or night), over the form. */
+  private removeDialog(settings: SandboxSettings, index: number): string {
+    const map = BATTLEGROUNDS[runBattleground(settings, index)].name;
+    const survival = settings.mode === 'survival';
+    const total = levelEnemyTotal(settings.levels[index].enemies);
+    const what = survival ? `${map}, ${survivalTabText(settings.survival.levels[index])}` : `${map}, ${total} ${total === 1 ? 'enemy' : 'enemies'}`;
+    return `<div class="confirm-overlay" data-remove-backdrop>
+      <div class="confirm-card" role="alertdialog" aria-labelledby="remove-title">
+        <h3 id="remove-title">Remove level ${index + 1}?</h3>
+        <p>Its setup (${what}) will be lost; the levels after it move up.</p>
+        <div class="confirm-actions">
+          <button type="button" class="secondary-button" data-remove-cancel>Cancel</button>
+          <button type="button" class="primary-button danger-button" data-remove-confirm>${ICON_TRASH} Remove</button>
+        </div>
+      </div>
+    </div>`;
   }
 
   /** The run's rules, one per row: health, difficulty, banners (battle) and support (battle; survival never has it). */
@@ -171,13 +196,12 @@ export class SandboxForm {
     const level = settings.levels[this.selected];
     return `
       <div class="level-tabs" role="tablist" aria-label="Levels">
-        ${Array.from({ length: count }, (_, index) => this.levelTab(settings, index)).join('')}
+        ${Array.from({ length: count }, (_, index) => this.levelTab(settings, index, count > MIN_LEVELS)).join('')}
         ${count < MAX_LEVELS ? '<button type="button" class="level-add" data-level-add>+ Add level</button>' : ''}
       </div>
       <div class="level-editor">
         <div class="level-editor-head">
           <div class="sandbox-section-label">Level ${this.selected + 1} · Battleground</div>
-          ${count > MIN_LEVELS ? '<button type="button" class="level-remove" data-level-remove>Remove level</button>' : ''}
         </div>
         <div class="map-cards" style="--maps: ${maps.length}">
           ${maps.map((id) => `<button type="button" class="map-card${id === battleground ? ' active' : ''}" data-map="${id}" aria-pressed="${id === battleground}">
@@ -192,15 +216,15 @@ export class SandboxForm {
       </div>`;
   }
 
-  private levelTab(settings: SandboxSettings, index: number): string {
+  private levelTab(settings: SandboxSettings, index: number, removable: boolean): string {
     const active = index === this.selected;
     const battleground = BATTLEGROUNDS[runBattleground(settings, index)];
     const total = levelEnemyTotal(settings.levels[index].enemies);
     const text = settings.mode === 'survival' ? survivalTabText(settings.survival.levels[index]) : `${total} ${total === 1 ? 'enemy' : 'enemies'}`;
-    return `<button type="button" class="level-tab${active ? ' active' : ''}" role="tab" aria-selected="${active}" data-level="${index}" title="${battleground.name}">
+    return `<div class="level-tab-wrap"><button type="button" class="level-tab${active ? ' active' : ''}" role="tab" aria-selected="${active}" data-level="${index}" title="${battleground.name}">
       ${mapThumbnail(battleground)}
       <span class="level-tab-text"><strong>Level ${index + 1}</strong><small data-tab-total="${index}">${text}</small></span>
-    </button>`;
+    </button>${removable ? `<button type="button" class="level-remove" data-level-remove="${index}" title="Remove level ${index + 1}" aria-label="Remove level ${index + 1}">${ICON_TRASH}</button>` : ''}</div>`;
   }
 
   private enemyCard(type: EnemyType, count: number): string {
@@ -231,7 +255,23 @@ export class SandboxForm {
     const survival = settings.mode === 'survival';
     const count = runLevelCount(settings);
     // (The quiver's own clicks are editQuiverIn's.)
-    if (pickMode && RUN_MODES.includes(pickMode)) {
+    const removeAsk = target.closest<HTMLElement>('[data-level-remove]');
+    if (this.confirmRemove !== undefined) {
+      // The dialog is open: only its buttons (and the backdrop, as Cancel) do anything.
+      const index = this.confirmRemove;
+      if (target.closest('[data-remove-confirm]')) {
+        this.confirmRemove = undefined;
+        this.removeLevel(settings, index);
+      } else if (target.closest('[data-remove-cancel]') || target.matches('[data-remove-backdrop]')) {
+        this.confirmRemove = undefined;
+        this.render(settings);
+      }
+      return;
+    }
+    if (removeAsk && count > MIN_LEVELS) {
+      this.confirmRemove = Number(removeAsk.dataset.levelRemove);
+      this.render(settings);
+    } else if (pickMode && RUN_MODES.includes(pickMode)) {
       this.step = 'setup';
       this.update({ ...settings, mode: pickMode }, pickMode === settings.mode ? this.selected : 0);
     } else if (page) {
@@ -246,16 +286,6 @@ export class SandboxForm {
       this.update(survival
         ? { ...settings, survival: { ...settings.survival, levelCount: count + 1 } }
         : { ...settings, levelCount: count + 1 }, count);
-    } else if (target.closest('[data-level-remove]') && count > MIN_LEVELS) {
-      // Later levels move up; the removed one goes to the end, out of the run.
-      const removeSelected = <T>(list: readonly T[]): T[] => {
-        const levels = [...list];
-        levels.push(...levels.splice(this.selected, 1));
-        return levels;
-      };
-      this.update(survival
-        ? { ...settings, survival: { levels: removeSelected(settings.survival.levels), levelCount: count - 1 } }
-        : { ...settings, levels: removeSelected(settings.levels), levelCount: count - 1 }, Math.max(0, this.selected - 1));
     } else if (kind && !kind.disabled) {
       const type = kind.dataset.survivalKind as EnemyType;
       const { kinds } = settings.survival.levels[this.selected];
@@ -286,6 +316,23 @@ export class SandboxForm {
     } else if (target.closest('[data-sandbox-back]')) {
       this.back();
     }
+  }
+
+  /** Later levels move up; the removed one goes to the end, out of the run (it keeps its setup if added back). */
+  private removeLevel(settings: SandboxSettings, index: number): void {
+    const count = runLevelCount(settings);
+    if (count <= MIN_LEVELS) {
+      return;
+    }
+    const removeAt = <T>(list: readonly T[]): T[] => {
+      const levels = [...list];
+      levels.push(...levels.splice(index, 1));
+      return levels;
+    };
+    const selected = index < this.selected || this.selected === count - 1 ? Math.max(0, this.selected - 1) : this.selected;
+    this.update(settings.mode === 'survival'
+      ? { ...settings, survival: { levels: removeAt(settings.survival.levels), levelCount: count - 1 } }
+      : { ...settings, levels: removeAt(settings.levels), levelCount: count - 1 }, selected);
   }
 
   private withLevel(settings: SandboxSettings, change: Partial<LevelSetup>): SandboxSettings {
