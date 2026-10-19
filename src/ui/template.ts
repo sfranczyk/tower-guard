@@ -80,7 +80,7 @@ export const OVERLAY_TEMPLATE = `
 `;
 
 /** Weapon slots (the quiver from the battle setup): icon only (name in the tooltip), key in the corner, shots ready / held
- * underneath, a grey shade over the slot while none is ready, cleared clockwise from 12 o'clock (`--cooldown`, DomUi.updateWeaponCooldowns). */
+ * underneath, a grey shade over the slot while the next one loads, cleared clockwise from 12 o'clock (`--cooldown`, DomUi.updateWeaponCooldowns). */
 export const weaponSlots = (loadout: readonly (ArrowType | null)[]): string => loadout.map((type, index) => {
   if (!type) {
     return `<div class="weapon"><div class="weapon-slot empty" aria-hidden="true"><span class="weapon-key">${index + 1}</span></div><span class="weapon-ammo">–</span></div>`;

@@ -345,7 +345,7 @@ export class DomUi {
     this.weaponsRoot.innerHTML = weaponSlots(loadout);
   }
 
-  /** Each frame: shots ready / held under each weapon slot, and the shade over it while none is ready. */
+  /** Each frame: shots ready / held under each weapon slot, and the shade over it while the next one loads. */
   public updateWeaponCooldowns(cooldowns: WeaponCharges): void {
     this.weaponsRoot.querySelectorAll<HTMLButtonElement>('[data-projectile]').forEach((button) => {
       const type = button.dataset.projectile as ArrowType;
@@ -355,7 +355,8 @@ export class DomUi {
       if (count && count.textContent !== text) {
         count.textContent = text;
       }
-      const share = charges > 0 ? 0 : Math.round(cooldowns.remaining(type) * 1000) / 1000;
+      // Loading the next shot greys the slot, as with one shot, even while others are ready (vortex).
+      const share = Math.round(cooldowns.remaining(type) * 1000) / 1000;
       const shown = share > 0 ? String(share) : '';
       if (button.style.getPropertyValue('--cooldown') !== shown) {
         if (shown) {
