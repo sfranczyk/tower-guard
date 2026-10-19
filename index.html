@@ -168,7 +168,8 @@
         .panel-actions .primary-button { padding: 9px 18px; font-size: 17px; }
         .panel-body { flex: 1; min-height: 0; overflow-y: auto; margin: 0 -24px; padding: 12px 24px 20px; border-top: 2px solid var(--panel-edge); }
         /* Sandbox setup: levels as tabs, the selected level's map cards and enemy steppers. */
-        .panel-card[data-sandbox-form] { width: min(780px, calc(100% - 28px)); }
+        /* One height for every page (and the mode picker), so the top bar and tabs stay put when switching. */
+        .panel-card[data-sandbox-form] { width: min(780px, calc(100% - 28px)); height: min(660px, calc(100% - 28px)); }
         .panel-card select, .panel-card input[type="number"] { min-width: 0; padding: 5px 8px; border: 0; border-radius: 9px; background: var(--panel-sunk); color: var(--ink); font-family: var(--display); font-weight: 500; font-size: 15px; box-shadow: inset 0 2px 0 rgba(0, 0, 0, .06); }
         .sandbox-head { display: flex; flex-shrink: 0; padding-bottom: 10px; }
         /* The mode picker: two big cards, a map, the name and what the mode is. */
