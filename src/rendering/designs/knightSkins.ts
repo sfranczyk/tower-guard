@@ -1,7 +1,7 @@
 import type { Graphics } from 'pixi.js';
 import type { Vec2 } from '../../types';
 import { limb, shape } from './designShapes';
-import { at, ellipseIn, shapeIn, torsoFrame, type Frame, type HumanoidLook, type LimbLook } from './skinKit';
+import { at, ellipseIn, PLAIN_HEAD, shapeIn, torsoFrame, type Frame, type HeadHit, type HumanoidLook, type LimbLook } from './skinKit';
 import type { BodyPose } from './bodyPoses';
 
 /**
@@ -67,13 +67,17 @@ const greatHelm = (g: Graphics, head: Vec2, frame: Frame, timeMs: number): void 
   [-4, -7].forEach((u) => [5, 8, 11].forEach((f) => g.circle(...xy(at(head, frame, u, f)), 0.8).fill({ color: 0x0b0b0e })));
 };
 
+/** The great helm stands a little wider than a bare head (also the mounted knight's: horseHitZones). */
+export const KNIGHT_HEAD: HeadHit = { ...PLAIN_HEAD, radius: 11 };
+
 /** The knights' common body: plate limbs, gauntlets and sabatons; `bulk` thickens them for the heavy knight. */
-const plateLook = (bulk: number): Pick<HumanoidLook, 'arm' | 'armFar' | 'leg' | 'legFar' | 'hand' | 'handFar' | 'handRadius' | 'foot'> => ({
+const plateLook = (bulk: number): Pick<HumanoidLook, 'arm' | 'armFar' | 'leg' | 'legFar' | 'hand' | 'handFar' | 'handRadius' | 'headHit' | 'foot'> => ({
   arm: limbs(PLATE, PLATE_EDGE, [8.5 * bulk, 7 * bulk], [7 * bulk, 6.5 * bulk]),
   armFar: limbs(PLATE_DARK, PLATE_DARK, [8.5 * bulk, 7 * bulk], [7 * bulk, 6.5 * bulk]),
   leg: limbs(PLATE, PLATE_EDGE, [11 * bulk, 9 * bulk], [9 * bulk, 8 * bulk]),
   legFar: limbs(PLATE_DARK, PLATE_DARK, [11 * bulk, 9 * bulk], [9 * bulk, 8 * bulk]),
   hand: 0x3a3d46, handFar: PLATE_DARK, handRadius: 4.2 * bulk,
+  headHit: KNIGHT_HEAD,
   foot: { color: 0x3a3d46, colorFar: PLATE_DARK, length: 16, height: 7.5 },
 });
 

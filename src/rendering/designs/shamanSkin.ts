@@ -1,7 +1,7 @@
 import type { Vec2 } from '../../types';
 import { limb, shape } from './designShapes';
-import { goblinLook } from './enemySkins';
-import { at, ellipseIn, shapeIn, type HumanoidLook } from './skinKit';
+import { GOBLIN_HEAD, goblinLook } from './enemySkins';
+import { at, ellipseIn, headCentre, shapeIn, type HumanoidLook } from './skinKit';
 
 /**
  * Goblin shaman: the goblin's body with white war paint, a fur cape, a necklace of teeth, a bone mask with a crest of
@@ -44,7 +44,7 @@ export const shamanLook = (timeMs: number, cast = 0): HumanoidLook => {
     },
     head: (g, pose, frame) => {
       goblin.head?.(g, pose, frame);
-      const head = at(pose.head, frame, -4, 5);
+      const head = headCentre(pose, GOBLIN_HEAD);
       // A crest of feathers over the head, swaying.
       const sway = Math.sin(timeMs / 170) * 1.5;
       FEATHERS.forEach((color, i) => {

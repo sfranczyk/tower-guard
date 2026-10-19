@@ -3,7 +3,9 @@
 `Bowman` is the façade every caller uses (controls, combat, co-op). Its parts:
 
 - `Bowman.ts`: health, the health bar over his head (`setHealthRatio`, from the battle's Player health), death fall, keep in/out, knockdown, burning/chill, delegates to the parts below.
-- `BowmanFigure.ts`: the drawn body (ranger / warden), walk and sprint blends, lean, fall poses, bow release point, burn points.
+- `BowmanFigure.ts`: the drawn body (ranger / warden), walk and sprint blends, lean, fall poses, bow release point, burn points;
+  `drawn` + `transform()` give `Bowman.getHitBoxes()` (arrows: head and body from the pose, `systems/bodyHitShape.ts`;
+  `bowmanBox` stays for melee reach, flames and enemy aim).
 - `bowAim.ts` (pure, tested): aim direction and power, the bow raised and lowered.
 - `bowmanFooting.ts` (pure, tested): walking, jumping (buffered), gravity and ground snap, the board's edges.
 - `bowmanAloft.ts`: vortex hold, thrown through the air, landing, the pin.

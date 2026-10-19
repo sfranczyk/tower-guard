@@ -4,6 +4,7 @@ import { mountedHitZones } from '../../rendering/horseHitZones';
 import { gaitGroundSpeed, getHorsePose, type HorseGait, type HorsePose } from '../../rendering/horseRider';
 import type { LanceHold } from '../../rendering/horseSeat';
 import { spriteToWorld, type Torso } from '../../systems/bodyAnchor';
+import { separate } from '../../systems/bodyHitShape';
 import { groundAt } from '../../systems/terrain';
 import { boundsAround } from '../../utils/math';
 import type { HitBox } from './enemyTypes';
@@ -154,12 +155,16 @@ export class MountedRider {
     }
     const transform = this.enemy.figure.transform();
     const unit = Math.abs(transform.scaleX) * transform.scale;
-    return mountedHitZones(this.pose).map(({ points, padding, headshot, part, leg }) => ({
+    const zones: HitBox[] = mountedHitZones(this.pose).map(({ points, padding, headshot, part, leg }) => ({
       bounds: boundsAround(points.map((point) => spriteToWorld(point, transform)), padding * unit),
       headshot,
       part,
       leg,
     }));
+    // The rider's torso stops at his helm's edge: one or the other, never both.
+    const [head, torso] = zones;
+    torso.bounds = separate(torso.bounds, head.bounds);
+    return zones;
   }
 
   /** The horse's back (croup to withers), where stuck arrows follow it. */

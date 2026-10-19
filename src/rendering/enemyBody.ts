@@ -11,7 +11,9 @@ import { ogreLook, trollLook, zombieLook } from './designs/heavySkins';
 import { blackKnightLook, darkPriestLook, heavyKnightLook } from './designs/knightSkins';
 import { shamanLook } from './designs/shamanSkin';
 import { allyKnightLook, medicLook, squireLook } from './designs/allySkins';
-import { drawHumanoid, type HumanoidLook } from './designs/skinKit';
+import { drawHumanoid, PLAIN_HEAD, type DrawnBody, type HumanoidLook } from './designs/skinKit';
+
+export type { DrawnBody } from './designs/skinKit';
 import { drawLookGibs } from './designs/lookGibs';
 import type { GibSimulation } from './stickmanGibs';
 import type { HorsePose } from './horseRider';
@@ -118,16 +120,22 @@ const plainPoseFor = (kind: UnitType, state: HumanState): BodyPose => {
   }
 };
 
-/** Draws an enemy of `kind` into `sprite` (cleared first); sets the sprite's y like drawStickman would. */
-export const drawEnemyBody = (sprite: Graphics, kind: UnitType, state: EnemyBodyState, originY: number, timeMs: number): void => {
+/**
+ * Draws an enemy of `kind` into `sprite` (cleared first); sets the sprite's y like drawStickman would. Returns the pose
+ * drawn (none on horseback: MountedRider has its own zones).
+ */
+export const drawEnemyBody = (sprite: Graphics, kind: UnitType, state: EnemyBodyState, originY: number, timeMs: number): DrawnBody | undefined => {
   sprite.clear();
   sprite.y = state.mode === 'joints' || state.mode === 'mounted' ? originY : originY - LIVE_POSE_LIFT;
   if (state.mode === 'mounted') {
     drawMountedKnight(sprite, state.pose, timeMs, { riderless: state.riderless });
-    return;
+    return undefined;
   }
   const cast = state.mode === 'cast' ? Math.sin(Math.PI * state.progress) : 0;
-  drawHumanoid(sprite, poseFor(kind, state), lookOf(kind).look(timeMs, cast));
+  const pose = poseFor(kind, state);
+  const look = lookOf(kind).look(timeMs, cast);
+  drawHumanoid(sprite, pose, look);
+  return { pose, head: look.headHit ?? PLAIN_HEAD };
 };
 
 /** Draws a blown-apart enemy of `kind`: its look's own parts flying (rendering/designs/lookGibs). */

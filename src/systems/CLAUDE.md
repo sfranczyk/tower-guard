@@ -86,7 +86,7 @@ run (fire lit, dives to the pass height; `nearWorldEdge` brakes it within `edgeO
 to the wait ranges.
 
 ## Friendly fire (`session.friendlyFire`, on by default; co-op: the host's)
-Players' arrows hit bowmen out in the open like enemies (`friendlyTargets`): top `BOWMAN_HEAD` px headshot, blasts,
+Players' arrows hit bowmen out in the open like enemies (`friendlyTargets`): head and body `Bowman.getHitBoxes` (his drawn pose, like the enemies'), blasts,
 fire (`Bowman.ignite`), frost (`Bowman.chill`; frozen = stunned, blast or landing breaks the ice), vortices (`Walker` =
 Enemy | Bowman), pins (`Bowman.pin`). Own shooter spared for `FRIENDLY_FIRE_GRACE_MS`.
 

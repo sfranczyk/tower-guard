@@ -1,7 +1,7 @@
 import type { Graphics } from 'pixi.js';
 import type { Vec2 } from '../../types';
 import { limb, shape } from './designShapes';
-import { at, drawBowWith, ellipseIn, headFrame, quiver, shapeIn, torsoFrame, woodenClub, type HumanoidLook, type LimbLook } from './skinKit';
+import { at, drawBowWith, ellipseIn, headCentre, quiver, shapeIn, torsoFrame, woodenClub, type HeadHit, type HumanoidLook, type LimbLook } from './skinKit';
 
 /**
  * New looks for the game's enemies that walk and run, drawn over the game's own poses (BodyPose):
@@ -56,6 +56,9 @@ export const raiderLook = (timeMs: number): HumanoidLook => {
 };
 
 /** Runner: the goblin. Hunched, pot-bellied, big head with long ears; a rusty dagger. */
+/** The goblin's big head hangs low and forward of the neck (also the bomber's and the shaman's). */
+export const GOBLIN_HEAD: HeadHit = { up: -4, fwd: 5, radius: 12 };
+
 export const goblinLook = (timeMs: number): HumanoidLook => {
   const SKIN = 0x86b04b, DARK = 0x5f8a36, BELLY = 0x9cc463, CLOTH = 0x7a5a3a;
   const flap = Math.sin(timeMs / 90) * 1.5;
@@ -65,9 +68,10 @@ export const goblinLook = (timeMs: number): HumanoidLook => {
     leg: limbs(SKIN, SKIN, [7, 5], [5, 4]),
     legFar: limbs(DARK, DARK, [7, 5], [5, 4]),
     hand: SKIN, handFar: DARK, handRadius: 3.3,
+    headHit: GOBLIN_HEAD,
     foot: { color: SKIN, colorFar: DARK, length: 15, height: 6 },
     torso: (g, pose, frame) => {
-      limb(g, pose.shoulder, at(pose.head, headFrame(pose), -4, 5), 6, 6, SKIN);
+      limb(g, pose.shoulder, headCentre(pose, GOBLIN_HEAD), 6, 6, SKIN);
       shapeIn(g, pose.hip, frame, [[-4, -8], [12, -10], [28, -11], [36, -4], [37, 4], [30, 9], [14, 12], [0, 10]], SKIN);
       ellipseIn(g, at(pose.hip, frame, 12, 6), frame, 5, 8, BELLY);
     },
@@ -77,7 +81,7 @@ export const goblinLook = (timeMs: number): HumanoidLook => {
     },
     head: (g, pose, frame) => {
       // Hunched: the big head hangs low and forward of the neck.
-      const head = at(pose.head, frame, -4, 5);
+      const head = headCentre(pose, GOBLIN_HEAD);
       shapeIn(g, head, frame, [[6, -4], [14 + flap, -24], [-2, -6]], DARK);
       g.circle(head.x, head.y, 12).fill({ color: SKIN });
       shapeIn(g, head, frame, [[7, -2], [17 + flap, -22], [-3, -3]], SKIN);

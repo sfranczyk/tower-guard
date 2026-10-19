@@ -5,7 +5,7 @@ import type { JointPose } from './stickmanPose';
 import { bowmanBody } from './designs/bodyPoses';
 import { huntsmanLook, steppeLook } from './designs/coopSkins';
 import { rangerLook, wardenLook } from './designs/playerSkins';
-import { drawHumanoid, type HumanoidLook } from './designs/skinKit';
+import { drawHumanoid, PLAIN_HEAD, type DrawnBody, type HumanoidLook } from './designs/skinKit';
 
 /**
  * The player drawn in a look from the design lab: the ranger (player 1) or, in co-op, the keep warden, the
@@ -43,10 +43,10 @@ export interface BowmanBodyState {
   handTension?: number;
 }
 
-/** Standing, walking or sprinting with the bow (cleared first; sets the sprite's x and y like drawStickman). */
+/** Standing, walking or sprinting with the bow (cleared first; sets the sprite's x and y like drawStickman); the pose drawn. */
 export const drawBowmanBody = (
   sprite: Graphics, look: BowmanLook, palette: ArmorPalette | undefined, state: BowmanBodyState, originY: number, timeMs: number,
-): void => {
+): DrawnBody => {
   sprite.clear();
   sprite.x = 0;
   sprite.y = originY - LIVE_POSE_LIFT;
@@ -54,16 +54,20 @@ export const drawBowmanBody = (
   if (state.loosed && pose.bow) {
     pose.bow = { ...pose.bow, tension: 0 };
   }
-  drawHumanoid(sprite, pose, lookOf(look, palette, timeMs, 1 - state.idleBlend));
+  const drawn = lookOf(look, palette, timeMs, 1 - state.idleBlend);
+  drawHumanoid(sprite, pose, drawn);
+  return { pose, head: drawn.headHit ?? PLAIN_HEAD };
 };
 
-/** A fall pose (knocked down, getting up) with the bow still in the bow hand (sprite reset like drawJointPose). */
+/** A fall pose (knocked down, getting up) with the bow still in the bow hand (sprite reset like drawJointPose); the pose drawn. */
 export const drawBowmanFall = (
   sprite: Graphics, look: BowmanLook, palette: ArmorPalette | undefined, pose: JointPose, originY: number, timeMs: number,
-): void => {
+): DrawnBody => {
   sprite.clear();
   sprite.rotation = 0;
   sprite.x = 0;
   sprite.y = originY;
-  drawHumanoid(sprite, { ...pose, bow: { rig: bowInRearHand(pose), tension: 0 } }, lookOf(look, palette, timeMs, 0));
+  const drawn = lookOf(look, palette, timeMs, 0);
+  drawHumanoid(sprite, { ...pose, bow: { rig: bowInRearHand(pose), tension: 0 } }, drawn);
+  return { pose, head: drawn.headHit ?? PLAIN_HEAD };
 };

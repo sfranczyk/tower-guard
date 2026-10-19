@@ -1,4 +1,6 @@
 import type { Vec2 } from '../types';
+import { KNIGHT_HEAD } from './designs/knightSkins';
+import { headCentre } from './designs/skinKit';
 import { rotateAbout as rotate } from '../utils/math';
 import { HORSE_LEG, type HorseLeg, type HorsePose } from './horseRider';
 
@@ -33,14 +35,15 @@ const barrelExtremes = ({ barrel }: HorsePose): Vec2[] => {
 };
 
 /**
- * Where horse and rider can be hit (pure, tested): the rider's head (a headshot) and torso, the horse's barrel, neck and
+ * Where horse and rider can be hit (pure, tested): the rider's head (a headshot, round his helm) and torso (MountedRider
+ * cuts it back to the head's edge), the horse's barrel, neck and
  * head (the horse's headshot) and each leg (`leg`). Under the belly between the legs and above the hooves arrows fly through.
  */
 export const mountedHitZones = (pose: HorsePose): MountedZone[] => {
   const { rider } = pose;
   const crest = { x: (pose.withers.x + pose.poll.x) / 2, y: (pose.withers.y + pose.poll.y) / 2 };
   return [
-    { points: [rider.head], padding: 10, headshot: true, part: 'rider' },
+    { points: [headCentre(rider, KNIGHT_HEAD)], padding: KNIGHT_HEAD.radius, headshot: true, part: 'rider' },
     { points: [rider.hip, rider.shoulder, rider.neckTop], padding: 8, headshot: false, part: 'rider' },
     { points: [...barrelExtremes(pose), pose.croup], padding: 0, headshot: false, part: 'horse' },
     { points: [crest, pose.throat, pose.chest, pose.withers], padding: 3, headshot: false, part: 'horse' },

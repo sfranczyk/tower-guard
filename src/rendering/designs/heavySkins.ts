@@ -5,7 +5,7 @@ import { drawDragon } from '../dragonArt';
 import type { BodyPose } from './bodyPoses';
 import { limb, shape } from './designShapes';
 import { banditArcherLook } from './enemySkins';
-import { at, drawHumanoid, ellipseIn, shapeIn, torsoFrame, type HumanoidLook, type LimbLook } from './skinKit';
+import { at, drawHumanoid, ellipseIn, headCentre, shapeIn, torsoFrame, type HeadHit, type HumanoidLook, type LimbLook } from './skinKit';
 
 /** New looks for the brute (an ogre), the troll, the zombie (a rotting peasant) and the dragon riders. */
 
@@ -14,6 +14,10 @@ const limbs = (upper: number, lower: number, upperWidth: [number, number], lower
   ({ upper, lower, upperWidth, lowerWidth });
 
 /** Brute: the ogre. A huge belly, a small bald head sunk between the shoulders, a spiked log. */
+/** The ogre's head sunk between the shoulders, the troll's low and thrust forward. */
+const OGRE_HEAD: HeadHit = { up: -6, fwd: 4, radius: 9.5 };
+const TROLL_HEAD: HeadHit = { up: -4, fwd: 3, radius: 9 };
+
 export const ogreLook = (): HumanoidLook => {
   const SKIN = 0xb59a6a, DARK = 0x8f784f, BELLY = 0xcbb183, HIDE = 0x7a5a3a;
   return {
@@ -22,6 +26,7 @@ export const ogreLook = (): HumanoidLook => {
     leg: limbs(SKIN, SKIN, [14, 12], [12, 10]),
     legFar: limbs(DARK, DARK, [14, 12], [12, 10]),
     hand: SKIN, handFar: DARK, handRadius: 6.5,
+    headHit: OGRE_HEAD,
     foot: { color: SKIN, colorFar: DARK, length: 17, height: 8 },
     torso: (g, pose, frame) => {
       shapeIn(g, pose.hip, frame, [[-8, -15], [18, -19], [36, -14], [43, -2], [41, 8], [31, 17], [12, 22], [-4, 16]], SKIN);
@@ -37,7 +42,7 @@ export const ogreLook = (): HumanoidLook => {
     },
     head: (g, pose, frame) => {
       // Sunk between the shoulders.
-      const head = at(pose.head, frame, -6, 4);
+      const head = headCentre(pose, OGRE_HEAD);
       ellipseIn(g, at(head, frame, -1, -8), frame, 2.5, 3.5, DARK);
       g.circle(head.x, head.y, 9.5).fill({ color: SKIN });
       ellipseIn(g, at(head, frame, 5, -2), frame, 4, 2, 0xd8c08f, 0.7);
@@ -75,6 +80,7 @@ export const trollLook = (): HumanoidLook => {
     leg: limbs(SKIN, SKIN, [11, 9], [9, 8]),
     legFar: limbs(DARK, DARK, [11, 9], [9, 8]),
     hand: SKIN, handFar: DARK, handRadius: 7,
+    headHit: TROLL_HEAD,
     foot: { color: SKIN, colorFar: DARK, length: 19, height: 7 },
     torso: (g, pose, frame) => {
       // Hunched: the back bulges behind the spine.
@@ -92,7 +98,7 @@ export const trollLook = (): HumanoidLook => {
     },
     head: (g, pose, frame) => {
       // Low and thrust forward, under a shaggy mane.
-      const head = at(pose.head, frame, -4, 3);
+      const head = headCentre(pose, TROLL_HEAD);
       for (const [u, f] of [[7, -9], [3, -11], [-2, -10], [-6, -8], [9, -4]] as const) {
         shapeIn(g, head, frame, [[u + 3, f + 2], [u - 1, f - 4], [u - 3, f + 3]], HAIR);
       }

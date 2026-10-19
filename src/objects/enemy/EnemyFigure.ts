@@ -8,7 +8,7 @@ import { getCheerPose } from '../../rendering/stickmanCheer';
 import { getPinnedPose } from '../../rendering/stickmanPinned';
 import { getFlailPose } from '../../rendering/stickmanFlail';
 import { GibSimulation } from '../../rendering/stickmanGibs';
-import { drawEnemyBody, drawEnemyGibs, type EnemyBodyState } from '../../rendering/enemyBody';
+import { drawEnemyBody, drawEnemyGibs, type DrawnBody, type EnemyBodyState } from '../../rendering/enemyBody';
 import { STANDING_BURN_POINTS, burnPoints } from '../../rendering/burning';
 import { FROZEN_TINT } from '../../rendering/afflictionArt';
 import { mountedBodyPoints, mountedIcePoints } from '../../rendering/horseHitZones';
@@ -17,7 +17,7 @@ import { enemyArchetype, isAllyType } from '../../data/enemyKinds';
 import { groundAt } from '../../systems/terrain';
 import type { Vec2 } from '../../types';
 import type Enemy from './Enemy';
-import { torsoOf } from './enemyHitShape';
+import { torsoOf } from '../../systems/bodyHitShape';
 import { KNOCKDOWN_LIE_MS, fallProgress, startFallState, stepFall, type FallState } from './enemyFall';
 
 /** Body sprite scale (x is mirrored by facing). */
@@ -82,9 +82,12 @@ export class EnemyFigure {
     this.body.scale.x = direction * BODY_SCALE.x;
   }
 
+  /** The pose last drawn and the look's skull (its hit boxes follow them); none on horseback or blown apart. */
+  public drawn: DrawnBody | undefined;
+
   /** Draws the body in this enemy's look (rendering/enemyBody) in the given state. */
   public draw(state: EnemyBodyState): void {
-    drawEnemyBody(this.body, this.enemy.kind, state, BODY_ORIGIN_Y, this.lookClock);
+    this.drawn = drawEnemyBody(this.body, this.enemy.kind, state, BODY_ORIGIN_Y, this.lookClock);
   }
 
   /**
@@ -355,6 +358,7 @@ export class EnemyFigure {
     const bomb = enemyArchetype(enemy.kind).detonates ? KAMIKAZE_GIB_FORCE : 1;
     const force = (GIB_FORCE_MIN + Math.random() * (GIB_FORCE_MAX - GIB_FORCE_MIN)) * bomb;
     this.gibs = new GibSimulation(blast, Math.floor(Math.random() * 1e9), force);
+    this.drawn = undefined;
     drawEnemyGibs(this.body, enemy.kind, this.gibs, BODY_ORIGIN_Y, this.lookClock);
   }
 

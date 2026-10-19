@@ -27,7 +27,7 @@ import type { ArrowMagic } from './ArrowMagic';
 import { isMagicArrow } from './ArrowMagic';
 import type { BowmanHit } from './bowmanDeath';
 import { segmentHitTime } from './collision';
-import { bowmanBox, foeHitBoxes, pointAlong, type Foe } from './combatGeometry';
+import { foeHitBoxes, pointAlong, type Foe } from './combatGeometry';
 import type { EffectsSystem } from './EffectsSystem';
 
 /** Damage of the fire and frost arrows' hit, × a normal arrow's (`rollArrowDamage`) (their effect does the rest; a vortex arrow does none). */
@@ -37,8 +37,6 @@ const PIERCING_MAX_IMPACTS = 5;
 const PIN_SINK = 9.5;
 /** An arrow hitting a keep sticks into the stone with its centre this far back from the point of impact. */
 const WALL_SINK = 10.5;
-/** A player arrow hitting a bowman (friendly fire) in the top this many px of him is a headshot. */
-const BOWMAN_HEAD = 10;
 
 interface EnemyHit {
   enemy: Foe;
@@ -127,7 +125,7 @@ export class ArrowHits {
       .filter((candidate): candidate is EnemyHit => candidate !== undefined)
       .sort((first, second) => first.time - second.time)[0];
     const bowmanTime = exposed
-      .map((bowman) => segmentHitTime(start, travel, bowmanBox(bowman)))
+      .map((bowman) => ArrowHits.bowmanHitTest(start, travel, bowman)?.time)
       .filter((time): time is number => time !== undefined)
       .sort((first, second) => first - second)[0];
     if (allyHit && !(allyHit.enemy instanceof DragonEnemy) && (bowmanTime === undefined || allyHit.time < bowmanTime)) {
@@ -148,7 +146,7 @@ export class ArrowHits {
 
     // The earliest bowman on its path (it flies over the fallen into the ground).
     const hit = exposed
-      .map((bowman) => ({ bowman, time: segmentHitTime(start, travel, bowmanBox(bowman)) }))
+      .map((bowman) => ({ bowman, time: ArrowHits.bowmanHitTest(start, travel, bowman)?.time }))
       .filter((candidate): candidate is { bowman: Bowman; time: number } => candidate.time !== undefined)
       .sort((first, second) => first.time - second.time)[0];
     if (hit) {
@@ -211,17 +209,16 @@ export class ArrowHits {
     }
   }
 
-  /** Earliest hit of the segment on a bowman: his head (the top BOWMAN_HEAD px, a headshot) or body; the head wins ties. */
+  /** Earliest hit of the segment on a bowman (Bowman.getHitBoxes: head, a headshot, and body); the head wins ties. */
   private static bowmanHitTest(start: Vec2, travel: Vec2, bowman: Bowman): BowmanArrowHit | undefined {
-    const box = bowmanBox(bowman);
-    const head = { ...box, bottom: box.top + BOWMAN_HEAD };
-    const body = { ...box, top: box.top + BOWMAN_HEAD };
-    const headTime = segmentHitTime(start, travel, head);
-    const bodyTime = segmentHitTime(start, travel, body);
-    if (headTime !== undefined && (bodyTime === undefined || headTime <= bodyTime)) {
-      return { bowman, time: headTime, headshot: true };
-    }
-    return bodyTime === undefined ? undefined : { bowman, time: bodyTime, headshot: false };
+    let best: BowmanArrowHit | undefined;
+    bowman.getHitBoxes().forEach(({ bounds, headshot }) => {
+      const time = segmentHitTime(start, travel, bounds);
+      if (time !== undefined && (!best || time < best.time || (time === best.time && headshot))) {
+        best = { bowman, time, headshot };
+      }
+    });
+    return best;
   }
 
   /** Earliest hit of the segment on any of the enemy's hit zones; a headshot zone wins ties. */

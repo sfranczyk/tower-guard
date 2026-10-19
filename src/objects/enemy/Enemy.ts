@@ -22,7 +22,7 @@ import { EnemyBars } from './EnemyBars';
 import { BuffAura } from './BuffAura';
 import { EnemyBow } from './EnemyBow';
 import { EnemyFigure } from './EnemyFigure';
-import { bodyBounds, headBounds, type EnemyShape } from './enemyHitShape';
+import { bodyBounds, headBounds, type BodyShape } from '../../systems/bodyHitShape';
 import { holdInVortex, liftFromSaddle, pin, pinnedFootPoint, throwInAir, throwOff, walk } from './enemyMotion';
 import { Vitals, applyDamage, applyHeal, unseatRider } from './enemyDamage';
 import { applyEnemyNet, enemyNetState } from './enemyNet';
@@ -466,9 +466,10 @@ export default class Enemy extends Container {
     return this.rider?.hitZones() ?? [{ bounds: this.getHeadBounds(), headshot: true }, { bounds: this.getPhysicsBounds(), headshot: false }];
   }
 
-  /** How it's drawn now, for its hit shape (enemyHitShape.ts). */
-  private shape(): EnemyShape {
-    return { transform: this.figure.transform(), size: this.look.size, pose: this.figure.jointPose() };
+  /** How it's drawn now, for its hit shape (systems/bodyHitShape.ts). */
+  private shape(): BodyShape {
+    const { drawn } = this.figure;
+    return { transform: this.figure.transform(), size: this.look.size, pose: drawn?.pose, head: drawn?.head };
   }
 
   /** The medic: bandaging now (she kneels), and how far down she is (0 standing … 1 kneeling). */

@@ -3,6 +3,8 @@ import { BOWMAN_WALK_SPEED } from '../../config';
 import type { Rect, Vec2 } from '../../types';
 import { AfflictionLayer } from '../AfflictionLayer';
 import { BodyMotion } from '../../systems/bodyMotion';
+import { bodyBounds, headBounds, type BodyShape } from '../../systems/bodyHitShape';
+import type { HitBox } from '../enemy/enemyTypes';
 import { startKnockdown, stepKnockdown, type Knockdown } from '../../systems/bowmanMotion';
 import type { ArmorPalette } from '../../rendering/armor';
 import { STANDING_BURN_POINTS } from '../../rendering/burning';
@@ -113,6 +115,13 @@ export class Bowman extends Container {
 
   public get isInTower(): boolean {
     return this.inTower;
+  }
+
+  /** Where arrows hit him (world space): his head (a headshot) and body, as he is drawn now. */
+  public getHitBoxes(): HitBox[] {
+    const { drawn } = this.figure;
+    const shape: BodyShape = { transform: this.figure.transform(), size: 1, pose: drawn?.pose, head: drawn?.head };
+    return [{ bounds: headBounds(shape), headshot: true }, { bounds: bodyBounds(shape), headshot: false }];
   }
 
   public get currentSpeed(): number {

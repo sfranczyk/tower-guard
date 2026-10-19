@@ -152,6 +152,10 @@ export class CombatSystem {
       [this.world.playerTower, this.world.enemyTower].forEach((tower) => tower.hitParts().forEach((part) => {
         this.world.debug.rect(part.left, part.top, part.right - part.left, part.bottom - part.top).stroke({ width: 1, color: 0x55e0ff, alpha: 0.9 });
       }));
+      // Yellow and red: the bowmen's head and body out in the open, like the enemies' (EnemyAI.drawDebugHitboxes).
+      this.world.bowmen.filter((bowman) => !bowman.isInTower).forEach((bowman) => bowman.getHitBoxes().forEach(({ bounds, headshot }) => {
+        this.world.debug.rect(bounds.x, bounds.y, bounds.width, bounds.height).stroke({ width: 1, color: headshot ? 0xffd23f : 0xff5555, alpha: 0.9 });
+      }));
     }
     const friendly = this.friendlyTargets();
     // Friendly fire: the players' arrows and their effects hit the soldiers like the enemies.

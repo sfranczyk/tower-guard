@@ -4,7 +4,7 @@ import { limb, shape } from './designShapes';
 import { capPoints } from './enemySkins';
 import { longsword } from './knightSkins';
 import type { BodyPose } from './bodyPoses';
-import { at, ellipseIn, shapeIn, type Frame, type HumanoidLook, type LimbLook } from './skinKit';
+import { at, ellipseIn, PLAIN_HEAD, shapeIn, type Frame, type HumanoidLook, type LimbLook } from './skinKit';
 
 /**
  * The player's soldiers (scenes/BattleAllies.ts), in the bowman's blue and silver so they read as his side: the squire
@@ -114,6 +114,7 @@ export const allyKnightLook = (timeMs: number): HumanoidLook => ({
   leg: limbs(MAIL, MAIL, [10, 8], [8, 7]),
   legFar: limbs(MAIL_DARK, MAIL_DARK, [10, 8], [8, 7]),
   hand: MAIL_DARK, handFar: STEEL_DARK, handRadius: 4,
+  headHit: { ...PLAIN_HEAD, radius: 11 },
   armsSwapped: true,
   raiseFarArm: true,
   foot: { color: 0x3a3433, colorFar: 0x262120, length: 16, height: 8 },

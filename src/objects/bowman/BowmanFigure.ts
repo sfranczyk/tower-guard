@@ -2,7 +2,7 @@ import { Graphics } from 'pixi.js';
 import type { Vec2 } from '../../types';
 import { getFlailPose } from '../../rendering/stickmanFlail';
 import { knockdownProgress } from '../../systems/bowmanMotion';
-import { spriteToContainer } from '../../systems/bodyAnchor';
+import { spriteToContainer, type BodyTransform } from '../../systems/bodyAnchor';
 import type { JointPose } from '../../rendering/stickmanPose';
 import { approach } from '../../utils/math';
 import { getArcherRig, toArcherLocalAngle } from '../../rendering/archer';
@@ -10,6 +10,7 @@ import type { ArmorPalette } from '../../rendering/armor';
 import { armoredFallPose } from '../../rendering/armoredPose';
 import { STANDING_BURN_POINTS, burnPoints } from '../../rendering/burning';
 import { drawBowmanBody, drawBowmanFall, type BowmanLook } from '../../rendering/bowmanBody';
+import type { DrawnBody } from '../../rendering/designs/skinKit';
 import { FALL_DURATION_MS } from '../../rendering/stickmanFall';
 import type { Bowman } from './Bowman';
 
@@ -36,6 +37,8 @@ export class BowmanFigure {
   private runningBlend = 0;
   /** Follows facing smoothly so the lean doesn't flip instantly on a turn. */
   private leanDirection = 1;
+  /** The pose last drawn and the look's skull (his hit boxes follow them). */
+  public drawn: DrawnBody | undefined;
 
   public constructor(
     private readonly bowman: Bowman,
@@ -105,13 +108,13 @@ export class BowmanFigure {
     body.scale.x = this.facing;
     const fall = this.fallPose();
     if (fall) {
-      drawBowmanFall(body, this.look, this.armorColors, fall, BODY_ORIGIN_Y, this.lookTimeMs);
+      this.drawn = drawBowmanFall(body, this.look, this.armorColors, fall, BODY_ORIGIN_Y, this.lookTimeMs);
       this.turnAloft();
       return;
     }
     // Leaning into the walk, more when sprinting (as drawStickman leans the sprite).
     body.rotation = (0.06 + 0.04 * this.runningBlend) * (1 - this.idleBlend) * this.leanDirection;
-    drawBowmanBody(body, this.look, this.armorColors, {
+    this.drawn = drawBowmanBody(body, this.look, this.armorColors, {
       phase: this.animationTime,
       idleBlend: this.idleBlend,
       runningBlend: this.runningBlend,
@@ -133,6 +136,21 @@ export class BowmanFigure {
     } else if (bowman.afflictions.inVortex && !bowman.knockdown && !bowman.deathFall) {
       body.rotation += bowman.afflictions.lean + (this.isFlailing ? 0 : Math.sin(this.lookTimeMs / 90) * 0.06);
     }
+  }
+
+  /** Where the body sprite is in the world (his hit shape). */
+  public transform(): BodyTransform {
+    const { body, bowman } = this;
+    return {
+      x: bowman.x,
+      y: bowman.y,
+      scale: bowman.scale.x,
+      bodyX: body.x,
+      bodyY: body.y,
+      rotation: body.rotation,
+      scaleX: body.scale.x,
+      scaleY: body.scale.y,
+    };
   }
 
   /** Where the arrow is nocked: the string hand, converted from body-sprite space to world space. */

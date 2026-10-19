@@ -1,7 +1,7 @@
 import type { Vec2 } from '../../types';
 import type { ArmorPalette } from '../armor';
 import { limb } from './designShapes';
-import { at, drawBowWith, ellipseIn, quiver, shapeIn, torsoFrame, type HumanoidLook, type LimbLook } from './skinKit';
+import { at, drawBowWith, ellipseIn, PLAIN_HEAD, quiver, shapeIn, torsoFrame, type HumanoidLook, type LimbLook } from './skinKit';
 
 /** The player looks for players 1 and 2, over the same archer rig and animations as the armored archer (3 and 4: coopSkins.ts). */
 
@@ -80,6 +80,7 @@ export const wardenLook = (palette?: ArmorPalette): HumanoidLook => {
     leg: limbs(0x3f4756, 0x3f4756, [10, 8], [8, 7]),
     legFar: limbs(0x2e3440, 0x2e3440, [10, 8], [8, 7]),
     hand: 0x6b4a2f, handFar: 0x4a3322, handRadius: 3.8,
+    headHit: { ...PLAIN_HEAD, radius: 11 },
     foot: { color: 0x2b2420, colorFar: 0x1d1815, length: 15, height: 7.5 },
     back: (g, pose) => {
       const frame = torsoFrame(pose);

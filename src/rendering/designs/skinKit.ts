@@ -31,6 +31,25 @@ export const at = (base: Vec2, frame: Frame, u: number, f: number): Vec2 => ({
   y: base.y + frame.up.y * u + frame.fwd.y * f,
 });
 
+/** Where a look's skull is (its head hit box): `up` / `fwd` from the pose's head point in the head frame, and its radius. */
+export interface HeadHit {
+  up: number;
+  fwd: number;
+  radius: number;
+}
+
+/** A plain head: a circle of 10 on the pose's head point. */
+export const PLAIN_HEAD: HeadHit = { up: 0, fwd: 0, radius: 10 };
+
+/** The pose a figure was drawn in (sprite space) and where its look puts the skull: what its hit boxes follow. */
+export interface DrawnBody {
+  pose: BodyPose;
+  head: HeadHit;
+}
+
+/** The skull's centre in `pose` (sprite space). */
+export const headCentre = (pose: BodyPose, hit: HeadHit): Vec2 => at(pose.head, headFrame(pose), hit.up, hit.fwd);
+
 /** A polygon given in (u, f) pairs around `base`. */
 export const shapeIn = (g: Graphics, base: Vec2, frame: Frame, points: ReadonlyArray<readonly [number, number]>, color: number, alpha = 1): void =>
   shape(g, points.map(([u, f]) => at(base, frame, u, f)), color, alpha);
@@ -80,6 +99,8 @@ export interface HumanoidLook {
   /** Over the near leg (an apron, a loincloth, a bomb). */
   overLegs?: (g: Graphics, pose: BodyPose, frame: Frame) => void;
   head: (g: Graphics, pose: BodyPose, frame: Frame) => void;
+  /** Where `head` draws the skull, if not PLAIN_HEAD (hit boxes follow it). */
+  headHit?: HeadHit;
   /** The club, drawn under the near fist. */
   club?: (g: Graphics, butt: Vec2, tip: Vec2) => void;
   /** Something held in the far or near fist (drawn over the forearm, under the fist). */

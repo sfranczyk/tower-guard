@@ -34,7 +34,8 @@ animation gets a row in `scenes/labRows.ts` (or `scenes/labSequences.ts` for one
   sash = `gold`, reflex bow) / huntsman (wolf pelt, tunic = `limb`) from `designs/coopSkins.ts`. Falls draw the bow in the rear hand
   (`bowInRearHand`).
 - **Designs** (`designs/`): `bodyPoses.ts` (BodyPose for every animation, pure, tested), `skinKit.ts` (parts in
-  torso/head frames), `drawHumanoid` / `HumanoidLook`; looks in `enemySkins.ts`, `heavySkins.ts`, `knightSkins.ts`,
+  torso/head frames), `drawHumanoid` / `HumanoidLook`; a look that moves or resizes the skull sets `headHit` and draws
+  at `headCentre(pose, headHit)` (hit boxes follow it: goblin, ogre, troll, helms); looks in `enemySkins.ts`, `heavySkins.ts`, `knightSkins.ts`,
   `playerSkins.ts`, `warhorse.ts`, `allySkins.ts` (the player's soldiers: squire, knight with a kite shield in front and
   the sword behind (`HumanoidLook.armsSwapped`, `front`; `raiseFarArm` holds the shield up while upright: `withShieldRaised`), medic; design-lab tab Allies); the medic's kneel
   `bandageBody(kneel, timeMs)` (timing `bandaging.ts`, lab `bandage`); ideas in `ideas.ts` (+ `ideaHumanoids.ts`, `ideaFolk.ts`, `ideaUndead.ts`, `ideaBeasts.ts`, `ideaCreatures.ts`, gaits in `designSkeleton.ts`);
