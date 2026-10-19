@@ -34,6 +34,16 @@ export const NIGHT_SCENERY = tunable('NIGHT_SCENERY', 'Night scenery', {
 }, { meta: { hillsParallax: { max: 1 } } });
 
 /**
+ * Northern lights on night maps with `nightCycle.aurora` (rendering/aurora.ts): how bright the curtains glow at full
+ * night (`alpha`), how fast they wave (`speed`, 1 = normal) and how tall their rays rise (`height`, px).
+ */
+export const AURORA = tunable('AURORA', 'Aurora', {
+  alpha: 0.6,
+  speed: 1,
+  height: 95,
+}, { meta: { alpha: { max: 1 }, speed: { max: 4 }, height: { max: 250 } } });
+
+/**
  * Green Meadow scenery (rendering/meadowLayout.ts): gaps between front-row trees (`gapMin`..`gapMax`, px), the chance
  * the next tree stands close (a clump) or after a clearing, the hazier back row (`farScale` of the size, `farHaze`
  * towards the far hills), flowers per 100 px of grass and one rock per `rockEvery` px on average. Read when a level's

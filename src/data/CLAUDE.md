@@ -46,7 +46,8 @@ All pure and tested. Tuning numbers live in `config/`, sandbox defaults in `sand
   `SandboxSettings.banners` (off by default; battle setup, solo only): systems/CLAUDE.md Banners.
   `SandboxSettings.mode` (`battle` | `survival`): survival has its own levels (`survival: SurvivalSetup`, each
   `SurvivalLevel` = map, `kinds`, `minutes` 1–15); read the run's with `runLevelCount` / `runBattleground` / `survivalLevel`.
-  Map `moonlitHollow` is `survivalOnly` (`battlegroundsFor(mode)`) with a `nightCycle` (dawn/day skies, moon, sun, shade).
+  Night maps (`nightCycle`: dawn/day skies, moon, sun, shade, optional `aurora`; `nightOf` = its day map) are survival-only,
+  the others battle-only (`battlegroundsFor(mode)`): `moonlitHollow` (Green Meadow), `auroraPeaks` (Frostpeak Pass).
   `SandboxSettings.difficulty` (`difficulty.ts`, medium by default): wave scale and pacing, picked in the battle setup. Between levels `healAfterLevel` heals the bowmen (easy full, medium +50%, hard +10% of max; `DIFFICULTY_SCALE.*LevelHeal`); the keep starts every level whole.
 - **Arrow tree** (`arrowTree.ts`): every arrow has a `path` (archer, craftsman, mage) and a `parent`, all growing out of
   normal (`ARROW_TREE`, `arrowLineage`, `arrowsOnPath`); the Quiver page shows one column per path. Whole tree open for

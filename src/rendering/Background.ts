@@ -108,6 +108,7 @@ export class Background {
   /** Drifts the clouds right; one that leaves the scenery on the right comes back in on the left. */
   public update(deltaMs: number): void {
     const deltaSeconds = deltaMs / 1000;
+    this.night?.update(deltaMs);
     this.clouds.forEach(({ sprite, speed, width }) => {
       sprite.x += speed * deltaSeconds;
       if (sprite.x - width / 2 > this.right) {

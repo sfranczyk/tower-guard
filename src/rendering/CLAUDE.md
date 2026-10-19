@@ -75,5 +75,6 @@ animation gets a row in `scenes/labRows.ts` (or `scenes/labSequences.ts` for one
 - **Night** (`NightSky.ts`, `Background.night` on `nightCycle` maps): dawn/day bands, stars, moon and sun placed across
   the view (stars fixed to the view, like the moon), shade over hills and trees; the hills (`holdHills`) get a slight
   parallax (`NIGHT_SCENERY.hillsParallax`) and fade to `nightCycle.dayHills` at dawn; `show(progress, viewLeft, viewWidth)`. Design lab tab Night (`designs/nightDesigns.ts`).
+  Northern lights on `nightCycle.aurora` maps: `aurora.ts` (pure curtain waves), drawn by `drawAurora` in `NightSky.ts`, tuning `AURORA`.
 - **Aim overlay** (`AimOverlay.ts`): circles at the drag start (off by default, `session.showCursorCircle`) and at the
   bow; a ghost of the last shot stays where it was loosed.

@@ -78,7 +78,7 @@ const DEFAULT_LEVEL_ENEMIES: readonly LevelEnemyCounts[] = [
   { raider: 6, fast: 4, tank: 3, troll: 0, hunter: 3, dragon: 1, fireDragon: 1, kamikaze: 1, goblinKamikaze: 2, zombie: 3, knight: 2, heavyKnight: 1, horseKnight: 1, priest: 1, shaman: 0 },
 ];
 
-/** Default survival levels: more kinds each level, all at night in the Moonlit Hollow but one. */
+/** Default survival levels: more kinds each level, at night in the Moonlit Hollow and on the Aurora Peaks by turns. */
 const DEFAULT_SURVIVAL_KINDS: readonly EnemyType[][] = [
   ['raider', 'hunter'],
   ['raider', 'fast', 'hunter', 'zombie'],
@@ -87,17 +87,23 @@ const DEFAULT_SURVIVAL_KINDS: readonly EnemyType[][] = [
   ['raider', 'fast', 'hunter', 'zombie', 'tank', 'troll', 'knight', 'horseKnight', 'shaman', 'fireDragon'],
 ];
 export const DEFAULT_SURVIVAL_MINUTES = 3;
-const SURVIVAL_BATTLEGROUND: BattlegroundId = 'moonlitHollow';
+const SURVIVAL_BATTLEGROUNDS: readonly BattlegroundId[] = ['moonlitHollow', 'auroraPeaks'];
 
-/** The maps a level of this mode may be fought on (survival-only maps are left out of battle runs). */
+/** The maps a level of this mode may be fought on: survival on the night maps only, battle on the others. */
 export const battlegroundsFor = (mode: RunMode): BattlegroundId[] =>
-  BATTLEGROUND_IDS.filter((id) => mode === 'survival' || !BATTLEGROUNDS[id].survivalOnly);
+  BATTLEGROUND_IDS.filter((id) => !!BATTLEGROUNDS[id].nightCycle === (mode === 'survival'));
+
+/** The night map of a battle map, if it has one (a stored survival level on a day map moves to its night). */
+const nightVersionOf = (id: unknown): BattlegroundId | undefined =>
+  BATTLEGROUND_IDS.find((night) => BATTLEGROUNDS[night].nightCycle?.nightOf === id);
 
 export const createDefaultSandbox = (): SandboxSettings => ({
   mode: 'battle',
   survival: {
     levelCount: MIN_LEVELS,
-    levels: DEFAULT_SURVIVAL_KINDS.map((kinds) => ({ battleground: SURVIVAL_BATTLEGROUND, kinds: [...kinds], minutes: DEFAULT_SURVIVAL_MINUTES })),
+    levels: DEFAULT_SURVIVAL_KINDS.map((kinds, index) => ({
+      battleground: SURVIVAL_BATTLEGROUNDS[index % SURVIVAL_BATTLEGROUNDS.length],
+      kinds: [...kinds], minutes: DEFAULT_SURVIVAL_MINUTES })),
   },
   levelCount: MIN_LEVELS,
   levels: DEFAULT_LEVEL_ENEMIES.map((enemies, index) => ({
@@ -140,7 +146,9 @@ const normalizeSurvival = (input: Partial<SurvivalSetup> | undefined, defaults: 
     const stored = Array.isArray(level?.kinds) ? level.kinds.map((kind) => RENAMED_TYPES[kind] ?? kind) : undefined;
     const kinds = stored ? ENEMY_TYPES.filter((type) => stored.includes(type)) : fallback.kinds;
     return {
-      battleground: isBattleground(level?.battleground, 'survival') ? level.battleground : fallback.battleground,
+      battleground: isBattleground(level?.battleground, 'survival')
+        ? level.battleground
+        : nightVersionOf(level?.battleground) ?? fallback.battleground,
       kinds: kinds.length > 0 ? kinds : fallback.kinds,
       minutes: clampInt(level?.minutes, SURVIVAL_MINUTES.min, SURVIVAL_MINUTES.max, fallback.minutes),
     };

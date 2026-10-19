@@ -5,7 +5,8 @@ import type { ArmorPalette } from '../rendering/armor';
  * weather. Pure data; rendering/Background.ts draws them and systems/WeatherSystem.ts adds lightning.
  */
 
-export type BattlegroundId = 'greenMeadow' | 'crimsonPass' | 'sunscorchDunes' | 'thunderRidge' | 'frostpeakPass' | 'moonlitHollow';
+export type BattlegroundId = 'greenMeadow' | 'crimsonPass' | 'sunscorchDunes' | 'thunderRidge' | 'frostpeakPass' | 'moonlitHollow'
+  | 'auroraPeaks';
 
 /** fair: drifting clouds; clear: cloudless sky; storm: dark clouds, rain, lightning; snow: grey sky, snowfall. */
 export type Weather = 'fair' | 'clear' | 'storm' | 'snow';
@@ -58,13 +59,14 @@ export interface Battleground {
   ui: { accent: string; backdrop: string };
   /** The bowman's armor colours, picked to stand out against this map. */
   player: ArmorPalette;
-  /** Only offered for survival levels. */
-  survivalOnly?: boolean;
   /**
    * Night falls on this map: `sky` is the night sky; a moon crosses it and dawn (`dawn` bands, then `day`) comes as the
-   * survival level's time runs out, the sun rising at its end (systems/nightCycle.ts, rendering/NightSky.ts).
+   * survival level's time runs out, the sun rising at its end (systems/nightCycle.ts, rendering/NightSky.ts). Maps with
+   * a night are offered only for survival levels, the others only for battle levels (data/sandbox.ts battlegroundsFor).
    */
   nightCycle?: {
+    /** The battle map this is the night of (a stored survival level on it moves here). */
+    nightOf: BattlegroundId;
     dawn: readonly number[];
     day: readonly number[];
     moon: number;
@@ -72,6 +74,8 @@ export interface Battleground {
     shade: number;
     /** The hills by day (far, near), fading in over the night ones as it brightens. */
     dayHills: readonly [number, number];
+    /** Northern lights waving over the sky (rendering/aurora.ts), in these colours; they fade with the stars at dawn. */
+    aurora?: readonly number[];
   };
 }
 
@@ -109,6 +113,11 @@ const PLAYER_COLORS: Readonly<Record<BattlegroundId, ArmorPalette>> = {
   moonlitHollow: {
     limb: 0xd9932f, limbRear: 0xa86f22, outline: 0x22160b, plate: 0xd6dce3, plateLight: 0xffffff,
     gold: 0xffd75a, leather: 0x8a5a33, face: 0x3a2610, bow: 0xe9c48a, bowString: 0xf6e7c8,
+  },
+  // Rust cloth like Frostpeak's, brighter, with bright steel against the navy night and the moonlit snow.
+  auroraPeaks: {
+    limb: 0xd0582c, limbRear: 0xa04420, outline: 0x22140c, plate: 0xd6dce3, plateLight: 0xffffff,
+    gold: 0xffd75a, leather: 0x8a5a33, face: 0x3a2010, bow: 0xe9c48a, bowString: 0xf6e7c8,
   },
 };
 
@@ -231,8 +240,8 @@ export const BATTLEGROUNDS: Readonly<Record<BattlegroundId, Battleground>> = {
     trees: { style: 'round', colors: [0x143026, 0x1a3a2e, 0x10261f], trunk: 0x2c2620 },
     ground: { fill: 0x3a5a44, edge: 0x5f8466, tufts: 0x2c4836 },
     ui: { accent: '#4a6a9c', backdrop: '#0c1224' },
-    survivalOnly: true,
     nightCycle: {
+      nightOf: 'greenMeadow',
       dawn: [0x2b3a6e, 0x4f4f86, 0x8a6390, 0xd88a84, 0xf4b98a],
       day: [0x6fa8d0, 0x8cbcd8, 0xaccfdc, 0xcfe0d8, 0xf1e2b8],
       moon: 0xeef1e4,
@@ -241,6 +250,39 @@ export const BATTLEGROUNDS: Readonly<Record<BattlegroundId, Battleground>> = {
       shade: 0x070c1e,
       // Green like the meadow's, a little darker.
       dayHills: [0x557d66, 0x3d6450],
+    },
+  },
+  auroraPeaks: {
+    id: 'auroraPeaks',
+    player: PLAYER_COLORS.auroraPeaks,
+    name: 'Aurora Peaks',
+    // Survival: Frostpeak Pass by night. Northern lights wave over the navy sky and fade at dawn, the peaks turn pink,
+    // then the bright winter sky. It snows lightly and the wind blows as on the pass.
+    sky: [0x050b1f, 0x0a1530, 0x0f1e3f, 0x15284d, 0x1c335a],
+    weather: 'snow',
+    cloudColor: 0x2a3656,
+    cloudAlpha: 0.25,
+    hills: [0x2a3a5c, 0x1c2944],
+    hillShape: 'mountains',
+    trees: { style: 'snowPine', colors: [0x172b2a, 0x1e3532, 0x122220], trunk: 0x2a2420 },
+    // Snow in moonlight: blue-grey, darker than by day.
+    ground: { fill: 0x8a9cba, edge: 0xb8c7dc, tufts: 0x5f7194 },
+    terrainAmplitude: 48,
+    terrainWaviness: 0.9,
+    wind: 300,
+    // Frostpeak's navy aim would vanish in the night: the default gold, with a dark halo over the pale snow.
+    aimColors: { ...DEFAULT_AIM_COLORS, halo: 0x0a1228 },
+    ui: { accent: '#3f8f86', backdrop: '#08111f' },
+    nightCycle: {
+      nightOf: 'frostpeakPass',
+      dawn: [0x24305e, 0x45487f, 0x7e6293, 0xd394a4, 0xf0c2ae],
+      day: [0x7d9dc0, 0x9ab3cf, 0xbac9da, 0xd9dde2, 0xe8e2d8],
+      moon: 0xeef3ff,
+      sun: 0xfff1d6,
+      shade: 0x050a1c,
+      // Frostpeak's grey-blue rock by day.
+      dayHills: [0x8295b2, 0x5a6a84],
+      aurora: [0x5cf0a0, 0x3fd8c4, 0xa47cf2],
     },
   },
 };

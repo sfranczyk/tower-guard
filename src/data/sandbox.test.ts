@@ -61,8 +61,18 @@ describe('survival setup', () => {
       expect(level.minutes).toBe(DEFAULT_SURVIVAL_MINUTES);
     });
     expect(runBattleground({ ...settings, mode: 'survival' }, 0)).toBe('moonlitHollow');
-    // Battle levels never get the survival-only map.
+    expect(runBattleground({ ...settings, mode: 'survival' }, 1)).toBe('auroraPeaks');
+    // Battle levels never get a night map, survival levels only night maps.
+    expect(battlegroundsFor('survival')).toEqual(['moonlitHollow', 'auroraPeaks']);
     settings.levels.forEach((level) => expect(battlegroundsFor('battle')).toContain(level.battleground));
+  });
+
+  it('moves stored survival levels on day maps to their night', () => {
+    const settings = normalizeSandbox({
+      survival: { levelCount: 2, levels: [{ battleground: 'frostpeakPass', kinds: ['raider'], minutes: 3 }, { battleground: 'thunderRidge', kinds: ['raider'], minutes: 3 }] },
+    });
+    expect(settings.survival.levels[0].battleground).toBe('auroraPeaks');
+    expect(settings.survival.levels[1].battleground).toBe(createDefaultSandbox().survival.levels[1].battleground);
   });
 
   it('clamps stored survival levels', () => {
@@ -76,7 +86,7 @@ describe('survival setup', () => {
     expect(settings.survival.levels[0]).toEqual({ battleground: 'moonlitHollow', kinds: ['raider', 'tank'], minutes: SURVIVAL_MINUTES.max });
     expect(settings.survival.levels[1].kinds).toEqual(createDefaultSandbox().survival.levels[1].kinds);
     expect(settings.survival.levels[1].minutes).toBe(SURVIVAL_MINUTES.min);
-    // The survival-only map isn't kept for a battle level.
+    // A night map isn't kept for a battle level.
     expect(settings.levels[0].battleground).toBe(createDefaultSandbox().levels[0].battleground);
     expect(normalizeSandbox({ mode: 'siege' as never }).mode).toBe('battle');
   });
