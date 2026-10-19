@@ -16,7 +16,7 @@ everything under `ctx.root` on each switch. Scenes never touch the DOM: they cal
   Survival (`sandbox.mode`): `BattleSurvival.ts` (clock, `background.night`, `fleeAll` at dawn = level held; ?debug
   `scene.survival.skip(ms)`), enemy keep `Tower` `absent`, no Banners; end texts in `levelEnd.ts` (`survivedMs`).
   Held: `BattleRelief.ts` marches in the relief force at the knights' walking pace (knights stand still, the rest cheer; draw order `Enemy.baseZ`; formation `systems/reliefFormation.ts`, tuning `RELIEF`), show only,
-  outside the battle; BattleOutcome shows the end screen once it has formed up (a guest marches its own at time-up).
+  outside the battle; the end screen shows at once over it (a guest marches its own at time-up).
   Keyboard, HUD/pause handlers and soldier keys: `BattleControls.ts`. Esc pauses (`togglePause` / `setPaused`: `update`
   stops, `DomUi.showPause`; co-op: net/CLAUDE.md). The pause dialog's "Restart level" (`restartLevel`, solo/host) starts the level over: bowmen at full health, keeps as they are; in the keep
   it edits the quiver (`changeLoadout`: saved, shared in co-op, HUD rebuilt). A

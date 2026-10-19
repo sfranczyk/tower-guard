@@ -41,7 +41,7 @@ All pure and tested. Tuning numbers live in `config/`, sandbox defaults in `sand
   0.9 (few, high rises), and `wind` 300: each level rolls one up to it, px/s², part of `FlightParams`; it may shift
   mid-level, `systems/windShift.ts`; the status line shows it).
 - **Sandbox** (`sandbox.ts`, `loadout.ts`): settings are pure data, `normalizeSandbox` clamps everything and still reads
-  pre-rename setups (`waves`, `waveCount`; old enemy ids via `RENAMED_TYPES`). `SandboxSettings.loadout`: five weapon slots (`LOADOUT_SLOTS`), any arrows,
+  pre-rename setups (`waves`, `waveCount`; old enemy ids via `RENAMED_TYPES`). `SandboxSettings.loadout`: three weapon slots (`LOADOUT_SLOTS`), any arrows,
   each at most once, slots may stay empty. Persisted by `core/sandboxStorage.ts`.
   `SandboxSettings.banners` (off by default; battle setup, solo only): systems/CLAUDE.md Banners.
   `SandboxSettings.mode` (`battle` | `survival`): survival has its own levels (`survival: SurvivalSetup`, each

@@ -61,7 +61,7 @@ export interface SandboxSettings {
   levels: LevelSetup[];
   bowmanHealth: number;
   keepHealth: number;
-  /** The arrow in each weapon slot (keys 1–5); in co-op the host's (the guest picks their own, net/coopLink.ts). */
+  /** The arrow in each weapon slot (keys 1–3); in co-op the host's (the guest picks their own, net/coopLink.ts). */
   loadout: Loadout;
   /** How many enemies each wave brings and how they come out (data/difficulty.ts); fixed for the run. */
   difficulty: DifficultyLevel;

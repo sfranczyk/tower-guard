@@ -1,11 +1,11 @@
 import type { ProjectileType } from '../types';
 
 /**
- * The quiver: which arrow sits in each of the weapon slots (keys 1–5), picked on the battle setup's
+ * The quiver: which arrow sits in each of the weapon slots (keys 1–3), picked on the battle setup's
  * Quiver page. Each type at most once; a slot may stay empty, but never all of them. Pure data + validation.
  */
 
-export const LOADOUT_SLOTS = 5;
+export const LOADOUT_SLOTS = 3;
 
 /** Arrows the player can carry (shrapnel fragments only come from a burst). */
 export type ArrowType = Exclude<ProjectileType, 'fragment'>;
@@ -25,7 +25,7 @@ export const ARROW_INFO: Readonly<Record<ArrowType, { name: string; summary: str
 /** `null` is an empty slot. */
 export type Loadout = (ArrowType | null)[];
 
-export const DEFAULT_LOADOUT: readonly ArrowType[] = ['normal', 'explosive', 'piercing', 'fire', 'vortex'];
+export const DEFAULT_LOADOUT: readonly ArrowType[] = ['normal', 'explosive', 'piercing'];
 
 export const isArrowType = (value: unknown): value is ArrowType => ARROW_TYPES.includes(value as ArrowType);
 

@@ -3,7 +3,7 @@ import { ARROW_INFO, ARROW_TYPES, arrowCount, type ArrowType, type Loadout } fro
 import { ICON_WEAPONS } from './icons';
 
 /**
- * The battle setup's Quiver page: the five weapon slots (keys 1–5) and the arrows to fill them with, one column per
+ * The battle setup's Quiver page: the three weapon slots (keys 1–3) and the arrows to fill them with, one column per
  * arrow path (archer, craftsman, mage; `data/arrowTree.ts`), parents above their evolutions.
  * Pick a slot, then an arrow, or drag an arrow (or a slot's arrow) onto a slot (`QuiverDrag`); an arrow already in
  * another slot swaps places with it. Markup only, SandboxForm handles the clicks (`data-slot`, `data-slot-clear`, `data-arrow`).

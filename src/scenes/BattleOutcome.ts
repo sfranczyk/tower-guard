@@ -116,11 +116,10 @@ export class BattleOutcome {
       enemyKeepHealth: enemyTower.getHealth(),
       }), hostSync);
     };
-    // A held survival level: the end screen waits for the relief force to form up.
-    if (won && survival?.timeUp && relief) {
-      relief.arrive(show);
-    } else {
-      show();
+    // A held survival level: the relief force marches in behind the end screen ("View battlefield" to watch it).
+    if (won && survival?.timeUp) {
+      relief?.arrive();
     }
+    show();
   }
 }

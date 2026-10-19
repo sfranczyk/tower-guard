@@ -25,8 +25,8 @@ const context = (): GameContext => ({
   goTo: () => {},
 }) as unknown as GameContext;
 
-const hostQuiver: Loadout = ['explosive', 'normal', null, null, null];
-const guestQuiver: Loadout = ['fire', 'frost', 'vortex', null, null];
+const hostQuiver: Loadout = ['explosive', 'normal', null];
+const guestQuiver: Loadout = ['fire', 'frost', 'vortex'];
 
 describe('co-op quivers', () => {
   it('each player picks their own and sees the other one', () => {
@@ -62,12 +62,12 @@ describe('co-op quivers', () => {
     linkUp(host, 'host', 'ABCDE', hostEnd, hostQuiver);
     linkUp(guest, 'guest', 'ABCDE', guestEnd, guestQuiver);
     host.session.net!.transport.send({ t: 'welcome' });
-    shareLoadout(host.session, ['piercing', null, null, null, null]);
+    shareLoadout(host.session, ['piercing', null, null]);
 
     const received: NetMessage[] = [];
     guest.session.net!.transport.onMessage((message) => received.push(message));
     expect(received).toEqual([{ t: 'welcome' }]);
-    expect(partnerLoadout(guest.session)).toEqual(['piercing', null, null, null, null]);
+    expect(partnerLoadout(guest.session)).toEqual(['piercing', null, null]);
   });
 
   it('alone, the battle setup quiver counts', () => {
