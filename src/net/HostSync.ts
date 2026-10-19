@@ -8,9 +8,9 @@ import type { EffectsSystem } from '../systems/EffectsSystem';
 import type { Foe } from '../systems/CombatSystem';
 import type { EnemyType, ProjectileType, Vec2 } from '../types';
 import { fromNetAim, type EndInfo, type GameEvent, type InputMessage, type Snapshot, type SpawnPlace } from './protocol';
-import type { Transport } from './Transport';
+import type { RoomLink } from './Transport';
 
-/** Frames (snapshot + events) go to the guest this often. */
+/** Frames (snapshot + events) go to the guests this often. */
 const FRAME_MS = 50;
 
 /** What the host's battle exposes to the sync. */
@@ -38,8 +38,8 @@ const round = (value: number): number => Math.round(value * 10) / 10;
 
 /**
  * Co-op host side: gives every enemy and arrow an id, listens to them (and to the bowmen and effects) for
- * events, and sends a frame with the world's state 20 times a second. The guest's controls arrive as
- * `input` messages and drive player 2 (a ManualInput).
+ * events, and sends every guest a frame with the world's state 20 times a second. Each guest's controls arrive
+ * as `input` messages and drive their own player (a ManualInput).
  */
 export class HostSync {
   private events: GameEvent[] = [];
@@ -47,17 +47,20 @@ export class HostSync {
   private readonly enemyIds = new Map<Foe, number>();
   private nextEnemyId = 1;
   private nextArrowId = 1;
-  /** The guest pressed Esc (the host decides and answers with `sendPause`). */
+  /** A guest pressed Esc (the host decides and answers with `sendPause`). */
   public onPauseRequest?: (paused: boolean) => void;
 
   public constructor(
-    private readonly transport: Transport,
+    private readonly transport: RoomLink,
     private readonly world: HostWorld,
-    guestInput: ManualInput,
   ) {
-    transport.onMessage((message) => {
+    transport.onMessage((message, from) => {
+      const guest = from > 0 ? world.players[from] : undefined;
       if (message.t === 'input') {
-        HostSync.applyInput(guestInput, message);
+        // A guest who joined mid-level has no bowman until the next one.
+        if (guest) {
+          HostSync.applyInput(guest.input as ManualInput, message);
+        }
       } else if (message.t === 'pause') {
         this.onPauseRequest?.(message.paused);
       }
@@ -81,7 +84,7 @@ export class HostSync {
     }
   }
 
-  /** Pauses or resumes the guest's battle along with the host's. */
+  /** Pauses or resumes the guests' battles along with the host's. */
   public sendPause(paused: boolean): void {
     this.transport.send({ t: 'pause', paused });
   }

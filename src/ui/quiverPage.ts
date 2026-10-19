@@ -8,18 +8,18 @@ import { ICON_WEAPONS } from './icons';
  * Pick a slot, then an arrow, or drag an arrow (or a slot's arrow) onto a slot (`QuiverDrag`); an arrow already in
  * another slot swaps places with it. Markup only, SandboxForm handles the clicks (`data-slot`, `data-slot-clear`, `data-arrow`).
  */
-export const quiverPage = (loadout: Loadout, selectedSlot: number, partner?: PartnerQuiver): string => {
+export const quiverPage = (loadout: Loadout, selectedSlot: number, partners?: readonly PartnerQuiver[]): string => {
   const canClear = arrowCount(loadout) > 1;
   return `<div class="quiver-editor">
     <div class="quiver-row">
-      <div class="sandbox-section-label">${partner ? 'Your quiver' : 'Quiver'} · keys 1–${loadout.length}</div>
+      <div class="sandbox-section-label">${partners ? 'Your quiver' : 'Quiver'} · keys 1–${loadout.length}</div>
       <div class="quiver-slots">${loadout.map((type, index) => quiverSlot(type, index, index === selectedSlot, canClear)).join('')}</div>
     </div>
     <div class="arrow-cards">${ARROW_PATHS.map((path) => `<div class="arrow-path">
       <div class="sandbox-section-label">${ARROW_PATH_NAMES[path]}</div>
       ${arrowsOnPath(path, ARROW_TYPES).map((type) => arrowCard(type, loadout.indexOf(type))).join('')}
     </div>`).join('')}</div>
-    ${partner ? partnerQuiver(partner) : ''}
+    ${(partners ?? []).map(partnerQuiver).join('')}
   </div>`;
 };
 

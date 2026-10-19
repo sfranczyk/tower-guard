@@ -20,8 +20,9 @@ export class SceneManager {
 
   public constructor(app: Application, ui: DomUi, textures: GameTextures, sound: SoundManager) {
     const sandbox = loadSandbox();
-    // Co-op (two bowmen) for now with ?coop in the URL; the online lobby will set it later.
-    const playerCount = getUrlParam(COOP_PARAM) !== null ? 2 : 1;
+    // A local co-op test: ?coop gives two bowmen, ?coop=3 or ?coop=4 more (the others driven from the console).
+    const coop = getUrlParam(COOP_PARAM);
+    const playerCount = coop === null ? 1 : Math.max(2, Math.min(4, Number(coop) || 2));
     const root = new Container();
     root.sortableChildren = true;
     app.stage.addChild(root);

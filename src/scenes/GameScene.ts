@@ -17,7 +17,7 @@ import { BATTLEGROUNDS, aimColorsOf, type Battleground } from '../data/battlegro
 import { enemyEdge, wavePacing } from '../data/difficulty';
 import { runBattleground, runLevelCount, survivalLevel, type SurvivalLevel } from '../data/sandbox';
 import type { ManualInput } from '../input/PlayerInput';
-import { loadoutOf } from '../net/coopLink';
+import { enterBattle, isPresent, loadoutOf } from '../net/coopLink';
 import type { GuestSync } from '../net/GuestSync';
 import type { HostSync } from '../net/HostSync';
 import Tower from '../objects/Tower';
@@ -108,7 +108,8 @@ export class GameScene extends Scene {
     this.survivalSetup = survivalLevel(sandbox, run.levelIndex);
     this.battleground = BATTLEGROUNDS[runBattleground(sandbox, run.levelIndex)];
     this.role = ctx.session.net?.role ?? 'solo';
-    this.localIndex = this.role === 'guest' ? 1 : 0;
+    this.localIndex = ctx.session.net?.localIndex ?? 0;
+    enterBattle(ctx.session);
     // Windy maps roll a fresh wind for every level (direction and strength); a co-op guest takes the host's.
     const strongest = this.battleground.wind ?? 0;
     this.wind = this.role === 'guest' ? ctx.session.net!.wind : rollWind(strongest);
@@ -339,10 +340,13 @@ export class GameScene extends Scene {
 
   /** The world keeps running after the level ends; the end screen just overlays it. */
   public update(deltaMs: number): void {
-    // The guest left mid-level: player 2 stands still from now on.
-    if (this.hostSync && !this.ctx.session.net) {
-      this.hostSync = undefined;
-      (this.players[1]?.input as ManualInput | undefined)?.set({ direction: 0, sprint: false, aim: undefined });
+    // A guest left mid-level: their bowman stands still from now on.
+    if (this.hostSync) {
+      this.players.forEach((player) => {
+        if (player.index > 0 && !isPresent(this.ctx.session, player.index)) {
+          (player.input as ManualInput).set({ direction: 0, sprint: false, aim: undefined });
+        }
+      });
     }
     if (this.controls?.paused) {
       return;

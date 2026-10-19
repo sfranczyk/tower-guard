@@ -1,114 +1,216 @@
-import type { GameContext, GameSession } from '../core/Scene';
+import type { GameContext, GameSession, NetLink } from '../core/Scene';
 import { getUrlParam } from '../core/urlState';
 import { normalizeLoadout, type Loadout } from '../data/loadout';
 import type { NetMessage } from './protocol';
-import type { Transport, TransportMode } from './Transport';
+import { RoomHub, guestLink } from './RoomHub';
+import { hasGaps, seatCount } from './seats';
+import type { HostedRoom, RoomLink, Transport, TransportMode } from './Transport';
 
-/** `?net=local` links two tabs of this browser (no internet needed) instead of PeerJS. */
+/** `?net=local` links tabs of this browser (no internet needed) instead of PeerJS. */
 export const transportMode = (): TransportMode => (getUrlParam('net') === 'local' ? 'local' : 'peer');
 
-/** Called when the host loses the guest while in the lobby (to show it), set by the lobby scene. */
-let onPartnerLeft: (() => void) | undefined;
-/** Called when the partner's quiver arrives or changes (the lobby and the battle setup show it). */
-let onPartnerLoadout: (() => void) | undefined;
+/** A co-op room holds the host and up to three guests. */
+export const MAX_PLAYERS = 4;
 
-export const setPartnerLeftListener = (listener: (() => void) | undefined): void => {
-  onPartnerLeft = listener;
+/** Each player's bowman (rendering/bowmanBody.ts BOWMAN_LOOKS), for the lobby's labels. */
+const LOOK_NAMES = ['Ranger', 'Keep warden', 'Steppe archer', 'Huntsman'];
+
+/** "Host · Ranger", "Player 3 · Steppe archer". */
+export const playerLabel = (index: number): string => `${index === 0 ? 'Host' : `Player ${index + 1}`} · ${LOOK_NAMES[index] ?? 'Archer'}`;
+
+/** Called when someone joins or leaves the room or picks a quiver (the lobby and the battle setup show it). */
+let onRoomChange: (() => void) | undefined;
+
+export const setRoomListener = (listener: (() => void) | undefined): void => {
+  onRoomChange = listener;
 };
 
-export const setPartnerLoadoutListener = (listener: (() => void) | undefined): void => {
-  onPartnerLoadout = listener;
-};
-
-/** This browser's player index in co-op: the host is player 1 (0), the guest player 2 (1). */
-const ownIndex = (role: 'host' | 'guest'): number => (role === 'host' ? 0 : 1);
+/** Host: sends the roster round again (after a join, a leave or a new quiver). */
+const announcers = new WeakMap<NetLink, () => void>();
+/** Host: the RoomHub behind the link (for closing up seats). */
+const hubs = new WeakMap<NetLink, RoomHub>();
 
 /**
- * The transport as the scenes see it: quiver messages are taken out here (they can come in any scene), the rest
- * go to whichever handler the current scene set (queued until it sets one).
+ * The link as the scenes see it: room messages (quivers, the roster) are taken out here (they can come in any
+ * scene), the rest go to whichever handler the current scene set (queued until it sets one).
  */
-const withLoadouts = (transport: Transport, take: (message: NetMessage) => boolean): Transport => {
-  let handler: ((message: NetMessage) => void) | undefined;
-  let queue: NetMessage[] = [];
-  transport.onMessage((message) => {
-    if (take(message)) {
+const takeRoomMessages = (link: RoomLink, take: (message: NetMessage, from: number) => boolean): RoomLink => {
+  let handler: ((message: NetMessage, from: number) => void) | undefined;
+  let queue: Array<[NetMessage, number]> = [];
+  link.onMessage((message, from) => {
+    if (take(message, from)) {
       return;
     }
     if (handler) {
-      handler(message);
+      handler(message, from);
     } else {
-      queue.push(message);
+      queue.push([message, from]);
     }
   });
   return {
-    send: (message) => transport.send(message),
+    send: (message) => link.send(message),
+    sendTo: (player, message) => link.sendTo(player, message),
     onMessage: (next) => {
       handler = next;
       const queued = queue;
       queue = [];
-      queued.forEach((message) => next(message));
+      queued.forEach(([message, from]) => next(message, from));
     },
-    onClose: (next) => transport.onClose(next),
-    close: () => transport.close(),
+    close: () => link.close(),
   };
 };
 
 /**
- * Both browsers are linked: two bowmen from now on, each with their own quiver (`ownLoadout` is this player's).
- * If the link drops, the guest goes back to the lobby with a notice, and the host plays on alone (player 2 stands
- * still for the rest of the level).
+ * The host opened a room: guests join it while it's open (up to three), each takes the lowest free seat and picks
+ * their own quiver. A guest who leaves mid-battle leaves their bowman standing still for the rest of the level;
+ * back in the lobby or the setup the seats close up (`settleSeats`).
  */
-export const linkUp = (ctx: GameContext, role: 'host' | 'guest', code: string, raw: Transport, ownLoadout: Loadout): void => {
+export const hostCoop = (ctx: GameContext, room: HostedRoom, ownLoadout: Loadout): void => {
   const { session } = ctx;
-  const loadouts: Array<Loadout | undefined> = [undefined, undefined];
-  loadouts[ownIndex(role)] = ownLoadout;
-  const transport = withLoadouts(raw, (message) => {
+  const net: NetLink = {
+    role: 'host', code: room.code, transport: undefined as unknown as RoomLink, wind: 0, loadouts: [ownLoadout], localIndex: 0, present: [true], inBattle: false,
+  };
+  session.net = net;
+  session.playerCount = 1;
+  const hub = new RoomHub(room, MAX_PLAYERS);
+  const announce = (): void => {
+    net.present = hub.present();
+    net.loadouts.length = net.present.length;
+    session.playerCount = seatCount(net.present);
+    const loadouts = net.present.map((_, seat) => net.loadouts[seat] ?? null);
+    net.present.forEach((taken, seat) => {
+      if (taken && seat > 0) {
+        hub.sendTo(seat, { t: 'roster', you: seat, present: net.present, loadouts });
+      }
+    });
+    onRoomChange?.();
+  };
+  announcers.set(net, announce);
+  hubs.set(net, hub);
+  net.transport = takeRoomMessages(hub, (message, from) => {
     if (message.t !== 'loadout') {
       return false;
     }
-    loadouts[1 - ownIndex(role)] = normalizeLoadout(message.loadout);
-    onPartnerLoadout?.();
+    net.loadouts[from] = normalizeLoadout(message.loadout);
+    announce();
     return true;
   });
-  session.net = { role, code, transport, wind: 0, loadouts };
-  session.playerCount = 2;
-  raw.onClose(() => {
-    if (session.net?.transport !== transport) {
+  hub.onJoin = (seat) => {
+    net.loadouts[seat] = undefined;
+    announce();
+  };
+  hub.onLeave = (seat) => {
+    net.loadouts[seat] = undefined;
+    if (net.inBattle) {
+      ctx.ui.setStatus(`${playerLabel(seat)} has left · the others play on`);
+    } else {
+      net.loadouts = hub.compact().map((old) => net.loadouts[old]);
+    }
+    announce();
+  };
+  hub.open();
+};
+
+/**
+ * This browser joined a room: the host's roster tells it its seat and everyone's quivers. If the link drops (or the
+ * room was full), back to the lobby with a notice.
+ */
+export const joinCoop = (ctx: GameContext, code: string, transport: Transport, ownLoadout: Loadout): void => {
+  const { session } = ctx;
+  let notice = 'The host has left the game.';
+  const net: NetLink = {
+    role: 'guest', code, transport: guestLink(transport), wind: 0, loadouts: [undefined, ownLoadout], localIndex: 1, present: [], inBattle: false,
+  };
+  // First: a roster may already be waiting.
+  session.net = net;
+  session.playerCount = 1;
+  net.transport = takeRoomMessages(net.transport, (message) => {
+    if (message.t === 'roster') {
+      const own = net.loadouts[net.localIndex] ?? ownLoadout;
+      net.localIndex = message.you;
+      net.present = message.present;
+      net.loadouts = message.loadouts.map((loadout, seat) => (seat === message.you ? own : loadout ? normalizeLoadout(loadout) : undefined));
+      session.playerCount = seatCount(net.present);
+      // Joined (or the host lost track): the host gets this player's quiver.
+      if (!message.loadouts[message.you]) {
+        transport.send({ t: 'loadout', loadout: own });
+      }
+      onRoomChange?.();
+      return true;
+    }
+    if (message.t === 'full') {
+      notice = 'That room is full (four players).';
+      return true;
+    }
+    return false;
+  });
+  transport.onClose(() => {
+    if (session.net !== net) {
       return;
     }
     session.net = undefined;
     session.playerCount = 1;
-    if (role === 'guest') {
-      session.coopNotice = 'The host has left the game.';
-      ctx.goTo('coop');
-    } else {
-      ctx.ui.setStatus('Your partner has left · you play on alone');
-      onPartnerLeft?.();
-    }
+    session.coopNotice = notice;
+    ctx.goTo('coop');
   });
 };
 
-/** This player picked a new quiver: kept for the battle and sent to the partner. */
+/** Host, back in the lobby or the setup: the seats of guests who left close up (players renumbered, told by roster). */
+export const settleSeats = (session: GameSession): void => {
+  const { net } = session;
+  if (net?.role !== 'host') {
+    return;
+  }
+  net.inBattle = false;
+  const hub = hubs.get(net);
+  if (hub && hasGaps(net.present)) {
+    net.loadouts = hub.compact().map((old) => net.loadouts[old]);
+    announcers.get(net)?.();
+  }
+};
+
+/** Host: a battle starts (seats keep their numbers until `settleSeats`). */
+export const enterBattle = (session: GameSession): void => {
+  if (session.net?.role === 'host') {
+    session.net.inBattle = true;
+  }
+};
+
+/** This player picked a new quiver: kept for the battle and passed on (the host sends it round in the roster). */
 export const shareLoadout = (session: GameSession, loadout: Loadout): void => {
   const { net } = session;
   if (!net) {
     return;
   }
-  net.loadouts[ownIndex(net.role)] = loadout;
-  net.transport.send({ t: 'loadout', loadout });
+  net.loadouts[net.localIndex] = loadout;
+  if (net.role === 'host') {
+    announcers.get(net)?.();
+  } else {
+    net.transport.send({ t: 'loadout', loadout });
+  }
 };
 
-/** The partner's quiver (undefined until it arrives, or alone). */
-export const partnerLoadout = (session: GameSession): Loadout | undefined => {
+/** The other players in the room (not this one), with their quivers (undefined until picked). */
+export const otherPlayers = (session: GameSession): Array<{ index: number; loadout?: Loadout }> => {
   const { net } = session;
-  return net ? net.loadouts[1 - ownIndex(net.role)] : undefined;
+  if (!net) {
+    return [];
+  }
+  return net.present.flatMap((taken, index) => (taken && index !== net.localIndex ? [{ index, loadout: net.loadouts[index] }] : []));
 };
+
+/** The other players' quivers as the lobby and the Quiver page list them (ui/quiverPage.ts PartnerQuiver). */
+export const otherQuivers = (session: GameSession): Array<{ label: string; loadout?: Loadout }> =>
+  otherPlayers(session).map(({ index, loadout }) => ({ label: playerLabel(index), loadout }));
+
+/** Whether player `index` is still in the room (always, alone). */
+export const isPresent = (session: GameSession, index: number): boolean => !session.net || session.net.present[index] === true;
 
 /** The quiver player `index` fights with: their own in co-op, else the battle setup's. */
 export const loadoutOf = (session: GameSession, index: number): Loadout =>
   session.net?.loadouts[index] ?? session.sandbox.loadout;
 
-/** Leaves co-op on purpose: closes the link (the other side is told) and goes back to playing alone. */
+/** Leaves co-op on purpose: closes the links (the others are told) and goes back to playing alone. */
 export const leaveCoop = (ctx: GameContext): void => {
   const { session } = ctx;
   const link = session.net;

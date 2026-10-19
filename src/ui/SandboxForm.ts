@@ -61,8 +61,8 @@ export class SandboxForm {
   private confirmRemove?: number;
   /** The quiver slot the next picked arrow goes into. */
   private selectedSlot = 0;
-  /** Co-op: the partner's quiver, shown (not editable) on the Quiver page. */
-  private partner?: PartnerQuiver;
+  /** Co-op: the other players' quivers, shown (not editable) on the Quiver page. */
+  private partners?: PartnerQuiver[];
 
   public constructor(private readonly root: HTMLElement, private readonly callbacks: SandboxFormCallbacks) {
     root.addEventListener('input', (event) => {
@@ -85,9 +85,9 @@ export class SandboxForm {
     );
   }
 
-  /** Co-op: the partner's quiver to show next to the player's own (undefined alone); redraws if it's open. */
-  public setPartner(partner: PartnerQuiver | undefined): void {
-    this.partner = partner;
+  /** Co-op: the other players' quivers to show next to the player's own (undefined alone); redraws if it's open. */
+  public setPartners(partners: PartnerQuiver[] | undefined): void {
+    this.partners = partners;
     if (this.settings && this.page === 'quiver') {
       this.render(this.settings);
     }
@@ -140,7 +140,7 @@ export class SandboxForm {
         </div>
       </div>
       <div class="panel-body">
-        ${this.page === 'levels' ? this.levelsPage(settings) : this.page === 'rules' ? this.rulesPage(settings) : quiverPage(settings.loadout, this.selectedSlot, this.partner)}
+        ${this.page === 'levels' ? this.levelsPage(settings) : this.page === 'rules' ? this.rulesPage(settings) : quiverPage(settings.loadout, this.selectedSlot, this.partners)}
       </div>
       ${this.confirmRemove !== undefined ? this.removeDialog(settings, this.confirmRemove) : ''}`);
   }

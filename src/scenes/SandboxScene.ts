@@ -5,7 +5,7 @@ import { centeredCameraX } from '../core/viewport';
 import { saveSandbox } from '../core/sandboxStorage';
 import { BATTLEGROUNDS } from '../data/battlegrounds';
 import { normalizeSandbox, runBattleground, runLevelCount, type SandboxSettings } from '../data/sandbox';
-import { partnerLoadout, setPartnerLoadoutListener, shareLoadout } from '../net/coopLink';
+import { otherQuivers, setRoomListener, settleSeats, shareLoadout } from '../net/coopLink';
 import { Background } from '../rendering/Background';
 
 /**
@@ -27,21 +27,22 @@ export class SandboxScene extends Scene {
     ui.showScreen('sandbox');
     ui.openSandbox(session.sandbox);
     this.showPreview(session.sandbox);
-    // Co-op host: the guest picks their own quiver in the lobby; it shows (as it changes) on the Quiver page.
-    const showPartner = (): void => ui.setSandboxPartner(session.net ? { label: "Partner's quiver", loadout: partnerLoadout(session) } : undefined);
-    showPartner();
-    setPartnerLoadoutListener(showPartner);
+    // Co-op host: the guests pick their own quivers in the lobby; they show (as they change) on the Quiver page.
+    settleSeats(session);
+    const showPartners = (): void => ui.setSandboxPartners(session.net ? otherQuivers(session) : undefined);
+    showPartners();
+    setRoomListener(showPartners);
 
     ui.handlers.sandboxChange = (settings, level) => this.applySettings(settings, level);
     ui.handlers.sandboxStart = () => this.startRun();
-    // Co-op host: back to the lobby (the partner stays connected).
+    // Co-op host: back to the lobby (the guests stay connected).
     ui.handlers.sandboxBack = () => this.ctx.goTo(this.ctx.session.net ? 'coop' : 'menu');
     this.onExit(() => {
       ui.handlers.sandboxChange = undefined;
       ui.handlers.sandboxStart = undefined;
       ui.handlers.sandboxBack = undefined;
-      setPartnerLoadoutListener(undefined);
-      ui.setSandboxPartner(undefined);
+      setRoomListener(undefined);
+      ui.setSandboxPartners(undefined);
     });
 
     this.listenWindow('keydown', (event) => {

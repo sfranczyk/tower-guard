@@ -50,7 +50,7 @@ export interface BattleControlsDeps {
 export class BattleControls {
   /** Esc pauses the battle; the world stands still until Esc again. */
   public paused = false;
-  /** Guest: this player's Esc asked the host to pause (so the dialog doesn't say the partner did). */
+  /** Guest: this player's Esc asked the host to pause (so the dialog doesn't say another player did). */
   public pauseAsked = false;
   private optionsVisible = false;
   private localInput?: LocalInput;
@@ -171,7 +171,7 @@ export class BattleControls {
       }
     };
     ui.handlers.pauseMenu = () => {
-      // Leaving a co-op battle leaves the room (the partner is told).
+      // Leaving a co-op battle leaves the room (the others are told).
       leaveCoop(ctx);
       ctx.goTo('menu');
     };

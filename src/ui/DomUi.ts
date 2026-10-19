@@ -427,9 +427,9 @@ export class DomUi {
   }
 
 
-  /** Co-op host: the guest's quiver, shown on the battle setup's Quiver page (undefined alone). */
-  public setSandboxPartner(partner: PartnerQuiver | undefined): void {
-    this.sandboxForm.setPartner(partner);
+  /** Co-op host: the guests' quivers, shown on the battle setup's Quiver page (undefined alone). */
+  public setSandboxPartners(partners: PartnerQuiver[] | undefined): void {
+    this.sandboxForm.setPartners(partners);
   }
 
   public renderSoundLab(rows: readonly SoundLabRow[], music: SoundLabMusic, settings: Readonly<AudioSettings>): void {
@@ -518,7 +518,7 @@ export class DomUi {
   public showPause(pause: PauseView | undefined): void {
     this.pauseScreen.hidden = !pause;
     if (pause) {
-      this.pauseCopy.textContent = pause.byPartner ? 'Your partner paused the battle.' : pause.coop ? 'Paused for both players.' : 'The battle waits for you.';
+      this.pauseCopy.textContent = pause.byPartner ? 'Another player paused the battle.' : pause.coop ? 'Paused for all players.' : 'The battle waits for you.';
       this.pauseRestart.hidden = !pause.canRestart;
       this.pauseQuiver = pause.quiver ? { loadout: [...pause.quiver], slot: 0 } : undefined;
       this.renderPauseQuiver();

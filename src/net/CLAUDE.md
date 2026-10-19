@@ -1,29 +1,33 @@
 # Co-op online (src/net)
 
-Two bowmen, host-authoritative over PeerJS (`peerjs`, its free public broker only to find each other; `?net=local`
-links two tabs with a BroadcastChannel instead). Menu → "Co-op online" → `CoopScene` (lobby, `ui/CoopPanel.ts`): host a
-room (5-character code, `net/roomCode.ts`) or join one. The host sets up the battle (SandboxScene, back = lobby) and
-starts it; the guest waits in the lobby, meanwhile picking their own quiver there (`CoopPanel`, the same `quiverPage` and
-`ui/quiverEditing.ts` as the setup's Quiver page; starts from and is saved into the guest's own stored setup). Each sends
-their quiver (`{ t: 'loadout' }`, on linking up and on every change; `net/coopLink.ts` takes these messages out of the
-transport so they arrive in any scene) and sees the other's (`partnerQuiver`: the host in the lobby and on the Quiver
-page, the guest under their own); `NetLink.loadouts` holds both by player and `loadoutOf(session, index)` is what each
-fights with (HUD slots, keys, the host checks the guest's picks). `ctx.session.net` (`NetLink`: role, code,
-`Transport`, the level's wind, both quivers) and `playerCount` 2; `net/coopLink.ts` links up and handles a dropped link
-(guest back to the lobby with a notice; host plays on, player 2 stands still). Esc pauses both screens: the guest asks
-(`{ t: 'pause' }`, `GuestSync.requestPause`), the host decides and answers (`HostSync.onPauseRequest` / `sendPause`);
-the pause dialog's "Main menu" leaves the room.
+Two to four bowmen, host-authoritative over PeerJS (`peerjs`, its free public broker only to find each other;
+`?net=local` links tabs with a BroadcastChannel instead, envelopes addressed host → one guest). Menu → "Co-op online" →
+`CoopScene` (lobby, `ui/CoopPanel.ts`): host a room (5-character code, `net/roomCode.ts`) or join one. The room stays
+open while the host waits, sets up or fights: up to three guests (`MAX_PLAYERS`), a fifth gets `{ t: 'full' }`.
+`net/RoomHub.ts` holds the host's links by seat (player index; `net/seats.ts`, pure: lowest free seat, closing gaps)
+as one `RoomLink` (`send` to all, `sendTo`, messages tagged `from`); a guest's link is `guestLink`. `net/coopLink.ts`:
+`hostCoop` / `joinCoop` build `ctx.session.net` (`NetLink`: role, code, `RoomLink`, `localIndex`, `present`,
+`loadouts`, wind) and take room messages out of the stream: a guest sends `{ t: 'loadout' }`, the host sends each guest
+`{ t: 'roster' }` (their seat `you`, who is in, every quiver) on every join, leave or quiver change
+(`setRoomListener` redraws the lobby and the setup's Quiver page; `otherQuivers`, `playerLabel`). `playerCount` =
+up to the last taken seat. A guest who leaves mid-battle (`NetLink.inBattle`, `enterBattle`) leaves a gap: their
+bowman stands still; back in the lobby or the setup `settleSeats` closes up the seats and renumbers the rest. A new
+guest can join mid-run and fights from the next level. The host leaving sends every guest to the lobby with a notice.
+The guests pick their quivers in the lobby (the same `quiverPage` and `ui/quiverEditing.ts`, saved into their own stored
+setup); `loadoutOf(session, index)` is what each fights with. Esc pauses all screens: a guest asks (`{ t: 'pause' }`,
+`GuestSync.requestPause`), the host decides and answers everyone (`HostSync.onPauseRequest` / `sendPause`); the pause
+dialog's "Main menu" leaves the room.
 
 - **Players**: `GameScene.players`, one `Player` per bowman (`scenes/PlayerControl.ts`: bowman, `PlayerInput`, health,
-  weapon). The host is player 1, the guest player 2 (`localIndex`; camera, aim overlay, status line follow the local
-  one; the HUD shows player 1 then player 2 on both screens). Controls through `input/PlayerInput.ts`: `LocalInput`
-  (keyboard and mouse), `ManualInput` (set from outside: the guest's controls on the host; `?coop` alone gives a local
-  2-bowman test with player 2 driven from the console, `scene.players[1].input.set({ direction: 1 })`),
+  weapon). The host is player 1, the guests 2–4 by seat (`NetLink.localIndex`; camera, aim overlay, status line follow
+  the local one). Looks by index: ranger, keep warden, steppe archer, huntsman (`BOWMAN_LOOKS`); one keep tower each. Controls through `input/PlayerInput.ts`: `LocalInput`
+  (keyboard and mouse), `ManualInput` (set from outside: the guests' controls on the host; `?coop` (or `?coop=3`, `?coop=4`) gives a local
+  test with the others driven from the console, `scene.players[1].input.set({ direction: 1 })`),
   `RecordingInput` (guest: passes through and records presses).
 - **Host** (`net/HostSync.ts`): ids for enemies and arrows, `netHooks` on Enemy/DragonEnemy (hits, swings), Arrow
   (stuck, gone), Bowman (knockdown, fire) and `EffectsSystem.onEffect`; sounds, deaths, cheers and per-player status
   lines as events; a `frame` (snapshot + events, `net/protocol.ts`) every 50 ms; `start` / `end` / `lobby` messages
-  around levels. The guest's `input` drives player 2.
+  around levels. Each guest's `input` drives their own player (`from`).
 - **Guest** (`net/GuestSync.ts`): no WaveDirector, AI or CombatSystem; applies events in order with the same objects
   (same takeDamage, so the same reactions), shows snapshots 100 ms in the past, interpolated (`applyNetState`,
   `applyRemote`), flies arrows locally (same ballistics, sticks into the ground itself), predicts its own bowman and
@@ -31,7 +35,7 @@ the pause dialog's "Main menu" leaves the room.
 - **Gameplay**: enemies go for the nearest bowman out in the open, else the keep (`systems/targeting.ts`, pure);
   `CombatWorld.bowmen`, damage events name the bowman. Health is per player (`RunState.bowmanHealths`), a fallen bowman
   stays down for the run (`Bowman.die({}, true)`), the level is lost when all have fallen or the keep falls. Player 2
-  wears `secondPlayerArmor` (bronze, silver trim) and hides in the keep's lower second tower.
+  wears `secondPlayerArmor` (bronze, silver trim); each player hides in their own keep tower (`Tower.hideSpot`).
 - **Feature sync seen so far** (add yours here): knight `attack` style; priest `cast` / `heal` events (troll regeneration and the shaman's cast and mend reuse them), shaman buff `EnemySnap.bf` + fx `buffPulse`, `EnemySnap.mana` / `drained`,
   fx `heal` / `healPulse`; pinned time `EnemySnap.pinned`; afflictions `af`, thrown `th`; `BowmanSnap.net`
   (`Bowman.getNetState`); horse `EnemyNet.lame`, `spawn` event `place` (`RiderOff`), `unseat` event; dragon hover side and flight look `DragonSnap.fl`;

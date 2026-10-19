@@ -13,7 +13,7 @@ import { groundAt } from '../systems/terrain';
 import type { EnemyType, ProjectileType, Vec2 } from '../types';
 import type { ArrowLaunch } from './HostSync';
 import { toNetAim, type EndInfo, type GameEvent, type NetMessage, type Snapshot, type SpawnPlace } from './protocol';
-import type { Transport } from './Transport';
+import type { RoomLink } from './Transport';
 
 /** The guest shows the world this far in the past, between two frames, so motion stays smooth. */
 const INTERPOLATION_DELAY_MS = 100;
@@ -71,7 +71,7 @@ export class GuestSync {
   private projectile?: ProjectileType;
 
   public constructor(
-    private readonly transport: Transport,
+    private readonly transport: RoomLink,
     private readonly world: GuestWorld,
     private readonly input: RecordingInput,
   ) {

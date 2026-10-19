@@ -4,20 +4,26 @@ import type { SandboxSettings } from '../data/sandbox';
 import type { ProjectileType } from '../types';
 import type { SoundManager } from '../audio/SoundManager';
 import type { DomUi } from '../ui/DomUi';
-import type { Transport } from '../net/Transport';
+import type { RoomLink } from '../net/Transport';
 
 export type SceneName = 'menu' | 'coop' | 'sandbox' | 'animationLab' | 'soundLab' | 'designLab' | 'game';
 
-/** Co-op online: this browser's role, the room and the link to the other browser. */
+/** Co-op online: this browser's role, the room and the links to the other browsers (net/coopLink.ts). */
 export interface NetLink {
   role: 'host' | 'guest';
   code: string;
-  transport: Transport;
+  transport: RoomLink;
+  /** This browser's player: the host 0, a guest the seat the host gave them (1–3). */
+  localIndex: number;
+  /** Who is in the room, by player index (the host first); a seat left mid-run stays empty until the lobby. */
+  present: boolean[];
+  /** Host: a battle is on (seats keep their numbers until it's back in the lobby or the setup). */
+  inBattle: boolean;
   /** Guest: the wind of the level the host started (the host rolls it). */
   wind: number;
   /**
-   * Each player's quiver, by player index (0 the host, 1 the guest): each picks their own (the host on the battle
-   * setup's Quiver page, the guest in the lobby) and sends it on every change; undefined until it arrives.
+   * Each player's quiver, by player index (0 the host): each picks their own (the host on the battle setup's Quiver
+   * page, a guest in the lobby); the host passes them all round in the roster; undefined until picked.
    */
   loadouts: Array<Loadout | undefined>;
 }

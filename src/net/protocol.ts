@@ -175,15 +175,20 @@ export interface EndInfo {
 export type NetMessage =
   /** Guest → host on connecting. */
   | { t: 'hello' }
-  /** Host → guest: connected, waiting in the lobby. */
-  | { t: 'welcome' }
+  /**
+   * Host → each guest, on joining and on every change in the room: the guest's player index (`you`), who is in
+   * (`present`, by player index, the host first) and everyone's quiver (null until picked).
+   */
+  | { t: 'roster'; you: number; present: boolean[]; loadouts: Array<Loadout | null> }
+  /** Host → a guest who knocked on a full room (then the link closes). */
+  | { t: 'full' }
   /** Host → guest: a level starts with this setup (the guest builds the same battlefield). */
   | { t: 'start'; sandbox: SandboxSettings; run: RunState; wind: number }
   | { t: 'frame'; snap: Snapshot; events: GameEvent[] }
   | { t: 'end'; info: EndInfo }
   /** Host → guest: the host went back to the battle setup. */
   | { t: 'lobby' }
-  /** Either way: the sender's own quiver (sent on linking up and on every change; handled by net/coopLink). */
+  /** Guest → host: the guest's own quiver (sent on joining and on every change; handled by net/coopLink). */
   | { t: 'loadout'; loadout: Loadout }
   /** Guest → host: Esc asks to pause or resume; host → guest: the battle is paused or resumed (both screens). */
   | { t: 'pause'; paused: boolean }

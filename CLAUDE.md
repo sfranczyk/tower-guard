@@ -10,7 +10,7 @@ from beyond the enemy keep on the right. PixiJS 8 + TypeScript (strict), bundled
     (e.g. `scene.enemies[0].takeDamage(999, { cause: 'headshot', fromX: 0 })`).
   - `?lab`, `?lab=<tab>` (e.g. `death`), `?lab=<id>` (e.g. `run`; ids in `scenes/labRows.ts`): animation lab.
   - `?designs`, `?designs=<tab or id>` (e.g. `player`, `raider`): design lab.
-  - `?sounds`: sound test panel. `?coop`: local 2-bowman test. `?net=local`: co-op between two tabs.
+  - `?sounds`: sound test panel. `?coop` / `?coop=4`: local 2–4-bowman test. `?net=local`: co-op between tabs (host + up to 3).
 - `npm run verify`: type-check + tests, prints only errors and failures (use this, not `check`/`test` separately).
 - `npm run build`: production build to `dist/`.
 
@@ -29,7 +29,7 @@ src/
                 bowman/ (Bowman + parts)
   rendering/    pure drawing and pose math: stickman, falls, cheers, gibs, dragons, horse, keep, designs/ (looks)
   data/         enemy catalogue and stats, projectiles, battlegrounds, sandbox, loadout
-  net/          co-op: Transport, HostSync, GuestSync, protocol, coopLink
+  net/          co-op (2–4 players): Transport, RoomHub, seats, HostSync, GuestSync, protocol, coopLink
   input/        PlayerInput (Local / Manual / Recording)
   managers/     InputManager (keyboard + drag-to-aim)
   ui/           DomUi (HTML overlay), Hud, SandboxForm, quiver page, CoopPanel, SoundLabPanel, icons, template

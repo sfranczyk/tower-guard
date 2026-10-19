@@ -1,22 +1,25 @@
 import type { Loadout } from '../data/loadout';
 import { editQuiverIn } from './quiverEditing';
 import { panelTop, renderPanel } from './panelLayout';
-import { partnerQuiver, quiverPage } from './quiverPage';
+import { partnerQuiver, quiverPage, type PartnerQuiver } from './quiverPage';
 
 /** What the co-op lobby shows. */
 export type CoopView =
   /** Host a game or join one by code (with the last error, if any). */
   | { kind: 'choose'; error?: string }
-  /** Hosting: the code to pass on, whether the partner is in, and the quiver they picked. */
-  | { kind: 'hosting'; code?: string; partner: boolean; partnerLoadout?: Loadout }
+  /** Hosting: the code to pass on, and the guests who are in (up to three) with the quivers they picked. */
+  | { kind: 'hosting'; code?: string; guests: PartnerQuiver[] }
   | { kind: 'joining'; code: string }
-  /** Joined: waiting for the host to start the battle, meanwhile picking a quiver; the host's beside it. */
-  | { kind: 'joined'; code: string; notice?: string; loadout: Loadout; partnerLoadout?: Loadout };
+  /**
+   * Joined: waiting for the host to start the battle, meanwhile picking a quiver; the others' beside it. `you` names
+   * this player's seat once the host has told it.
+   */
+  | { kind: 'joined'; code: string; notice?: string; you?: string; loadout: Loadout; others: PartnerQuiver[] };
 
 export interface CoopPanelCallbacks {
   host(): void;
   join(code: string): void;
-  /** Host with the partner in: on to the battle setup. */
+  /** Host with at least one guest in: on to the battle setup. */
   setup(): void;
   /** Leave the room (or the lobby) and go back to the menu. */
   leave(): void;
@@ -75,7 +78,7 @@ export class CoopPanel {
     switch (view.kind) {
       case 'choose':
         body = `
-          <p class="coop-copy">Defend the keep together: one of you hosts, the other joins with the room code.</p>
+          <p class="coop-copy">Defend the keep together, two to four of you: one hosts, the others join with the room code.</p>
           <button class="primary-button" data-coop-host>Host a game</button>
           <div class="coop-join">
             <input data-coop-code maxlength="7" placeholder="Room code" autocomplete="off" spellcheck="false">
@@ -85,13 +88,14 @@ export class CoopPanel {
         break;
       case 'hosting':
         leave = view.code ? 'Close the room' : 'Cancel';
-        actions = view.code && view.partner ? '<button class="primary-button" data-coop-setup>Battle setup</button>' : '';
+        actions = view.code && view.guests.length > 0 ? '<button class="primary-button" data-coop-setup>Battle setup</button>' : '';
         body = view.code
           ? `
-          <p class="coop-copy">Give your partner this room code:</p>
+          <p class="coop-copy">Give the others this room code (up to three can join):</p>
           <div class="coop-code">${escapeHtml(view.code)}</div>
-          <p class="coop-status">${view.partner ? 'Your partner has joined!' : 'Waiting for your partner…'}</p>
-          ${view.partner ? partnerQuiver({ label: "Partner's quiver", loadout: view.partnerLoadout }) : ''}`
+          <p class="coop-status">${view.guests.length === 0 ? 'Waiting for players…'
+            : view.guests.length < 3 ? `${view.guests.length + 1} of 4 in · more can still join` : 'The room is full!'}</p>
+          ${view.guests.map(partnerQuiver).join('')}`
           : '<p class="coop-status">Opening a room…</p>';
         break;
       case 'joining':
@@ -101,8 +105,8 @@ export class CoopPanel {
       case 'joined':
         body = `
           <div class="coop-code">${escapeHtml(view.code)}</div>
-          <p class="coop-status">${escapeHtml(view.notice ?? 'Connected! Pick your arrows while the host sets up the battle…')}</p>
-          ${quiverPage(view.loadout, this.selectedSlot, { label: "Host's quiver", loadout: view.partnerLoadout })}`;
+          <p class="coop-status">${escapeHtml(view.notice ?? `Connected${view.you ? ` as ${view.you}` : ''}! Pick your arrows while the host sets up the battle…`)}</p>
+          ${quiverPage(view.loadout, this.selectedSlot, view.others)}`;
         leave = 'Leave the room';
         break;
     }

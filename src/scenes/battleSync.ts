@@ -1,6 +1,6 @@
 import type { SoundId } from '../audio/SoundManager';
 import type { GameContext } from '../core/Scene';
-import type { ManualInput, RecordingInput } from '../input/PlayerInput';
+import type { RecordingInput } from '../input/PlayerInput';
 import { GuestSync } from '../net/GuestSync';
 import { HostSync } from '../net/HostSync';
 import type { EndInfo, NetMessage, SpawnPlace } from '../net/protocol';
@@ -36,8 +36,8 @@ export interface BattleSyncSetup {
 }
 
 /**
- * Co-op online. The host tells the guest the level's setup and then streams it (HostSync), with the guest's
- * controls driving player 2. The guest builds the same battlefield and replays the host's (GuestSync).
+ * Co-op online. The host tells the guests the level's setup and then streams it (HostSync), each guest's
+ * controls driving their own player. A guest builds the same battlefield and replays the host's (GuestSync).
  */
 export const startBattleSync = (setup: BattleSyncSetup): { hostSync?: HostSync; guestSync?: GuestSync } => {
   const { ctx, role, players, enemies, playerTower, enemyTower } = setup;
@@ -46,7 +46,7 @@ export const startBattleSync = (setup: BattleSyncSetup): { hostSync?: HostSync; 
     return {};
   }
   if (role === 'host') {
-    const hostSync = new HostSync(net.transport, { players: players.list, enemies, playerTower, enemyTower, clock: setup.survivalClock }, players.list[1].input as ManualInput);
+    const hostSync = new HostSync(net.transport, { players: players.list, enemies, playerTower, enemyTower, clock: setup.survivalClock });
     hostSync.watch(setup.effects);
     const { sandbox, run } = ctx.session;
     net.transport.send({ t: 'start', sandbox, run, wind: setup.wind });

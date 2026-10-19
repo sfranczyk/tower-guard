@@ -3,9 +3,9 @@ import type { NetMessage } from './protocol';
 import { makeRoomCode, peerIdFor } from './roomCode';
 
 /**
- * The link between the two browsers of a co-op game. PeerJS (WebRTC data channel, with PeerJS's free public
- * broker only for finding each other) over the internet, or a BroadcastChannel between two tabs of this
- * browser for development (`?net=local`).
+ * The links between the browsers of a co-op game: the host has one to each guest (up to three), a guest one to
+ * the host. PeerJS (WebRTC data channel, with PeerJS's free public broker only for finding each other) over the
+ * internet, or a BroadcastChannel between tabs of this browser for development (`?net=local`).
  */
 export interface Transport {
   send(message: NetMessage): void;
@@ -17,12 +17,38 @@ export interface Transport {
 
 export type TransportMode = 'peer' | 'local';
 
-/** A room the host opened: its code, and the guest once someone joins. */
-export interface HostedRoom {
-  code: string;
-  guest: Promise<Transport>;
+/**
+ * The room as the scenes see it (net/coopLink.ts builds it): the host's links to all guests, or the guest's link to
+ * the host. Messages say which player sent them (a guest hears everything from the host, player 0).
+ */
+export interface RoomLink {
+  /** Host: to every guest; guest: to the host. */
+  send(message: NetMessage): void;
+  /** Host: to one guest (by player index). */
+  sendTo(player: number, message: NetMessage): void;
+  onMessage(handler: (message: NetMessage, from: number) => void): void;
   close(): void;
 }
+
+/** A room the host opened: its code, and each guest as they join (until the room is closed). */
+export interface HostedRoom {
+  code: string;
+  onGuest(handler: (guest: Transport) => void): void;
+  close(): void;
+}
+
+/** Hands guests to the handler, holding the ones that come before it's set. */
+const guestDoor = (): { arrive: (guest: Transport) => void; onGuest: (handler: (guest: Transport) => void) => void } => {
+  let handler: ((guest: Transport) => void) | undefined;
+  const waiting: Transport[] = [];
+  return {
+    arrive: (guest) => (handler ? handler(guest) : waiting.push(guest)),
+    onGuest: (next) => {
+      handler = next;
+      waiting.splice(0).forEach(next);
+    },
+  };
+};
 
 /** Calls registered handlers (messages can arrive before the scene subscribes, so they're queued until then). */
 class Channel implements Transport {
@@ -77,10 +103,11 @@ class Channel implements Transport {
   }
 }
 
-const fromConnection = (connection: DataConnection, peer: Peer): Channel => {
+/** One connection; closing it also ends `peer` when given (a guest's own peer, not the host's room). */
+const fromConnection = (connection: DataConnection, peer?: Peer): Channel => {
   const channel = new Channel((message) => connection.send(message), () => {
     connection.close();
-    peer.destroy();
+    peer?.destroy();
   });
   connection.on('data', (data) => channel.receive(data as NetMessage));
   connection.on('close', () => channel.dropped());
@@ -88,7 +115,7 @@ const fromConnection = (connection: DataConnection, peer: Peer): Channel => {
   return channel;
 };
 
-/** Opens a room under a fresh code (a new one if that code is taken) and waits for a guest. */
+/** Opens a room under a fresh code (a new one if that code is taken) and takes guests as they connect. */
 const hostPeerRoom = (): Promise<HostedRoom> => new Promise((resolve, reject) => {
   const attempt = (triesLeft: number): void => {
     const code = makeRoomCode();
@@ -96,12 +123,11 @@ const hostPeerRoom = (): Promise<HostedRoom> => new Promise((resolve, reject) =>
     let opened = false;
     peer.on('open', () => {
       opened = true;
-      const guest = new Promise<Transport>((resolveGuest) => {
-        peer.on('connection', (connection) => {
-          connection.on('open', () => resolveGuest(fromConnection(connection, peer)));
-        });
+      const door = guestDoor();
+      peer.on('connection', (connection) => {
+        connection.on('open', () => door.arrive(fromConnection(connection)));
       });
-      resolve({ code, guest, close: () => peer.destroy() });
+      resolve({ code, onGuest: door.onGuest, close: () => peer.destroy() });
     });
     peer.on('error', (error) => {
       if (!opened && error.type === 'unavailable-id' && triesLeft > 0) {
@@ -129,41 +155,77 @@ const joinPeerRoom = (code: string): Promise<Transport> => new Promise((resolve,
   });
 });
 
-/** Between two tabs: one BroadcastChannel per room; each side ignores its own role's messages. */
-const localChannel = (code: string, role: 'host' | 'guest'): { channel: Channel; broadcast: BroadcastChannel } => {
-  const broadcast = new BroadcastChannel(`tower-guard-${code}`);
-  const channel = new Channel((message) => broadcast.postMessage({ from: role, message }), () => {
-    broadcast.postMessage({ from: role, bye: true });
-    broadcast.close();
-  });
-  broadcast.onmessage = (event: MessageEvent<{ from: string; message?: NetMessage; bye?: boolean }>) => {
-    if (event.data.from === role) {
-      return;
-    }
-    if (event.data.bye) {
-      channel.dropped();
-    } else if (event.data.message) {
-      channel.receive(event.data.message);
-    }
-  };
-  return { channel, broadcast };
-};
+/** Between tabs: one BroadcastChannel per room, the host `'host'` and each guest a random id; the host writes to one guest at a time. */
+interface LocalEnvelope {
+  from: string;
+  /** Host → this guest only (else to every guest: the room closing). */
+  to?: string;
+  message?: NetMessage;
+  bye?: boolean;
+}
 
 const hostLocalRoom = (): Promise<HostedRoom> => {
   const code = makeRoomCode();
-  const { channel, broadcast } = localChannel(code, 'host');
-  const guest = new Promise<Transport>((resolveGuest) => {
-    channel.onMessage((message) => {
-      if (message.t === 'hello') {
-        resolveGuest(channel);
+  const broadcast = new BroadcastChannel(`tower-guard-${code}`);
+  let closed = false;
+  const post = (envelope: LocalEnvelope): void => {
+    if (!closed) {
+      broadcast.postMessage(envelope);
+    }
+  };
+  const guests = new Map<string, Channel>();
+  const door = guestDoor();
+  broadcast.onmessage = (event: MessageEvent<LocalEnvelope>) => {
+    const { from, message, bye } = event.data;
+    if (from === 'host') {
+      return;
+    }
+    const known = guests.get(from);
+    if (bye) {
+      guests.delete(from);
+      known?.dropped();
+    } else if (known && message) {
+      known.receive(message);
+    } else if (message?.t === 'hello') {
+      const channel = new Channel((next) => post({ from: 'host', to: from, message: next }), () => {
+        guests.delete(from);
+        post({ from: 'host', to: from, bye: true });
+      });
+      guests.set(from, channel);
+      door.arrive(channel);
+    }
+  };
+  return Promise.resolve({
+    code,
+    onGuest: door.onGuest,
+    close: () => {
+      if (!closed) {
+        closed = true;
+        post({ from: 'host', bye: true });
+        broadcast.close();
       }
-    });
+    },
   });
-  return Promise.resolve({ code, guest, close: () => broadcast.close() });
 };
 
 const joinLocalRoom = (code: string): Promise<Transport> => {
-  const { channel } = localChannel(code, 'guest');
+  const id = Math.random().toString(36).slice(2, 10);
+  const broadcast = new BroadcastChannel(`tower-guard-${code}`);
+  const channel = new Channel((message) => broadcast.postMessage({ from: id, message }), () => {
+    broadcast.postMessage({ from: id, bye: true });
+    broadcast.close();
+  });
+  broadcast.onmessage = (event: MessageEvent<LocalEnvelope>) => {
+    const { from, to, message, bye } = event.data;
+    if (from !== 'host' || (to !== undefined && to !== id)) {
+      return;
+    }
+    if (bye) {
+      channel.dropped();
+    } else if (message) {
+      channel.receive(message);
+    }
+  };
   return Promise.resolve(channel);
 };
 

@@ -10,6 +10,7 @@ import type { HostSync } from '../net/HostSync';
 import Bowman from '../objects/bowman/Bowman';
 import { secondPlayerArmor } from '../rendering/armor';
 import { BOWMAN_LOOKS } from '../rendering/bowmanBody';
+import { playerLabel } from '../net/coopLink';
 import type { AimOverlay } from '../rendering/AimOverlay';
 import type { EffectsSystem } from '../systems/EffectsSystem';
 import { ArrowCooldowns } from '../systems/arrowCooldowns';
@@ -34,7 +35,7 @@ export interface BattlePlayersDeps {
 }
 
 /**
- * The battle's players (co-op: two; the host is player 1, the guest player 2): their bowmen, each frame's weapon picks,
+ * The battle's players (co-op: up to four; the host is player 1, the guests 2–4 by seat): their bowmen, each frame's weapon picks,
  * shots and shrapnel bursts, their falls and their status messages.
  */
 export class BattlePlayers {
@@ -42,8 +43,8 @@ export class BattlePlayers {
   public readonly list: Player[];
 
   /**
-   * The bowmen: this browser's player first (keyboard and mouse), in co-op a second one in bronze armor whose
-   * controls are set from outside (ManualInput). A bowman who fell in an earlier level starts lying where he fell.
+   * The bowmen, one per player (co-op: up to four), the local one on keyboard and mouse, the others' controls
+   * set from outside (ManualInput). A bowman who fell in an earlier level starts lying where he fell.
    */
   public constructor(private readonly deps: BattlePlayersDeps) {
     const { session } = deps.ctx;
@@ -51,7 +52,7 @@ export class BattlePlayers {
     const armor = deps.battleground.player;
     this.list = Array.from({ length: Math.max(1, playerCount) }, (_, index) => {
       const bowman = new Bowman(playerStartX(index), BOWMAN_Y, { x: 0, y: 0, width: WORLD_WIDTH, height: GAME_HEIGHT }, {
-        armorColors: index === 0 ? armor : secondPlayerArmor(armor),
+        armorColors: index === 1 ? secondPlayerArmor(armor) : armor,
         // Player 1 is the ranger; in co-op the keep warden, the steppe archer and the huntsman follow.
         look: BOWMAN_LOOKS[index % BOWMAN_LOOKS.length],
         burnMs: relight(sandbox.difficulty),
@@ -162,7 +163,10 @@ export class BattlePlayers {
       const kind = fallen.bowman.die();
       this.deps.hostSync()?.push({ e: 'die', player: fallen.index, kind, fromX: Math.round(fallen.bowman.lastHitFromX ?? fallen.bowman.x) });
       if (this.coop) {
-        this.list.forEach((player) => this.status(player, player === fallen ? 'You have fallen · your partner fights on' : 'Your partner has fallen · hold on alone'));
+        const standing = this.list.filter((player) => player.health > 0).length;
+        const fightOn = standing === 1 ? 'one fights on' : `${standing} fight on`;
+        this.list.forEach((player) => this.status(player, player === fallen ? `You have fallen · ${fightOn}`
+          : `${playerLabel(fallen.index)} has fallen · ${player.health > 0 && standing === 1 ? 'hold on alone' : fightOn}`));
       }
     });
   }
