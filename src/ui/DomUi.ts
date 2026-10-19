@@ -355,16 +355,11 @@ export class DomUi {
       if (count && count.textContent !== text) {
         count.textContent = text;
       }
-      // Loading the next shot greys the slot, as with one shot, even while others are ready (vortex).
-      const share = Math.round(cooldowns.remaining(type) * 1000) / 1000;
-      const shown = share > 0 ? String(share) : '';
-      if (button.style.getPropertyValue('--cooldown') !== shown) {
-        if (shown) {
-          button.style.setProperty('--cooldown', shown);
-        } else {
-          button.style.removeProperty('--cooldown');
-        }
-        button.classList.toggle('cooling', share > 0);
+      // Loading the next shot shades the slot, as with one shot, even while others are ready (vortex).
+      const wait = button.querySelector<HTMLElement>('[data-wait]');
+      const height = `${Math.round(cooldowns.remaining(type) * 100)}%`;
+      if (wait && wait.style.height !== height) {
+        wait.style.height = height;
       }
     });
   }

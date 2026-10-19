@@ -80,14 +80,14 @@ export const OVERLAY_TEMPLATE = `
 `;
 
 /** Weapon slots (the quiver from the battle setup): icon only (name in the tooltip), key in the corner, shots ready / held
- * underneath, a grey shade over the slot while the next one loads, cleared clockwise from 12 o'clock (`--cooldown`, DomUi.updateWeaponCooldowns). */
+ * underneath, a shade over the slot while the next one loads, draining downward as with the soldiers (DomUi.updateWeaponCooldowns). */
 export const weaponSlots = (loadout: readonly (ArrowType | null)[]): string => loadout.map((type, index) => {
   if (!type) {
     return `<div class="weapon"><div class="weapon-slot empty" aria-hidden="true"><span class="weapon-key">${index + 1}</span></div><span class="weapon-ammo">–</span></div>`;
   }
   const { name, summary } = ARROW_INFO[type];
   return `<div class="weapon"><button class="weapon-slot" data-projectile="${type}" title="${name}: ${summary} (${index + 1})" aria-label="${name}">`
-    + `<span class="weapon-key">${index + 1}</span>${ICON_WEAPONS[type]}<span class="weapon-cooldown"></span></button>`
+    + `<span class="weapon-key">${index + 1}</span>${ICON_WEAPONS[type]}<span class="slot-shade"><i class="slot-wait" data-wait></i></span></button>`
     + `<span class="weapon-ammo" data-ammo="${type}"></span></div>`;
 }).join('');
 
@@ -98,7 +98,7 @@ export const ORDER_KEY = 'V';
 /** The soldiers' slots (icon, key, "standing / allowed" under it, a shade for the pause) and the order button. */
 export const allySlots = (allies: ReadonlyArray<{ type: AllyType; label: string }>): string => allies.map(({ type, label }) =>
   `<div class="weapon"><button class="weapon-slot" data-ally="${type}" title="Summon a ${label.toLowerCase()} (${ALLY_KEYS[type]})" aria-label="Summon a ${label.toLowerCase()}">`
-  + `<span class="weapon-key">${ALLY_KEYS[type]}</span>${ICON_ALLIES[type]}<span class="ally-shade"><i class="ally-wait" data-ally-wait="${type}"></i></span></button>`
+  + `<span class="weapon-key">${ALLY_KEYS[type]}</span>${ICON_ALLIES[type]}<span class="slot-shade"><i class="slot-wait" data-ally-wait="${type}"></i></span></button>`
   + `<span class="weapon-ammo" data-ally-count="${type}">0/0</span></div>`).join('')
   + `<div class="weapon order-slot"><button class="weapon-slot" data-ally-order title="Orders (${ORDER_KEY})" aria-label="Orders">`
   + `<span class="weapon-key">${ORDER_KEY}</span><span data-order-icon>${ICON_ORDERS.hold}</span></button>`
