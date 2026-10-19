@@ -35,7 +35,7 @@ const drawNight = (g: Graphics, progress: number): void => {
     g.circle(LEFT + SUN_X * WIDTH, HORIZON + 10 - (state.sunRise + 1) * 15, 10).fill({ color: cycle.sun });
   }
   g.moveTo(LEFT, HORIZON + 8).bezierCurveTo(-30, HORIZON - 12, 10, HORIZON + 6, 40, HORIZON - 4).lineTo(LEFT + WIDTH, HORIZON + 2)
-    .lineTo(LEFT + WIDTH, GROUND).lineTo(LEFT, GROUND).closePath().fill({ color: mixColor(map.hills[0], cycle.shade, 0.42 * state.shade) });
+    .lineTo(LEFT + WIDTH, GROUND).lineTo(LEFT, GROUND).closePath().fill({ color: mixColor(mixColor(map.hills[0], cycle.dayHills[0], state.hillsLight), cycle.shade, 0.42 * state.shade) });
   g.rect(LEFT, GROUND - 8, WIDTH, 8).fill({ color: map.ground.fill });
 };
 

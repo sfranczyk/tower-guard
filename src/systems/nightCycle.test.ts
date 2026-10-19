@@ -11,6 +11,7 @@ describe('night cycle', () => {
     expect(sky.dawn).toBe(0);
     expect(sky.day).toBe(0);
     expect(sky.shade).toBe(1);
+    expect(sky.hillsLight).toBe(0);
     expect(sky.sunRise).toBe(-1);
   });
 
@@ -36,6 +37,7 @@ describe('night cycle', () => {
     expect(sky.day).toBe(1);
     expect(sky.stars).toBe(0);
     expect(sky.shade).toBe(0);
+    expect(sky.hillsLight).toBe(1);
     expect(sky.sunRise).toBe(1);
     expect(nightSky(2)).toEqual(sky);
   });

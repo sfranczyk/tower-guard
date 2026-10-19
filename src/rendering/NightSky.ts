@@ -1,5 +1,5 @@
 import { Container, Graphics } from 'pixi.js';
-import { GROUND_Y, VIEW_TOP } from '../config';
+import { GROUND_Y, MAX_VIEW_WIDTH, NIGHT_SCENERY, VIEW_TOP } from '../config';
 import type { Battleground } from '../data/battlegrounds';
 import { nightSky, SUN_X } from '../systems/nightCycle';
 
@@ -22,7 +22,8 @@ const seeded = (seed: number): (() => number) => () => {
 /**
  * The night of a `nightCycle` map (systems/nightCycle.ts says where everything is): dawn and day skies over the night
  * bands, stars, a moon crossing the view and the rising sun, all behind the hills (`sky`), and a shade darkening hills
- * and trees (`shade`, laid over them). Background adds both; `show(progress, viewLeft, viewWidth)` every frame.
+ * and trees (`shade`, laid over them). Moon, sun and stars are at infinity: they keep their place in the view while the
+ * camera moves. Background adds both and hands the hills to `holdHills`; `show(progress, viewLeft, viewWidth)` every frame.
  */
 export class NightSky {
   public readonly sky = new Container();
@@ -32,6 +33,9 @@ export class NightSky {
   private readonly stars = new Graphics();
   private readonly moon = new Graphics();
   private readonly sun = new Graphics();
+  /** The hills (night and day colours), shifted against the camera for a slight parallax. */
+  private readonly hills = new Container();
+  private readonly dayHills = new Container();
 
   public constructor(battleground: Battleground, left: number, right: number) {
     const cycle = battleground.nightCycle!;
@@ -43,7 +47,8 @@ export class NightSky {
     bands(this.day, cycle.day);
     const random = seeded(7919);
     for (let index = 0; index < STAR_COUNT; index += 1) {
-      const x = left + random() * (right - left);
+      // Across the widest view, in view coordinates (the layer follows the camera).
+      const x = random() * MAX_VIEW_WIDTH;
       const y = VIEW_TOP + random() * (HORIZON_Y - VIEW_TOP - 20);
       this.stars.circle(x, y, 0.6 + random() * 1.3).fill({ color: 0xf4f1ff, alpha: 0.45 + random() * 0.55 });
     }
@@ -60,12 +65,22 @@ export class NightSky {
     this.show(0, 0, right - left);
   }
 
+  /** Takes the hill tiles in night and day colours; the returned layer goes where the hills belong. */
+  public holdHills(night: readonly Container[], day: readonly Container[]): Container {
+    this.dayHills.addChild(...day);
+    this.hills.addChild(...night, this.dayHills);
+    return this.hills;
+  }
+
   /** The sky `progress` (0..1) through the night, with moon and sun placed across the view at `viewLeft`. */
   public show(progress: number, viewLeft: number, viewWidth: number): void {
     const state = nightSky(progress);
     this.dawn.alpha = state.dawn;
     this.day.alpha = state.day;
     this.stars.alpha = state.stars;
+    this.stars.x = viewLeft;
+    this.hills.x = viewLeft * (1 - NIGHT_SCENERY.hillsParallax);
+    this.dayHills.alpha = state.hillsLight;
     this.moon.visible = state.moon.visible;
     this.moon.position.set(viewLeft + state.moon.x * viewWidth, HORIZON_Y - state.moon.height * (HORIZON_Y - MOON_TOP_Y));
     // The moon pales as the sky brightens.

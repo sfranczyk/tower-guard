@@ -15,6 +15,8 @@ export interface NightSkyState {
   day: number;
   /** Strength of the night shade over the hills (1 = full night). */
   shade: number;
+  /** How far the hills have turned to their day colours (0 night .. 1 day). */
+  hillsLight: number;
   /** -1: a radius below the horizon (hidden), 0: centred on it, 1: the whole disc above it. */
   sunRise: number;
 }
@@ -41,6 +43,7 @@ export const nightSky = (progress: number): NightSkyState => {
     dawn: smoothstep(0, 0.55, dawn),
     day: smoothstep(0.45, 1, dawn),
     shade: 1 - smoothstep(0.15, 1, dawn),
+    hillsLight: smoothstep(0.15, 1, dawn),
     sunRise: -1 + 2 * smoothstep(0.55, 1, dawn) ** 0.8,
   };
 };

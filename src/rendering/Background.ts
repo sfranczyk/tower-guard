@@ -73,7 +73,14 @@ export class Background {
       container.addChild(cloud);
       return { sprite: cloud, speed, width: shape.width };
     });
-    container.addChild(...this.tiledHills(drawHills(battleground)), drawVegetation(battleground, this.left, this.right));
+    const hills = this.tiledHills(drawHills(battleground));
+    if (this.night) {
+      const dayHills = this.tiledHills(drawHills({ ...battleground, hills: battleground.nightCycle!.dayHills }));
+      container.addChild(this.night.holdHills(hills, dayHills));
+    } else {
+      container.addChild(...hills);
+    }
+    container.addChild(drawVegetation(battleground, this.left, this.right));
     if (this.night) {
       container.addChild(this.night.shade);
     }

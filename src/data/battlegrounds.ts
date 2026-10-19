@@ -64,7 +64,15 @@ export interface Battleground {
    * Night falls on this map: `sky` is the night sky; a moon crosses it and dawn (`dawn` bands, then `day`) comes as the
    * survival level's time runs out, the sun rising at its end (systems/nightCycle.ts, rendering/NightSky.ts).
    */
-  nightCycle?: { dawn: readonly number[]; day: readonly number[]; moon: number; sun: number; shade: number };
+  nightCycle?: {
+    dawn: readonly number[];
+    day: readonly number[];
+    moon: number;
+    sun: number;
+    shade: number;
+    /** The hills by day (far, near), fading in over the night ones as it brightens. */
+    dayHills: readonly [number, number];
+  };
 }
 
 /**
@@ -231,6 +239,7 @@ export const BATTLEGROUNDS: Readonly<Record<BattlegroundId, Battleground>> = {
       sun: 0xffd890,
       // Night shade over the hills and trees (fades at dawn).
       shade: 0x070c1e,
+      dayHills: [0x7f9fb4, 0x5d8296],
     },
   },
 };

@@ -26,6 +26,14 @@ export const MOUNTAIN_MIST = tunable('MOUNTAIN_MIST', 'Mountain mist', {
 }, { meta: { farAlpha: { max: 1 }, nearAlpha: { max: 1 } } });
 
 /**
+ * Night maps (rendering/NightSky.ts): the hills follow the camera by `hillsParallax` of its movement (0 = stand still
+ * like the sky, 1 = move with the battlefield), so they look far away.
+ */
+export const NIGHT_SCENERY = tunable('NIGHT_SCENERY', 'Night scenery', {
+  hillsParallax: 0.08,
+}, { meta: { hillsParallax: { max: 1 } } });
+
+/**
  * Green Meadow scenery (rendering/meadowLayout.ts): gaps between front-row trees (`gapMin`..`gapMax`, px), the chance
  * the next tree stands close (a clump) or after a clearing, the hazier back row (`farScale` of the size, `farHaze`
  * towards the far hills), flowers per 100 px of grass and one rock per `rockEvery` px on average. Read when a level's
