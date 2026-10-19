@@ -17,6 +17,8 @@ export class Rain {
   private readonly drops: Drop[];
   private splashes: Splash[] = [];
   private lastCameraX?: number;
+  /** Share of the drops that fall (1 = full rain, 0 = it has stopped). */
+  public intensity = 1;
 
   public constructor(container: Container) {
     this.graphics.zIndex = 90;
@@ -30,12 +32,13 @@ export class Rain {
     const deltaSeconds = deltaMs / 1000;
     const pan = this.lastCameraX === undefined ? 0 : cameraX - this.lastCameraX;
     this.lastCameraX = cameraX;
+    const falling = this.falling();
     this.drops.forEach((drop, index) => {
       drop.y += drop.speed * deltaSeconds;
       drop.x += drop.speed * deltaSeconds * RAIN_SLANT - pan;
       const ground = groundAt(drop.x + cameraX);
       if (drop.y >= ground) {
-        if (Math.random() < 0.5) {
+        if (index < falling && Math.random() < 0.5) {
           this.splashes.push({ x: drop.x, y: ground, ageMs: 0 });
         }
         this.drops[index] = Rain.newDrop(random(VIEW_TOP - 60, VIEW_TOP - 10));
@@ -55,7 +58,7 @@ export class Rain {
   private draw(): void {
     const graphics = this.graphics;
     graphics.clear();
-    this.drops.forEach(({ x, y, length }) => {
+    this.drops.slice(0, this.falling()).forEach(({ x, y, length }) => {
       graphics.moveTo(x, y).lineTo(x - length * RAIN_SLANT, y - length);
     });
     graphics.stroke({ width: 1, color: 0xb4c4d8, alpha: RAIN_ALPHA });
@@ -67,6 +70,11 @@ export class Rain {
     if (this.splashes.length > 0) {
       graphics.stroke({ width: 1, color: 0xc8d4e4, alpha: RAIN_ALPHA * 1.2 });
     }
+  }
+
+  /** How many of the drops fall (the rest are kept, unseen, for when the rain picks up). */
+  private falling(): number {
+    return Math.round(this.drops.length * this.intensity);
   }
 
   private static newDrop(y: number): Drop {

@@ -39,6 +39,7 @@ import { Background } from '../rendering/Background';
 import { CombatSystem, type Foe } from '../systems/CombatSystem';
 import { EffectsSystem } from '../systems/EffectsSystem';
 import { DamageNumbers } from '../objects/DamageNumbers';
+import { Sand } from '../rendering/Sand';
 import { Snow } from '../rendering/Snow';
 import { WeatherSystem } from '../systems/WeatherSystem';
 import { firstArrow, type Loadout } from '../data/loadout';
@@ -76,6 +77,7 @@ export class GameScene extends Scene {
   /** Storm battlegrounds only: lightning. */
   private weather?: WeatherSystem;
   private snow?: Snow;
+  private sand?: Sand;
   /** The wind now (px/s² on a normal arrow), rolled from the battleground's strongest; it may change mid-level. */
   private wind: number;
   private readonly windShifts: WindShifts;
@@ -321,6 +323,9 @@ export class GameScene extends Scene {
     if (this.battleground.weather === 'snow') {
       this.snow = new Snow(this.ctx.root, this.wind * SNOW_WIND_DRIFT);
     }
+    if (this.battleground.weather === 'sandstorm') {
+      this.sand = new Sand(this.ctx.root, this.wind < 0 ? -1 : 1);
+    }
     const hint = this.battleground.weather === 'storm' ? 'beware of lightning' : this.wind !== 0 ? windLabel(this.wind, this.battleground.wind ?? 0)
       : this.survival ? `hold out for ${clockText(this.survival.durationMs)}` : 'defend your keep';
     ui.setStatus(`Level ${run.levelIndex + 1} of ${runLevelCount(sandbox)} · ${this.battleground.name} · ${hint}`);
@@ -347,6 +352,10 @@ export class GameScene extends Scene {
     this.survival?.update(deltaMs, this.camera.x, !this.outcome.ended, this.role === 'guest');
     this.weather?.update(deltaMs, this.camera.x);
     this.snow?.update(deltaMs, this.camera.x);
+    if (this.sand) {
+      this.sand.intensity = 1 - (this.background.night?.calm ?? 0);
+      this.sand.update(deltaMs, this.camera.x);
+    }
     // A co-op guest moves only its own bowman; the host's comes from the host.
     this.players.filter((player) => this.role !== 'guest' || player.local).forEach((player) => this.team.update(player, deltaMs));
     this.playerTower.update(deltaMs);
@@ -378,6 +387,9 @@ export class GameScene extends Scene {
     this.wind = wind;
     if (this.snow) {
       this.snow.drift = wind * SNOW_WIND_DRIFT;
+    }
+    if (this.sand) {
+      this.sand.direction = wind < 0 ? -1 : 1;
     }
     this.ctx.ui.setStatus(`The wind shifts · ${windLabel(wind, this.battleground.wind ?? 0)}`);
   }

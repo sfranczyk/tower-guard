@@ -59,7 +59,7 @@ describe('levelEndInfo in survival', () => {
   });
 
   it('ends the run after the last night, or says how long was left on a defeat', () => {
-    expect(held({ levelIndex: 1 }).info).toMatchObject({ title: 'Victory!', copy: 'You held out all 2 nights.' });
+    expect(held({ levelIndex: 1 }).info).toMatchObject({ title: 'Victory!', copy: 'You held out all 2 levels.' });
     const minutes = survival.survival.levels[0].minutes;
     expect(held({ won: false, levelCleared: false, survivedMs: minutes * 60_000 - 75_000 }).info.copy).toMatch(/with 1:15 to dawn/);
   });

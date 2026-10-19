@@ -44,6 +44,19 @@ export const AURORA = tunable('AURORA', 'Aurora', {
 }, { meta: { alpha: { max: 1 }, speed: { max: 4 }, height: { max: 250 } } });
 
 /**
+ * Sandstorm weather (rendering/Sand.ts): `grains` streaks of sand per GAME_WIDTH blowing at `speed` px/s (the way the
+ * wind blows), a `haze` of dust over the whole field thickening by `farHaze` from world x `hazeFrom` to the enemy keep
+ * (enemies come out of the dust). All of it dies down as the storm calms.
+ */
+export const SANDSTORM = tunable('SANDSTORM', 'Sandstorm', {
+  grains: 170,
+  speed: 360,
+  haze: 0.1,
+  farHaze: 0.42,
+  hazeFrom: 800,
+}, { meta: { haze: { max: 1 }, farHaze: { max: 1 }, hazeFrom: { max: 2400 } } });
+
+/**
  * Green Meadow scenery (rendering/meadowLayout.ts): gaps between front-row trees (`gapMin`..`gapMax`, px), the chance
  * the next tree stands close (a clump) or after a clearing, the hazier back row (`farScale` of the size, `farHaze`
  * towards the far hills), flowers per 100 px of grass and one rock per `rockEvery` px on average. Read when a level's

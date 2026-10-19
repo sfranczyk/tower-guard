@@ -21,6 +21,8 @@ type PendingStrike = { start: Vec2; target: Vec2; leftMs: number; marker: Graphi
 const BOLT_LIFE_MS = 450;
 const GROUND_FLASH = 0.42;
 const SKY_FLASH = 0.16;
+/** How much brighter a flash is at night (the dark field lights up). */
+const NIGHT_FLASH = 1.7;
 
 /** Bolt brightness over its life: on, a dark flicker, on again, then fading out. */
 const flicker = (ageMs: number): number => {
@@ -65,8 +67,11 @@ export class WeatherSystem {
   }
 
   public update(deltaMs: number, cameraX: number): void {
+    // Survival maps whose storm calms at dawn: less rain and ever rarer bolts; at night the flashes light up more.
+    const calm = this.background.night?.calm ?? 0;
+    this.rain.intensity = 1 - calm;
     this.rain.update(deltaMs, cameraX);
-    this.waitMs -= deltaMs;
+    this.waitMs -= deltaMs * (1 - calm);
     if (!this.pending && this.waitMs <= 0) {
       this.trigger(this.plan, cameraX);
       this.plan = planStrike(Math.random);
@@ -86,7 +91,7 @@ export class WeatherSystem {
         this.bolts.splice(index, 1);
       }
     }
-    this.flashOverlay.alpha = flash;
+    this.flashOverlay.alpha = Math.min(0.8, flash * (this.background.night ? NIGHT_FLASH - (NIGHT_FLASH - 1) * calm : 1));
   }
 
   private trigger(plan: StrikePlan, cameraX: number): void {

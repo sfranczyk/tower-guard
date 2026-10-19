@@ -24,31 +24,24 @@ const AURORA_LAYERS: ReadonlyArray<{ from: number; to: number; alpha: number; ti
   { from: 0.5, to: 1, alpha: 0.18, tint: 0.8 },
 ];
 
-/**
- * The northern lights (rendering/aurora.ts) in `colors` across `width` from `left`, at `seconds`: `y(footY)` places a
- * curtain's foot, `height` is the full ray height, `scale` shrinks the waves with it (the design lab's miniature) and
- * `alpha` dims it all.
- */
-export const drawAurora = (
-  g: Graphics, colors: readonly number[], left: number, width: number, seconds: number,
-  y: (footY: number) => number, height: number, scale = 1, alpha = 1,
-): void => {
+/** The northern lights (rendering/aurora.ts) in `colors` across `width` (view coordinates) at `seconds`. */
+const drawAurora = (g: Graphics, colors: readonly number[], width: number, seconds: number): void => {
   const top = colors[colors.length - 1];
   AURORA_CURTAINS.forEach((curtain) => {
     const foot = colors[curtain.color % colors.length];
     const columns = Array.from({ length: AURORA_COLUMNS + 1 }, (_, index) => {
       const u = index / AURORA_COLUMNS;
       const column = auroraColumn(curtain, u, seconds);
-      return { x: left + (curtain.from + (curtain.to - curtain.from) * u) * width, y: y(curtain.footY) + column.foot * scale, ...column };
+      return { x: (curtain.from + (curtain.to - curtain.from) * u) * width, y: curtain.footY + column.foot, ...column };
     });
     AURORA_LAYERS.forEach((layer) => {
       const color = mixColor(foot, top, layer.tint);
       columns.slice(1).forEach((b, index) => {
         const a = columns[index];
-        const shade = alpha * layer.alpha * (a.glow + b.glow) / 2;
-        if (shade > 0.01) {
-          const rise = (column: typeof a, share: number): number => column.y - share * column.height * height;
-          g.poly([a.x, rise(a, layer.to), b.x, rise(b, layer.to), b.x, rise(b, layer.from), a.x, rise(a, layer.from)]).fill({ color, alpha: shade });
+        const alpha = layer.alpha * (a.glow + b.glow) / 2;
+        if (alpha > 0.01) {
+          const rise = (column: typeof a, share: number): number => column.y - share * column.height * AURORA.height;
+          g.poly([a.x, rise(a, layer.to), b.x, rise(b, layer.to), b.x, rise(b, layer.from), a.x, rise(a, layer.from)]).fill({ color, alpha });
         }
       });
     });
@@ -62,8 +55,9 @@ const seeded = (seed: number): (() => number) => () => {
 };
 
 /**
- * The night of a `nightCycle` map (systems/nightCycle.ts says where everything is): dawn and day skies over the night
- * bands, stars (and northern lights, `nightCycle.aurora`), a moon crossing the view and the rising sun, all behind the hills (`sky`), and a shade darkening hills
+ * The survival sky of a `nightCycle` map (systems/nightCycle.ts says where everything is): dawn and day skies over the
+ * night bands, stars (and northern lights, `nightCycle.aurora`), a moon crossing the view (or an eclipse, or a sun dim
+ * behind dust, `nightCycle.kind`) and the rising sun, all behind the hills (`sky`), and a shade darkening hills
  * and trees (`shade`, laid over them). Moon, sun and stars are at infinity: they keep their place in the view while the
  * camera moves. Background adds both and hands the hills to `holdHills`; `show(progress, viewLeft, viewWidth)` and `update(deltaMs)` every frame.
  */
@@ -83,6 +77,15 @@ export class NightSky {
   private viewWidth: number;
   private readonly moon = new Graphics();
   private readonly sun = new Graphics();
+  /** Eclipse maps: the corona around the covered sun and the moon's dark disc over it. */
+  private readonly corona = new Graphics();
+  private readonly eclipseMoon = new Graphics();
+  private readonly kind: 'night' | 'eclipse' | 'dust';
+  private readonly sunAt: { x: number; y: number };
+  private readonly starsAlpha: number;
+  private readonly calms: boolean;
+  /** How far the weather has died down (0..1) on maps whose storm calms (`nightCycle.calms`); 0 elsewhere. */
+  public calm = 0;
   /** The hills (night and day colours), shifted against the camera for a slight parallax. */
   private readonly hills = new Container();
   private readonly dayHills = new Container();
@@ -110,11 +113,31 @@ export class NightSky {
     this.sun.circle(0, 0, SUN_RADIUS * 1.9).fill({ color: cycle.sun, alpha: 0.12 });
     this.sun.circle(0, 0, SUN_RADIUS * 1.3).fill({ color: cycle.sun, alpha: 0.18 });
     this.sun.circle(0, 0, SUN_RADIUS).fill({ color: cycle.sun, alpha: 0.95 });
+    this.kind = cycle.kind ?? 'night';
+    this.sunAt = cycle.sunAt ?? { x: SUN_X, y: VIEW_TOP + 120 };
+    this.starsAlpha = this.kind === 'dust' ? 0 : cycle.stars ?? 1;
+    this.calms = !!cycle.calms;
+    // Streamers of the corona, longer and shorter by turns, round a pale glow.
+    this.corona.circle(0, 0, SUN_RADIUS * 1.9).fill({ color: 0xfff4e0, alpha: 0.08 });
+    this.corona.circle(0, 0, SUN_RADIUS * 1.35).fill({ color: 0xfff4e0, alpha: 0.18 });
+    for (let index = 0; index < 14; index += 1) {
+      const angle = (index / 14) * Math.PI * 2 + 0.2 * Math.sin(index * 2.3);
+      const reach = SUN_RADIUS * (index % 2 === 0 ? 2.3 : 1.6);
+      const side = 0.12;
+      this.corona.poly([
+        Math.cos(angle - side) * SUN_RADIUS, Math.sin(angle - side) * SUN_RADIUS,
+        Math.cos(angle) * reach, Math.sin(angle) * reach,
+        Math.cos(angle + side) * SUN_RADIUS, Math.sin(angle + side) * SUN_RADIUS,
+      ]).fill({ color: 0xfff4e0, alpha: 0.22 });
+    }
+    this.eclipseMoon.circle(0, 0, SUN_RADIUS * 1.02).fill({ color: cycle.moon });
+    this.corona.visible = this.kind === 'eclipse';
+    this.eclipseMoon.visible = this.kind === 'eclipse';
     this.auroraColors = cycle.aurora;
     this.valleys = battleground.hillShape === 'mountains' ? MOUNTAIN_VALLEYS : undefined;
     this.aurora.blendMode = 'add';
     this.viewWidth = right - left;
-    this.sky.addChild(this.dawn, this.day, this.stars, this.aurora, this.moon, this.sun);
+    this.sky.addChild(this.dawn, this.day, this.stars, this.aurora, this.moon, this.corona, this.sun, this.eclipseMoon);
     this.shade.rect(left, VIEW_TOP, right - left, GROUND_Y - VIEW_TOP + 60).fill({ color: cycle.shade });
     this.show(0, 0, right - left);
   }
@@ -133,7 +156,7 @@ export class NightSky {
     }
     this.seconds += (deltaMs / 1000) * AURORA.speed;
     this.aurora.clear();
-    drawAurora(this.aurora, this.auroraColors, 0, this.viewWidth, this.seconds, (footY) => footY, AURORA.height);
+    drawAurora(this.aurora, this.auroraColors, this.viewWidth, this.seconds);
   }
 
   /** The sky `progress` (0..1) through the night, with moon and sun placed across the view at `viewLeft`. */
@@ -141,19 +164,32 @@ export class NightSky {
     const state = nightSky(progress);
     this.dawn.alpha = state.dawn;
     this.day.alpha = state.day;
-    this.stars.alpha = state.stars;
+    this.stars.alpha = state.stars * this.starsAlpha;
+    this.calm = this.calms ? state.calm : 0;
     this.stars.x = viewLeft;
     this.viewWidth = viewWidth;
     this.aurora.x = viewLeft;
     this.aurora.alpha = AURORA.alpha * state.stars;
     this.hills.x = viewLeft * (1 - NIGHT_SCENERY.hillsParallax);
     this.dayHills.alpha = state.hillsLight;
-    this.moon.visible = state.moon.visible;
+    this.moon.visible = this.kind === 'night' && state.moon.visible;
     this.moon.position.set(viewLeft + state.moon.x * viewWidth, HORIZON_Y - state.moon.height * (HORIZON_Y - MOON_TOP_Y));
     // The moon pales as the sky brightens.
     this.moon.alpha = 1 - 0.6 * state.dawn;
-    this.sun.visible = state.sunRise > -1;
-    this.sun.position.set(this.sunX(state.sunRise > -1, viewLeft, viewWidth), HORIZON_Y + SUN_RADIUS - (state.sunRise + 1) * SUN_RADIUS * 1.5);
+    if (this.kind === 'night') {
+      this.sun.visible = state.sunRise > -1;
+      this.sun.position.set(this.sunX(state.sunRise > -1, viewLeft, viewWidth), HORIZON_Y + SUN_RADIUS - (state.sunRise + 1) * SUN_RADIUS * 1.5);
+    } else {
+      // Eclipse and dust: the sun stands still in the view; behind the dust it shows dim and brightens as it clears.
+      this.sun.visible = true;
+      this.sun.position.set(viewLeft + this.sunAt.x * viewWidth, this.sunAt.y);
+      this.sun.alpha = this.kind === 'dust' ? 0.25 + 0.75 * state.calm : 1;
+      this.corona.position.copyFrom(this.sun.position);
+      this.corona.alpha = state.corona;
+      this.eclipseMoon.alpha = state.eclipseMoon;
+      // The moon slides off towards the upper left.
+      this.eclipseMoon.position.set(this.sun.x - state.eclipse * SUN_RADIUS * 0.8, this.sun.y - state.eclipse * SUN_RADIUS * 0.6);
+    }
     this.shade.alpha = SHADE_ALPHA * state.shade;
   }
 

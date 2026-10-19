@@ -6,10 +6,13 @@ import type { ArmorPalette } from '../rendering/armor';
  */
 
 export type BattlegroundId = 'greenMeadow' | 'crimsonPass' | 'sunscorchDunes' | 'thunderRidge' | 'frostpeakPass' | 'moonlitHollow'
-  | 'auroraPeaks';
+  | 'auroraPeaks' | 'stormwatchRidge' | 'eclipsePass' | 'sandstormDunes';
 
-/** fair: drifting clouds; clear: cloudless sky; storm: dark clouds, rain, lightning; snow: grey sky, snowfall. */
-export type Weather = 'fair' | 'clear' | 'storm' | 'snow';
+/**
+ * fair: drifting clouds; clear: cloudless sky; storm: dark clouds, rain, lightning; snow: grey sky, snowfall;
+ * sandstorm: dust clouds, blowing sand and a haze thickening towards the enemy's side (rendering/Sand.ts).
+ */
+export type Weather = 'fair' | 'clear' | 'storm' | 'snow' | 'sandstorm';
 
 /** Colours of the aim circles, the predicted path and the player's arrow trails. */
 export interface AimColors {
@@ -60,13 +63,30 @@ export interface Battleground {
   /** The bowman's armor colours, picked to stand out against this map. */
   player: ArmorPalette;
   /**
-   * Night falls on this map: `sky` is the night sky; a moon crosses it and dawn (`dawn` bands, then `day`) comes as the
-   * survival level's time runs out, the sun rising at its end (systems/nightCycle.ts, rendering/NightSky.ts). Maps with
-   * a night are offered only for survival levels, the others only for battle levels (data/sandbox.ts battlegroundsFor).
+   * The survival sky of this map: `sky` is its darkest (night, eclipse or sandstorm); `dawn` bands, then `day`, come
+   * over it as the survival level's time runs out (systems/nightCycle.ts, rendering/NightSky.ts). Maps with one are
+   * offered only for survival levels, the others only for battle levels (data/sandbox.ts battlegroundsFor).
    */
   nightCycle?: {
-    /** The battle map this is the night of (a stored survival level on it moves here). */
+    /** The battle map this is the survival version of (a stored survival level on it moves here). */
     nightOf: BattlegroundId;
+    /**
+     * night (default): stars, a moon crossing the sky, the sun rising at the end. eclipse: the sun stands at `sunAt`
+     * behind the moon, which slides off it; stars and a corona while it's dark. dust: no moon or stars, the sun at
+     * `sunAt` dim behind the dust and brightening as it clears.
+     */
+    kind?: 'night' | 'eclipse' | 'dust';
+    /** eclipse / dust: where the sun stands, across the view (0..1) and world y. */
+    sunAt?: { x: number; y: number };
+    /** How bright the stars shine (default 1; dimmer behind storm clouds). */
+    stars?: number;
+    /** The weather (rain, lightning, clouds, sand and haze) dies down as day comes (`calm`). */
+    calms?: boolean;
+    /**
+     * The end screen: a held level's title, what was held out until, and (lost) what the time left was short of
+     * (default 'Dawn breaks!' / 'sunrise' / 'to dawn').
+     */
+    ending?: { title: string; until: string; left: string };
     dawn: readonly number[];
     day: readonly number[];
     moon: number;
@@ -118,6 +138,21 @@ const PLAYER_COLORS: Readonly<Record<BattlegroundId, ArmorPalette>> = {
   auroraPeaks: {
     limb: 0xd0582c, limbRear: 0xa04420, outline: 0x22140c, plate: 0xd6dce3, plateLight: 0xffffff,
     gold: 0xffd75a, leather: 0x8a5a33, face: 0x3a2010, bow: 0xe9c48a, bowString: 0xf6e7c8,
+  },
+  // Thunder Ridge's amber, a shade lighter, against the near-black storm night.
+  stormwatchRidge: {
+    limb: 0xe39a3a, limbRear: 0xb07428, outline: 0x24180c, plate: 0xd6dce3, plateLight: 0xffffff,
+    gold: 0xffd75a, leather: 0x8a5a33, face: 0x3a2610, bow: 0xe9c48a, bowString: 0xf6e7c8,
+  },
+  // Crimson Pass's teal, brighter, against the dark crimson of the eclipse.
+  eclipsePass: {
+    limb: 0x2a9ca2, limbRear: 0x1f767b, outline: 0x0f1c20, plate: 0xc8d3da, plateLight: 0xf2f6f8,
+    gold: 0x7fe6df, leather: 0x3a2a22, face: 0x10282b, bow: 0x14262a, bowString: 0x6aa9a8,
+  },
+  // Sunscorch's navy, a little bluer, against the ochre dust.
+  sandstormDunes: {
+    limb: 0x2e3480, limbRear: 0x22286a, outline: 0x13152c, plate: 0x5f687c, plateLight: 0x8f99ad,
+    gold: 0xe0442c, leather: 0x4a2e22, face: 0x161a3f, bow: 0x1a1c36, bowString: 0x3b3f66,
   },
 };
 
@@ -283,6 +318,103 @@ export const BATTLEGROUNDS: Readonly<Record<BattlegroundId, Battleground>> = {
       // Frostpeak's grey-blue rock by day.
       dayHills: [0x8295b2, 0x5a6a84],
       aurora: [0x5cf0a0, 0x3fd8c4, 0xa47cf2],
+    },
+  },
+  stormwatchRidge: {
+    id: 'stormwatchRidge',
+    player: PLAYER_COLORS.stormwatchRidge,
+    name: 'Stormwatch Ridge',
+    // Survival: Thunder Ridge by night. The moon glimpses through gaps in the storm deck, lightning lights up the field;
+    // at dawn the storm dies down (less rain, thinner clouds, rarer bolts) and the sun rises into a rain-washed sky.
+    sky: [0x070a10, 0x0b1018, 0x0f1520, 0x141b28],
+    weather: 'storm',
+    cloudColor: 0x2a303a,
+    cloudAlpha: 0.96,
+    hills: [0x232d39, 0x19222c],
+    hillShape: 'hills',
+    trees: { style: 'pine', colors: [0x10191a, 0x152020, 0x0c1414], trunk: 0x1e1a18 },
+    ground: { fill: 0x34402f, edge: 0x4b5a42, tufts: 0x262f22 },
+    ui: { accent: '#4f6178', backdrop: '#0a0e14' },
+    nightCycle: {
+      nightOf: 'thunderRidge',
+      dawn: [0x2a3040, 0x3e4458, 0x5e5e70, 0x8a7c80],
+      day: [0x6f8fae, 0x8fa8c0, 0xb0c0cc, 0xd8d8c8],
+      moon: 0xdfe4ea,
+      sun: 0xffe0a0,
+      shade: 0x04060c,
+      stars: 0.35,
+      calms: true,
+      // Washed green slopes once the storm has gone.
+      dayHills: [0x4e6a6a, 0x3a5452],
+      ending: { title: 'The storm passes!', until: 'the storm passed', left: 'to dawn' },
+    },
+  },
+  eclipsePass: {
+    id: 'eclipsePass',
+    player: PLAYER_COLORS.eclipsePass,
+    name: 'Eclipse Pass',
+    // Survival: Crimson Pass under a total eclipse. A black disc in a pale corona, stars over a dark crimson sky; a
+    // crescent of sun shows and grows, and as the moon slides off the pass's red-orange evening sky comes back.
+    sky: [0x12070f, 0x1e0b18, 0x2c1020, 0x3d1626, 0x52202a],
+    weather: 'clear',
+    cloudColor: 0xffffff,
+    cloudAlpha: 0,
+    hills: [0x3a1a24, 0x28121c],
+    hillShape: 'hills',
+    trees: { style: 'pine', colors: [0x140b16, 0x1a0f1c, 0x0f0812], trunk: 0x1a1014 },
+    ground: { fill: 0x6a4a32, edge: 0x8a6642, tufts: 0x4e3624 },
+    ui: { accent: '#9c3a4a', backdrop: '#1a0c14' },
+    nightCycle: {
+      nightOf: 'crimsonPass',
+      kind: 'eclipse',
+      sunAt: { x: 0.62, y: 120 },
+      dawn: [0x2a1838, 0x4a2244, 0x6e2c48, 0x9c4044, 0xc05c40],
+      day: [0x3b2a52, 0x5e3456, 0x8e4152, 0xc65c45, 0xe8894a],
+      // The moon's dark face over the sun.
+      moon: 0x0c0608,
+      sun: 0xffc27a,
+      shade: 0x10050c,
+      dayHills: [0x6e2f3a, 0x4a2230],
+      ending: { title: 'The eclipse ends!', until: 'the sun came back', left: 'of the eclipse left' },
+    },
+  },
+  sandstormDunes: {
+    id: 'sandstormDunes',
+    player: PLAYER_COLORS.sandstormDunes,
+    name: 'Sandstorm Dunes',
+    // Survival: Sunscorch Dunes in a sandstorm. Ochre dust hides the sky and the sun, sand blows across the field and
+    // the far side is lost in haze, so enemies come out of the dust; at the end it clears under the blazing sun.
+    sky: [0x9c7c4c, 0xac8a56, 0xbc985f, 0xc8a468, 0xd2ae72],
+    weather: 'sandstorm',
+    cloudColor: 0xc09a62,
+    cloudAlpha: 0.75,
+    hills: [0xb0905c, 0xa07e4c],
+    hillShape: 'dunes',
+    trees: { style: 'cactus', colors: [0x4e7442, 0x5f8650, 0x3d5e34], trunk: 0x3d5e34 },
+    ground: { fill: 0xd2b27a, edge: 0xe4ca94, tufts: 0xb4925c },
+    wind: 260,
+    // As on Sunscorch: deep violet stands out against sand and dust.
+    aimColors: {
+      aim: 0x6a12c9,
+      previousShot: 0x00666e,
+      trajectory: 0x7a0fb5,
+      trailGlow: 0xb54dff,
+      trailCore: 0x5a0aa8,
+    },
+    ui: { accent: '#a0703a', backdrop: '#2e2416' },
+    nightCycle: {
+      nightOf: 'sunscorchDunes',
+      kind: 'dust',
+      sunAt: { x: 0.25, y: 92 },
+      dawn: [0xa8b0a8, 0xbab8a2, 0xccc29c, 0xdac694, 0xe4ca8e],
+      day: [0x7fb6d4, 0x9cc6d6, 0xbdd3cc, 0xdcd8b4, 0xeed9a2],
+      moon: 0xffffff,
+      sun: 0xfff3c4,
+      // Dust browning the dunes and cacti.
+      shade: 0x6a4a28,
+      calms: true,
+      dayHills: [0xd8b479, 0xc89c5c],
+      ending: { title: 'The sandstorm clears!', until: 'the sandstorm cleared', left: 'of the storm left' },
     },
   },
 };

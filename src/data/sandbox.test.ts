@@ -63,7 +63,7 @@ describe('survival setup', () => {
     expect(runBattleground({ ...settings, mode: 'survival' }, 0)).toBe('moonlitHollow');
     expect(runBattleground({ ...settings, mode: 'survival' }, 1)).toBe('auroraPeaks');
     // Battle levels never get a night map, survival levels only night maps.
-    expect(battlegroundsFor('survival')).toEqual(['moonlitHollow', 'auroraPeaks']);
+    expect(battlegroundsFor('survival')).toEqual(['moonlitHollow', 'auroraPeaks', 'stormwatchRidge', 'eclipsePass', 'sandstormDunes']);
     settings.levels.forEach((level) => expect(battlegroundsFor('battle')).toContain(level.battleground));
   });
 
@@ -72,7 +72,7 @@ describe('survival setup', () => {
       survival: { levelCount: 2, levels: [{ battleground: 'frostpeakPass', kinds: ['raider'], minutes: 3 }, { battleground: 'thunderRidge', kinds: ['raider'], minutes: 3 }] },
     });
     expect(settings.survival.levels[0].battleground).toBe('auroraPeaks');
-    expect(settings.survival.levels[1].battleground).toBe(createDefaultSandbox().survival.levels[1].battleground);
+    expect(settings.survival.levels[1].battleground).toBe('stormwatchRidge');
   });
 
   it('clamps stored survival levels', () => {

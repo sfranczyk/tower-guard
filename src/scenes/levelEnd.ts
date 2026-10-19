@@ -31,6 +31,7 @@ export const levelEndInfo = (outcome: LevelOutcome, sandbox: SandboxSettings): {
   const coop = outcome.playerHealths.length > 1;
   const survival = outcome.survivedMs !== undefined;
   const levelCount = runLevelCount(sandbox);
+  const ending = BATTLEGROUNDS[runBattleground(sandbox, levelIndex)].nightCycle?.ending ?? { title: 'Dawn breaks!', until: 'sunrise', left: 'to dawn' };
   const stats = [
     ...(survival ? [{ label: 'held out', value: clockText(outcome.survivedMs!) }] : []),
     { label: 'enemies defeated', value: survival ? `${outcome.defeated}` : `${outcome.defeated} / ${outcome.totalEnemies}` },
@@ -45,7 +46,7 @@ export const levelEndInfo = (outcome: LevelOutcome, sandbox: SandboxSettings): {
     return {
       next: true,
       info: {
-        title: survival ? 'Dawn breaks!' : outcome.banner === 'captured' ? 'Banner captured!' : `Level ${levelIndex + 1} cleared!`,
+        title: survival ? ending.title : outcome.banner === 'captured' ? 'Banner captured!' : `Level ${levelIndex + 1} cleared!`,
         outcome: 'win',
         stats,
         copy: `${survival ? `Level ${levelIndex + 1} survived, the enemy flees. ` : outcome.banner === 'captured' ? `Level ${levelIndex + 1} won. ` : ''}${next}`,
@@ -53,7 +54,7 @@ export const levelEndInfo = (outcome: LevelOutcome, sandbox: SandboxSettings): {
     };
   }
   const victory = survival
-    ? (levelCount === 1 ? 'You held out until sunrise; the enemy flees.' : `You held out all ${levelCount} nights.`)
+    ? (levelCount === 1 ? `You held out until ${ending.until}; the enemy flees.` : `You held out all ${levelCount} levels.`)
     : outcome.enemyKeepDestroyed ? 'The enemy keep has fallen.' : outcome.banner === 'captured' ? 'The enemy banner is ours.' : levelCount === 1 ? 'The level is held off.' : `All ${levelCount} levels held off.`;
   return {
     next: false,
@@ -63,7 +64,7 @@ export const levelEndInfo = (outcome: LevelOutcome, sandbox: SandboxSettings): {
       stats,
       copy: won
         ? victory
-        : `${outcome.playerKeepDestroyed ? 'The keep has fallen' : outcome.banner === 'lost' ? 'The enemy has carried off our banner' : coop ? 'Both bowmen have fallen' : 'The bowman has fallen'}${survival ? ` with ${clockText(sandbox.survival.levels[levelIndex].minutes * 60_000 - outcome.survivedMs!)} to dawn` : ''}. Adjust the sandbox and try again.`,
+        : `${outcome.playerKeepDestroyed ? 'The keep has fallen' : outcome.banner === 'lost' ? 'The enemy has carried off our banner' : coop ? 'Both bowmen have fallen' : 'The bowman has fallen'}${survival ? ` with ${clockText(sandbox.survival.levels[levelIndex].minutes * 60_000 - outcome.survivedMs!)} ${ending.left}` : ''}. Adjust the sandbox and try again.`,
     },
   };
 };

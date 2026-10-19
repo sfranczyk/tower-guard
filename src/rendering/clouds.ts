@@ -132,6 +132,11 @@ const SKIES: Record<Weather, Partial<Record<CloudKind, KindSettings>>> = {
     stratus: { width: [300, 420], y: [70, 120], speed: [8, 12], alpha: 0.9, count: 3 },
     cumulus: { width: [240, 320], y: [140, 190], speed: [12, 18], alpha: 0.85, count: 2 },
   },
+  // Banks of blown dust low over the dunes.
+  sandstorm: {
+    stratus: { width: [320, 460], y: [110, 190], speed: [40, 60], alpha: 0.8, count: 4 },
+    cumulus: { width: [260, 340], y: [190, 240], speed: [50, 70], alpha: 0.6, count: 2 },
+  },
   // A low, nearly closed deck of storm clouds with a few ragged bands under it.
   storm: {
     storm: { width: [330, 470], y: [105, 150], speed: [6, 11], alpha: 1, count: 6 },

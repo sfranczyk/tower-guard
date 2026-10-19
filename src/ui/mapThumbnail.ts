@@ -7,12 +7,25 @@ const hex = (color: number): string => `#${color.toString(16).padStart(6, '0')}`
  * the sun, a cloud (or a storm cloud with a bolt), hills or dunes, a tree or cactus and the ground.
  */
 export const mapThumbnail = (battleground: Battleground): string => {
-  const { sky, sun, weather, cloudColor, hills, hillShape, trees, ground } = battleground;
+  const { sky, sun, weather, cloudColor, hills, hillShape, trees, ground, nightCycle } = battleground;
   const parts: string[] = [];
   const band = 27 / sky.length;
   sky.forEach((color, index) => parts.push(`<rect x="0" y="${index * band}" width="48" height="${band + 0.5}" fill="${hex(color)}"/>`));
   if (sun) {
     parts.push(`<circle cx="${sun.x < 600 ? 13 : 36}" cy="${sun.y > 200 ? 20 : 9}" r="5" fill="${hex(sun.color)}"/>`);
+  }
+  if (nightCycle?.kind === 'eclipse') {
+    parts.push(`<circle cx="34" cy="9" r="6.5" fill="#fff4e0" opacity=".35"/><circle cx="34" cy="9" r="4.6" fill="${hex(nightCycle.moon)}"/>`);
+  } else if (nightCycle?.kind === 'dust') {
+    parts.push(`<circle cx="13" cy="9" r="4.5" fill="${hex(nightCycle.sun)}" opacity=".45"/>`);
+  } else if (nightCycle) {
+    parts.push(`<circle cx="13" cy="8" r="3.6" fill="${hex(nightCycle.moon)}"/><g fill="#fff"><circle cx="30" cy="5" r=".5"/><circle cx="40" cy="10" r=".5"/><circle cx="22" cy="12" r=".4"/></g>`);
+  }
+  if (nightCycle?.aurora) {
+    parts.push(`<path d="M18 13c6-6 12-1 18-6s8-1 12-3" stroke="${hex(nightCycle.aurora[0])}" stroke-width="2.4" fill="none" opacity=".6"/>`);
+  }
+  if (weather === 'sandstorm') {
+    parts.push(`<g stroke="${hex(cloudColor)}" stroke-width="1.6" opacity=".8"><path d="M4 15h14M24 12h18M10 19h20"/></g>`);
   }
   if (weather === 'fair') {
     parts.push(`<g fill="${hex(cloudColor)}" opacity=".9"><circle cx="22" cy="9" r="3.2"/><circle cx="26" cy="8" r="4"/><circle cx="30" cy="9.5" r="3"/><rect x="19" y="9" width="14" height="3.4" rx="1.7"/></g>`);

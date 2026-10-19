@@ -78,7 +78,7 @@ const DEFAULT_LEVEL_ENEMIES: readonly LevelEnemyCounts[] = [
   { raider: 6, fast: 4, tank: 3, troll: 0, hunter: 3, dragon: 1, fireDragon: 1, kamikaze: 1, goblinKamikaze: 2, zombie: 3, knight: 2, heavyKnight: 1, horseKnight: 1, priest: 1, shaman: 0 },
 ];
 
-/** Default survival levels: more kinds each level, at night in the Moonlit Hollow and on the Aurora Peaks by turns. */
+/** Default survival levels: more kinds each level, each on another survival map. */
 const DEFAULT_SURVIVAL_KINDS: readonly EnemyType[][] = [
   ['raider', 'hunter'],
   ['raider', 'fast', 'hunter', 'zombie'],
@@ -87,7 +87,7 @@ const DEFAULT_SURVIVAL_KINDS: readonly EnemyType[][] = [
   ['raider', 'fast', 'hunter', 'zombie', 'tank', 'troll', 'knight', 'horseKnight', 'shaman', 'fireDragon'],
 ];
 export const DEFAULT_SURVIVAL_MINUTES = 3;
-const SURVIVAL_BATTLEGROUNDS: readonly BattlegroundId[] = ['moonlitHollow', 'auroraPeaks'];
+const SURVIVAL_BATTLEGROUNDS: readonly BattlegroundId[] = ['moonlitHollow', 'auroraPeaks', 'stormwatchRidge', 'eclipsePass', 'sandstormDunes'];
 
 /** The maps a level of this mode may be fought on: survival on the night maps only, battle on the others. */
 export const battlegroundsFor = (mode: RunMode): BattlegroundId[] =>

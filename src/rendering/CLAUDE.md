@@ -74,7 +74,9 @@ animation gets a row in `scenes/labRows.ts` (or `scenes/labSequences.ts` for one
   far peaks' and near slopes' feet, tunable in `MOUNTAIN_MIST`; planes step down in lightness, darkest in front.
 - **Night** (`NightSky.ts`, `Background.night` on `nightCycle` maps): dawn/day bands, stars, moon and sun placed across
   the view (stars fixed to the view, like the moon), shade over hills and trees; the hills (`holdHills`) get a slight
-  parallax (`NIGHT_SCENERY.hillsParallax`) and fade to `nightCycle.dayHills` at dawn; `show(progress, viewLeft, viewWidth)`. Design lab tab Night (`designs/nightDesigns.ts`).
+  parallax (`NIGHT_SCENERY.hillsParallax`) and fade to `nightCycle.dayHills` at dawn; `show(progress, viewLeft, viewWidth)`.
   Northern lights on `nightCycle.aurora` maps: `aurora.ts` (pure curtain waves), drawn by `drawAurora` in `NightSky.ts`, tuning `AURORA`. On mountain maps the sun rises in the nearest deep valley (`MOUNTAIN_VALLEYS`, `nearestValley`).
+  `nightCycle.kind` eclipse (corona, moon disc sliding off the sun at `sunAt`) or dust (dim sun); `NightSky.calm` thins
+  clouds (Background), rain and lightning (WeatherSystem) and the sandstorm (`Sand.ts`, tuning `SANDSTORM`) on `calms` maps.
 - **Aim overlay** (`AimOverlay.ts`): circles at the drag start (off by default, `session.showCursorCircle`) and at the
   bow; a ghost of the last shot stays where it was loosed.

@@ -11,6 +11,7 @@ type Cloud = {
   sprite: Graphics;
   speed: number;
   width: number;
+  alpha: number;
 };
 
 /** Spacing of the points the ground surface is drawn through. */
@@ -71,7 +72,7 @@ export class Background {
       cloud.alpha = battleground.cloudAlpha * alpha;
       cloud.zIndex = 0;
       container.addChild(cloud);
-      return { sprite: cloud, speed, width: shape.width };
+      return { sprite: cloud, speed, width: shape.width, alpha: cloud.alpha };
     });
     const hills = this.tiledHills(drawHills(battleground));
     if (this.night) {
@@ -105,11 +106,16 @@ export class Background {
     });
   }
 
-  /** Drifts the clouds right; one that leaves the scenery on the right comes back in on the left. */
+  /**
+   * Drifts the clouds right; one that leaves the scenery on the right comes back in on the left. Where the storm calms
+   * (`nightCycle.calms`) they thin out as it dies down.
+   */
   public update(deltaMs: number): void {
     const deltaSeconds = deltaMs / 1000;
     this.night?.update(deltaMs);
-    this.clouds.forEach(({ sprite, speed, width }) => {
+    const thinning = 1 - 0.85 * (this.night?.calm ?? 0);
+    this.clouds.forEach(({ sprite, speed, width, alpha }) => {
+      sprite.alpha = alpha * thinning;
       sprite.x += speed * deltaSeconds;
       if (sprite.x - width / 2 > this.right) {
         sprite.x = this.left - width / 2;

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { SURVIVAL } from '../config';
-import { nearestValley, nightSky } from './nightCycle';
+import { ECLIPSE_CLEAR, nearestValley, nightSky } from './nightCycle';
 
 describe('night cycle', () => {
   it('starts in full night with the moon up and the sun hidden', () => {
@@ -40,6 +40,24 @@ describe('night cycle', () => {
     expect(sky.hillsLight).toBe(1);
     expect(sky.sunRise).toBe(1);
     expect(nightSky(2)).toEqual(sky);
+  });
+});
+
+describe('storms and eclipses on the same timeline', () => {
+  it('rages until dawn and is over by sunrise', () => {
+    expect(nightSky(SURVIVAL.dawnAt - 0.01).calm).toBe(0);
+    expect(nightSky(0.9).calm).toBeGreaterThan(0);
+    expect(nightSky(1).calm).toBe(1);
+  });
+
+  it('starts as a total eclipse and ends with the sun clear', () => {
+    expect(nightSky(0).eclipse).toBe(0);
+    expect(nightSky(0).corona).toBe(1);
+    // Never more than a crescent before dawn.
+    expect(nightSky(SURVIVAL.dawnAt - 0.01).eclipse).toBeLessThan(ECLIPSE_CLEAR * 0.4);
+    expect(nightSky(1).eclipse).toBeCloseTo(ECLIPSE_CLEAR);
+    expect(nightSky(1).corona).toBe(0);
+    expect(nightSky(1).eclipseMoon).toBe(0);
   });
 });
 
