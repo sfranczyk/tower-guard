@@ -16,7 +16,7 @@
   at the bottom of its card.
 - **Sandbox form** (`SandboxForm.ts`): level tabs (map thumbnail, enemy count, add/remove, 1–5), the selected level's
   battleground (map cards, `mapThumbnail.ts`: a tiny SVG landscape from the palette) and enemies (a card per type with
-  − / +, type icons), bowman/keep health, difficulty and Banners on/off in one strip under the page tabs (`.sandbox-options`: two pairs that wrap only whole). Second page, Quiver (`quiverPage.ts`): fill the three slots
+  − / +, type icons), bowman/keep health, difficulty and Banners on/off in "Battle rules" at the top of the scrolling body (`.sandbox-options`, a `<details>`: one setting per row, closed by default with a one-line summary, `optionsOpen` kept across re-renders). Second page, Quiver (`quiverPage.ts`): fill the three slots
   (click a slot then an arrow, or drag: `quiverDrag.ts`; editing shared with co-op: `quiverEditing.ts`).
   Mode switch Battle / Survival right of the page tabs (`data-mode`); survival levels: time stepper and kind toggles
   (`survivalEditor.ts`), no Banners. HUD in survival: the clock "m:ss to dawn" (`HudValues.clockMs`) and the defeated count.

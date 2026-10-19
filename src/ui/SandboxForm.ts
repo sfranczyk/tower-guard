@@ -45,7 +45,7 @@ export interface SandboxFormCallbacks {
  * The sandbox setup form, in two pages. Levels: the run is a row of levels (tabs, each with its map and enemy
  * count, plus add and remove); below, the selected level's battleground (map cards) and enemies (a card per type
  * with − / +). Quiver: which arrow goes in each weapon slot (`quiverPage`). Back and Start sit in the top bar, the
- * pages and bowman and keep health under it; only the page scrolls (SandboxSettings.levels; a level's enemies then come in waves, systems/waveDirector).
+ * pages under it; the battle rules (collapsible) and the page scroll (SandboxSettings.levels; a level's enemies then come in waves, systems/waveDirector).
  */
 export class SandboxForm {
   private settings?: SandboxSettings;
@@ -54,6 +54,8 @@ export class SandboxForm {
   private page: SandboxPage = 'levels';
   /** The quiver slot the next picked arrow goes into. */
   private selectedSlot = 0;
+  /** The battle rules section is expanded (kept across re-renders). */
+  private optionsOpen = false;
   /** Co-op: the partner's quiver, shown (not editable) on the Quiver page. */
   private partner?: PartnerQuiver;
 
@@ -64,6 +66,12 @@ export class SandboxForm {
       }
     });
     root.addEventListener('click', (event) => this.onClick(event.target as HTMLElement));
+    // 'toggle' doesn't bubble, hence the capture.
+    root.addEventListener('toggle', (event) => {
+      if ((event.target as HTMLElement).matches('.sandbox-options')) {
+        this.optionsOpen = (event.target as HTMLDetailsElement).open;
+      }
+    }, true);
     editQuiverIn(
       root,
       () => (this.settings && this.page === 'quiver' ? { loadout: this.settings.loadout, slot: this.selectedSlot } : undefined),
@@ -89,10 +97,6 @@ export class SandboxForm {
   public render(settings: SandboxSettings): void {
     this.settings = settings;
     this.selected = Math.min(this.selected, runLevelCount(settings) - 1);
-    const survival = settings.mode === 'survival';
-    const numberInput = (attribute: string, value: number, limits: { min: number; max: number; step: number }): string =>
-      `<input type="number" ${attribute} value="${value}" min="${limits.min}" max="${limits.max}" step="${limits.step}">`;
-
     renderPanel(this.root, `
       ${panelTop(
     '<button class="secondary-button small-button" data-sandbox-back>← Back</button>',
@@ -108,23 +112,33 @@ export class SandboxForm {
           ${RUN_MODES.map((mode) => `<button type="button" class="sandbox-page${mode === settings.mode ? ' active' : ''}" role="radio" aria-checked="${mode === settings.mode}" data-mode="${mode}">${RUN_MODE_LABELS[mode]}</button>`).join('')}
         </div>
       </div>
-      <div class="sandbox-options">
-        <div class="option-group" aria-label="Health">
-          <label class="option-field" title="Bowman health">${ICON_BOWMAN}<span>Bowman</span>${numberInput('data-bowman-health', settings.bowmanHealth, HEALTH_LIMITS.bowman)}</label>
-          <label class="option-field" title="Keep health">${ICON_KEEP}<span>Keep</span>${numberInput('data-keep-health', settings.keepHealth, HEALTH_LIMITS.keep)}</label>
-        </div>
-        <div class="option-group" aria-label="Rules">
-          <div class="option-field" title="How hard enemies hit and how well their archers aim (fixed for the battle)"><span>Difficulty</span><div class="segmented" role="radiogroup" aria-label="Difficulty">
-            ${DIFFICULTY_LEVELS.map((level) => `<button type="button" class="chip-button${level === settings.difficulty ? ' active' : ''}" role="radio" aria-checked="${level === settings.difficulty}" data-difficulty="${level}">${DIFFICULTY_LABELS[level]}</button>`).join('')}
-          </div></div>
-          ${survival ? '' : `<div class="option-field" title="Each keep has a banner: bring the enemy's to your keep to win the level, lose yours and the level is lost (solo only)"><span>Banners</span><div class="segmented" role="radiogroup" aria-label="Banners">
-            ${[false, true].map((on) => `<button type="button" class="chip-button${on === settings.banners ? ' active' : ''}" role="radio" aria-checked="${on === settings.banners}" data-banners="${on}">${on ? 'On' : 'Off'}</button>`).join('')}
-          </div></div>`}
-        </div>
-      </div>
       <div class="panel-body">
+        ${this.options(settings)}
         ${this.page === 'levels' ? this.levelsPage(settings) : quiverPage(settings.loadout, this.selectedSlot, this.partner)}
       </div>`);
+  }
+
+  /**
+   * Battle-wide rules (health, difficulty, banners): a collapsible section at the top of the scrolling body, one
+   * setting per row; closed, its head sums them up.
+   */
+  private options(settings: SandboxSettings): string {
+    const survival = settings.mode === 'survival';
+    const numberInput = (attribute: string, value: number, limits: { min: number; max: number; step: number }): string =>
+      `<input type="number" ${attribute} value="${value}" min="${limits.min}" max="${limits.max}" step="${limits.step}">`;
+    const choice = <T>(name: string, attribute: string, values: readonly T[], current: T, label: (value: T) => string): string =>
+      `<div class="segmented" role="radiogroup" aria-label="${name}">
+        ${values.map((value) => `<button type="button" class="chip-button${value === current ? ' active' : ''}" role="radio" aria-checked="${value === current}" ${attribute}="${value}">${label(value)}</button>`).join('')}
+      </div>`;
+    return `<details class="sandbox-options"${this.optionsOpen ? ' open' : ''}>
+        <summary><span>Battle rules</span><small data-options-summary>${optionsSummary(settings)}</small></summary>
+        <label class="option-row" title="Bowman health">${ICON_BOWMAN}<span>Bowman health</span>${numberInput('data-bowman-health', settings.bowmanHealth, HEALTH_LIMITS.bowman)}</label>
+        <label class="option-row" title="Keep health">${ICON_KEEP}<span>Keep health</span>${numberInput('data-keep-health', settings.keepHealth, HEALTH_LIMITS.keep)}</label>
+        <div class="option-row" title="How hard enemies hit and how well their archers aim (fixed for the battle)"><span>Difficulty</span>
+          ${choice('Difficulty', 'data-difficulty', DIFFICULTY_LEVELS, settings.difficulty, (level) => DIFFICULTY_LABELS[level])}</div>
+        ${survival ? '' : `<div class="option-row" title="Each keep has a banner: bring the enemy's to your keep to win the level, lose yours and the level is lost (solo only)"><span>Banners</span>
+          ${choice('Banners', 'data-banners', [false, true], settings.banners, (on) => (on ? 'On' : 'Off'))}</div>`}
+      </details>`;
   }
 
   /** The selected level's map, enemies (battle: counts; survival: time and kinds, ui/survivalEditor.ts) and the level tabs. */
@@ -300,6 +314,10 @@ export class SandboxForm {
       bowmanHealth: value('[data-bowman-health]', settings.bowmanHealth),
       keepHealth: value('[data-keep-health]', settings.keepHealth),
     };
+    const summary = this.root.querySelector('[data-options-summary]');
+    if (summary) {
+      summary.textContent = optionsSummary(this.settings);
+    }
     this.emit();
   }
 
@@ -309,3 +327,11 @@ export class SandboxForm {
     }
   }
 }
+
+/** The closed battle rules' one-line summary. */
+const optionsSummary = (settings: SandboxSettings): string => [
+  `Bowman ${settings.bowmanHealth}`,
+  `Keep ${settings.keepHealth}`,
+  DIFFICULTY_LABELS[settings.difficulty],
+  ...(settings.mode === 'survival' ? [] : [`Banners ${settings.banners ? 'on' : 'off'}`]),
+].join(' · ');
