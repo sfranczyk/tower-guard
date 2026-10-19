@@ -30,6 +30,17 @@ const smoothstep = (from: number, to: number, value: number): number => {
 /** Where the sun rises across the view (east, over the enemy's side). */
 export const SUN_X = 0.72;
 
+/**
+ * The valley nearest `x` in the hills' own coordinates: `valleys` lie within one `tileWidth` stretch, repeated across
+ * the scenery with every other copy mirrored (rendering/Background.ts tiledHills).
+ */
+export const nearestValley = (x: number, valleys: readonly number[], tileWidth: number): number => {
+  const tile = Math.floor(x / tileWidth);
+  const candidates = [tile - 1, tile, tile + 1].flatMap((index) => valleys.map((valley) =>
+    (Math.abs(index) % 2 === 1 ? (index + 1) * tileWidth - valley : index * tileWidth + valley)));
+  return candidates.reduce((best, candidate) => (Math.abs(candidate - x) < Math.abs(best - x) ? candidate : best));
+};
+
 export const nightSky = (progress: number): NightSkyState => {
   const p = clamp01(progress);
   const moonT = p / SURVIVAL.moonSetAt;

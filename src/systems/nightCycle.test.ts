@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { SURVIVAL } from '../config';
-import { nightSky } from './nightCycle';
+import { nearestValley, nightSky } from './nightCycle';
 
 describe('night cycle', () => {
   it('starts in full night with the moon up and the sun hidden', () => {
@@ -40,5 +40,20 @@ describe('night cycle', () => {
     expect(sky.hillsLight).toBe(1);
     expect(sky.sunRise).toBe(1);
     expect(nightSky(2)).toEqual(sky);
+  });
+});
+
+describe('nearestValley', () => {
+  const valleys = [300, 650];
+  it('finds the closest valley in a plain stretch', () => {
+    expect(nearestValley(420, valleys, 1200)).toBe(300);
+    expect(nearestValley(600, valleys, 1200)).toBe(650);
+  });
+
+  it('mirrors every other stretch', () => {
+    // Stretch 1 (1200..2400) is mirrored: its valleys sit at 2400 − 300 and 2400 − 650.
+    expect(nearestValley(2050, valleys, 1200)).toBe(2100);
+    expect(nearestValley(1700, valleys, 1200)).toBe(1750);
+    expect(nearestValley(-350, valleys, 1200)).toBe(-300);
   });
 });

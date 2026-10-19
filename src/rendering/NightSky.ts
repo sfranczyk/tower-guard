@@ -1,9 +1,10 @@
 import { Container, Graphics } from 'pixi.js';
-import { AURORA, GROUND_Y, MAX_VIEW_WIDTH, NIGHT_SCENERY, VIEW_TOP } from '../config';
+import { AURORA, BACKDROP_WIDTH, GROUND_Y, MAX_VIEW_WIDTH, NIGHT_SCENERY, VIEW_TOP } from '../config';
 import type { Battleground } from '../data/battlegrounds';
-import { nightSky, SUN_X } from '../systems/nightCycle';
+import { nearestValley, nightSky, SUN_X } from '../systems/nightCycle';
 import { AURORA_CURTAINS, auroraColumn } from './aurora';
 import { mixColor } from './clouds';
+import { MOUNTAIN_VALLEYS } from './landscape';
 
 /** Where the sun's centre sits on the horizon (behind the hills) and how big moon and sun are, world px. */
 const HORIZON_Y = 280;
@@ -76,6 +77,9 @@ export class NightSky {
   private readonly aurora = new Graphics();
   private readonly auroraColors?: readonly number[];
   private seconds = 0;
+  /** Mountain maps: the valley the sun rises in (hills' own x), picked when it first shows and kept while it rises. */
+  private readonly valleys?: readonly number[];
+  private sunValley?: number;
   private viewWidth: number;
   private readonly moon = new Graphics();
   private readonly sun = new Graphics();
@@ -107,6 +111,7 @@ export class NightSky {
     this.sun.circle(0, 0, SUN_RADIUS * 1.3).fill({ color: cycle.sun, alpha: 0.18 });
     this.sun.circle(0, 0, SUN_RADIUS).fill({ color: cycle.sun, alpha: 0.95 });
     this.auroraColors = cycle.aurora;
+    this.valleys = battleground.hillShape === 'mountains' ? MOUNTAIN_VALLEYS : undefined;
     this.aurora.blendMode = 'add';
     this.viewWidth = right - left;
     this.sky.addChild(this.dawn, this.day, this.stars, this.aurora, this.moon, this.sun);
@@ -148,7 +153,20 @@ export class NightSky {
     // The moon pales as the sky brightens.
     this.moon.alpha = 1 - 0.6 * state.dawn;
     this.sun.visible = state.sunRise > -1;
-    this.sun.position.set(viewLeft + SUN_X * viewWidth, HORIZON_Y + SUN_RADIUS - (state.sunRise + 1) * SUN_RADIUS * 1.5);
+    this.sun.position.set(this.sunX(state.sunRise > -1, viewLeft, viewWidth), HORIZON_Y + SUN_RADIUS - (state.sunRise + 1) * SUN_RADIUS * 1.5);
     this.shade.alpha = SHADE_ALPHA * state.shade;
+  }
+
+  /**
+   * Where the sun stands (world x): SUN_X across the view, or on mountain maps in the valley nearest it, which it then
+   * keeps (moving with the hills' parallax) so it never rises behind a peak.
+   */
+  private sunX(visible: boolean, viewLeft: number, viewWidth: number): number {
+    if (!this.valleys) {
+      return viewLeft + SUN_X * viewWidth;
+    }
+    const valley = this.sunValley ?? nearestValley(viewLeft + SUN_X * viewWidth - this.hills.x, this.valleys, BACKDROP_WIDTH);
+    this.sunValley = visible ? valley : undefined;
+    return valley + this.hills.x;
   }
 }

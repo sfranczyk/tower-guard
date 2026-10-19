@@ -34,6 +34,11 @@ export const drawHills = ({ hills: [far, near], hillShape, sky }: Battleground):
 /** Peaks of the far range: x, summit y. Valleys sit between them at VALLEY_Y. */
 const PEAKS: ReadonlyArray<[number, number]> = [[60, 210], [230, 150], [400, 225], [560, 135], [730, 205], [900, 160], [1060, 215], [1190, 175]];
 const VALLEY_Y = 300;
+/** The deep valleys of the far range (between every second pair of peaks), where a night map's sun rises (NightSky). */
+export const MOUNTAIN_VALLEYS: readonly number[] = PEAKS.slice(0, -1)
+  .map(([x], index) => ({ x: (x + PEAKS[index + 1][0]) / 2, deep: index % 2 === 1 }))
+  .filter((valley) => valley.deep)
+  .map((valley) => valley.x);
 const SNOW = 0xf2f5f8;
 /** The far peaks' snow caps: a touch darker than the pines' snow, so they don't glare against the grey rock. */
 const PEAK_SNOW = 0xdfe6ee;
