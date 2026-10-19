@@ -19,12 +19,14 @@ export interface ReliefPlace {
   depth: number;
   /** Where he starts, in his file beyond the left edge. */
   startX: number;
+  /** Whether he cheers once formed up: the knights in front are too grave for it and stand still. */
+  cheers: boolean;
 }
 
 /**
  * The relief force's formation (pure, tested): the knights in the front rank, the squires in two ranks behind them
  * (the second staggered by half a place), the medics at the left end of the last rank. Each rank marches in as its own
- * file, the man going furthest in front, so nobody walks through another.
+ * file, the man going furthest in front, so nobody walks through another. Only the squires and medics cheer.
  */
 export const reliefFormation = (settings: ReliefSettings): ReliefPlace[] => {
   const { frontX, spacing, rankDepth, gap, spawnX } = settings;
@@ -39,5 +41,6 @@ export const reliefFormation = (settings: ReliefSettings): ReliefPlace[] => {
     x: frontX - (rankIndex === 1 ? spacing / 2 : 0) - index * spacing,
     depth: (ranks.length - 1 - rankIndex) * rankDepth,
     startX: spawnX - index * gap,
+    cheers: rankIndex > 0,
   })));
 };

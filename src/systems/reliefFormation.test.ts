@@ -22,6 +22,10 @@ describe('relief formation', () => {
     expect(medics.every((place) => place.depth === 0)).toBe(true);
   });
 
+  it('lets only the squires and medics cheer', () => {
+    expect(places.every((place) => place.cheers === (place.type !== 'allyKnight'))).toBe(true);
+  });
+
   it('marches each rank in as a file without anyone passing another', () => {
     [0, 6, 12].forEach((depth) => {
       const file = places.filter((place) => place.depth === depth);

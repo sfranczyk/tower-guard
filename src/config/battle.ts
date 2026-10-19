@@ -67,22 +67,21 @@ export const ALLIES = tunable('ALLIES', 'Allies', {
 
 /**
  * The relief force at the end of a held survival level (scenes/BattleRelief.ts, systems/reliefFormation.ts): `knights`,
- * `squires` (in two ranks) and `medics` march in from beyond the left edge at `speed` px/s in three files, `gap` px
- * apart, and form up in front of the keep, the front rank's head at `frontX`, `spacing` px between men in a rank, each
- * rank `rankDepth` px further down the screen than the one behind it. The end screen waits until they have cheered
- * `cheerMs` in formation, at most `waitMs`.
+ * `squires` (in two ranks) and `medics` march in from beyond the left edge in three files, `gap` px apart, all
+ * at the walking pace of the slowest of them (the knights), and form up in front of the keep, the front rank's head at `frontX`, `spacing` px between men in a rank, each
+ * rank `rankDepth` px further down the screen than the one behind it. The end screen waits until the squires and medics have
+ * cheered `cheerMs` in formation (the knights stand still), at most `waitMs` longer than the march should take.
  */
 export const RELIEF = tunable('RELIEF', 'Relief force', {
   knights: 10,
   squires: 20,
   medics: 3,
-  speed: 95,
   gap: 24,
   frontX: 640,
   spacing: 28,
   rankDepth: 6,
   cheerMs: 1500,
-  waitMs: 12000,
+  waitMs: 6000,
 }, { meta: { knights: { max: 20 }, squires: { max: 40 }, medics: { max: 10 } } });
 
 /**

@@ -157,7 +157,7 @@ export class EnemyFigure {
       this.settledDrawn = false;
     }
     // Held up by a vortex arrow, it glows in front of the funnel.
-    enemy.zIndex = afflictions.levitating ? LEVITATE_Z : 1;
+    enemy.zIndex = afflictions.levitating ? LEVITATE_Z : enemy.baseZ;
     if (enemy.motion.isThrown) {
       this.updateFlight(deltaMs);
       return;

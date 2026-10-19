@@ -51,6 +51,8 @@ export default class Enemy extends Container {
   public readonly velocity: Vec2 = { x: 0, y: 0 };
   /** Its drawn body (falls, gibs, the body transform). */
   public readonly figure: EnemyFigure;
+  /** Its draw order among the others when not lifted (a relief soldier lower on the screen is drawn over the rest). */
+  public baseZ = 1;
   /** What it is busy doing (a swing, a cast, a stagger, the cheer). */
   public readonly actions: EnemyActions;
   /** On horseback: the horse (its own health, a lame leg; bolting or dying once the fight is over for it). */

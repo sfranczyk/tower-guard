@@ -9,14 +9,17 @@ type Marcher = { soldier: Enemy; place: ReliefPlace };
 
 /**
  * The relief force at the end of a held survival level (`arrive`): knights, squires and medics march in from beyond the
- * left edge (systems/reliefFormation.ts), form up in front of the keep and cheer; after RELIEF.cheerMs of it (at the
- * latest RELIEF.waitMs after they set out) `onFormed`: the end screen. Only for show: they aren't in the battle (no AI, nothing hits them), and each
+ * left edge (systems/reliefFormation.ts) at an ordinary walk, all at the slowest one's pace, and form up in front of the
+ * keep; the squires and medics cheer, the knights stand still. After RELIEF.cheerMs of it (at the latest RELIEF.waitMs
+ * after the march should have ended) `onFormed`: the end screen. Only for show: they aren't in the battle (no AI, nothing hits them), and each
  * browser marches its own (a co-op guest's comes when its clock, the host's, runs out).
  */
 export class BattleRelief {
   private marchers: Marcher[] = [];
   private onFormed?: () => void;
   private waitedMs = 0;
+  /** When to stop waiting for stragglers: the longest march at their pace, plus RELIEF.waitMs. */
+  private maxWaitMs = 0;
   /** How long they have stood cheering in formation. */
   private cheeredMs?: number;
 
@@ -31,11 +34,16 @@ export class BattleRelief {
       return;
     }
     this.onFormed = onFormed;
-    this.marchers = reliefFormation({ ...RELIEF, spawnX: ALLIES.spawnX }).map((place) => {
-      const soldier = new Enemy(place.startX, getEnemyStats(place.type, 1).health, RELIEF.speed, 'bowman', place.type);
+    const places = reliefFormation({ ...RELIEF, spawnX: ALLIES.spawnX });
+    const pace = Math.min(...places.map((place) => getEnemyStats(place.type, 1).speed));
+    const longestMarch = Math.max(0, ...places.map((place) => place.x - place.startX));
+    this.maxWaitMs = (longestMarch / pace) * 1000 + RELIEF.waitMs;
+    this.marchers = places.map((place) => {
+      const soldier = new Enemy(place.startX, getEnemyStats(place.type, 1).health, pace, 'bowman', place.type);
       soldier.bars.health.visible = false;
       // Lower on the screen is nearer: the front rank is drawn over the ones behind it.
-      soldier.zIndex = 1 + place.depth / 100;
+      soldier.baseZ = 1 + place.depth / 100;
+      soldier.zIndex = soldier.baseZ;
       this.world.addChild(soldier);
       return { soldier, place };
     });
@@ -55,18 +63,20 @@ export class BattleRelief {
       soldier.y = groundAt(soldier.x) + place.depth;
       soldier.updateAnimation(deltaMs, soldier.isMoving());
     });
-    if (this.cheeredMs === undefined && (formed || this.waitedMs >= RELIEF.waitMs)) {
+    if (this.cheeredMs === undefined && (formed || this.waitedMs >= this.maxWaitMs)) {
       this.cheeredMs = 0;
     }
     if (this.cheeredMs === undefined) {
       return;
     }
-    this.marchers.forEach(({ soldier }) => {
+    this.marchers.forEach(({ soldier, place }) => {
       soldier.faceTowards(soldier.x + 100);
-      soldier.celebrate();
+      if (place.cheers) {
+        soldier.celebrate();
+      }
     });
     this.cheeredMs += deltaMs;
-    if (this.cheeredMs >= RELIEF.cheerMs || this.waitedMs >= RELIEF.waitMs) {
+    if (this.cheeredMs >= RELIEF.cheerMs || this.waitedMs >= this.maxWaitMs) {
       const onFormed = this.onFormed;
       this.onFormed = undefined;
       onFormed?.();
