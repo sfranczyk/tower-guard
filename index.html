@@ -199,11 +199,9 @@
         .level-tab.active { background: #fffaf0; box-shadow: inset 0 3px 0 var(--gold); }
         .level-add { align-self: center; padding: 6px 12px; border: 2px dashed var(--panel-edge); border-radius: 12px; background: none; color: var(--accent); font-family: var(--display); font-weight: 600; font-size: 14px; pointer-events: auto; }
         .level-add:hover { background: var(--panel-sunk); }
-        /* A level's bin: a small round button on the tab's top-right corner; asks first (SandboxForm.removeDialog). */
-        .level-tab-wrap { position: relative; display: flex; }
-        .level-remove { position: absolute; top: -7px; right: -7px; display: grid; place-items: center; width: 24px; height: 24px; padding: 0; border-radius: 12px; background: var(--panel); color: var(--ink-soft); box-shadow: 0 2px 0 var(--panel-edge); pointer-events: auto; transition: color .12s ease, transform .08s ease; }
-        .level-remove .icon { width: 16px; height: 16px; }
-        .level-remove:hover { color: var(--bad); transform: scale(1.1); }
+        /* Remove the selected level: an outlined red button right of the editor's head; asks first (SandboxForm.removeDialog). */
+        .level-remove { padding: 4px 12px; border: 2px solid color-mix(in srgb, var(--bad) 55%, transparent); border-radius: 12px; background: none; color: var(--bad); font-family: var(--display); font-weight: 600; font-size: 13px; pointer-events: auto; transition: background .12s ease, color .12s ease; }
+        .level-remove:hover { background: var(--bad); border-color: var(--bad); color: #fff; }
         /* Confirmation over the setup card (remove a level). */
         .panel-card[data-sandbox-form] { position: relative; }
         .confirm-overlay { position: absolute; inset: 0; z-index: 5; display: grid; place-items: center; padding: 20px; border-radius: inherit; background: rgba(20, 30, 32, .35); pointer-events: auto; }

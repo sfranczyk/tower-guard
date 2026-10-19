@@ -196,12 +196,13 @@ export class SandboxForm {
     const level = settings.levels[this.selected];
     return `
       <div class="level-tabs" role="tablist" aria-label="Levels">
-        ${Array.from({ length: count }, (_, index) => this.levelTab(settings, index, count > MIN_LEVELS)).join('')}
+        ${Array.from({ length: count }, (_, index) => this.levelTab(settings, index)).join('')}
         ${count < maxLevelsFor(settings.mode) ? '<button type="button" class="level-add" data-level-add>+ Add level</button>' : ''}
       </div>
       <div class="level-editor">
         <div class="level-editor-head">
           <div class="sandbox-section-label">Level ${this.selected + 1} · Battleground</div>
+          ${count > MIN_LEVELS ? `<button type="button" class="level-remove" data-level-remove="${this.selected}">Remove level ${this.selected + 1}</button>` : ''}
         </div>
         <div class="map-cards" style="--maps: ${maps.length}">
           ${maps.map((id) => `<button type="button" class="map-card${id === battleground ? ' active' : ''}" data-map="${id}" aria-pressed="${id === battleground}">
@@ -216,15 +217,15 @@ export class SandboxForm {
       </div>`;
   }
 
-  private levelTab(settings: SandboxSettings, index: number, removable: boolean): string {
+  private levelTab(settings: SandboxSettings, index: number): string {
     const active = index === this.selected;
     const battleground = BATTLEGROUNDS[runBattleground(settings, index)];
     const total = levelEnemyTotal(settings.levels[index].enemies);
     const text = settings.mode === 'survival' ? survivalTabText(settings.survival.levels[index]) : `${total} ${total === 1 ? 'enemy' : 'enemies'}`;
-    return `<div class="level-tab-wrap"><button type="button" class="level-tab${active ? ' active' : ''}" role="tab" aria-selected="${active}" data-level="${index}" title="${battleground.name}">
+    return `<button type="button" class="level-tab${active ? ' active' : ''}" role="tab" aria-selected="${active}" data-level="${index}" title="${battleground.name}">
       ${mapThumbnail(battleground)}
       <span class="level-tab-text"><strong>Level ${index + 1}</strong><small data-tab-total="${index}">${text}</small></span>
-    </button>${removable ? `<button type="button" class="level-remove" data-level-remove="${index}" title="Remove level ${index + 1}" aria-label="Remove level ${index + 1}">${ICON_TRASH}</button>` : ''}</div>`;
+    </button>`;
   }
 
   private enemyCard(type: EnemyType, count: number): string {

@@ -16,7 +16,7 @@
   at the bottom of its card.
 - **Sandbox form** (`SandboxForm.ts`): opens on the mode picker (`step 'mode'`: two big cards, Battle / Survival, map +
   `RUN_MODE_DESCRIPTIONS`); Back/Esc returns there (`DomUi.sandboxBack`). Then three pages, no mode switch. Levels:
-  level tabs (map thumbnail, enemy count, add; a bin on each tab asks first, `removeDialog` over the card, Esc cancels; 1–5), the selected level's battleground (map cards,
+  level tabs (map thumbnail, enemy count, add; "Remove level N" right of the editor head asks first, `removeDialog` over the card, Esc cancels; battle 1–5, survival 1–3), the selected level's battleground (map cards,
   `mapThumbnail.ts`) and enemies (a card per type with − / +); survival levels: time stepper and kind toggles
   (`survivalEditor.ts`). Rules (`rulesPage`, `.option-row`, one per row): bowman/keep health, difficulty, Banners
   (battle only), Support (`SandboxSettings.support`, `supportAllowed`: soldiers only in battle with it on; shown off and
