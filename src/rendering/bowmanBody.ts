@@ -3,20 +3,30 @@ import type { ArmorPalette } from './armor';
 import { bowInRearHand } from './armoredPose';
 import type { JointPose } from './stickmanPose';
 import { bowmanBody } from './designs/bodyPoses';
+import { huntsmanLook, steppeLook } from './designs/coopSkins';
 import { rangerLook, wardenLook } from './designs/playerSkins';
 import { drawHumanoid, type HumanoidLook } from './designs/skinKit';
 
 /**
- * The player drawn in a look from the design lab: the ranger (player 1) or, in co-op, the keep warden
- * (player 2), coloured from the battleground's player palette. Same poses as drawStickman's armored archer.
+ * The player drawn in a look from the design lab: the ranger (player 1) or, in co-op, the keep warden, the
+ * steppe archer and the huntsman (players 2–4), coloured from the battleground's player palette. Same poses as
+ * drawStickman's armored archer.
  */
-export type BowmanLook = 'ranger' | 'warden';
+export type BowmanLook = 'ranger' | 'warden' | 'steppe' | 'huntsman';
+/** Player n's look (index from 0). */
+export const BOWMAN_LOOKS: readonly BowmanLook[] = ['ranger', 'warden', 'steppe', 'huntsman'];
 
 /** drawStickman's feet are 55 below the hip, the BodyPoses' 57: live poses are drawn this much higher. */
 const LIVE_POSE_LIFT = 2;
 
-const lookOf = (look: BowmanLook, palette: ArmorPalette | undefined, timeMs: number, moving: number): HumanoidLook =>
-  look === 'ranger' ? rangerLook(timeMs, moving, palette) : wardenLook(palette);
+const lookOf = (look: BowmanLook, palette: ArmorPalette | undefined, timeMs: number, moving: number): HumanoidLook => {
+  switch (look) {
+    case 'ranger': return rangerLook(timeMs, moving, palette);
+    case 'warden': return wardenLook(palette);
+    case 'steppe': return steppeLook(timeMs, moving, palette);
+    case 'huntsman': return huntsmanLook(timeMs, moving, palette);
+  }
+};
 
 export interface BowmanBodyState {
   /** drawStickman's walk phase (radians, one cycle = 2π). */

@@ -175,8 +175,8 @@ export class GameScene extends Scene {
     const { sandbox, run } = this.ctx.session;
     const hillColor = this.battleground.hills[0];
     // Co-op: the keep gets a second, lower tower for the second bowman.
-    const twin = this.ctx.session.playerCount > 1;
-    this.playerTower = new Tower(PLAYER_TOWER_X, GROUND_Y, { hillColor, enemy: false, twin }, sandbox.keepHealth, run.keepHealth);
+    const towers = this.ctx.session.playerCount;
+    this.playerTower = new Tower(PLAYER_TOWER_X, GROUND_Y, { hillColor, enemy: false, towers }, sandbox.keepHealth, run.keepHealth);
     // Survival: the enemy has no keep (they come from beyond the field).
     this.enemyTower = new Tower(ENEMY_TOWER_X, GROUND_Y, { hillColor, enemy: true, absent: !!this.survivalSetup }, ENEMY_KEEP_HEALTH, run.enemyKeepHealth);
     if (this.survivalSetup) {

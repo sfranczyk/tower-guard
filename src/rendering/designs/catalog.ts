@@ -23,6 +23,8 @@ import { drawMountedKnight } from './warhorse';
 import { HORSE_DEATH_MS, getHorseDeath, type HorseDeathKind } from '../horseDeath';
 import { gaitGroundSpeed, getHorsePose, type HorsePose } from '../horseRider';
 import { rangerLook, wardenLook } from './playerSkins';
+import { huntsmanLook, steppeLook } from './coopSkins';
+import { KEEP_ENTRIES } from './keepDesigns';
 import { drawHumanoid, type HumanoidLook } from './skinKit';
 import { drawEnemyGibs } from '../enemyBody';
 import { GibSimulation } from '../stickmanGibs';
@@ -40,6 +42,8 @@ export interface DesignView {
   /** Framing: scale on top of the tile's fit, and a shift right (figure units). */
   scale?: number;
   offsetX?: number;
+  /** Drawn first, under `draw` (the bowmen behind the keep's parapets). */
+  behind?: (g: Graphics, timeMs: number) => void;
 }
 
 export interface DesignEntry {
@@ -503,6 +507,20 @@ const PLAYER: DesignEntry[] = [
     description: 'A soldier of the keep he defends: a steel kettle helm over a mail coif, a blue tabard with the keep\'s gold tower (the same tower as the one behind him), padded sleeves, leather gloves and a dark recurve bow. In the game: the second player in co-op. The tabard takes the battleground\'s player colour, the helm its plate (bronze for player 2) and the tower its trim.',
     views: playerViews(() => wardenLook()),
   },
+  {
+    id: 'steppe',
+    name: 'Steppe archer',
+    tagline: 'Player 3 in co-op',
+    description: 'A rider of the steppe on foot: a pointed cap leaning back over a thick fur brim, a long black braid, a drooping moustache, a kaftan to mid-thigh with a fur-edged crossover and hem, a sash with its ends flying behind, red riding boots, a quiver slung low at the hip and a short reflex bow with pale horn tips. In the game: the third player in co-op. The cap and kaftan take the battleground\'s player colour, the sash its trim.',
+    views: playerViews(steppeLook),
+  },
+  {
+    id: 'huntsman',
+    name: 'Huntsman',
+    tagline: 'Player 4 in co-op',
+    description: 'A hunter from the deep woods under a wolf pelt: the wolf\'s head for a hood (ears up, snout over his brow), its forepaws on his chest and the hide trailing down his back to the tail. A full beard, a short tunic, a belt with a hunting horn, leather bracers, fur-wrapped shins, a birch-bark quiver and a plain yew longbow. In the game: the fourth player in co-op. The tunic takes the battleground\'s player colour.',
+    views: playerViews(huntsmanLook),
+  },
 ];
 
 const IDEAS: DesignEntry[] = ENEMY_DESIGNS.map((design) => ({
@@ -610,7 +628,8 @@ const ALLIES: DesignEntry[] = [
 
 export const DESIGN_SECTIONS: readonly DesignSection[] = [
   { id: 'enemies', tab: 'Enemies', intro: 'Every enemy as it looks in the game now, over its own moves. Click one for all its animations and the old stickman.', entries: ENEMIES },
-  { id: 'player', tab: 'Player', intro: 'The player looks: the ranger (player 1) and the keep warden (player 2 in co-op), next to the old armored archer.', entries: PLAYER },
+  { id: 'player', tab: 'Player', intro: 'The player looks: the ranger (player 1), the keep warden, the steppe archer and the huntsman (players 2–4 in co-op), next to the old armored archer.', entries: PLAYER },
+  { id: 'keeps', tab: 'Keeps', intro: 'The player\'s keep with one tower per bowman: alone, and for co-op of two, three and four. Each lower tower stands at its own height; click one for its damage stages.', entries: KEEP_ENTRIES },
   { id: 'allies', tab: 'Allies', intro: 'The player\'s soldiers as they look in the game: summoned from beyond the left edge (Z, X, C), they follow the order button (V).', entries: ALLIES },
   { id: 'banners', tab: 'Banners', intro: 'Five proposals for the keeps\' banners (the Banners option): blue ours, red theirs, both in one breeze. The game draws BANNER_STYLE (rendering/banner.ts): the pennon.', entries: BANNER_ENTRIES },
   { id: 'ideas', tab: 'Ideas', intro: 'Proposals for new enemy looks, from the most human to the least (not tied to an enemy yet).', entries: IDEAS },

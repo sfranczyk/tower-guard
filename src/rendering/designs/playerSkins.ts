@@ -3,11 +3,11 @@ import type { ArmorPalette } from '../armor';
 import { limb } from './designShapes';
 import { at, drawBowWith, ellipseIn, quiver, shapeIn, torsoFrame, type HumanoidLook, type LimbLook } from './skinKit';
 
-/** Two proposals for a new player look, over the same archer rig and animations as the armored archer. */
+/** The player looks for players 1 and 2, over the same archer rig and animations as the armored archer (3 and 4: coopSkins.ts). */
 
 const xy = (point: Vec2): [number, number] => [point.x, point.y];
 /** A colour scaled towards black (factor < 1) or white (> 1). */
-const shade = (color: number, factor: number): number => {
+export const shade = (color: number, factor: number): number => {
   const channel = (shift: number): number => {
     const value = (color >> shift) & 0xff;
     const scaled = factor <= 1 ? value * factor : value + (255 - value) * (factor - 1);
@@ -16,7 +16,7 @@ const shade = (color: number, factor: number): number => {
   return channel(16) | channel(8) | channel(0);
 };
 
-const limbs = (upper: number, lower: number, upperWidth: [number, number], lowerWidth: [number, number]): LimbLook =>
+export const limbs = (upper: number, lower: number, upperWidth: [number, number], lowerWidth: [number, number]): LimbLook =>
   ({ upper, lower, upperWidth, lowerWidth });
 
 /**

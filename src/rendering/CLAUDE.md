@@ -29,8 +29,9 @@ animation gets a row in `scenes/labRows.ts` (or `scenes/labSequences.ts` for one
   (raider, runner = goblin, hunter = hooded archer, brute = ogre, kamikaze = sapper, goblin kamikaze = goblin bomber, zombie = rotting peasant,
   knights in black plate, priest in a robe). Gibs in the look: `drawEnemyGibs` → `designs/lookGibs.ts`;
   `enemyGibColors`. Colours: `bodyColors.ts`.
-- **Player** (`bowmanBody.ts`): ranger / keep warden from `designs/playerSkins.ts` (ranger: hood, cloak, sleeves =
-  `limb`; warden: tabard = `limb`, helm = `plate`, tower = `gold`). Falls draw the bow in the rear hand
+- **Player** (`bowmanBody.ts`, `BOWMAN_LOOKS` by player index): ranger / keep warden from `designs/playerSkins.ts` (ranger: hood, cloak, sleeves =
+  `limb`; warden: tabard = `limb`, helm = `plate`, tower = `gold`); players 3–4 steppe archer (cap and kaftan = `limb`,
+  sash = `gold`, reflex bow) / huntsman (wolf pelt, tunic = `limb`) from `designs/coopSkins.ts`. Falls draw the bow in the rear hand
   (`bowInRearHand`).
 - **Designs** (`designs/`): `bodyPoses.ts` (BodyPose for every animation, pure, tested), `skinKit.ts` (parts in
   torso/head frames), `drawHumanoid` / `HumanoidLook`; looks in `enemySkins.ts`, `heavySkins.ts`, `knightSkins.ts`,
@@ -67,6 +68,9 @@ animation gets a row in `scenes/labRows.ts` (or `scenes/labSequences.ts` for one
   `BANNER_GRIP` (bodyPoses.ts; `EnemyBodyState` `banner`, `Enemy.bannerHold` held/planted), lab row `banner-carry`.
 - **Keep** (`keep.ts`): flat tower, 200×406 at half size (`TOWER_HEIGHT`), stone tinted by `keepTones`,
   `keepDamageStage` (cracks ≤60%, broken merlons/banners/rubble ≤30%, fire ≤10%), `keepHitParts` (pure).
+  One tower per bowman (`KeepLook.towers` 1–4): `KEEP_TURRETS` = right-wall tower, left-wall tower, bastion beyond the
+  right wall (longer plinth), each lower; `keepTurrets(towers)`, `keepHideSpot(index, towers)`. Design-lab tab Keeps
+  (`designs/keepDesigns.ts`; `DesignView.behind` draws the bowmen under the keep).
 - **Background** (`Background.ts`, `landscape.ts`): hills drawing is one `BACKDROP_WIDTH` stretch repeated, every other
   copy mirrored; scenery extends `SCENERY_MARGIN` past the ends; calls `useTerrain`. Clouds (`clouds.ts`, pure, seeded
   per map, cached as textures, higher = slower). Rain (`Rain.ts`, `RAIN_*`) and snow (`Snow.ts`, `SNOW_*`) are screen

@@ -1,6 +1,6 @@
 import { Container, Graphics } from 'pixi.js';
 import { drawHealthBar } from '../rendering/healthBar';
-import { KEEP_BASE, KEEP_FIRE_SPOT, KEEP_SMOKE_SPOT, KEEP_TURRET, drawKeep, keepHitParts } from '../rendering/keep';
+import { KEEP_BASE, KEEP_FIRE_SPOT, KEEP_SMOKE_SPOT, drawKeep, keepHideSpot, keepHitParts } from '../rendering/keep';
 import { segmentHitTime, type AxisBounds } from '../systems/collision';
 import type { Vec2 } from '../types';
 import { keepDamageStage, keepTones, type KeepDamage, type KeepTones } from '../rendering/keepStyle';
@@ -19,8 +19,8 @@ export interface KeepOptions {
   hillColor: number;
   /** Enemy keep: red banners. */
   enemy: boolean;
-  /** Co-op: a second, lower tower for the second bowman to hide in. */
-  twin?: boolean;
+  /** Co-op: one tower per bowman to hide in (1–4; rendering/keep.ts KEEP_TURRETS). */
+  towers?: number;
   /** Health bar above it (default on; the menu's backdrop keeps have none). */
   showHealth?: boolean;
   /** A cold ruin (the menu's enemy keep): no torch, fire or smoke at any damage stage. */
@@ -50,10 +50,6 @@ interface Chip {
 
 const random = (min: number, max: number): number => min + Math.random() * (max - min);
 
-/** A hidden bowman's feet in the main tower: this far below the top of the drawing, behind the parapet. */
-const HIDE_BELOW_TOP = 34;
-/** In the lower tower: this far below the top of its cornice (as deep as in the main tower). */
-const HIDE_BELOW_CORNICE = 5;
 
 /**
  * A keep with health. The flat-style drawing (rendering/keep.ts) is redrawn only when the damage stage
@@ -123,7 +119,7 @@ export default class Tower extends Container {
       return [];
     }
     const { x, groundY } = this;
-    return keepHitParts(this.options.twin).map((part) => ({
+    return keepHitParts(this.options.towers).map((part) => ({
       left: x + (part.left - KEEP_BASE.x) * KEEP_SCALE,
       right: x + (part.right - KEEP_BASE.x) * KEEP_SCALE,
       top: groundY + (part.top - KEEP_BASE.y) * KEEP_SCALE,
@@ -140,17 +136,12 @@ export default class Tower extends Container {
   }
 
   /**
-   * Where a bowman hiding in the keep stands (world, feet): the main tower for the first, the lower second
-   * tower (co-op keep) for the second.
+   * Where a bowman hiding in the keep stands (world, feet): the main tower for the first, in co-op each other
+   * bowman in a lower tower of his own (rendering/keep.ts `keepHideSpot`).
    */
   public hideSpot(index: number): Vec2 {
-    if (index > 0 && this.options.twin) {
-      return {
-        x: this.x + ((KEEP_TURRET.left + KEEP_TURRET.right) / 2 - KEEP_BASE.x) * KEEP_SCALE,
-        y: this.groundY - (KEEP_BASE.y - KEEP_TURRET.cornice) * KEEP_SCALE + HIDE_BELOW_CORNICE,
-      };
-    }
-    return { x: this.x, y: this.groundY - TOWER_HEIGHT + HIDE_BELOW_TOP };
+    const spot = keepHideSpot(index, this.options.towers ?? 1);
+    return { x: this.x + (spot.x - KEEP_BASE.x) * KEEP_SCALE, y: this.groundY + (spot.y - KEEP_BASE.y) * KEEP_SCALE };
   }
 
   /** Co-op guest: the health the host's keep has (damage stage follows). */
@@ -249,7 +240,7 @@ export default class Tower extends Container {
     }
     this.drawn = true;
     this.damage = damage;
-    drawKeep(this.body, { tones: this.tones, enemy: this.options.enemy, damage, twin: this.options.twin });
+    drawKeep(this.body, { tones: this.tones, enemy: this.options.enemy, damage, towers: this.options.towers });
   }
 
   /** Flickering torch; at the last stage fire in the arrow slit and smoke rising from the top. */

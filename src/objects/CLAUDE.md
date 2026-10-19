@@ -19,4 +19,4 @@ host and guest each break their own copy (`deactivate(true)`, no `gone`).
 Drawn by `rendering/keep.ts`; `Tower` redraws only when `keepDamageStage` changes and animates torch, fire, smoke in
 `update(deltaMs)`. `Tower.takeDamage(amount, at?)` knocks stone chips off (`CHIPS`), no flash; health bar (`showHealth`,
 off in the menu). Arrows hit `keepHitParts` via `Tower.hitTime` (`?debug` cyan) and stick (`Arrow.stickToWall`), but
-explosive ones. Co-op twin keep (`KeepOptions.twin`, `KEEP_TURRET`); `Tower.hideSpot(index)` per bowman.
+explosive ones. Co-op keep with one tower per bowman (`KeepOptions.towers`, `KEEP_TURRETS`); `Tower.hideSpot(index)` per bowman.

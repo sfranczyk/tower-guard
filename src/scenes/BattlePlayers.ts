@@ -9,6 +9,7 @@ import type { GuestSync } from '../net/GuestSync';
 import type { HostSync } from '../net/HostSync';
 import Bowman from '../objects/bowman/Bowman';
 import { secondPlayerArmor } from '../rendering/armor';
+import { BOWMAN_LOOKS } from '../rendering/bowmanBody';
 import type { AimOverlay } from '../rendering/AimOverlay';
 import type { EffectsSystem } from '../systems/EffectsSystem';
 import { ArrowCooldowns } from '../systems/arrowCooldowns';
@@ -51,8 +52,8 @@ export class BattlePlayers {
     this.list = Array.from({ length: Math.max(1, playerCount) }, (_, index) => {
       const bowman = new Bowman(playerStartX(index), BOWMAN_Y, { x: 0, y: 0, width: WORLD_WIDTH, height: GAME_HEIGHT }, {
         armorColors: index === 0 ? armor : secondPlayerArmor(armor),
-        // Player 1 is the ranger; in co-op player 2 is the keep warden.
-        look: index === 0 ? 'ranger' : 'warden',
+        // Player 1 is the ranger; in co-op the keep warden, the steppe archer and the huntsman follow.
+        look: BOWMAN_LOOKS[index % BOWMAN_LOOKS.length],
         burnMs: relight(sandbox.difficulty),
       });
       bowman.y = groundAt(bowman.x);
