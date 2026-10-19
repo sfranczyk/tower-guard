@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BATTLEGROUND_IDS } from './battlegrounds';
+import { BATTLEGROUND_IDS, BATTLEGROUNDS } from './battlegrounds';
 import { DEFAULT_SURVIVAL_MINUTES, MAX_ENEMIES_PER_TYPE, MAX_LEVELS, SURVIVAL_MINUTES, battlegroundsFor, createDefaultSandbox, normalizeSandbox, levelEnemyTotal, runBattleground, runLevelCount } from './sandbox';
 
 describe('sandbox settings', () => {
@@ -61,9 +61,11 @@ describe('survival setup', () => {
       expect(level.minutes).toBe(DEFAULT_SURVIVAL_MINUTES);
     });
     expect(runBattleground({ ...settings, mode: 'survival' }, 0)).toBe('moonlitHollow');
-    expect(runBattleground({ ...settings, mode: 'survival' }, 1)).toBe('auroraPeaks');
+    expect(runBattleground({ ...settings, mode: 'survival' }, 1)).toBe('eclipsePass');
     // Battle levels never get a night map, survival levels only night maps.
-    expect(battlegroundsFor('survival')).toEqual(['moonlitHollow', 'auroraPeaks', 'stormwatchRidge', 'eclipsePass', 'sandstormDunes']);
+    expect(battlegroundsFor('survival')).toEqual(['moonlitHollow', 'eclipsePass', 'sandstormDunes', 'stormwatchRidge', 'auroraPeaks']);
+    // In the order of the battle maps they belong to.
+    expect(battlegroundsFor('survival').map((id) => BATTLEGROUNDS[id].nightCycle!.nightOf)).toEqual(battlegroundsFor('battle'));
     settings.levels.forEach((level) => expect(battlegroundsFor('battle')).toContain(level.battleground));
   });
 

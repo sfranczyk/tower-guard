@@ -53,7 +53,7 @@ describe('levelEndInfo in survival', () => {
     const { info, next } = held();
     expect(next).toBe(true);
     expect(info.title).toBe('Dawn breaks!');
-    expect(info.copy).toMatch(/Next: level 2 of 2 at Aurora Peaks/);
+    expect(info.copy).toMatch(/Next: level 2 of 2 at Eclipse Pass/);
     expect(info.stats[0]).toEqual({ label: 'held out', value: '3:00' });
     expect(info.stats[1]).toEqual({ label: 'enemies defeated', value: '12' });
   });

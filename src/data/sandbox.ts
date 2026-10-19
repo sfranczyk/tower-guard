@@ -87,11 +87,14 @@ const DEFAULT_SURVIVAL_KINDS: readonly EnemyType[][] = [
   ['raider', 'fast', 'hunter', 'zombie', 'tank', 'troll', 'knight', 'horseKnight', 'shaman', 'fireDragon'],
 ];
 export const DEFAULT_SURVIVAL_MINUTES = 3;
-const SURVIVAL_BATTLEGROUNDS: readonly BattlegroundId[] = ['moonlitHollow', 'auroraPeaks', 'stormwatchRidge', 'eclipsePass', 'sandstormDunes'];
+const BATTLE_BATTLEGROUNDS = BATTLEGROUND_IDS.filter((id) => !BATTLEGROUNDS[id].nightCycle);
+/** The survival maps in the order of the battle maps they are the versions of. */
+const SURVIVAL_BATTLEGROUNDS = BATTLEGROUND_IDS.filter((id) => BATTLEGROUNDS[id].nightCycle)
+  .sort((a, b) => BATTLE_BATTLEGROUNDS.indexOf(BATTLEGROUNDS[a].nightCycle!.nightOf) - BATTLE_BATTLEGROUNDS.indexOf(BATTLEGROUNDS[b].nightCycle!.nightOf));
 
 /** The maps a level of this mode may be fought on: survival on the night maps only, battle on the others. */
 export const battlegroundsFor = (mode: RunMode): BattlegroundId[] =>
-  BATTLEGROUND_IDS.filter((id) => !!BATTLEGROUNDS[id].nightCycle === (mode === 'survival'));
+  [...(mode === 'survival' ? SURVIVAL_BATTLEGROUNDS : BATTLE_BATTLEGROUNDS)];
 
 /** The night map of a battle map, if it has one (a stored survival level on a day map moves to its night). */
 const nightVersionOf = (id: unknown): BattlegroundId | undefined =>

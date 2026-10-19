@@ -29,6 +29,7 @@ import { BattleControls } from './BattleControls';
 import { BattleEnemies } from './BattleEnemies';
 import { BattleOutcome } from './BattleOutcome';
 import { BattleSurvival } from './BattleSurvival';
+import { BattleRelief } from './BattleRelief';
 import { BattlePlayers } from './BattlePlayers';
 import { startBattleSync } from './battleSync';
 import { DEFAULT_STATUS, clockText, windLabel } from './battleText';
@@ -57,6 +58,8 @@ export class GameScene extends Scene {
   /** Survival runs: the level's kinds and time; its clock and night once entered (`survival`; ?debug: `scene.survival.skip(ms)`). */
   private readonly survivalSetup?: SurvivalLevel;
   private survival?: BattleSurvival;
+  /** Survival: the relief force marching in once the level is held (BattleRelief). */
+  private relief?: BattleRelief;
   private readonly world = new Container();
   /** The level's enemies (also `foes.list`; kept here for the ?debug console: `scene.enemies[0]`). */
   private readonly enemies: Foe[] = [];
@@ -178,6 +181,7 @@ export class GameScene extends Scene {
     this.enemyTower = new Tower(ENEMY_TOWER_X, GROUND_Y, { hillColor, enemy: true, absent: !!this.survivalSetup }, ENEMY_KEEP_HEALTH, run.enemyKeepHealth);
     if (this.survivalSetup) {
       this.survival = new BattleSurvival(this.survivalSetup, this.background);
+      this.relief = new BattleRelief(this.world);
     }
     this.debugGraphics.zIndex = 4;
     this.world.addChild(this.playerTower, this.enemyTower, this.aimOverlay, this.debugGraphics);
@@ -254,6 +258,7 @@ export class GameScene extends Scene {
       enemyTower: this.enemyTower,
       banners: this.banners,
       survival: this.survival,
+      relief: this.relief,
       hostSync: () => this.hostSync,
       stopInput: () => this.controls?.destroy(),
     });
@@ -350,6 +355,11 @@ export class GameScene extends Scene {
     }
     this.background.update(deltaMs);
     this.survival?.update(deltaMs, this.camera.x, !this.outcome.ended, this.role === 'guest');
+    // The host (or solo) calls the relief when the level is held (BattleOutcome); a guest when the host's clock runs out.
+    if (this.role === 'guest' && this.survival?.timeUp && !this.outcome.ended) {
+      this.relief?.arrive();
+    }
+    this.relief?.update(deltaMs);
     this.weather?.update(deltaMs, this.camera.x);
     this.snow?.update(deltaMs, this.camera.x);
     if (this.sand) {

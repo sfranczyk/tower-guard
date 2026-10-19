@@ -66,6 +66,26 @@ export const ALLIES = tunable('ALLIES', 'Allies', {
 });
 
 /**
+ * The relief force at the end of a held survival level (scenes/BattleRelief.ts, systems/reliefFormation.ts): `knights`,
+ * `squires` (in two ranks) and `medics` march in from beyond the left edge at `speed` px/s in three files, `gap` px
+ * apart, and form up in front of the keep, the front rank's head at `frontX`, `spacing` px between men in a rank, each
+ * rank `rankDepth` px further down the screen than the one behind it. The end screen waits until they have cheered
+ * `cheerMs` in formation, at most `waitMs`.
+ */
+export const RELIEF = tunable('RELIEF', 'Relief force', {
+  knights: 10,
+  squires: 20,
+  medics: 3,
+  speed: 95,
+  gap: 24,
+  frontX: 640,
+  spacing: 28,
+  rankDepth: 6,
+  cheerMs: 1500,
+  waitMs: 12000,
+}, { meta: { knights: { max: 20 }, squires: { max: 40 }, medics: { max: 10 } } });
+
+/**
  * Banners (the run's Banners option, systems/banners.ts): each keep's banner stands `standOffset` px in front of it;
  * a carrier-to-be takes one within `pickupRadius`, and wins (or brings his own back) within `deliverReach` of his own
  * keep. A mounted carrier rides at `riderSpeedFactor` of his pace.

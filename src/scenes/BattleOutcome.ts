@@ -9,7 +9,9 @@ import type { BattleAllies } from './BattleAllies';
 import type { BattleBanners } from './BattleBanners';
 import type { BattleEnemies } from './BattleEnemies';
 import type { BattlePlayers } from './BattlePlayers';
+import type { BattleRelief } from './BattleRelief';
 import { BattleSurvival } from './BattleSurvival';
+import type { LevelOutcome } from './levelEnd';
 import { showLevelEnd } from './levelEndScreen';
 
 export interface BattleOutcomeDeps {
@@ -22,6 +24,7 @@ export interface BattleOutcomeDeps {
   enemyTower: Tower;
   banners?: BattleBanners;
   survival?: BattleSurvival;
+  relief?: BattleRelief;
   hostSync: () => HostSync | undefined;
   /** The level is decided: this browser's keyboard and mouse stop. */
   stopInput: () => void;
@@ -74,7 +77,7 @@ export class BattleOutcome {
   }
 
   private end(won: boolean, levelCleared = false): void {
-    const { ctx, team, foes, enemies, soldiers, playerTower, enemyTower, banners, survival } = this.deps;
+    const { ctx, team, foes, enemies, soldiers, playerTower, enemyTower, banners, survival, relief } = this.deps;
     const hostSync = this.deps.hostSync();
     this.ended = true;
     this.deps.stopInput();
@@ -87,7 +90,7 @@ export class BattleOutcome {
     }
     const { run, sandbox } = ctx.session;
     const players = team.list;
-    this.endAction = showLevelEnd(ctx, {
+    const outcome: LevelOutcome = {
       won,
       levelCleared,
       levelIndex: run.levelIndex,
@@ -99,12 +102,21 @@ export class BattleOutcome {
       banner: banners?.outcome === 'won' ? 'captured' : banners?.outcome === 'lost' ? 'lost' : undefined,
       playerHealths: players.map((player) => player.health),
       survivedMs: survival && survival.durationMs - survival.remainingMs,
-    }, () => ({
+    };
+    const show = (): void => {
+      this.endAction = showLevelEnd(ctx, outcome, () => ({
       levelIndex: run.levelIndex + 1,
       // Bowmen heal by the difficulty; the keep starts every level whole.
       bowmanHealths: players.map((player) => healAfterLevel(sandbox.difficulty, player.health, sandbox.bowmanHealth)),
       keepHealth: sandbox.keepHealth,
       enemyKeepHealth: enemyTower.getHealth(),
-    }), hostSync);
+      }), hostSync);
+    };
+    // A held survival level: the end screen waits for the relief force to form up.
+    if (won && survival?.timeUp && relief) {
+      relief.arrive(show);
+    } else {
+      show();
+    }
   }
 }

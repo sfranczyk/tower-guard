@@ -36,6 +36,7 @@ the pause dialog's "Main menu" leaves the room.
   fx `heal` / `healPulse`; pinned time `EnemySnap.pinned`; afflictions `af`, thrown `th`; `BowmanSnap.net`
   (`Bowman.getNetState`); horse `EnemyNet.lame`, `spawn` event `place` (`RiderOff`), `unseat` event; dragon hover side and flight look `DragonSnap.fl`;
   bowman `die` event carries the fall; exit-keep press (`PlayerInput.isExitPressed`); mid-level wind shift `wind` event; survival clock `Snapshot.clock` (fleeing enemies follow from positions).
+- **Local on each side**: the survival relief force (BattleRelief, show only; the guest's comes when the host's clock runs out).
 - **Not yet**: the player's soldiers (BattleAllies: the HUD slots and keys are off with `ctx.session.net`), a local preview of the guest's own arrows (they appear after a round trip), the guest's lightning bolts
   are its own (only the host's strikes hurt; their sparks arrive as effects), no reconnecting, and a hidden browser tab
   stops its game loop (keep the host's tab visible).
