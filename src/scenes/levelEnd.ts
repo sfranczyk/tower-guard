@@ -64,7 +64,7 @@ export const levelEndInfo = (outcome: LevelOutcome, sandbox: SandboxSettings): {
       stats,
       copy: won
         ? victory
-        : `${outcome.playerKeepDestroyed ? 'The keep has fallen' : outcome.banner === 'lost' ? 'The enemy has carried off our banner' : coop ? 'Both bowmen have fallen' : 'The bowman has fallen'}${survival ? ` with ${clockText(sandbox.survival.levels[levelIndex].minutes * 60_000 - outcome.survivedMs!)} ${ending.left}` : ''}. Adjust the sandbox and try again.`,
+        : `${outcome.playerKeepDestroyed ? 'The keep has fallen' : outcome.banner === 'lost' ? 'The enemy has carried off our banner' : coop ? `${outcome.playerHealths.length === 2 ? 'Both' : 'All'} bowmen have fallen` : 'The bowman has fallen'}${survival ? ` with ${clockText(sandbox.survival.levels[levelIndex].minutes * 60_000 - outcome.survivedMs!)} ${ending.left}` : ''}. Adjust the sandbox and try again.`,
     },
   };
 };

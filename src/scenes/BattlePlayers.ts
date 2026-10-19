@@ -164,9 +164,9 @@ export class BattlePlayers {
       this.deps.hostSync()?.push({ e: 'die', player: fallen.index, kind, fromX: Math.round(fallen.bowman.lastHitFromX ?? fallen.bowman.x) });
       if (this.coop) {
         const standing = this.list.filter((player) => player.health > 0).length;
-        const fightOn = standing === 1 ? 'one fights on' : `${standing} fight on`;
-        this.list.forEach((player) => this.status(player, player === fallen ? `You have fallen · ${fightOn}`
-          : `${playerLabel(fallen.index)} has fallen · ${player.health > 0 && standing === 1 ? 'hold on alone' : fightOn}`));
+        const fightOn = standing === 0 ? '' : standing === 1 ? ' · one fights on' : ` · ${standing} fight on`;
+        this.list.forEach((player) => this.status(player, player === fallen ? `You have fallen${fightOn}`
+          : `${playerLabel(fallen.index)} has fallen${player.health > 0 && standing === 1 ? ' · hold on alone' : fightOn}`));
       }
     });
   }

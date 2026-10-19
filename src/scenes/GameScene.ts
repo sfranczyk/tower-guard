@@ -96,6 +96,8 @@ export class GameScene extends Scene {
   private readonly role: 'solo' | 'host' | 'guest';
   private readonly localIndex: number;
   private hostSync?: HostSync;
+  /** Host: the guest whose Esc paused the battle (their leaving resumes it). */
+  private pausedBy?: number;
   private guestSync?: GuestSync;
 
   private readonly camera = new BattleCamera();
@@ -304,7 +306,8 @@ export class GameScene extends Scene {
       setSurvivalClock: (ms) => this.survival?.sync(ms),
     }));
     if (this.hostSync) {
-      this.hostSync.onPauseRequest = (paused) => {
+      this.hostSync.onPauseRequest = (paused, from) => {
+        this.pausedBy = paused ? from : undefined;
         controls.setPaused(paused, true);
         this.hostSync?.sendPause(paused);
       };
@@ -340,13 +343,21 @@ export class GameScene extends Scene {
 
   /** The world keeps running after the level ends; the end screen just overlays it. */
   public update(deltaMs: number): void {
-    // A guest left mid-level: their bowman stands still from now on.
+    // A guest left mid-level: their bowman stands still from now on (and a pause they asked for ends).
     if (this.hostSync) {
       this.players.forEach((player) => {
         if (player.index > 0 && !isPresent(this.ctx.session, player.index)) {
           (player.input as ManualInput).set({ direction: 0, sprint: false, aim: undefined });
+          if (this.pausedBy === player.index && this.controls?.paused) {
+            this.pausedBy = undefined;
+            this.controls.setPaused(false, false);
+            this.hostSync?.sendPause(false);
+          }
         }
       });
+    }
+    if (!this.controls?.paused) {
+      this.pausedBy = undefined;
     }
     if (this.controls?.paused) {
       return;

@@ -102,7 +102,7 @@ export const hostCoop = (ctx: GameContext, room: HostedRoom, ownLoadout: Loadout
   hub.onLeave = (seat) => {
     net.loadouts[seat] = undefined;
     if (net.inBattle) {
-      ctx.ui.setStatus(`${playerLabel(seat)} has left · the others play on`);
+      ctx.ui.setStatus(`${playerLabel(seat)} has left · ${hub.present().some((taken, other) => taken && other > 0) ? 'the others play on' : 'you play on alone'}`);
     } else {
       net.loadouts = hub.compact().map((old) => net.loadouts[old]);
     }

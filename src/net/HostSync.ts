@@ -48,7 +48,7 @@ export class HostSync {
   private nextEnemyId = 1;
   private nextArrowId = 1;
   /** A guest pressed Esc (the host decides and answers with `sendPause`). */
-  public onPauseRequest?: (paused: boolean) => void;
+  public onPauseRequest?: (paused: boolean, from: number) => void;
 
   public constructor(
     private readonly transport: RoomLink,
@@ -62,7 +62,7 @@ export class HostSync {
           HostSync.applyInput(guest.input as ManualInput, message);
         }
       } else if (message.t === 'pause') {
-        this.onPauseRequest?.(message.paused);
+        this.onPauseRequest?.(message.paused, from);
       }
     });
   }
