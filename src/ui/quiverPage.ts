@@ -51,6 +51,32 @@ const quiverSlot = (type: ArrowType | null, index: number, selected: boolean, ca
   </div>`;
 };
 
+/**
+ * The quiver editor in the pause dialog (in the keep): the same slots and clicks/drags as `quiverPage`, but each
+ * arrow path is one row of icon tiles (name and summary in the tooltip), so it fits beside the pause buttons.
+ */
+export const compactQuiver = (loadout: Loadout, selectedSlot: number): string => {
+  const canClear = arrowCount(loadout) > 1;
+  return `<div class="quiver-editor compact">
+    <div class="quiver-row">
+      <div class="sandbox-section-label">Quiver · keys 1–${loadout.length}</div>
+      <div class="quiver-slots">${loadout.map((type, index) => quiverSlot(type, index, index === selectedSlot, canClear)).join('')}</div>
+    </div>
+    <div class="arrow-cards">${ARROW_PATHS.map((path) => `<div class="arrow-path">
+      <div class="sandbox-section-label">${ARROW_PATH_NAMES[path]}</div>
+      <div class="arrow-tiles">${arrowsOnPath(path, ARROW_TYPES).map((type) => arrowTile(type, loadout.indexOf(type))).join('')}</div>
+    </div>`).join('')}</div>
+  </div>`;
+};
+
+const arrowTile = (type: ArrowType, slot: number): string => {
+  const { name, summary } = ARROW_INFO[type];
+  return `<button type="button" class="arrow-card arrow-tile${slot >= 0 ? ' packed' : ''}" data-arrow="${type}" title="${name}: ${summary}" aria-label="${name}">
+    ${ICON_WEAPONS[type]}
+    ${slot >= 0 ? `<span class="arrow-slot">${slot + 1}</span>` : ''}
+  </button>`;
+};
+
 const arrowCard = (type: ArrowType, slot: number): string => {
   const { name, summary } = ARROW_INFO[type];
   return `<button type="button" class="arrow-card${slot >= 0 ? ' packed' : ''}" data-arrow="${type}">

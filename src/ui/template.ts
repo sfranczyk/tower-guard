@@ -34,12 +34,14 @@ export const OVERLAY_TEMPLATE = `
         <div class="end-card">
           <h2>Paused</h2>
           <p data-pause-copy>The battle waits for you.</p>
+          <div class="pause-body">
           <div class="pause-quiver" data-pause-quiver></div>
           <div class="pause-actions">
             <button class="primary-button" data-pause-resume>Resume <span class="key-hint">Esc</span></button>
             <button class="secondary-button" data-pause-restart title="Full health for the bowmen, the level's enemies anew; the keep stays as it is">Restart level</button>
             <button class="secondary-button" data-pause-settings>Settings <span class="key-hint">I</span></button>
             <button class="secondary-button" data-pause-menu>Main menu</button>
+          </div>
           </div>
         </div>
       </section>

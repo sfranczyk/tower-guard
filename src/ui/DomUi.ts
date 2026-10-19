@@ -8,7 +8,7 @@ import type { ArrowType, Loadout } from '../data/loadout';
 import { Hud, type HudValues } from './Hud';
 import { CoopPanel, type CoopView } from './CoopPanel';
 import { SandboxForm } from './SandboxForm';
-import { quiverPage, type PartnerQuiver } from './quiverPage';
+import { compactQuiver, type PartnerQuiver } from './quiverPage';
 import { editQuiverIn, type QuiverEdit } from './quiverEditing';
 import { TuningPanel } from './TuningPanel';
 import { SoundLabPanel, type SoundLabMusic, type SoundLabMusicState, type SoundLabRow } from './SoundLabPanel';
@@ -529,7 +529,7 @@ export class DomUi {
   private renderPauseQuiver(): void {
     this.pauseCard.classList.toggle('pause-wide', this.pauseQuiver !== undefined);
     this.pauseQuiverRoot.innerHTML = this.pauseQuiver
-      ? quiverPage(this.pauseQuiver.loadout, this.pauseQuiver.slot)
+      ? compactQuiver(this.pauseQuiver.loadout, this.pauseQuiver.slot)
       : '<p class="pause-quiver-hint">Hide in the keep to change your quiver.</p>';
   }
 
