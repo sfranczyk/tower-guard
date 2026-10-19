@@ -78,6 +78,8 @@ export interface UiHandlers {
   openSoundLab?: () => void;
   openDesignLab?: () => void;
   toggleTuning?: () => void;
+  /** The end screen's "View battlefield" (true) or "Back to results" (false). */
+  viewBattlefield?: (viewing: boolean) => void;
   /** Animation and design lab: back to the main menu. */
   labMenu?: () => void;
   /** Animation lab: leave the zoomed view and return to the list. */
@@ -257,6 +259,8 @@ export class DomUi {
     this.onClick('[data-lab-back]', () => this.handlers.labBack?.());
     this.onClick('[data-close-options]', () => this.handlers.toggleOptions?.());
     this.endButton.addEventListener('click', () => this.onEndButton?.());
+    this.onClick('[data-end-view]', () => this.setEndViewing(true));
+    this.onClick('[data-end-back]', () => this.setEndViewing(false));
     this.onClick('[data-pause-resume]', () => this.handlers.pauseResume?.());
     this.onClick('[data-pause-restart]', () => this.handlers.pauseRestart?.());
     this.onClick('[data-pause-settings]', () => this.handlers.toggleOptions?.());
@@ -315,6 +319,7 @@ export class DomUi {
     this.hudBottom.hidden = screen !== 'game';
     this.labBackButton.hidden = true;
     this.endScreen.hidden = true;
+    this.endScreen.classList.remove('viewing');
     this.pauseScreen.hidden = true;
     this.optionsDrawer.hidden = true;
     this.fitCanvas();
@@ -484,6 +489,19 @@ export class DomUi {
     this.endButton.textContent = options.buttonLabel;
     this.onEndButton = options.onButton;
     this.endScreen.hidden = false;
+    this.endScreen.classList.remove('viewing');
+  }
+
+  /**
+   * Hides the end card to look over the battlefield (only a "Back to results" button stays), or brings it back; tells
+   * the scene (`handlers.viewBattlefield`).
+   */
+  public setEndViewing(viewing: boolean): void {
+    if (this.endScreen.hidden || this.endScreen.classList.contains('viewing') === viewing) {
+      return;
+    }
+    this.endScreen.classList.toggle('viewing', viewing);
+    this.handlers.viewBattlefield?.(viewing);
   }
 
   /**

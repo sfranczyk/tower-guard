@@ -274,6 +274,11 @@
 
         /* ---------- End screen (the battle keeps going behind it) ---------- */
         .end-screen { background: rgba(20, 30, 32, .18); }
+        .end-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
+        .end-back { display: none; position: absolute; left: 50%; top: 18px; transform: translateX(-50%); zoom: var(--ui-scale, 1); pointer-events: auto; }
+        .end-screen.viewing { background: none; pointer-events: none; }
+        .end-screen.viewing .end-card { display: none; }
+        .end-screen.viewing .end-back { display: block; }
         .coop-card { width: min(420px, calc(100% - 28px)); text-align: center; }
         .coop-card .panel-title { text-align: left; }
         .coop-card.coop-wide { width: min(760px, calc(100% - 28px)); }

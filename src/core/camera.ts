@@ -9,13 +9,16 @@ import { tunable } from './tuning';
 /**
  * Shots landing within deadZone (share of the view width) from the bowman don't move the camera; edgeMargin: how
  * close to the view's edge the bowman (and, at full slide, the landing spot) may come (px); aimMs / returnMs: easing
- * time constants, sliding out while aiming and drifting back to the bowman once he moves again.
+ * time constants, sliding out while aiming and drifting back to the bowman once he moves again. panSpeed: how fast
+ * (px/s) the keys move the free camera over the field after a lost level ("View battlefield"), × panSprint with Shift.
  */
 export const CAMERA_LOOK = tunable('CAMERA_LOOK', 'Aim camera', {
   deadZone: 0.22,
   edgeMargin: 70,
   aimMs: 300,
   returnMs: 1500,
+  panSpeed: 520,
+  panSprint: 2.2,
 }, { meta: { deadZone: { max: 0.5 } }, file: 'src/core/camera.ts' });
 
 /**

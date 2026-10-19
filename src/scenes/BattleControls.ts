@@ -5,7 +5,7 @@ import { loadSandbox, saveSandbox } from '../core/sandboxStorage';
 import { firstArrow, type ArrowType, type Loadout } from '../data/loadout';
 import { ALLY_TYPES, ENEMY_KINDS } from '../data/enemyKinds';
 import InputManager from '../managers/InputManager';
-import { LocalInput, ManualInput, RecordingInput } from '../input/PlayerInput';
+import { LocalInput, ManualInput, RecordingInput, WalkingInput, type PlayerInput } from '../input/PlayerInput';
 import { leaveCoop, loadoutOf, shareLoadout } from '../net/coopLink';
 import type { GuestSync } from '../net/GuestSync';
 import type { HostSync } from '../net/HostSync';
@@ -31,6 +31,8 @@ export interface BattleControlsDeps {
   ended: () => boolean;
   /** What the end screen's button (and Space) does. */
   endAction: () => (() => void) | undefined;
+  /** The decided level was won (after the end, "View battlefield" walks the bowman; after a loss it moves the camera). */
+  won: () => boolean;
   /** The enemy keep's health now (a restarted level keeps its damage). */
   enemyKeepHealth: () => number;
   /** O hid or showed the enemies (the debug hitboxes are redrawn). */
@@ -51,6 +53,8 @@ export class BattleControls {
   public pauseAsked = false;
   private optionsVisible = false;
   private localInput?: LocalInput;
+  /** Looking over the field from the end screen: walking the bowman (a win) or moving the camera (a loss). */
+  private viewing?: 'walk' | 'pan';
 
   public constructor(private readonly deps: BattleControlsDeps) {
     this.bind();
@@ -96,22 +100,52 @@ export class BattleControls {
   public destroy(): void {
     this.localInput?.destroy();
     this.localInput = undefined;
+    this.viewing = undefined;
     this.deps.team.setLocalInput(new ManualInput());
+  }
+
+  /**
+   * The end screen's "View battlefield" (`viewing`) or "Back to results": after a win the local bowman walks the field
+   * again (no shots, WalkingInput; dead, he can only look), after a loss the keys move the camera (`panInput`).
+   */
+  public viewBattlefield(viewing: boolean): void {
+    this.destroy();
+    if (!viewing) {
+      return;
+    }
+    const input = this.createLocalInput();
+    this.localInput = input;
+    const walks = this.deps.won() && !this.deps.team.local.bowman.isDead;
+    this.viewing = walks ? 'walk' : 'pan';
+    if (walks) {
+      const walking = new WalkingInput(input);
+      this.deps.team.setLocalInput(this.deps.role === 'guest' ? new RecordingInput(walking) : walking);
+    }
+  }
+
+  /** While looking over the field after a loss: the keys that move the camera. */
+  public get panInput(): PlayerInput | undefined {
+    return this.viewing === 'pan' ? this.localInput : undefined;
+  }
+
+  private createLocalInput(): LocalInput {
+    return new LocalInput(new InputManager({
+      eventTarget: this.deps.ctx.app.canvas,
+      worldPointFromScreen: (point) => ({ x: point.x + this.deps.cameraX(), y: point.y + VIEW_TOP }),
+      maxDragDistance: 200,
+      screenSize: () => ({ x: viewWidth(), y: GAME_HEIGHT }),
+    }));
   }
 
   private bind(): void {
     const { ctx, role, team } = this.deps;
     const { ui } = ctx;
-    this.localInput = new LocalInput(new InputManager({
-      eventTarget: ctx.app.canvas,
-      worldPointFromScreen: (point) => ({ x: point.x + this.deps.cameraX(), y: point.y + VIEW_TOP }),
-      maxDragDistance: 200,
-      screenSize: () => ({ x: viewWidth(), y: GAME_HEIGHT }),
-    }));
+    this.localInput = this.createLocalInput();
     // A co-op guest also sends its presses to the host.
     team.setLocalInput(role === 'guest' ? new RecordingInput(this.localInput) : this.localInput);
 
     ui.handlers.toggleOptions = () => this.toggleOptions();
+    ui.handlers.viewBattlefield = (viewing) => this.viewBattlefield(viewing);
     ui.handlers.selectProjectile = (type) => this.localInput?.queueProjectile(type);
     // The player's soldiers: not yet in online co-op (the guest doesn't see them yet).
     const commandsSoldiers = !ctx.session.net;
@@ -142,6 +176,7 @@ export class BattleControls {
     };
     this.deps.onExit(() => {
       ui.handlers.toggleOptions = undefined;
+      ui.handlers.viewBattlefield = undefined;
       ui.handlers.pauseResume = undefined;
       ui.handlers.pauseMenu = undefined;
       ui.handlers.pauseRestart = undefined;
@@ -157,6 +192,8 @@ export class BattleControls {
       if (event.code === 'Escape') {
         if (this.optionsVisible) {
           this.setOptionsVisible(false);
+        } else if (this.viewing) {
+          ui.setEndViewing(false);
         } else if (!ended) {
           this.togglePause();
         }
@@ -188,7 +225,10 @@ export class BattleControls {
       if (event.code === 'Space') {
         event.preventDefault();
         if (ended) {
-          this.deps.endAction()?.();
+          // Not while looking over the field: the results come back first (Esc or the button).
+          if (!this.viewing) {
+            this.deps.endAction()?.();
+          }
         } else {
           this.localInput?.queueBurst();
         }

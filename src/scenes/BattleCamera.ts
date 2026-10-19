@@ -33,6 +33,16 @@ export class BattleCamera {
   /** Where aiming has slid the view to: only further out, unless he aims the other way; 0 again once he moves. */
   private lookGoal = 0;
 
+  /** One frame of the free camera ("View battlefield" after a defeat): `direction` -1/0/1 from the keys. */
+  public pan(deltaMs: number, direction: number, fast: boolean, shake: Vec2): Vec2 {
+    const width = viewWidth();
+    const speed = CAMERA_LOOK.panSpeed * (fast ? CAMERA_LOOK.panSprint : 1);
+    this.x = width >= WORLD_WIDTH
+      ? centeredCameraX(width, WORLD_WIDTH)
+      : clamp(this.x + direction * speed * deltaMs / 1000, 0, WORLD_WIDTH - width);
+    return { x: -this.x + shake.x, y: -VIEW_TOP + shake.y };
+  }
+
   /** One frame: moves the view and returns the world container's position (with the effects' `shake`). */
   public follow(deltaMs: number, focus: CameraFocus, shake: Vec2): Vec2 {
     const width = viewWidth();

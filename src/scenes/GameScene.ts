@@ -277,6 +277,7 @@ export class GameScene extends Scene {
       guestSync: () => this.guestSync,
       ended: () => this.outcome.ended,
       endAction: () => this.outcome.endAction,
+      won: () => this.outcome.won,
       enemyKeepHealth: () => this.enemyTower.getHealth(),
       foesToggled: () => this.debugGraphics.clear(),
       onKeyDown: (handler) => this.listenWindow('keydown', handler),
@@ -446,8 +447,14 @@ export class GameScene extends Scene {
       : undefined);
   }
 
-  /** The camera follows the local bowman and slides towards where he's aiming (BattleCamera). */
+  /** The camera follows the local bowman and slides towards where he's aiming (BattleCamera); after a lost level the keys may move it freely. */
   private updateCamera(deltaMs: number): void {
+    const pan = this.controls?.panInput;
+    if (pan) {
+      const position = this.camera.pan(deltaMs, pan.getMovementDirection(), pan.isSprintDown(), this.effects.cameraShake);
+      this.world.position.set(position.x, position.y);
+      return;
+    }
     const { bowman, input } = this.localPlayer;
     const aim = input.getAim();
     const position = this.camera.follow(deltaMs, {

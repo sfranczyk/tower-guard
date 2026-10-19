@@ -263,3 +263,49 @@ export class RecordingInput implements PlayerInput {
     this.inner.destroy();
   }
 }
+
+/** After a won level ("View battlefield"): the bowman walks, jumps and leaves the keep, but no longer shoots. */
+export class WalkingInput implements PlayerInput {
+  public constructor(private readonly inner: PlayerInput) {}
+
+  public getMovementDirection(): number {
+    return this.inner.getMovementDirection();
+  }
+
+  public isSprintDown(): boolean {
+    return this.inner.isSprintDown();
+  }
+
+  public isJumpPressed(): boolean {
+    return this.inner.isJumpPressed();
+  }
+
+  public isExitPressed(): boolean {
+    return this.inner.isExitPressed();
+  }
+
+  public getAim(): AimInput | undefined {
+    return undefined;
+  }
+
+  public takeShots(): AimInput[] {
+    this.inner.takeShots();
+    return [];
+  }
+
+  public takeBurst(): boolean {
+    return false;
+  }
+
+  public takeProjectile(): ProjectileType | undefined {
+    return undefined;
+  }
+
+  public cancelAim(): void {
+    this.inner.cancelAim();
+  }
+
+  public destroy(): void {
+    this.inner.destroy();
+  }
+}

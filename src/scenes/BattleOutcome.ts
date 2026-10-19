@@ -37,6 +37,8 @@ export interface BattleOutcomeDeps {
  */
 export class BattleOutcome {
   public ended = false;
+  /** How the decided level went (the guest hears it from the host). */
+  public won = false;
   /** What the end screen's button (and Space) does. */
   public endAction?: () => void;
 
@@ -72,6 +74,7 @@ export class BattleOutcome {
   /** Guest: the host decides what comes after the level. */
   public showGuestEnd(info: EndInfo): void {
     this.ended = true;
+    this.won = info.outcome === 'win';
     this.deps.stopInput();
     this.deps.ctx.ui.showEndScreen({ ...info, buttonLabel: 'Waiting for the host…', onButton: () => {} });
   }
@@ -80,6 +83,7 @@ export class BattleOutcome {
     const { ctx, team, foes, enemies, soldiers, playerTower, enemyTower, banners, survival, relief } = this.deps;
     const hostSync = this.deps.hostSync();
     this.ended = true;
+    this.won = won;
     this.deps.stopInput();
     foes.stopWaves();
     if (!won) {
