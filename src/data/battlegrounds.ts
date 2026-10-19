@@ -239,7 +239,8 @@ export const BATTLEGROUNDS: Readonly<Record<BattlegroundId, Battleground>> = {
       sun: 0xffd890,
       // Night shade over the hills and trees (fades at dawn).
       shade: 0x070c1e,
-      dayHills: [0x7f9fb4, 0x5d8296],
+      // Green like the meadow's, a little darker.
+      dayHills: [0x557d66, 0x3d6450],
     },
   },
 };
