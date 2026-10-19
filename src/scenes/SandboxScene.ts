@@ -25,7 +25,7 @@ export class SandboxScene extends Scene {
   public enter(): void {
     const { ui, session } = this.ctx;
     ui.showScreen('sandbox');
-    ui.renderSandbox(session.sandbox);
+    ui.openSandbox(session.sandbox);
     this.showPreview(session.sandbox);
     // Co-op host: the guest picks their own quiver in the lobby; it shows (as it changes) on the Quiver page.
     const showPartner = (): void => ui.setSandboxPartner(session.net ? { label: "Partner's quiver", loadout: partnerLoadout(session) } : undefined);
@@ -46,7 +46,7 @@ export class SandboxScene extends Scene {
 
     this.listenWindow('keydown', (event) => {
       if (event.code === 'Escape') {
-        this.ctx.goTo('menu');
+        ui.sandboxBack();
       }
     });
   }

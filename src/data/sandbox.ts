@@ -34,6 +34,11 @@ export interface LevelSetup {
 export type RunMode = 'battle' | 'survival';
 export const RUN_MODES: readonly RunMode[] = ['battle', 'survival'];
 export const RUN_MODE_LABELS: Readonly<Record<RunMode, string>> = { battle: 'Battle', survival: 'Survival' };
+/** What each mode is, on the mode picker that opens the battle setup. */
+export const RUN_MODE_DESCRIPTIONS: Readonly<Record<RunMode, string>> = {
+  battle: 'Clear each level of the enemies you set up, wave after wave, then march on to the next. Call in squires, knights and medics to fight beside you.',
+  survival: 'Hold the keep through the night until dawn while the chosen kinds keep coming, more the longer it lasts. No support: you stand alone.',
+};
 
 export const SURVIVAL_MINUTES = { min: 1, max: 15 } as const;
 
@@ -67,6 +72,8 @@ export interface SandboxSettings {
   difficulty: DifficultyLevel;
   /** Banners (systems/banners.ts): each keep has one; bringing the enemy's home wins a level, losing ours loses it. Solo only. */
   banners: boolean;
+  /** Support: the player may summon soldiers (squire, knight, medic) in battle mode; never in survival (`supportAllowed`). */
+  support: boolean;
 }
 
 /** Default levels get a little harder each time and alternate battlegrounds. */
@@ -118,6 +125,7 @@ export const createDefaultSandbox = (): SandboxSettings => ({
   loadout: [...DEFAULT_LOADOUT],
   difficulty: DEFAULT_DIFFICULTY,
   banners: false,
+  support: true,
 });
 
 const clampInt = (value: unknown, min: number, max: number, fallback: number): number => {
@@ -186,6 +194,7 @@ export const normalizeSandbox = (input: (Partial<SandboxSettings> & LegacySandbo
     loadout: normalizeLoadout(input.loadout),
     difficulty: isDifficultyLevel(input.difficulty) ? input.difficulty : defaults.difficulty,
     banners: typeof input.banners === 'boolean' ? input.banners : defaults.banners,
+    support: typeof input.support === 'boolean' ? input.support : defaults.support,
   };
 };
 
@@ -203,3 +212,6 @@ export const runBattleground = (sandbox: SandboxSettings, index: number): Battle
 /** The survival level `index` of the run, if it's a survival run. */
 export const survivalLevel = (sandbox: SandboxSettings, index: number): SurvivalLevel | undefined =>
   (sandbox.mode === 'survival' ? sandbox.survival.levels[index] : undefined);
+
+/** Whether the run's player may summon soldiers: battle mode with support on (survival never). */
+export const supportAllowed = (sandbox: SandboxSettings): boolean => sandbox.mode === 'battle' && sandbox.support;

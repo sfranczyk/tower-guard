@@ -9,7 +9,7 @@ everything under `ctx.root` on each switch. Scenes never touch the DOM: they cal
 - **GameScene** plays one level. Hands arrows to `BattleArrows` (launching, shrapnel, enemy arrows, co-op copies,
   `pruneArrows`, the preview's path), the view to `BattleCamera`, enemies to `BattleEnemies` (waves, spawn, `unhorse`
   places unhorsed riders, defeated count, O-key hide), the player's soldiers to `BattleAllies` (summon from `ALLIES.spawnX`
-  beyond the left edge, limits and pauses, `order`; keys Z/X/C summon, V cycles the order; none in online co-op yet; each
+  beyond the left edge, limits and pauses, `order`; keys Z/X/C summon, V cycles the order; only with support on (`supportAllowed`: battle mode, Rules page), none in online co-op yet; each
   level starts with none), bowmen to `BattlePlayers` (creation, per-frame picks/shots/bursts,
   falls, `status`), co-op setup to `startBattleSync` (`battleSync.ts`), win/loss checks to `BattleOutcome.ts` (`check`, `ended`, guest
   `showGuestEnd`), the end screen to `showLevelEnd` (`levelEndScreen.ts`, text from pure `levelEndInfo`), banners to `BattleBanners` (Banners option, solo: steps `systems/banners.ts`, draws them (`rendering/banner.ts`), edge markers; a captured banner = level cleared, ours lost = defeat), status texts to `battleText.ts` (pure). A

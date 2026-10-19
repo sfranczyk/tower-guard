@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { BATTLEGROUND_IDS, BATTLEGROUNDS } from './battlegrounds';
-import { DEFAULT_SURVIVAL_MINUTES, MAX_ENEMIES_PER_TYPE, MAX_LEVELS, SURVIVAL_MINUTES, battlegroundsFor, createDefaultSandbox, normalizeSandbox, levelEnemyTotal, runBattleground, runLevelCount } from './sandbox';
+import { DEFAULT_SURVIVAL_MINUTES, MAX_ENEMIES_PER_TYPE, MAX_LEVELS, SURVIVAL_MINUTES, battlegroundsFor, createDefaultSandbox, normalizeSandbox, levelEnemyTotal, runBattleground, runLevelCount, supportAllowed } from './sandbox';
 
 describe('sandbox settings', () => {
   it('defaults to one level with five prepared levels that get harder', () => {
@@ -48,6 +48,15 @@ describe('sandbox settings', () => {
     expect(normalizeSandbox(undefined).banners).toBe(false);
     expect(normalizeSandbox({ banners: true }).banners).toBe(true);
     expect(normalizeSandbox({ banners: 'yes' } as never).banners).toBe(false);
+  });
+
+  it('allows support in battle by default, never in survival', () => {
+    const sandbox = normalizeSandbox(undefined);
+    expect(sandbox.support).toBe(true);
+    expect(supportAllowed(sandbox)).toBe(true);
+    expect(supportAllowed({ ...sandbox, support: false })).toBe(false);
+    expect(supportAllowed({ ...sandbox, mode: 'survival' })).toBe(false);
+    expect(normalizeSandbox({ support: 'no' } as never).support).toBe(true);
   });
 });
 

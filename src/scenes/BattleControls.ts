@@ -3,6 +3,7 @@ import type { GameContext } from '../core/Scene';
 import { viewWidth } from '../core/viewport';
 import { loadSandbox, saveSandbox } from '../core/sandboxStorage';
 import { firstArrow, type ArrowType, type Loadout } from '../data/loadout';
+import { supportAllowed } from '../data/sandbox';
 import { ALLY_TYPES, ENEMY_KINDS } from '../data/enemyKinds';
 import InputManager from '../managers/InputManager';
 import { LocalInput, ManualInput, RecordingInput, WalkingInput, type PlayerInput } from '../input/PlayerInput';
@@ -147,8 +148,8 @@ export class BattleControls {
     ui.handlers.toggleOptions = () => this.toggleOptions();
     ui.handlers.viewBattlefield = (viewing) => this.viewBattlefield(viewing);
     ui.handlers.selectProjectile = (type) => this.localInput?.queueProjectile(type);
-    // The player's soldiers: not yet in online co-op (the guest doesn't see them yet).
-    const commandsSoldiers = !ctx.session.net;
+    // The player's soldiers: with support on (battle mode only), not yet in online co-op (the guest doesn't see them yet).
+    const commandsSoldiers = !ctx.session.net && supportAllowed(ctx.session.sandbox);
     ui.setAllies(commandsSoldiers ? ALLY_TYPES.map((type) => ({ type, label: ENEMY_KINDS[type].label })) : []);
     if (commandsSoldiers) {
       ui.handlers.summonAlly = (type) => this.summonAlly(type);

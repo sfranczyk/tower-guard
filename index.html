@@ -171,22 +171,24 @@
         .panel-card[data-sandbox-form] { width: min(780px, calc(100% - 28px)); }
         .panel-card select, .panel-card input[type="number"] { min-width: 0; padding: 5px 8px; border: 0; border-radius: 9px; background: var(--panel-sunk); color: var(--ink); font-family: var(--display); font-weight: 500; font-size: 15px; box-shadow: inset 0 2px 0 rgba(0, 0, 0, .06); }
         .sandbox-head { display: flex; flex-shrink: 0; padding-bottom: 10px; }
-        /* Battle-wide rules: a collapsible sunk box at the top of the scrolling body, one setting per row. */
-        .sandbox-options { margin-bottom: 12px; padding: 0 12px; border-radius: 14px; background: var(--panel-sunk); }
-        .sandbox-options summary { display: flex; align-items: baseline; gap: 10px; padding: 9px 0; cursor: pointer; pointer-events: auto; list-style: none; }
-        .sandbox-options summary::-webkit-details-marker { display: none; }
-        .sandbox-options summary::before { content: '▸'; color: var(--ink-soft); transition: transform .15s ease; }
-        .sandbox-options[open] summary::before { transform: rotate(90deg); }
-        .sandbox-options summary > span { color: var(--ink-soft); font-family: var(--display); font-size: 12px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; }
-        .sandbox-options summary > small { min-width: 0; overflow: hidden; color: var(--ink-soft); font-size: 12px; white-space: nowrap; text-overflow: ellipsis; }
-        .sandbox-options[open] summary > small { display: none; }
-        .option-row { display: flex; align-items: center; gap: 8px; min-height: 40px; border-top: 1px solid var(--panel-edge); }
-        .option-row:last-child { margin-bottom: 4px; }
-        .option-row .icon { width: 22px; height: 22px; }
-        .option-row > span:first-child { padding-left: 30px; }
-        .option-row > span { flex: 1; color: var(--ink); font-family: var(--display); font-size: 14px; font-weight: 500; }
-        .option-row input[type="number"] { width: 90px; background: var(--panel); box-shadow: none; }
-        .option-row .chip-button:not(.active) { background: var(--panel); }
+        /* The mode picker: two big cards, a map, the name and what the mode is. */
+        .mode-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding: 4px 0; }
+        .mode-card { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; padding: 14px; border-radius: 18px; background: var(--panel-sunk); color: var(--ink); text-align: left; box-shadow: 0 4px 0 var(--panel-edge); outline: 3px solid transparent; outline-offset: 1px; transition: transform .08s ease, outline-color .15s ease; pointer-events: auto; }
+        .mode-card:hover { outline-color: var(--gold); transform: translateY(-2px); }
+        .mode-card .map-thumb { width: 100%; height: auto; aspect-ratio: 4 / 3; border-radius: 12px; }
+        .mode-card strong { font-family: var(--display); font-weight: 600; font-size: 24px; }
+        .mode-card span { color: var(--ink-soft); font-size: 14px; line-height: 1.4; }
+        /* The Rules page: one rule per row, name and hint left, control right. */
+        .rules-list { display: flex; flex-direction: column; padding: 0 14px; border-radius: 14px; background: #fffaf0; box-shadow: 0 3px 0 var(--panel-edge); }
+        .option-row { display: flex; align-items: center; gap: 10px; min-height: 58px; padding: 8px 0; }
+        .option-row + .option-row { border-top: 1px solid var(--panel-edge); }
+        .option-row .icon { width: 26px; height: 26px; flex-shrink: 0; }
+        .option-row > span { display: flex; flex: 1; flex-direction: column; min-width: 0; }
+        .option-row > span:first-child { padding-left: 36px; }
+        .option-row strong { font-family: var(--display); font-size: 16px; font-weight: 600; }
+        .option-row small { color: var(--ink-soft); font-size: 12px; }
+        .option-row input[type="number"] { width: 90px; }
+        .option-row .chip-button:disabled { opacity: .55; cursor: default; }
         .level-tabs { display: flex; flex-wrap: wrap; gap: 8px; }
         .level-tab { display: flex; align-items: center; gap: 8px; padding: 6px 12px 6px 6px; border-radius: 14px 14px 0 0; background: var(--panel-sunk); color: var(--ink); text-align: left; box-shadow: inset 0 -3px 0 var(--panel-edge); pointer-events: auto; }
         .level-tab .map-thumb { width: 36px; height: 27px; border-radius: 7px; }

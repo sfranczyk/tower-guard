@@ -416,9 +416,16 @@ export class DomUi {
     this.coopPanel.render(view);
   }
 
-  public renderSandbox(settings: SandboxSettings): void {
-    this.sandboxForm.render(settings);
+  /** Opens the battle setup on its mode picker. */
+  public openSandbox(settings: SandboxSettings): void {
+    this.sandboxForm.open(settings);
   }
+
+  /** Esc in the battle setup: as its Back button. */
+  public sandboxBack(): void {
+    this.sandboxForm.back();
+  }
+
 
   /** Co-op host: the guest's quiver, shown on the battle setup's Quiver page (undefined alone). */
   public setSandboxPartner(partner: PartnerQuiver | undefined): void {
