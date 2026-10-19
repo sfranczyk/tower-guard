@@ -33,7 +33,7 @@ import { BattlePlayers } from './BattlePlayers';
 import { startBattleSync } from './battleSync';
 import { DEFAULT_STATUS, clockText, windLabel } from './battleText';
 import { rollWind, WindShifts } from '../systems/windShift';
-import { PlayerControl, type Player } from './PlayerControl';
+import { PlayerControl, canDrawBow, type Player } from './PlayerControl';
 import { AimOverlay } from '../rendering/AimOverlay';
 import { Background } from '../rendering/Background';
 import { CombatSystem, type Foe } from '../systems/CombatSystem';
@@ -401,10 +401,12 @@ export class GameScene extends Scene {
     const { bowman, input, projectile } = this.localPlayer;
     const aim = input.getAim();
     const hasAim = aim !== undefined && !bowman.isStunned && !bowman.isDead;
+    // The chosen arrow still loading: grey circles, no path.
+    const loaded = canDrawBow(this.localPlayer);
     const releasePoint = bowman.getBowReleasePoint();
-    const path = hasAim && aim.power > MIN_SHOT_POWER ? this.shots.simulate(aim, releasePoint, projectile) : [];
+    const path = hasAim && loaded && aim.power > MIN_SHOT_POWER ? this.shots.simulate(aim, releasePoint, projectile) : [];
     this.aimLandingX = path.length > 0 ? path[path.length - 1].x : undefined;
-    this.aimOverlay.draw(releasePoint, hasAim ? aim : undefined, this.ctx.session.showTrajectory ? path : [], this.ctx.session.showCursorCircle);
+    this.aimOverlay.draw(releasePoint, hasAim ? aim : undefined, this.ctx.session.showTrajectory ? path : [], this.ctx.session.showCursorCircle, !loaded);
   }
 
   private updateHud(): void {

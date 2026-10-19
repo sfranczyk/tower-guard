@@ -12,6 +12,7 @@ const fakeBowman = (x: number) => {
     x,
     y: BOWMAN_Y,
     isDead: false,
+    drawn: 0,
     isStunned: false,
     isPinned: false,
     isInTower: false,
@@ -37,7 +38,9 @@ const fakeBowman = (x: number) => {
       bowman.x = newX;
     },
     getAim: () => ({ direction: { x: 1, y: 0 }, power: 0 }),
-    setAim() {},
+    setAim(_direction: unknown, power: number) {
+      bowman.drawn = power;
+    },
     isAgainstEdge: () => false,
     updateAnimation() {},
   };
@@ -51,7 +54,7 @@ const setup = (x: number) => {
   const tower = { x: PLAYER_TOWER_X, hideSpot: () => ({ x: PLAYER_TOWER_X, y: BOWMAN_Y - 150 }) } as unknown as Tower;
   const control = new PlayerControl(tower, { enteredTower: () => {}, leftTower: () => {} });
   const frame = () => control.update(player, 16);
-  return { bowman, input, frame };
+  return { bowman, input, frame, player };
 };
 
 describe('PlayerControl: the keep', () => {
@@ -100,5 +103,21 @@ describe('PlayerControl: the keep', () => {
     frame();
     frame();
     expect(bowman.isInTower).toBe(true);
+  });
+});
+
+describe('PlayerControl: drawing the bow', () => {
+  const aim = { direction: { x: 1, y: 0 }, power: 0.8, strength: { value: 0.8, max: 1, distance: 80 }, start: { x: 0, y: 0 }, current: { x: -80, y: 0 } };
+
+  it('the bow is drawn only once the chosen arrow is loaded', () => {
+    const { bowman, input, frame, player } = setup(PLAYER_TOWER_X + 300);
+    player.projectile = 'explosive';
+    player.cooldowns.spend('explosive');
+    input.set({ aim });
+    frame();
+    expect(bowman.drawn).toBe(0);
+    player.cooldowns.tick(60_000);
+    frame();
+    expect(bowman.drawn).toBe(0.8);
   });
 });

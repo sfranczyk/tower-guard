@@ -4,6 +4,8 @@ import { DEFAULT_AIM_COLORS, type AimColors } from '../data/battlegrounds';
 import type { AimInput } from '../managers/InputManager';
 import type { Vec2 } from '../types';
 
+/** The aim circles while the chosen arrow is still loading (the bow can't be drawn yet). */
+const UNLOADED_AIM_COLOR = 0x8a8a8a;
 /** One dot per this many simulated frames. */
 const TRAJECTORY_DOT_EVERY = 3;
 /** Fraction of the drag distance used for the drawn aim radius. */
@@ -33,8 +35,11 @@ export class AimOverlay extends Graphics {
     this.lastReleaseOrigin = { ...origin };
   }
 
-  /** `showCursor`: also draw the circles at the drag start (settings drawer); the ones at the bow always show. */
-  public draw(origin: Vec2, aim: AimInput | undefined, trajectory: readonly Vec2[] = [], showCursor = true): void {
+  /**
+   * `showCursor`: also draw the circles at the drag start (settings drawer); the ones at the bow always show.
+   * `unloaded`: the chosen arrow is still loading, the circles are grey.
+   */
+  public draw(origin: Vec2, aim: AimInput | undefined, trajectory: readonly Vec2[] = [], showCursor = true, unloaded = false): void {
     this.clear();
     this.drawPreviousRelease();
     this.drawTrajectory(trajectory);
@@ -42,7 +47,7 @@ export class AimOverlay extends Graphics {
       return;
     }
 
-    const aimColor = this.colors.aim;
+    const aimColor = unloaded ? UNLOADED_AIM_COLOR : this.colors.aim;
     const visualRadius = aim.strength.distance * AIM_VISUAL_RADIUS_FACTOR;
     this.circle(origin.x, origin.y, visualRadius).fill({ color: aimColor, alpha: 0.1 });
     this.ring(origin, visualRadius, aimColor, 0.8);
@@ -50,13 +55,12 @@ export class AimOverlay extends Graphics {
     // See-through centre dot, so the bowman shows through it.
     this.dot(origin, 4, aimColor, 0.35);
     if (showCursor) {
-      this.drawCursorCircles(aim, visualRadius);
+      this.drawCursorCircles(aim, visualRadius, aimColor);
     }
   }
 
   /** Circles at the drag start: the power circle, one through the cursor and a line towards it. */
-  private drawCursorCircles(aim: AimInput, visualRadius: number): void {
-    const aimColor = this.colors.aim;
+  private drawCursorCircles(aim: AimInput, visualRadius: number, aimColor: number): void {
     const cursorRadius = Math.hypot(aim.start.x - aim.current.x, aim.start.y - aim.current.y);
     // Nearly clear at the cursor, so the battlefield under the drag stays visible.
     this.circle(aim.start.x, aim.start.y, visualRadius).fill({ color: aimColor, alpha: 0.03 });

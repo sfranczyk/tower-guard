@@ -1,4 +1,5 @@
-import { BOWMAN_START_X, BOWMAN_Y, TOWER_ENTRY_ZONE_HEIGHT, TOWER_ENTRY_ZONE_WIDTH } from '../config';
+import { ARROW_COOLDOWN_SLACK_MS, BOWMAN_START_X, BOWMAN_Y, TOWER_ENTRY_ZONE_HEIGHT, TOWER_ENTRY_ZONE_WIDTH } from '../config';
+import type { ArrowType } from '../data/loadout';
 import type { PlayerInput } from '../input/PlayerInput';
 import type Bowman from '../objects/bowman/Bowman';
 import type Tower from '../objects/Tower';
@@ -21,6 +22,14 @@ export interface Player {
 
 /** Co-op: how far apart the bowmen start. */
 const START_SPACING = 45;
+
+/**
+ * Whether the bow can be drawn: the chosen arrow has a shot ready. While it loads the bowman stands with the bow
+ * slack and the aim circles go grey; the drag goes on and the draw starts when the arrow is back. Another player's
+ * copy on the host gets the same leeway as their shots.
+ */
+export const canDrawBow = (player: Player): boolean =>
+  player.cooldowns.ready(player.projectile as ArrowType, player.local ? 0 : ARROW_COOLDOWN_SLACK_MS);
 
 export const playerStartX = (index: number): number => BOWMAN_START_X + index * START_SPACING;
 
@@ -74,9 +83,9 @@ export class PlayerControl {
       bowman.updateVertical(deltaSeconds);
     }
 
-    // The bow follows the draw (knocked down, the draw is lost; Bowman ignores it then).
+    // The bow follows the draw (knocked down, the draw is lost; Bowman ignores it then), once the arrow is loaded.
     const aim = input.getAim();
-    if (aim) {
+    if (aim && canDrawBow(player)) {
       bowman.setAim(aim.direction, aim.power);
     } else if (bowman.getAim().power > 0) {
       bowman.setAim(bowman.getAim().direction, 0);
