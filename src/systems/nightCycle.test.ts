@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { SURVIVAL } from '../config';
-import { ECLIPSE_CLEAR, nearestValley, nightSky } from './nightCycle';
+import { ECLIPSE_CLEAR, nearestValley, nightSky, sunCrescent, sunShowing } from './nightCycle';
 
 describe('night cycle', () => {
   it('starts in full night with the moon up and the sun hidden', () => {
@@ -23,7 +23,7 @@ describe('night cycle', () => {
 
   it('keeps the night until dawn, then brightens step by step', () => {
     expect(nightSky(SURVIVAL.dawnAt - 0.01).dawn).toBe(0);
-    const steps = [SURVIVAL.dawnAt + 0.05, 0.85, 0.95].map(nightSky);
+    const steps = [SURVIVAL.dawnAt + 0.05, 0.85, 0.95].map((progress) => nightSky(progress));
     steps.reduce((before, after) => {
       expect(after.dawn).toBeGreaterThanOrEqual(before.dawn);
       expect(after.stars).toBeLessThanOrEqual(before.stars);
@@ -50,14 +50,29 @@ describe('storms and eclipses on the same timeline', () => {
     expect(nightSky(1).calm).toBe(1);
   });
 
-  it('starts as a total eclipse and ends with the sun clear', () => {
-    expect(nightSky(0).eclipse).toBe(0);
-    expect(nightSky(0).corona).toBe(1);
-    // Never more than a crescent before dawn.
-    expect(nightSky(SURVIVAL.dawnAt - 0.01).eclipse).toBeLessThan(ECLIPSE_CLEAR * 0.4);
-    expect(nightSky(1).eclipse).toBeCloseTo(ECLIPSE_CLEAR);
-    expect(nightSky(1).corona).toBe(0);
-    expect(nightSky(1).eclipseMoon).toBe(0);
+  it('holds a total eclipse, then the light comes back fast as the moon slides off', () => {
+    const total = nightSky(SURVIVAL.eclipseFrom, 'eclipse');
+    expect(total).toMatchObject({ eclipse: 0, corona: 1, stars: 1, dawn: 0, day: 0, shade: 1 });
+    expect(total.moon.visible).toBe(false);
+    // A quarter of the sun showing already lights more than half the sky.
+    const offsets = Array.from({ length: 50 }, (_, index) => SURVIVAL.eclipseFrom + (index / 50) * (SURVIVAL.eclipseTo - SURVIVAL.eclipseFrom));
+    const quarter = offsets.map((p) => nightSky(p, 'eclipse')).find((sky) => sunShowing(sky.eclipse) >= 0.25)!;
+    expect(quarter.hillsLight).toBeGreaterThan(0.5);
+    const clear = nightSky(SURVIVAL.eclipseTo, 'eclipse');
+    expect(clear).toMatchObject({ eclipse: ECLIPSE_CLEAR, corona: 0, stars: 0, day: 1, shade: 0 });
+  });
+
+  it('cuts the sun to a crescent where the moon covers it', () => {
+    expect(sunCrescent(0, 0)).toEqual([]);
+    expect(sunShowing(0)).toBe(0);
+    expect(sunShowing(ECLIPSE_CLEAR)).toBe(1);
+    expect(sunShowing(1)).toBeGreaterThan(sunShowing(0.5));
+    // Moon to the right: the crescent's points lie on the left, all within the sun.
+    const points = sunCrescent(1, 0);
+    for (let index = 0; index < points.length; index += 2) {
+      expect(Math.hypot(points[index], points[index + 1])).toBeLessThanOrEqual(1 + 1e-9);
+      expect(points[index]).toBeLessThan(0.55);
+    }
   });
 });
 

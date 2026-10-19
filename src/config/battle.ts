@@ -24,7 +24,8 @@ export const WAVES = tunable('WAVES', 'Waves', {
  * Survival mode (systems/survivalWaves.ts): a wave every `waveEveryMs` (the first after `startDelayMs`), the n-th
  * (from 0) `firstSize + growth × n` enemies, × `levelGrowth` per level after the first and × the difficulty's
  * `*Scale`; never more than `maxAlive` standing (the rest wait). No new wave in the last `quietEndMs`. The night
- * cycle (systems/nightCycle.ts): dawn starts at `dawnAt` of the time, the moon has set by `moonSetAt`.
+ * cycle (systems/nightCycle.ts): dawn starts at `dawnAt` of the time, the moon has set by `moonSetAt`; on eclipse maps the moon
+ * starts sliding off the sun at `eclipseFrom` and is off by `eclipseTo`.
  */
 export const SURVIVAL = tunable('SURVIVAL', 'Survival', {
   startDelayMs: 3000,
@@ -39,6 +40,8 @@ export const SURVIVAL = tunable('SURVIVAL', 'Survival', {
   quietEndMs: 8000,
   dawnAt: 0.72,
   moonSetAt: 0.86,
+  eclipseFrom: 0.45,
+  eclipseTo: 0.9,
 });
 
 /**

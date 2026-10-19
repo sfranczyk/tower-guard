@@ -353,8 +353,8 @@ export const BATTLEGROUNDS: Readonly<Record<BattlegroundId, Battleground>> = {
     id: 'eclipsePass',
     player: PLAYER_COLORS.eclipsePass,
     name: 'Eclipse Pass',
-    // Survival: Crimson Pass under a total eclipse. A black disc in a pale corona, stars over a dark crimson sky; a
-    // crescent of sun shows and grows, and as the moon slides off the pass's red-orange evening sky comes back.
+    // Survival: Crimson Pass under a total eclipse: a pale corona round the hidden sun, stars over a dark crimson sky.
+    // Then a crescent of sun shows and grows, and the light comes back fast to the pass's red-orange evening sky.
     sky: [0x12070f, 0x1e0b18, 0x2c1020, 0x3d1626, 0x52202a],
     weather: 'clear',
     cloudColor: 0xffffff,
@@ -370,7 +370,7 @@ export const BATTLEGROUNDS: Readonly<Record<BattlegroundId, Battleground>> = {
       sunAt: { x: 0.62, y: 120 },
       dawn: [0x2a1838, 0x4a2244, 0x6e2c48, 0x9c4044, 0xc05c40],
       day: [0x3b2a52, 0x5e3456, 0x8e4152, 0xc65c45, 0xe8894a],
-      // The moon's dark face over the sun.
+      // Only the map thumbnail's dark disc: in the game the moon just hides the sun.
       moon: 0x0c0608,
       sun: 0xffc27a,
       shade: 0x10050c,

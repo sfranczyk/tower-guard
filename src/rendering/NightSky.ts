@@ -1,7 +1,7 @@
 import { Container, Graphics } from 'pixi.js';
 import { AURORA, BACKDROP_WIDTH, GROUND_Y, MAX_VIEW_WIDTH, NIGHT_SCENERY, VIEW_TOP } from '../config';
 import type { Battleground } from '../data/battlegrounds';
-import { nearestValley, nightSky, SUN_X } from '../systems/nightCycle';
+import { nearestValley, nightSky, sunCrescent, sunShowing, SUN_X } from '../systems/nightCycle';
 import { AURORA_CURTAINS, auroraColumn } from './aurora';
 import { mixColor } from './clouds';
 import { MOUNTAIN_VALLEYS } from './landscape';
@@ -48,6 +48,10 @@ const drawAurora = (g: Graphics, colors: readonly number[], width: number, secon
   });
 };
 
+/** Eclipse maps: the way the moon slides off the sun (up and to the left), and the corona's streamers. */
+const ECLIPSE_ANGLE = Math.atan2(-0.6, -0.8);
+const CORONA_STREAMERS = 14;
+
 /** A small seeded random (the same stars every time). */
 const seeded = (seed: number): (() => number) => () => {
   seed = (Math.imul(seed ^ (seed >>> 15), 2246822507) + 0x6d2b79f5) >>> 0;
@@ -77,9 +81,10 @@ export class NightSky {
   private viewWidth: number;
   private readonly moon = new Graphics();
   private readonly sun = new Graphics();
-  /** Eclipse maps: the corona around the covered sun and the moon's dark disc over it. */
+  /** Eclipse maps: the corona round the covered sun and the sun's crescent (the moon only hides it, never drawn). */
   private readonly corona = new Graphics();
-  private readonly eclipseMoon = new Graphics();
+  private readonly crescent = new Graphics();
+  private readonly sunColor: number;
   private readonly kind: 'night' | 'eclipse' | 'dust';
   private readonly sunAt: { x: number; y: number };
   private readonly starsAlpha: number;
@@ -117,27 +122,15 @@ export class NightSky {
     this.sunAt = cycle.sunAt ?? { x: SUN_X, y: VIEW_TOP + 120 };
     this.starsAlpha = this.kind === 'dust' ? 0 : cycle.stars ?? 1;
     this.calms = !!cycle.calms;
-    // Streamers of the corona, longer and shorter by turns, round a pale glow.
-    this.corona.circle(0, 0, SUN_RADIUS * 1.9).fill({ color: 0xfff4e0, alpha: 0.08 });
-    this.corona.circle(0, 0, SUN_RADIUS * 1.35).fill({ color: 0xfff4e0, alpha: 0.18 });
-    for (let index = 0; index < 14; index += 1) {
-      const angle = (index / 14) * Math.PI * 2 + 0.2 * Math.sin(index * 2.3);
-      const reach = SUN_RADIUS * (index % 2 === 0 ? 2.3 : 1.6);
-      const side = 0.12;
-      this.corona.poly([
-        Math.cos(angle - side) * SUN_RADIUS, Math.sin(angle - side) * SUN_RADIUS,
-        Math.cos(angle) * reach, Math.sin(angle) * reach,
-        Math.cos(angle + side) * SUN_RADIUS, Math.sin(angle + side) * SUN_RADIUS,
-      ]).fill({ color: 0xfff4e0, alpha: 0.22 });
-    }
-    this.eclipseMoon.circle(0, 0, SUN_RADIUS * 1.02).fill({ color: cycle.moon });
+    this.sunColor = cycle.sun;
     this.corona.visible = this.kind === 'eclipse';
-    this.eclipseMoon.visible = this.kind === 'eclipse';
+    this.crescent.visible = this.kind === 'eclipse';
+    this.sun.visible = this.kind !== 'eclipse';
     this.auroraColors = cycle.aurora;
     this.valleys = battleground.hillShape === 'mountains' ? MOUNTAIN_VALLEYS : undefined;
     this.aurora.blendMode = 'add';
     this.viewWidth = right - left;
-    this.sky.addChild(this.dawn, this.day, this.stars, this.aurora, this.moon, this.corona, this.sun, this.eclipseMoon);
+    this.sky.addChild(this.dawn, this.day, this.stars, this.aurora, this.moon, this.corona, this.sun, this.crescent);
     this.shade.rect(left, VIEW_TOP, right - left, GROUND_Y - VIEW_TOP + 60).fill({ color: cycle.shade });
     this.show(0, 0, right - left);
   }
@@ -161,7 +154,7 @@ export class NightSky {
 
   /** The sky `progress` (0..1) through the night, with moon and sun placed across the view at `viewLeft`. */
   public show(progress: number, viewLeft: number, viewWidth: number): void {
-    const state = nightSky(progress);
+    const state = nightSky(progress, this.kind);
     this.dawn.alpha = state.dawn;
     this.day.alpha = state.day;
     this.stars.alpha = state.stars * this.starsAlpha;
@@ -179,18 +172,58 @@ export class NightSky {
     if (this.kind === 'night') {
       this.sun.visible = state.sunRise > -1;
       this.sun.position.set(this.sunX(state.sunRise > -1, viewLeft, viewWidth), HORIZON_Y + SUN_RADIUS - (state.sunRise + 1) * SUN_RADIUS * 1.5);
-    } else {
-      // Eclipse and dust: the sun stands still in the view; behind the dust it shows dim and brightens as it clears.
-      this.sun.visible = true;
+    } else if (this.kind === 'dust') {
+      // The sun stands still in the view, dim behind the dust and brightening as it clears.
       this.sun.position.set(viewLeft + this.sunAt.x * viewWidth, this.sunAt.y);
-      this.sun.alpha = this.kind === 'dust' ? 0.25 + 0.75 * state.calm : 1;
-      this.corona.position.copyFrom(this.sun.position);
-      this.corona.alpha = state.corona;
-      this.eclipseMoon.alpha = state.eclipseMoon;
-      // The moon slides off towards the upper left.
-      this.eclipseMoon.position.set(this.sun.x - state.eclipse * SUN_RADIUS * 0.8, this.sun.y - state.eclipse * SUN_RADIUS * 0.6);
+      this.sun.alpha = 0.25 + 0.75 * state.calm;
+    } else {
+      this.drawEclipse(state.eclipse, state.corona, viewLeft + this.sunAt.x * viewWidth);
     }
     this.shade.alpha = SHADE_ALPHA * state.shade;
+  }
+
+  /**
+   * The eclipse at world x `x` (sunAt.y): the sun's crescent left by the moon `offset` sun radii off it, its glow
+   * growing with it, and the corona round the sun at `corona`, fading first on the side the sun comes out.
+   */
+  private drawEclipse(offset: number, corona: number, x: number): void {
+    const color = this.sunColor;
+    const showing = sunShowing(offset);
+    this.crescent.clear();
+    this.crescent.position.set(x, this.sunAt.y);
+    if (showing > 0) {
+      this.crescent.circle(0, 0, SUN_RADIUS * 1.9).fill({ color, alpha: 0.12 * showing });
+      this.crescent.circle(0, 0, SUN_RADIUS * 1.3).fill({ color, alpha: 0.18 * showing });
+    }
+    const crescent = sunCrescent(offset, ECLIPSE_ANGLE);
+    if (crescent.length > 0) {
+      this.crescent.poly(crescent.map((value) => value * SUN_RADIUS)).fill({ color, alpha: 0.95 });
+    }
+    this.corona.clear();
+    this.corona.position.copyFrom(this.crescent.position);
+    if (corona <= 0) {
+      return;
+    }
+    // A ring of pale glow (none inside the sun, where the sky shows behind the moon) and streamers round it.
+    this.corona.circle(0, 0, SUN_RADIUS * 1.9).fill({ color: 0xfff4e0, alpha: 0.08 * corona });
+    this.corona.circle(0, 0, SUN_RADIUS).cut();
+    this.corona.circle(0, 0, SUN_RADIUS * 1.35).fill({ color: 0xfff4e0, alpha: 0.12 * corona });
+    this.corona.circle(0, 0, SUN_RADIUS).cut();
+    for (let index = 0; index < CORONA_STREAMERS; index += 1) {
+      const angle = (index / CORONA_STREAMERS) * Math.PI * 2 + 0.2 * Math.sin(index * 2.3);
+      // 1 on the moon's side, 0 where the sun comes out: that side goes first.
+      const side = (1 + Math.cos(angle - ECLIPSE_ANGLE)) / 2;
+      const alpha = 0.22 * Math.max(0, Math.min(1, corona * 2 - (1 - side)));
+      if (alpha <= 0.01) {
+        continue;
+      }
+      const reach = SUN_RADIUS * (index % 2 === 0 ? 2.3 : 1.6);
+      this.corona.poly([
+        Math.cos(angle - 0.12) * SUN_RADIUS, Math.sin(angle - 0.12) * SUN_RADIUS,
+        Math.cos(angle) * reach, Math.sin(angle) * reach,
+        Math.cos(angle + 0.12) * SUN_RADIUS, Math.sin(angle + 0.12) * SUN_RADIUS,
+      ]).fill({ color: 0xfff4e0, alpha });
+    }
   }
 
   /**
