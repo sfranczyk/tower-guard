@@ -79,15 +79,15 @@ export const OVERLAY_TEMPLATE = `
       </section>
 `;
 
-/** Weapon slots (the quiver from the battle setup): icon only (name in the tooltip), key in the corner, ammo underneath. */
+/** Weapon slots (the quiver from the battle setup): icon only (name in the tooltip), key in the corner, a grey shade over
+ * the slot while the arrow cools down, cleared clockwise from 12 o'clock (`--cooldown`, DomUi.updateWeaponCooldowns). */
 export const weaponSlots = (loadout: readonly (ArrowType | null)[]): string => loadout.map((type, index) => {
   if (!type) {
-    return `<div class="weapon"><div class="weapon-slot empty" aria-hidden="true"><span class="weapon-key">${index + 1}</span></div><span class="weapon-ammo">–</span></div>`;
+    return `<div class="weapon"><div class="weapon-slot empty" aria-hidden="true"><span class="weapon-key">${index + 1}</span></div></div>`;
   }
   const { name, summary } = ARROW_INFO[type];
   return `<div class="weapon"><button class="weapon-slot" data-projectile="${type}" title="${name}: ${summary} (${index + 1})" aria-label="${name}">`
-    + `<span class="weapon-key">${index + 1}</span>${ICON_WEAPONS[type]}</button>`
-    + `<span class="weapon-ammo" data-ammo="${type}">∞</span></div>`;
+    + `<span class="weapon-key">${index + 1}</span>${ICON_WEAPONS[type]}<span class="weapon-cooldown"></span></button></div>`;
 }).join('');
 
 /** The keys that summon each soldier and cycle their order (GameScene). */

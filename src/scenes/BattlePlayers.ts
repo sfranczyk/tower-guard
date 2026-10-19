@@ -1,8 +1,8 @@
 import type { Container } from 'pixi.js';
-import { BOWMAN_Y, GAME_HEIGHT, MIN_SHOT_POWER, WORLD_WIDTH } from '../config';
+import { ARROW_COOLDOWN_SLACK_MS, BOWMAN_Y, GAME_HEIGHT, MIN_SHOT_POWER, WORLD_WIDTH } from '../config';
 import type { GameContext } from '../core/Scene';
 import type { Battleground } from '../data/battlegrounds';
-import { firstArrow } from '../data/loadout';
+import { ARROW_INFO, firstArrow, type ArrowType } from '../data/loadout';
 import { ManualInput, type PlayerInput } from '../input/PlayerInput';
 import { loadoutOf } from '../net/coopLink';
 import type { GuestSync } from '../net/GuestSync';
@@ -11,6 +11,7 @@ import Bowman from '../objects/bowman/Bowman';
 import { secondPlayerArmor } from '../rendering/armor';
 import type { AimOverlay } from '../rendering/AimOverlay';
 import type { EffectsSystem } from '../systems/EffectsSystem';
+import { ArrowCooldowns } from '../systems/arrowCooldowns';
 import { relight } from '../systems/burning';
 import { groundAt } from '../systems/terrain';
 import type { ProjectileType } from '../types';
@@ -61,7 +62,8 @@ export class BattlePlayers {
       }
       deps.world.addChild(bowman);
       const input: PlayerInput = new ManualInput();
-      return { index, bowman, input, local: index === deps.localIndex, health, projectile: firstArrow(loadoutOf(session, index)) as ProjectileType };
+      return { index, bowman, input, local: index === deps.localIndex, health,
+        projectile: firstArrow(loadoutOf(session, index)) as ProjectileType, cooldowns: new ArrowCooldowns() };
     });
   }
 
@@ -114,10 +116,20 @@ export class BattlePlayers {
     if (projectile && guestSync) {
       guestSync.queueProjectile(projectile);
     }
+    player.cooldowns.tick(deltaMs);
     input.takeShots().forEach((aim) => {
       bowman.setAim(aim.direction, aim.power);
-      // Knocked down by a blast (or fallen): the draw is lost.
-      if (aim.power > MIN_SHOT_POWER && !bowman.isStunned && !bowman.isDead) {
+      const arrow = player.projectile as ArrowType;
+      // A co-op guest's shot reaches the host late: it gets some leeway on the host's copy of its cooldown.
+      const slack = player.local || !this.deps.hostSync() ? 0 : ARROW_COOLDOWN_SLACK_MS;
+      // Knocked down by a blast (or fallen), or the arrow still cooling down: the draw is lost.
+      const loosed = aim.power > MIN_SHOT_POWER && !bowman.isStunned && !bowman.isDead;
+      if (loosed && !player.cooldowns.ready(arrow, slack)) {
+        if (player.local) {
+          ctx.ui.setStatus(`${ARROW_INFO[arrow].name} not ready`);
+        }
+      } else if (loosed) {
+        player.cooldowns.start(arrow);
         if (player.local) {
           this.deps.aimOverlay.recordRelease(aim, bowman.getBowReleasePoint());
         }
@@ -130,6 +142,9 @@ export class BattlePlayers {
       }
       bowman.setAim(aim.direction, 0);
     });
+    if (player.local) {
+      ctx.ui.updateWeaponCooldowns((type) => player.cooldowns.remaining(type));
+    }
     if (input.takeBurst()) {
       if (guestSync) {
         guestSync.queueBurst();

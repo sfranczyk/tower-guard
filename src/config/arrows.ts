@@ -45,6 +45,21 @@ export const ARROWS = tunable('ARROWS', 'Arrows', {
   piercingMultiplier: 0.62,
 }, { meta: { headshotMultiplier: { min: 1, max: 3 }, piercingMultiplier: { max: 1 }, minSpeedFrac: { min: 0, max: 1, step: 0.01 }, drawCurve: { min: 0.3, max: 3, step: 0.05 } } });
 /**
+ * Seconds before an arrow type can be loosed again after a shot (per player and type; switching to another type is
+ * free). The host gives a co-op guest's shots ARROW_COOLDOWN_SLACK_MS of network leeway (BattlePlayers).
+ */
+export const ARROW_COOLDOWN = tunable('ARROW_COOLDOWN', 'Arrow cooldowns (s)', {
+  normal: 0.5,
+  piercing: 2,
+  fire: 4,
+  frost: 5,
+  pinning: 6,
+  shrapnel: 7,
+  explosive: 9,
+  vortex: 15,
+}, { meta: { normal: { min: 0, max: 5, step: 0.1 } } });
+export const ARROW_COOLDOWN_SLACK_MS = 250;
+/**
  * Arrows stuck in something that blows apart (or shatters) snap in two (`breakMin..breakMax` of the shaft), the halves
  * thrown from the blast (`speedMin..speedMax` px/s, `lift` up), spinning up to `spin` rad/s, falling at `gravity`; they
  * lie where they land and are gone after `lifeMs`, fading over the last `fadeMs` (systems/arrowShards.ts).

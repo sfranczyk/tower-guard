@@ -2,6 +2,7 @@ import { BOWMAN_START_X, BOWMAN_Y, TOWER_ENTRY_ZONE_HEIGHT, TOWER_ENTRY_ZONE_WID
 import type { PlayerInput } from '../input/PlayerInput';
 import type Bowman from '../objects/bowman/Bowman';
 import type Tower from '../objects/Tower';
+import type { ArrowCooldowns } from '../systems/arrowCooldowns';
 import { groundAt } from '../systems/terrain';
 import type { ProjectileType } from '../types';
 
@@ -14,6 +15,8 @@ export interface Player {
   readonly local: boolean;
   health: number;
   projectile: ProjectileType;
+  /** Per arrow type, the wait after a shot (the guest's own and, on the host, its copy of it). */
+  readonly cooldowns: ArrowCooldowns;
 }
 
 /** Co-op: how far apart the bowmen start. */

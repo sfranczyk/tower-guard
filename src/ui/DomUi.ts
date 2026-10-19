@@ -339,6 +339,22 @@ export class DomUi {
     this.weaponsRoot.innerHTML = weaponSlots(loadout);
   }
 
+  /** Each frame: the shade over each weapon slot, `remaining` 1 just after a shot down to 0 when ready. */
+  public updateWeaponCooldowns(remaining: (type: ArrowType) => number): void {
+    this.weaponsRoot.querySelectorAll<HTMLButtonElement>('[data-projectile]').forEach((button) => {
+      const share = Math.round(remaining(button.dataset.projectile as ArrowType) * 1000) / 1000;
+      const shown = share > 0 ? String(share) : '';
+      if (button.style.getPropertyValue('--cooldown') !== shown) {
+        if (shown) {
+          button.style.setProperty('--cooldown', shown);
+        } else {
+          button.style.removeProperty('--cooldown');
+        }
+        button.classList.toggle('cooling', share > 0);
+      }
+    });
+  }
+
   /** The soldiers' slots in the HUD (none: hidden, e.g. in online co-op until they're synced). */
   public setAllies(allies: ReadonlyArray<{ type: AllyType; label: string }>): void {
     this.alliesRoot.hidden = allies.length === 0;

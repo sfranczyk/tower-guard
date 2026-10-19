@@ -133,6 +133,11 @@
         .weapon { display: flex; flex-direction: column; align-items: center; gap: 5px; }
         .weapon-slot { position: relative; display: grid; place-items: center; width: 50px; height: 50px; padding: 0; border-radius: 12px; background: var(--panel); box-shadow: 0 4px 0 var(--panel-edge); }
         .weapon-slot.active { background: var(--gold); box-shadow: 0 4px 0 var(--gold-edge); transform: translateY(-3px); }
+        /* Cooling down: a grey, desaturating shade whose covered sector (the remaining share) shrinks clockwise. */
+        .weapon-cooldown { display: none; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+          background: color-mix(in srgb, var(--ink) 38%, transparent); backdrop-filter: grayscale(1);
+          -webkit-mask: conic-gradient(transparent calc((1 - var(--cooldown, 0)) * 360deg), #000 0); mask: conic-gradient(transparent calc((1 - var(--cooldown, 0)) * 360deg), #000 0); }
+        .weapon-slot.cooling .weapon-cooldown { display: block; }
         .weapon-slot.empty { background: transparent; box-shadow: none; border: 2px dashed color-mix(in srgb, var(--panel) 45%, transparent); }
         .weapon-slot.empty .weapon-key { opacity: .5; }
         .weapon-art { width: 40px; height: 40px; }

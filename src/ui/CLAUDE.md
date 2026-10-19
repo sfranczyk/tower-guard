@@ -6,8 +6,9 @@
 - **HUD** (`Hud.ts`): sits *outside* the canvas (bar above: level progress left, weapons centred;
   status line below); `DomUi.fitCanvas()` scales the canvas into the remaining space. Never place HUD elements over the
   play field. Keep and bowman health are bars in the world (Tower, `Bowman.setHealthRatio`), not in the HUD. Weapons are square slots (`LOADOUT_SLOTS` = 5,
-  `weaponSlots`): icon only (name in the tooltip), key in the corner, ammo underneath (∞ for now); built from the quiver
-  (`DomUi.setLoadout`). Right of them the soldiers' slots (`allySlots`, `ICON_ALLIES`: key, `alive/limit`, a shade for
+  `weaponSlots`): icon only (name in the tooltip), key in the corner, no ammo; after a shot a grey shade cleared clockwise
+  (`--cooldown`, `DomUi.updateWeaponCooldowns`; `ARROW_COOLDOWN` in config/arrows, `systems/arrowCooldowns.ts`, per
+  `Player`, checked in `BattlePlayers.update`); built from the quiver (`DomUi.setLoadout`). Right of them the soldiers' slots (`allySlots`, `ICON_ALLIES`: key, `alive/limit`, a shade for
   the pause) and the order button (`ICON_ORDERS`): `DomUi.setAllies` once, `updateAllies` every frame. Banners: a line under the level chip (`DomUi.updateBanners`, `ICON_BANNERS`), off with the drawer's "Banner markers" (`session.bannerMarkers`).
 - **Overlays on the canvas** (menu, sandbox/sound panels, end screen, pause dialog `[data-pause]` (`PauseView`: restart button, the quiver editor while in the keep) placed under the
   settings drawer and the tuning panel, settings drawer) are laid out for a canvas at

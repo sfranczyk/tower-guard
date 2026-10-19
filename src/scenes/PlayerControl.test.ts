@@ -3,6 +3,7 @@ import { BOWMAN_Y, PLAYER_TOWER_X } from '../config';
 import { ManualInput } from '../input/PlayerInput';
 import type Bowman from '../objects/bowman/Bowman';
 import type Tower from '../objects/Tower';
+import { ArrowCooldowns } from '../systems/arrowCooldowns';
 import { PlayerControl, type Player } from './PlayerControl';
 
 /** Just enough of a bowman for PlayerControl: walks at a steady pace, jumps, hides. */
@@ -46,7 +47,7 @@ const fakeBowman = (x: number) => {
 const setup = (x: number) => {
   const bowman = fakeBowman(x);
   const input = new ManualInput();
-  const player = { index: 0, bowman: bowman as unknown as Bowman, input, local: true, health: 100, projectile: 'normal' } as Player;
+  const player = { index: 0, bowman: bowman as unknown as Bowman, input, local: true, health: 100, projectile: 'normal', cooldowns: new ArrowCooldowns() } as Player;
   const tower = { x: PLAYER_TOWER_X, hideSpot: () => ({ x: PLAYER_TOWER_X, y: BOWMAN_Y - 150 }) } as unknown as Tower;
   const control = new PlayerControl(tower, { enteredTower: () => {}, leftTower: () => {} });
   const frame = () => control.update(player, 16);
