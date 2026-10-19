@@ -17,6 +17,8 @@ export const ENEMY_TYPE_LABELS: Readonly<Record<EnemyType, string>> = Object.fro
 
 export const MIN_LEVELS = 1;
 export const MAX_LEVELS = 5;
+/** Survival runs are shorter: at most this many nights (the stored list still has MAX_LEVELS entries). */
+export const MAX_SURVIVAL_LEVELS = 3;
 export const MAX_ENEMIES_PER_TYPE = 50;
 export const HEALTH_LIMITS = {
   bowman: { min: 20, max: 600, step: 10 },
@@ -151,7 +153,7 @@ const isBattleground = (value: unknown, mode: RunMode): value is BattlegroundId 
 
 /** Stored survival levels, clamped: known kinds only (catalogue order, renamed ids moved), at least one, 1–15 minutes. */
 const normalizeSurvival = (input: Partial<SurvivalSetup> | undefined, defaults: SurvivalSetup): SurvivalSetup => ({
-  levelCount: clampInt(input?.levelCount, MIN_LEVELS, MAX_LEVELS, defaults.levelCount),
+  levelCount: clampInt(input?.levelCount, MIN_LEVELS, MAX_SURVIVAL_LEVELS, defaults.levelCount),
   levels: defaults.levels.map((fallback, index) => {
     const level = input?.levels?.[index];
     const stored = Array.isArray(level?.kinds) ? level.kinds.map((kind) => RENAMED_TYPES[kind] ?? kind) : undefined;
@@ -200,6 +202,9 @@ export const normalizeSandbox = (input: (Partial<SandboxSettings> & LegacySandbo
 
 export const levelEnemyTotal = (enemies: LevelEnemyCounts): number =>
   ENEMY_TYPES.reduce((sum, type) => sum + enemies[type], 0);
+
+/** How many levels a run of this mode may have. */
+export const maxLevelsFor = (mode: RunMode): number => (mode === 'survival' ? MAX_SURVIVAL_LEVELS : MAX_LEVELS);
 
 /** How many levels the run has, in its mode. */
 export const runLevelCount = (sandbox: SandboxSettings): number =>

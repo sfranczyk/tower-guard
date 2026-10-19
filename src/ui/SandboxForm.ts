@@ -5,7 +5,6 @@ import {
   ENEMY_TYPE_LABELS,
   HEALTH_LIMITS,
   MAX_ENEMIES_PER_TYPE,
-  MAX_LEVELS,
   MIN_LEVELS,
   RUN_MODES,
   RUN_MODE_DESCRIPTIONS,
@@ -13,6 +12,7 @@ import {
   SURVIVAL_MINUTES,
   battlegroundsFor,
   levelEnemyTotal,
+  maxLevelsFor,
   runBattleground,
   runLevelCount,
   supportAllowed,
@@ -197,7 +197,7 @@ export class SandboxForm {
     return `
       <div class="level-tabs" role="tablist" aria-label="Levels">
         ${Array.from({ length: count }, (_, index) => this.levelTab(settings, index, count > MIN_LEVELS)).join('')}
-        ${count < MAX_LEVELS ? '<button type="button" class="level-add" data-level-add>+ Add level</button>' : ''}
+        ${count < maxLevelsFor(settings.mode) ? '<button type="button" class="level-add" data-level-add>+ Add level</button>' : ''}
       </div>
       <div class="level-editor">
         <div class="level-editor-head">
@@ -281,7 +281,7 @@ export class SandboxForm {
       this.selected = Number(tab.dataset.level);
       this.render(settings);
       this.emit();
-    } else if (target.closest('[data-level-add]') && count < MAX_LEVELS) {
+    } else if (target.closest('[data-level-add]') && count < maxLevelsFor(settings.mode)) {
       // The new level is the next stored one (it keeps whatever it was last set up with).
       this.update(survival
         ? { ...settings, survival: { ...settings.survival, levelCount: count + 1 } }

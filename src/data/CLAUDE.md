@@ -45,7 +45,7 @@ All pure and tested. Tuning numbers live in `config/`, sandbox defaults in `sand
   each at most once, slots may stay empty. Persisted by `core/sandboxStorage.ts`.
   `SandboxSettings.banners` (off by default; battle setup, solo only): systems/CLAUDE.md Banners.
   `SandboxSettings.mode` (`battle` | `survival`): survival has its own levels (`survival: SurvivalSetup`, each
-  `SurvivalLevel` = map, `kinds`, `minutes` 1–15); read the run's with `runLevelCount` / `runBattleground` / `survivalLevel`.
+  `SurvivalLevel` = map, `kinds`, `minutes` 1–15; at most `MAX_SURVIVAL_LEVELS` = 3, `maxLevelsFor(mode)`); read the run's with `runLevelCount` / `runBattleground` / `survivalLevel`.
   Night maps (`nightCycle`: dawn/day skies, moon, sun, shade, optional `aurora`; `nightOf` = its day map) are survival-only,
   the others battle-only (`battlegroundsFor(mode)`, survival ones in their day maps' order): `moonlitHollow` (Green Meadow), `auroraPeaks` (Frostpeak Pass), `stormwatchRidge` (Thunder Ridge,
   storm calming at dawn), `eclipsePass` (Crimson Pass, `kind: 'eclipse'`), `sandstormDunes` (Sunscorch, weather `sandstorm`,

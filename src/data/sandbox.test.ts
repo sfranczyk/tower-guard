@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { BATTLEGROUND_IDS, BATTLEGROUNDS } from './battlegrounds';
-import { DEFAULT_SURVIVAL_MINUTES, MAX_ENEMIES_PER_TYPE, MAX_LEVELS, SURVIVAL_MINUTES, battlegroundsFor, createDefaultSandbox, normalizeSandbox, levelEnemyTotal, runBattleground, runLevelCount, supportAllowed } from './sandbox';
+import { DEFAULT_SURVIVAL_MINUTES, MAX_ENEMIES_PER_TYPE, MAX_LEVELS, MAX_SURVIVAL_LEVELS, SURVIVAL_MINUTES, battlegroundsFor, createDefaultSandbox, normalizeSandbox, levelEnemyTotal, runBattleground, runLevelCount, supportAllowed } from './sandbox';
 
 describe('sandbox settings', () => {
   it('defaults to one level with five prepared levels that get harder', () => {
@@ -76,6 +76,12 @@ describe('survival setup', () => {
     // In the order of the battle maps they belong to.
     expect(battlegroundsFor('survival').map((id) => BATTLEGROUNDS[id].nightCycle!.nightOf)).toEqual(battlegroundsFor('battle'));
     settings.levels.forEach((level) => expect(battlegroundsFor('battle')).toContain(level.battleground));
+  });
+
+  it('allows at most three survival levels', () => {
+    expect(MAX_SURVIVAL_LEVELS).toBe(3);
+    expect(normalizeSandbox({ survival: { levelCount: 5, levels: [] } }).survival.levelCount).toBe(MAX_SURVIVAL_LEVELS);
+    expect(normalizeSandbox({ survival: { levelCount: 2, levels: [] } }).survival.levelCount).toBe(2);
   });
 
   it('moves stored survival levels on day maps to their night', () => {
