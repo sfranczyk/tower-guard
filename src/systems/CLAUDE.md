@@ -43,9 +43,10 @@ every enemy hit on bowmen and keep × `damage` (melee, arrows, kamikaze, dragon 
 groups of `DIFFICULTY_SCALE.groupSize` (kinds together, `groupByKind`), `groupSpawnIntervalMs` apart, `groupGapMs` between.
 
 ## Survival (`survivalWaves.ts`, `nightCycle.ts`, pure, tested; tuning `SURVIVAL`)
-`SurvivalDirector` (BattleEnemies in survival): a wave every `waveEveryMs` (sooner on a cleared field), `survivalWaveSize`
-growing per wave, level and difficulty, kinds by `arrival` (`kindsArrived`, `drawWave`), at most `maxAlive` standing, quiet
-before the end. `nightSky(progress)`: moon, stars, dawn/day weights, shade, `sunRise`. Time up: `Enemy`/`DragonEnemy.flee`,
+`SurvivalDirector` (BattleEnemies in survival): a wave every `waveEveryMs` (or `clearedDelayMs` after the field is
+cleared), `survivalWaveSize` growing up to the difficulty's `*PeakWave` then flat ± `sizeJitter`, × level and difficulty;
+kinds by `arrival` (`kindsArrived`) around a lead kind (`pickLead`, `drawWave` `leadShare`); levels over `finaleMinMs`
+end with a finale (× `finaleScale`) `finaleAtMs` before the end, nothing after; at most `maxAlive` standing. `nightSky(progress)`: moon, stars, dawn/day weights, shade, `sunRise`. Time up: `Enemy`/`DragonEnemy.flee`,
 `EnemyAI.runOff` (off the right edge, `escape`).
 
 ## Arrow flight (`ballistics.ts`)

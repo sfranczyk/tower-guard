@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { SURVIVAL } from '../config';
 import { wavePacing } from '../data/difficulty';
-import { SurvivalDirector, drawWave, kindsArrived, survivalWaveSize } from './survivalWaves';
+import { SurvivalDirector, drawWave, kindsArrived, pickLead, survivalWaveSize } from './survivalWaves';
 
 const run = (director: SurvivalDirector, ms: number, alive = () => 0): number => {
   let spawned = 0;
@@ -14,9 +14,41 @@ const run = (director: SurvivalDirector, ms: number, alive = () => 0): number =>
 describe('survival waves', () => {
   it('grow with each wave, each level and the difficulty', () => {
     expect(survivalWaveSize(0, 0, 'medium')).toBe(SURVIVAL.firstSize);
-    expect(survivalWaveSize(4, 0, 'medium')).toBeGreaterThan(survivalWaveSize(1, 0, 'medium'));
+    expect(survivalWaveSize(3, 0, 'medium')).toBeGreaterThan(survivalWaveSize(1, 0, 'medium'));
     expect(survivalWaveSize(2, 3, 'medium')).toBeGreaterThan(survivalWaveSize(2, 0, 'medium'));
     expect(survivalWaveSize(2, 0, 'hard')).toBeGreaterThan(survivalWaveSize(2, 0, 'easy'));
+  });
+
+  it('stop growing after the difficulty\'s peak wave', () => {
+    const peak = SURVIVAL.mediumPeakWave - 1;
+    expect(survivalWaveSize(peak, 0, 'medium')).toBeGreaterThan(survivalWaveSize(peak - 1, 0, 'medium'));
+    expect(survivalWaveSize(peak + 10, 0, 'medium')).toBe(survivalWaveSize(peak, 0, 'medium'));
+    expect(survivalWaveSize(peak, 0, 'medium', 1.5)).toBeGreaterThan(survivalWaveSize(peak, 0, 'medium'));
+  });
+
+  it('lead each wave with one kind, a newly arrived one first, never the same twice running', () => {
+    const wave = drawWave(['raider', 'hunter'], 10, () => 0, 'hunter');
+    expect(wave.filter((kind) => kind === 'hunter')).toHaveLength(Math.round(10 * SURVIVAL.leadShare));
+    expect(pickLead(['raider', 'tank'], 'raider', new Set(['raider']), () => 0)).toBe('tank');
+    expect(pickLead(['raider', 'tank'], 'tank', new Set(['raider', 'tank']), () => 0.99)).toBe('raider');
+    expect(pickLead(['raider'], 'raider', new Set(['raider']), Math.random)).toBe('raider');
+  });
+
+  it('send the next wave SURVIVAL.clearedDelayMs after the field is cleared', () => {
+    const director = new SurvivalDirector(['raider'], 600_000, { levelIndex: 0, difficulty: 'easy', pacing: wavePacing('easy') });
+    run(director, 20_000); // first wave out, field empty since
+    const waveAt = SURVIVAL.startDelayMs + SURVIVAL.waveEveryMs;
+    expect(run(director, waveAt - 20_000 - 1_000)).toBeGreaterThan(0);
+  });
+
+  it('end long levels with a big finale and nothing after it', () => {
+    const duration = SURVIVAL.finaleMinMs + 60_000;
+    const director = new SurvivalDirector(['raider'], duration, { levelIndex: 0, difficulty: 'medium', pacing: wavePacing('medium'), random: () => 0.5 });
+    const busy = () => 1; // no early waves
+    run(director, duration - SURVIVAL.finaleAtMs - 100, busy);
+    const finale = run(director, 30_000, busy);
+    expect(finale).toBeGreaterThanOrEqual(survivalWaveSize(99, 0, 'medium', SURVIVAL.finaleScale));
+    expect(run(director, SURVIVAL.finaleAtMs - 30_000, busy)).toBe(0);
   });
 
   it('bring tougher kinds only once their time has come', () => {

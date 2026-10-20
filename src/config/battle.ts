@@ -21,23 +21,37 @@ export const WAVES = tunable('WAVES', 'Waves', {
 });
 
 /**
- * Survival mode (systems/survivalWaves.ts): a wave every `waveEveryMs` (the first after `startDelayMs`), the n-th
- * (from 0) `firstSize + growth × n` enemies, × `levelGrowth` per level after the first and × the difficulty's
- * `*Scale`; never more than `maxAlive` standing (the rest wait). No new wave in the last `quietEndMs`. The night
- * cycle (systems/nightCycle.ts): dawn starts at `dawnAt` of the time, the moon has set by `moonSetAt`; on eclipse maps the moon
- * crosses the sun at an even pace from the level's start to its end, covering it all for `eclipseTotal` of the time
- * halfway (which sets how much bigger than the sun it is); the diamond ring flashes for `eclipseDiamond` of the time
- * before and after the total eclipse.
+ * Survival mode (systems/survivalWaves.ts): a wave every `waveEveryMs` (the first after `startDelayMs`), or
+ * `clearedDelayMs` after the field is cleared if that comes sooner. The n-th wave (from 0) has `firstSize + growth × n`
+ * enemies until the difficulty's `*PeakWave` (1-based), the same as that one after it, × `levelGrowth` per level after
+ * the first and × the difficulty's `*Scale`, each wave ± `sizeJitter`. On levels longer than `finaleMinMs` the last
+ * wave (× `finaleScale`) comes `finaleAtMs` before the end, the ones in the `waveEveryMs` before it × `preFinaleScale`;
+ * nothing after it. On shorter levels no new wave in the last `quietEndMs`. Each wave has a lead kind (`leadShare` of
+ * it; a kind that just arrived leads first, never the same twice running). Never more than `maxAlive` standing (the
+ * rest wait). The night cycle (systems/nightCycle.ts): dawn starts at `dawnAt` of the time, the moon has set by
+ * `moonSetAt`; on eclipse maps the moon crosses the sun at an even pace from the level's start to its end, covering it
+ * all for `eclipseTotal` of the time halfway (which sets how much bigger than the sun it is); the diamond ring flashes
+ * for `eclipseDiamond` of the time before and after the total eclipse.
  */
 export const SURVIVAL = tunable('SURVIVAL', 'Survival', {
   startDelayMs: 3000,
   waveEveryMs: 25000,
+  clearedDelayMs: 5000,
   firstSize: 3,
   growth: 1.5,
+  easyPeakWave: 3,
+  mediumPeakWave: 4,
+  hardPeakWave: 5,
+  sizeJitter: 0.2,
   levelGrowth: 1.25,
   easyScale: 0.8,
   mediumScale: 1,
   hardScale: 1.3,
+  finaleMinMs: 240000,
+  finaleAtMs: 120000,
+  finaleScale: 1.5,
+  preFinaleScale: 0.8,
+  leadShare: 0.55,
   maxAlive: 24,
   quietEndMs: 8000,
   dawnAt: 0.72,
