@@ -26,4 +26,12 @@ describe('view fit', () => {
     expect(huge.viewWidth).toBe(MAX_VIEW_WIDTH);
     expect(huge.cssWidth).toBeLessThanOrEqual(5000);
   });
+
+  it('never widens the view past a narrower battlefield (the canvas is letterboxed instead)', () => {
+    const fit = fitView(5000, 1400, 2100);
+    expect(fit.scale).toBe(MAX_VIEW_SCALE);
+    expect(fit.viewWidth).toBe(2100);
+    expect(fit.cssWidth).toBe(Math.floor(2100 * MAX_VIEW_SCALE));
+    expect(fitView(1500, GAME_HEIGHT, 2100).viewWidth).toBe(1500);
+  });
 });

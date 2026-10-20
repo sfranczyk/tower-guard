@@ -111,7 +111,8 @@ hit the bowman (not dead) or a soldier, or the keep while he hides, never enemie
 `'lightning'`); the bowman is safe in the keep.
 
 ## Battlefield (`battlefield.ts`)
-`worldWidth()` / `enemyKeepX()`: the level's field, `WORLD_WIDTH` or `SURVIVAL_WORLD_WIDTH` (GameScene's `useBattlefield`).
+`worldWidth()` / `enemyKeepX()`: the level's field, `WORLD_WIDTH` (2400) or `SURVIVAL_WORLD_WIDTH` (2100, no enemy keep:
+`enemyKeepX()` is only its spot) (GameScene's `useBattlefield`).
 
 ## Terrain (`terrain.ts`)
 `groundAt(x)`: waves of `TERRAIN_AMPLITUDE` around `GROUND_Y`, flat at both keeps. Use it, not `GROUND_Y`, for anything

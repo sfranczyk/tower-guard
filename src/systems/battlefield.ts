@@ -7,7 +7,10 @@ import { KEEP_INSET, WORLD_WIDTH } from '../config';
 let width = WORLD_WIDTH;
 
 export const worldWidth = (): number => width;
-/** The enemy keep's x (absent on a survival level, but its spot still bounds the field). */
+/**
+ * The enemy keep's x. A survival level has no enemy keep (its Tower is built `absent`): there this is only the far
+ * post enemies retreat to and rally at, and the end of the ground the terrain flattens for.
+ */
 export const enemyKeepX = (): number => width - KEEP_INSET;
 
 export const useBattlefield = (fieldWidth: number = WORLD_WIDTH): void => {

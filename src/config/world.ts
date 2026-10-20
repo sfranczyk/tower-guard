@@ -21,9 +21,11 @@ export const MAX_RENDER_RESOLUTION = 4;
 /**
  * The battlefield of a battle level, keep to keep (independent of the view width); the camera follows the bowman across
  * it. A survival level is shorter (SURVIVAL_WORLD_WIDTH). At run time ask systems/battlefield.ts (`worldWidth()`).
+ * The view never gets wider than the field (DomUi.limitViewWidth): a wider window shows bars beside the canvas.
  */
 export const WORLD_WIDTH = 2400;
-export const SURVIVAL_WORLD_WIDTH = 1800;
+/** A survival level's field: there is no enemy keep, only the spot one would stand on (`enemyKeepX()`). */
+export const SURVIVAL_WORLD_WIDTH = 2100;
 /**
  * Width of the backdrop behind menus, labs and the lobby (centred in the view), and of one stretch of the hills
  * drawing, which repeats (mirrored every other time) across the battlefield.
@@ -36,7 +38,7 @@ export const GROUND_Y = 490;
 /** The ground surface waves up and down by this much around GROUND_Y (see systems/terrain.ts). */
 export const TERRAIN_AMPLITUDE = 7;
 export const PLAYER_TOWER_X = 160;
-/** The enemy keep stands this far in from the battlefield's right end (`enemyKeepX()`). */
+/** The enemy keep stands this far in from the battlefield's right end (`enemyKeepX()`; survival has no keep). */
 export const KEEP_INSET = 160;
 /** The enemy keep on a battle level's battlefield; at run time `enemyKeepX()`. */
 export const ENEMY_TOWER_X = WORLD_WIDTH - KEEP_INSET;

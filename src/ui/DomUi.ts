@@ -1,4 +1,4 @@
-import { GAME_WIDTH } from '../config';
+import { GAME_WIDTH, MAX_VIEW_WIDTH } from '../config';
 import { fitView, type ViewFit } from '../core/viewport';
 import type { ProjectileType } from '../types';
 import type { AudioSettings } from '../audio/audioSettings';
@@ -345,17 +345,27 @@ export class DomUi {
     }, { once: true });
   }
 
+  /** The widest the view may get (a battle level sets its field's width, so no unplayable ground shows). */
+  private maxViewWidth = MAX_VIEW_WIDTH;
+
+  /** Caps the view at `width` game px (default: no cap beyond MAX_VIEW_WIDTH) and fits the canvas again. */
+  public limitViewWidth(width = MAX_VIEW_WIDTH): void {
+    if (width === this.maxViewWidth) return;
+    this.maxViewWidth = width;
+    this.fitCanvas();
+  }
+
   public fitCanvas(): void {
     const viewport = document.documentElement;
     const availableWidth = viewport.clientWidth - PAGE_MARGIN * 2;
     this.host.style.width = `${availableWidth}px`;
-    let fit = fitView(availableWidth, viewport.clientHeight);
+    let fit = fitView(availableWidth, viewport.clientHeight, this.maxViewWidth);
     // Two passes: the HUD height depends on the width it wraps in, which depends on the canvas width.
     for (let pass = 0; pass < 2; pass += 1) {
       const hudHeight = (this.hudTop.hidden ? 0 : this.hudTop.offsetHeight)
         + (this.hudBottom.hidden ? 0 : this.hudBottom.offsetHeight);
       const availableHeight = viewport.clientHeight - PAGE_MARGIN * 2 - hudHeight;
-      fit = fitView(availableWidth, availableHeight);
+      fit = fitView(availableWidth, availableHeight, this.maxViewWidth);
       this.canvas.style.width = `${Math.max(1, fit.cssWidth)}px`;
       this.canvas.style.height = `${Math.max(1, fit.cssHeight)}px`;
       this.host.style.width = `${Math.max(1, fit.cssWidth)}px`;

@@ -46,7 +46,7 @@ import type Enemy from '../objects/enemy/Enemy';
 import DragonEnemy from '../objects/dragon/DragonEnemy';
 import { ALLY_ORDER_LABELS } from '../systems/allyOrders';
 import type { Vec2 } from '../types';
-import { enemyKeepX, useBattlefield } from '../systems/battlefield';
+import { enemyKeepX, useBattlefield, worldWidth } from '../systems/battlefield';
 
 /**
  * One level of a sandbox run: the bowman defends the left keep on the level's battleground. Clearing
@@ -105,6 +105,8 @@ export class GameScene extends Scene {
     this.survivalSetup = survivalLevel(sandbox, run.levelIndex);
     // Before anything is laid out on it: a survival level's field is shorter (host and guest build the same).
     useBattlefield(this.survivalSetup ? SURVIVAL_WORLD_WIDTH : WORLD_WIDTH);
+    // No view wider than the field: a big window letterboxes instead of showing ground nobody can play on.
+    ctx.ui.limitViewWidth(worldWidth());
     this.battleground = BATTLEGROUNDS[runBattleground(sandbox, run.levelIndex)];
     this.role = ctx.session.net?.role ?? 'solo';
     this.localIndex = ctx.session.net?.localIndex ?? 0;
@@ -371,6 +373,7 @@ export class GameScene extends Scene {
     super.exit();
     this.controls?.destroy();
     useBattlefield();
+    this.ctx.ui.limitViewWidth();
   }
 
   /** Panned and faded by where it happens relative to the camera (co-op host: the guest hears it too). */

@@ -15,10 +15,14 @@ export interface ViewFit {
   cssHeight: number;
 }
 
-/** Fits the view into the available CSS area: scale up to MAX_VIEW_SCALE, then widen the view. */
-export const fitView = (availableWidth: number, availableHeight: number): ViewFit => {
+/**
+ * Fits the view into the available CSS area: scale up to MAX_VIEW_SCALE, then widen the view, up to `maxViewWidth`
+ * (a battlefield narrower than MAX_VIEW_WIDTH caps it; the canvas is then narrower than the window, centred).
+ */
+export const fitView = (availableWidth: number, availableHeight: number, maxViewWidth = MAX_VIEW_WIDTH): ViewFit => {
   const scale = Math.max(0.01, Math.min(availableWidth / GAME_WIDTH, availableHeight / GAME_HEIGHT, MAX_VIEW_SCALE));
-  const viewWidth = Math.max(GAME_WIDTH, Math.min(MAX_VIEW_WIDTH, Math.floor(availableWidth / scale)));
+  const widest = Math.min(MAX_VIEW_WIDTH, maxViewWidth);
+  const viewWidth = Math.max(GAME_WIDTH, Math.min(widest, Math.floor(availableWidth / scale)));
   return { scale, viewWidth, cssWidth: Math.floor(viewWidth * scale), cssHeight: Math.floor(GAME_HEIGHT * scale) };
 };
 
