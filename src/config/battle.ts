@@ -25,8 +25,9 @@ export const WAVES = tunable('WAVES', 'Waves', {
  * (from 0) `firstSize + growth × n` enemies, × `levelGrowth` per level after the first and × the difficulty's
  * `*Scale`; never more than `maxAlive` standing (the rest wait). No new wave in the last `quietEndMs`. The night
  * cycle (systems/nightCycle.ts): dawn starts at `dawnAt` of the time, the moon has set by `moonSetAt`; on eclipse maps the moon
- * touches the sun as the level starts, covers it all from `eclipseTotalFrom` to `eclipseTotalTo` and leaves it as the
- * time runs out; the diamond ring flashes for `eclipseDiamond` of the time before and after the total eclipse.
+ * crosses the sun at an even pace from the level's start to its end, covering it all for `eclipseTotal` of the time
+ * halfway (which sets how much bigger than the sun it is); the diamond ring flashes for `eclipseDiamond` of the time
+ * before and after the total eclipse.
  */
 export const SURVIVAL = tunable('SURVIVAL', 'Survival', {
   startDelayMs: 3000,
@@ -41,9 +42,8 @@ export const SURVIVAL = tunable('SURVIVAL', 'Survival', {
   quietEndMs: 8000,
   dawnAt: 0.72,
   moonSetAt: 0.86,
-  eclipseTotalFrom: 0.44,
-  eclipseTotalTo: 0.56,
-  eclipseDiamond: 0.03,
+  eclipseTotal: 0.06,
+  eclipseDiamond: 0.02,
 });
 
 /**

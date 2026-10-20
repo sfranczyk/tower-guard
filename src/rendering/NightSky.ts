@@ -1,7 +1,7 @@
 import { Container, Graphics } from 'pixi.js';
 import { AURORA, BACKDROP_WIDTH, GROUND_Y, MAX_VIEW_WIDTH, NIGHT_SCENERY, VIEW_TOP } from '../config';
 import type { Battleground } from '../data/battlegrounds';
-import { nearestValley, nightSky, sunCrescent, sunShowing, SUN_X } from '../systems/nightCycle';
+import { eclipseOutline, eclipseReach, nearestValley, nightSky, sunCrescent, sunShowing, SUN_X } from '../systems/nightCycle';
 import { AURORA_CURTAINS, auroraColumn } from './aurora';
 import { mixColor } from './clouds';
 import { MOUNTAIN_VALLEYS } from './landscape';
@@ -219,11 +219,20 @@ export class NightSky {
     if (corona <= 0) {
       return;
     }
-    // A ring of pale glow (none inside the sun, where the sky shows behind the moon) and streamers round it.
+    // A ring of pale glow (none over sun or moon, where the sky shows behind the moon) and streamers round it.
+    // The outline, seen from the sun's centre, crosses each direction once: pulled in to stay inside each ring's edge.
+    const outline = eclipseOutline(Math.abs(offset), moonAngle);
+    const hole = (radius: number): number[] => outline.flatMap((value, index) => {
+      if (index % 2 === 1) {
+        return [];
+      }
+      const scale = Math.min(1, (radius * 0.98) / Math.hypot(value, outline[index + 1])) * SUN_RADIUS;
+      return [value * scale, outline[index + 1] * scale];
+    });
     this.corona.circle(0, 0, SUN_RADIUS * 1.9).fill({ color: 0xfff4e0, alpha: 0.08 * corona });
-    this.corona.circle(0, 0, SUN_RADIUS).cut();
+    this.corona.poly(hole(1.9)).cut();
     this.corona.circle(0, 0, SUN_RADIUS * 1.35).fill({ color: 0xfff4e0, alpha: 0.12 * corona });
-    this.corona.circle(0, 0, SUN_RADIUS).cut();
+    this.corona.poly(hole(1.35)).cut();
     for (let index = 0; index < CORONA_STREAMERS; index += 1) {
       const angle = (index / CORONA_STREAMERS) * Math.PI * 2 + 0.2 * Math.sin(index * 2.3);
       // 1 on the moon's side, 0 where the sun comes out: that side goes first.
@@ -232,11 +241,16 @@ export class NightSky {
       if (alpha <= 0.01) {
         continue;
       }
+      // From the edge of sun or moon, whichever reaches further that way.
+      const base = SUN_RADIUS * eclipseReach(Math.abs(offset), moonAngle, angle);
       const reach = SUN_RADIUS * (index % 2 === 0 ? 2.3 : 1.6);
+      if (reach <= base * 1.1) {
+        continue;
+      }
       this.corona.poly([
-        Math.cos(angle - 0.12) * SUN_RADIUS, Math.sin(angle - 0.12) * SUN_RADIUS,
+        Math.cos(angle - 0.12) * base, Math.sin(angle - 0.12) * base,
         Math.cos(angle) * reach, Math.sin(angle) * reach,
-        Math.cos(angle + 0.12) * SUN_RADIUS, Math.sin(angle + 0.12) * SUN_RADIUS,
+        Math.cos(angle + 0.12) * base, Math.sin(angle + 0.12) * base,
       ]).fill({ color: 0xfff4e0, alpha });
     }
   }

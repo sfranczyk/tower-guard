@@ -24,7 +24,7 @@ export interface NightSkyState {
   calm: number;
   /**
    * Eclipse maps: the moon's offset from the sun's centre in sun radii along its path, positive on the side it comes
-   * from, negative on the side it leaves to (ECLIPSE_CLEAR: just touching, 0: centred).
+   * from, negative on the side it leaves to (±eclipseClear(): just touching, 0: centred).
    */
   eclipse: number;
   /** Eclipse maps: how bright the corona glows around the covered sun (1 total .. 0). */
@@ -33,9 +33,17 @@ export interface NightSkyState {
   diamond: number;
 }
 
-/** The moon's radius in sun radii, and its offset at which it no longer touches the sun. */
-export const ECLIPSE_MOON_RADIUS = 1.02;
-export const ECLIPSE_CLEAR = 1 + ECLIPSE_MOON_RADIUS;
+/**
+ * The moon's radius in sun radii: crossing the sun at an even pace over the whole level, it covers it all for
+ * SURVIVAL.eclipseTotal of the time, (r - 1) / (r + 1) (0.06: 1.13).
+ */
+export const eclipseMoonRadius = (): number => {
+  const total = Math.max(0, Math.min(0.5, SURVIVAL.eclipseTotal));
+  return (1 + total) / (1 - total);
+};
+
+/** The moon's offset from the sun (sun radii) at which it just touches it. */
+export const eclipseClear = (): number => 1 + eclipseMoonRadius();
 
 const clamp01 = (value: number): number => Math.max(0, Math.min(1, value));
 const smoothstep = (from: number, to: number, value: number): number => {
@@ -58,12 +66,11 @@ export const nearestValley = (x: number, valleys: readonly number[], tileWidth: 
 };
 
 /**
- * The sun's crescent as a polygon (sun radius 1, centred on 0, 0) with the moon (`ECLIPSE_MOON_RADIUS`) at `offset`
+ * The sun's crescent as a polygon (sun radius 1, centred on 0, 0) with the moon (radius `r`) at `offset`
  * sun radii in direction `angle`: the sun's rim outside the moon, then back along the moon's rim inside the sun. Empty
  * while the moon covers it all, the whole disc once it's off. The moon itself is never drawn, it only hides the sun.
  */
-export const sunCrescent = (offset: number, angle: number, steps = 48): number[] => {
-  const r = ECLIPSE_MOON_RADIUS;
+export const sunCrescent = (offset: number, angle: number, steps = 48, r = eclipseMoonRadius()): number[] => {
   const d = Math.max(0, offset);
   const point = (cx: number, cy: number, radius: number, a: number): number[] => [cx + radius * Math.cos(a), cy + radius * Math.sin(a)];
   if (d >= 1 + r) {
@@ -87,8 +94,7 @@ export const sunCrescent = (offset: number, angle: number, steps = 48): number[]
 };
 
 /** Share of the sun's disc the moon leaves showing at `offset` sun radii (0 total .. 1 clear). */
-export const sunShowing = (offset: number): number => {
-  const r = ECLIPSE_MOON_RADIUS;
+export const sunShowing = (offset: number, r = eclipseMoonRadius()): number => {
   const d = Math.max(0, offset);
   if (d >= 1 + r) {
     return 1;
@@ -102,21 +108,59 @@ export const sunShowing = (offset: number): number => {
 };
 
 /**
- * An eclipse map's sky at `progress`: the moon touches the sun as the level starts, slides across it at an even pace,
- * covers it all from SURVIVAL.eclipseTotalFrom to eclipseTotalTo and has left it as the time runs out. The light
- * fades only once most of the sun is hidden (a little sun lights a lot of sky) and comes back the same way; the corona
- * shows while it's dark, and the diamond ring flares just before and just after the total eclipse.
+ * The outline of sun and moon together (sun radius 1, centred on 0, 0; the moon `offset` sun radii off in direction
+ * `angle`): the sun's rim outside the moon, then the moon's rim outside the sun. What the corona never shines over.
+ */
+export const eclipseOutline = (offset: number, angle: number, steps = 48, r = eclipseMoonRadius()): number[] => {
+  const d = Math.max(0, offset);
+  const mx = d * Math.cos(angle);
+  const my = d * Math.sin(angle);
+  const circle = (cx: number, cy: number, radius: number): number[] =>
+    Array.from({ length: steps }, (_, index) => [cx + radius * Math.cos((index / steps) * Math.PI * 2), cy + radius * Math.sin((index / steps) * Math.PI * 2)]).flat();
+  if (d >= 1 + r) {
+    return circle(0, 0, 1);
+  }
+  if (d <= r - 1) {
+    return circle(mx, my, r);
+  }
+  const alpha = Math.acos(Math.max(-1, Math.min(1, (1 + d * d - r * r) / (2 * d))));
+  const beta = Math.acos(Math.max(-1, Math.min(1, (r * r + d * d - 1) / (2 * d * r))));
+  const points: number[] = [];
+  for (let index = 0; index <= steps; index += 1) {
+    const a = angle + alpha + (index / steps) * (Math.PI * 2 - 2 * alpha);
+    points.push(Math.cos(a), Math.sin(a));
+  }
+  for (let index = 1; index < steps; index += 1) {
+    const a = angle + Math.PI + beta + (index / steps) * (Math.PI * 2 - 2 * beta);
+    points.push(mx + r * Math.cos(a), my + r * Math.sin(a));
+  }
+  return points;
+};
+
+/**
+ * How far from the sun's centre (sun radii) sun and moon together reach in direction `direction`, with the moon
+ * `offset` sun radii off in direction `angle`: the far edge of the moon where it covers that way, else the sun's rim.
+ */
+export const eclipseReach = (offset: number, angle: number, direction: number, r = eclipseMoonRadius()): number => {
+  const d = Math.max(0, offset);
+  const along = d * Math.cos(direction - angle);
+  const across = d * Math.sin(direction - angle);
+  const inside = r * r - across * across;
+  return inside > 0 ? Math.max(1, along + Math.sqrt(inside)) : 1;
+};
+
+/**
+ * An eclipse map's sky at `progress`: the moon touches the sun as the level starts and crosses it at an even pace,
+ * covering it all for SURVIVAL.eclipseTotal of the time halfway, and leaves it as the time runs out. The light fades
+ * only once most of the sun is hidden (a little sun lights a lot of sky) and comes back the same way; the corona shows
+ * while it's dark, and the diamond ring flares just before and just after the total eclipse.
  */
 const eclipseSky = (p: number): NightSkyState => {
-  const from = SURVIVAL.eclipseTotalFrom;
-  const to = SURVIVAL.eclipseTotalTo;
-  const hidden = ECLIPSE_MOON_RADIUS - 1;
-  const eclipse = p < from
-    ? hidden + (ECLIPSE_CLEAR - hidden) * (1 - p / from)
-    : p > to
-      ? -hidden - (ECLIPSE_CLEAR - hidden) * ((p - to) / (1 - to))
-      : hidden * (1 - 2 * (p - from) / (to - from));
-  const light = sunShowing(Math.abs(eclipse)) ** 0.45;
+  const r = eclipseMoonRadius();
+  const eclipse = (1 + r) * (1 - 2 * p);
+  const from = 0.5 - SURVIVAL.eclipseTotal / 2;
+  const to = 0.5 + SURVIVAL.eclipseTotal / 2;
+  const light = sunShowing(Math.abs(eclipse), r) ** 0.45;
   const width = SURVIVAL.eclipseDiamond;
   const flare = (t: number): number => (t > 0 && t < 1 ? Math.sin(Math.PI * t) ** 2 : 0);
   return {
@@ -154,7 +198,7 @@ export const nightSky = (progress: number, kind: 'night' | 'eclipse' | 'dust' = 
     hillsLight: smoothstep(0.15, 1, dawn),
     sunRise: -1 + 2 * smoothstep(0.55, 1, dawn) ** 0.8,
     calm: smoothstep(0.05, 0.85, dawn),
-    eclipse: ECLIPSE_CLEAR,
+    eclipse: eclipseClear(),
     corona: 0,
     diamond: 0,
   };
