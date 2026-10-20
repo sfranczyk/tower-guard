@@ -75,16 +75,16 @@ export class SceneManager {
     };
     ui.handlers.arrowTrailsChange = (count) => {
       this.ctx.session.arrowTrails = Math.max(0, Math.min(MAX_ARROW_TRAILS, Math.round(count)));
-      ui.setArrowTrailsOption(this.ctx.session.arrowTrails);
+      ui.settings.setArrowTrailsOption(this.ctx.session.arrowTrails);
     };
     ui.handlers.audioChange = (changes) => sound.updateSettings(changes);
-    ui.setTrajectoryOption(this.ctx.session.showTrajectory);
-    ui.setCursorCircleOption(this.ctx.session.showCursorCircle);
-    ui.setFriendlyFireOption(this.ctx.session.friendlyFire);
-    ui.setDamageNumbersOption(this.ctx.session.showDamageNumbers);
-    ui.setBannerMarkersOption(this.ctx.session.bannerMarkers);
-    ui.setArrowTrailsOption(this.ctx.session.arrowTrails);
-    ui.setAudioOptions(sound.settings);
+    ui.settings.setTrajectoryOption(this.ctx.session.showTrajectory);
+    ui.settings.setCursorCircleOption(this.ctx.session.showCursorCircle);
+    ui.settings.setFriendlyFireOption(this.ctx.session.friendlyFire);
+    ui.settings.setDamageNumbersOption(this.ctx.session.showDamageNumbers);
+    ui.settings.setBannerMarkersOption(this.ctx.session.bannerMarkers);
+    ui.settings.setArrowTrailsOption(this.ctx.session.arrowTrails);
+    ui.settings.setAudioOptions(sound.settings);
 
     app.ticker.add((ticker) => this.current?.update(ticker.deltaMS));
   }

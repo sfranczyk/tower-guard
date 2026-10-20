@@ -140,7 +140,7 @@ export class EnemyFigure {
   /** Standing still (an archer with its bow as it is now), upright. */
   private drawStanding(): void {
     this.body.rotation = 0;
-    this.draw(this.enemy.isArcher ? this.archerState() : { mode: 'stand', phase: this.walkPhase, banner: this.enemy.bannerHold === 'held' });
+    this.draw(this.enemy.isArcher ? this.archerState() : { mode: 'stand', phase: this.walkPhase, banner: this.enemy.banner.state === 'held' });
   }
 
   /** An archer's bow state (upright sprite, so the aim needs no lean correction); `walkPhase` while walking. */
@@ -344,7 +344,7 @@ export class EnemyFigure {
     } else {
       const lean = runs ? RUN_LEAN : 0.06;
       this.body.rotation = velocity.x < 0 ? -lean : lean;
-      this.draw({ mode: 'walk', phase: this.stridePhase, running: runs, banner: this.enemy.bannerHold === 'held' });
+      this.draw({ mode: 'walk', phase: this.stridePhase, running: runs, banner: this.enemy.banner.state === 'held' });
     }
   }
 

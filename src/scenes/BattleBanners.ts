@@ -59,7 +59,7 @@ export class BattleBanners {
       team: (unit) => (isAllyType(unit.kind) ? 'player' : 'enemy'),
       canCarry: (unit) => unit.isAlive() && !unit.isDown && !unit.isCelebrating && canCarryBanner(ENEMY_KINDS[unit.kind].archetype),
       alive: (unit) => unit.isAlive(),
-      dropX: (unit) => (unit.bannerHold === 'planted' ? unit.bannerPlantX : unit.x),
+      dropX: (unit) => (unit.banner.state === 'planted' ? unit.banner.plantX : unit.x),
     });
     this.flags = { player: new Graphics(), enemy: new Graphics() };
     BANNER_SIDES.forEach((side) => {
@@ -87,8 +87,8 @@ export class BattleBanners {
     this.field.step(this.deps.units()).forEach((event) => {
       if (event.by) {
         const taken = event.kind === 'taken';
-        event.by.carrySpeed = taken && event.by.rider ? BANNERS.riderSpeedFactor : 1;
-        event.by.bannerHold = taken ? 'held' : 'none';
+        event.by.banner.carrySpeed = taken && event.by.rider ? BANNERS.riderSpeedFactor : 1;
+        event.by.banner.state = taken ? 'held' : 'none';
       }
       this.deps.status(STATUS[event.kind][event.side]);
     });
@@ -107,9 +107,9 @@ export class BattleBanners {
       const { by } = place;
       const facing = by.figure.facing;
       flag.rotation = 0;
-      if (by.bannerHold === 'planted') {
+      if (by.banner.state === 'planted') {
         // Stuck in the ground beside him while he fights.
-        flag.position.set(by.bannerPlantX, groundAt(by.bannerPlantX));
+        flag.position.set(by.banner.plantX, groundAt(by.banner.plantX));
         flag.scale.set(wind * CARRIED_SCALE * by.size, CARRIED_SCALE * by.size);
         flag.zIndex = 1;
         return;

@@ -7,7 +7,7 @@ import { supportAllowed } from '../data/sandbox';
 import { ALLY_TYPES, ENEMY_KINDS } from '../data/enemyKinds';
 import InputManager from '../managers/InputManager';
 import { LocalInput, ManualInput, RecordingInput, WalkingInput, type PlayerInput } from '../input/PlayerInput';
-import { leaveCoop, loadoutOf, shareLoadout } from '../net/coopLink';
+import { isPresent, leaveCoop, loadoutOf, shareLoadout } from '../net/coopLink';
 import type { GuestSync } from '../net/GuestSync';
 import type { HostSync } from '../net/HostSync';
 import { ALLY_ORDER_LABELS } from '../systems/allyOrders';
@@ -52,6 +52,8 @@ export class BattleControls {
   public paused = false;
   /** Guest: this player's Esc asked the host to pause (so the dialog doesn't say another player did). */
   public pauseAsked = false;
+  /** Host: the guest whose Esc paused the battle (their leaving resumes it). */
+  private pausedBy?: number;
   private optionsVisible = false;
   private localInput?: LocalInput;
   /** Looking over the field from the end screen: walking the bowman (a win) or moving the camera (a loss). */
@@ -89,12 +91,39 @@ export class BattleControls {
       this.setOptionsVisible(false);
     }
     this.localInput?.cancelAim();
-    this.deps.ctx.ui.showPause(paused ? {
+    this.deps.ctx.ui.dialogs.showPause(paused ? {
       byPartner,
       coop: this.deps.role !== 'solo',
       canRestart: this.deps.role !== 'guest',
       quiver: this.deps.team.local.bowman.isInTower ? this.loadout : undefined,
     } : undefined);
+  }
+
+  /** Host: guest `from` asked to pause or resume; both screens follow. */
+  public pauseFor(from: number, paused: boolean): void {
+    this.pausedBy = paused ? from : undefined;
+    this.setPaused(paused, true);
+    this.deps.hostSync()?.sendPause(paused);
+  }
+
+  /** Host, each frame: a guest who left mid-level stands still from now on, and a pause they asked for ends. */
+  public releaseLeftGuests(): void {
+    const hostSync = this.deps.hostSync();
+    if (hostSync) {
+      this.deps.team.list.forEach((player) => {
+        if (player.index > 0 && !isPresent(this.deps.ctx.session, player.index)) {
+          (player.input as ManualInput).set({ direction: 0, sprint: false, aim: undefined });
+          if (this.pausedBy === player.index && this.paused) {
+            this.pausedBy = undefined;
+            this.setPaused(false, false);
+            hostSync.sendPause(false);
+          }
+        }
+      });
+    }
+    if (!this.paused) {
+      this.pausedBy = undefined;
+    }
   }
 
   /** Stops reading this browser's keyboard and mouse (the level ended); the local player stands still. */
@@ -194,7 +223,7 @@ export class BattleControls {
         if (this.optionsVisible) {
           this.setOptionsVisible(false);
         } else if (this.viewing) {
-          ui.setEndViewing(false);
+          ui.dialogs.setEndViewing(false);
         } else if (!ended) {
           this.togglePause();
         }

@@ -22,6 +22,6 @@ export const showLevelEnd = (ctx: GameContext, outcome: LevelOutcome, nextRun: (
       ctx.goTo(session.net ? 'coop' : 'menu');
     };
   const backLabel = session.net ? 'Back to the lobby' : 'Return to menu';
-  ui.showEndScreen({ ...info, buttonLabel: next ? 'Next level' : backLabel, onButton: action });
+  ui.dialogs.showEndScreen({ ...info, buttonLabel: next ? 'Next level' : backLabel, onButton: action });
   return action;
 };

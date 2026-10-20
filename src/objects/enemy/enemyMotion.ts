@@ -37,7 +37,7 @@ export const walk = (enemy: Enemy, realDeltaMs: number, target: Vec2 | undefined
   }
 
   // A lame horse goes at HORSE_LEG.lameSpeed; a shaman's haste speeds it up; a rider with a banner goes slower.
-  const speed = enemy.speed * (enemy.rider?.mount.speedFactor ?? 1) * enemy.buff.speedFactor * enemy.carrySpeed;
+  const speed = enemy.speed * (enemy.rider?.mount.speedFactor ?? 1) * enemy.buff.speedFactor * enemy.banner.carrySpeed;
   if (!target) {
     velocity.x = -speed;
     velocity.y = 0;

@@ -27,6 +27,7 @@ import { holdInVortex, liftFromSaddle, pin, pinnedFootPoint, throwInAir, throwOf
 import { Vitals, applyDamage, applyHeal, unseatRider } from './enemyDamage';
 import { applyEnemyNet, enemyNetState } from './enemyNet';
 import { MountedRider } from './MountedRider';
+import { BannerHold } from './BannerHold';
 
 export type { ThrowNet } from '../../systems/bodyMotion';
 export type { EnemyNet, EnemyTarget, HitInfo, RiderOff } from './enemyTypes';
@@ -72,28 +73,8 @@ export default class Enemy extends Container {
   public readonly mana?: ManaPool;
   /** A goblin shaman's lasting spell on it (haste, stone skin, quick draw, bigger bomb; systems/shamanBuffs.ts). */
   public readonly buff = new ActiveBuff();
-  /** Its pace while carrying a banner (scenes/BattleBanners.ts: BANNERS.riderSpeedFactor on horseback, else 1). */
-  public carrySpeed = 1;
-  /**
-   * Banners: carried in both hands ('held', drawn with withBanner), or stuck in the ground at `bannerPlantX` while he
-   * fights ('planted'; the AIs' walkOnGuard), or none.
-   */
-  public bannerHold: 'none' | 'held' | 'planted' = 'none';
-  public bannerPlantX = 0;
-
-  /** Banners: sets the banner in the ground beside him (on his side away from `foeX`) to fight; picks it up again. */
-  public plantBanner(foeX: number): void {
-    if (this.bannerHold === 'held') {
-      this.bannerHold = 'planted';
-      this.bannerPlantX = this.x - Math.sign(foeX - this.x || 1) * 10 * this.size;
-    }
-  }
-
-  public liftBanner(): void {
-    if (this.bannerHold === 'planted') {
-      this.bannerHold = 'held';
-    }
-  }
+  /** Banners: carrying one, or planted beside him while he fights. */
+  public readonly banner = new BannerHold();
   private readonly buffAura = new BuffAura();
   /** Walked off the field (a priest left alone, `escape`): no longer alive for the battle. */
   private escaped = false;
@@ -497,8 +478,7 @@ export default class Enemy extends Container {
 
   /** The kneel moves towards down while bandaging, up otherwise (EnemyFigure draws it). */
   public advanceKneel(deltaMs: number): number {
-    const step = deltaMs / BANDAGE_KNEEL_MS;
-    this.kneel = Math.max(0, Math.min(1, this.kneel + (this.isBandaging ? step : -step)));
+    this.kneel = Math.max(0, Math.min(1, this.kneel + (this.isBandaging ? 1 : -1) * deltaMs / BANDAGE_KNEEL_MS));
     return this.kneel;
   }
 

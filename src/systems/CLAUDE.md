@@ -1,7 +1,8 @@
 # Gameplay logic (src/systems)
 
 ## Combat layout
-`CombatSystem.update` runs a frame on the host: `EnemyAI` (every living enemy: walk, swing, shoot, detonate, dragons),
+`CombatSystem.update` runs a frame on the host: `EnemyAI` (every living enemy: walk, swing, detonate; shooters and dragons in
+`EnemyRanged.ts`, priest and shaman in `EnemyPriests.ts`),
 `ArrowMagic` (fire, frost, vortex), `ArrowHits` (each arrow against enemies, keeps and, with friendly fire, bowmen);
 CombatSystem keeps what reaches beyond one target (explode, detonate, shatter, lightning, burns); what sets a kamikaze's bomb off and the chain fuses: `kamikazeBomb.ts`. Shared shapes in
 `combatGeometry.ts` (`Foe`, `bowmanBox`, `foeHitBoxes`). Emits `sound(id, at)` events (audio/CLAUDE.md). It forgets what
@@ -27,7 +28,7 @@ The run's Banners option (`SandboxSettings.banners`, solo only): `Banners<Enemy>
 keep's banner (`home` / `carried` / `dropped`, never goes back by itself). Carriers: `canCarryBanner` (fighter, runner, heavy,
 grabber, cavalry; squire, allyKnight). `step` takes, drops, returns or captures (`outcome`); `thief`, `bearer`, `fetchX`.
 AI: carriers and fetchers `walkOnGuard` (EnemyAI / AllyAI: fight only what reaches them, the banner planted beside them,
-`Enemy.plantBanner` / `liftBanner`); enemies but kamikazes go for the `thief`, archers shoot him; `escortsBanner` kinds walk
+`Enemy.banner.plant` / `lift`); enemies but kamikazes go for the `thief`, archers shoot him; `escortsBanner` kinds walk
 behind their bearer (`enemyEscortPost`, `EnemyAI.escortRanks`, `BANNERS.escortRange`); both banners fly in one
 `BannerBreeze` (`bannerBreeze.ts`, pure, tested: turns and lulls, follows a real wind; `BANNERS.breeze*`); soldiers on Advance go to the enemy banner, escort a `bearer` (`escortPost`), chase the thief.
 

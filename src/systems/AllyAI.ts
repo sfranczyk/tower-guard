@@ -170,9 +170,9 @@ export class AllyAI {
     const toX = foe ? ally.x : goalX;
     // A carrier sets his banner in the ground to fight and takes it up again once he's done.
     if (foe) {
-      ally.plantBanner(foe.x);
+      ally.banner.plant(ally, foe.x);
     } else if (!ally.isAttacking) {
-      ally.liftBanner();
+      ally.banner.lift();
     }
     ally.update(deltaMs, { x: toX, y: groundAt(toX) }, 2);
     ally.updateAnimation(deltaMs, ally.isMoving());

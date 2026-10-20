@@ -2,13 +2,7 @@ import type { Graphics } from 'pixi.js';
 import {
   BANNERS,
   BOWMAN_Y,
-  DRAGON_RANGE,
-  DRAGON_FLIGHT,
-  DRAGON_TURBULENCE_SPREAD,
-  ENEMY_ARROW_POWER,
-  ENEMY_ATTACK,
   EXPLOSION_RADIUS,
-  FIRE_DRAGON_RANGE,
   GROUND_Y,
   PRIEST_ESCAPE_BEYOND,
   PRIEST_POST_SLACK,
@@ -18,37 +12,26 @@ import {
 import type { EnemyEdge } from '../data/difficulty';
 import { enemyDamage, rollDamage } from '../data/enemies';
 import { ENEMY_KINDS, enemyArchetype, enemyRegenerates, enemyTraits } from '../data/enemyKinds';
-import { bowSpeed } from '../data/projectiles';
-import Arrow from '../objects/Arrow';
 import type Bowman from '../objects/bowman/Bowman';
 import DragonEnemy from '../objects/dragon/DragonEnemy';
 import type Enemy from '../objects/enemy/Enemy';
-import { TOWER_HEIGHT } from '../objects/Tower';
 import type Tower from '../objects/Tower';
 import type { EnemyType, Vec2 } from '../types';
-import { solveLaunchAngle } from './ballistics';
 import { enemyEscortPost, escortsBanner, type Banners } from './banners';
 import { BlastDodge, blastZones, missChance, type BlastZone, type BombSpot, type DodgeStep } from './blastAwareness';
-import { flamesTouch } from './burning';
-import { planHeals, priestPost } from './healing';
 import { REGEN_START, regenStep, type RegenState } from './regeneration';
-import { ShamanSpells } from './ShamanSpells';
+import { EnemyPriests } from './EnemyPriests';
+import { EnemyRanged } from './EnemyRanged';
 import type { BowmanHit } from './bowmanDeath';
-import { BOWMAN_CHEST, TOWER_HALF_WIDTH, bowmanBox, foeHitBoxes, type Foe } from './combatGeometry';
+import { TOWER_HALF_WIDTH, foeHitBoxes, type Foe } from './combatGeometry';
 import type { EffectsSystem } from './EffectsSystem';
 import { meleeBlow } from './AllyAI';
-import { nearestExposedBowman, nearestMeleeTarget } from './targeting';
+import { nearestMeleeTarget } from './targeting';
 import { groundAt } from './terrain';
 import { enemyKeepX, worldWidth } from './battlefield';
 
 const MELEE_REACH = 25;
 const TOWER_ATTACK_REACH = 40;
-/** The fire dragon aims this far above the bowman's feet. */
-const FIRE_AIM_ABOVE_FEET = 10;
-/** Enemy archers re-solve their aim this often (the solver simulates many trajectories). */
-const ARCHER_AIM_REFRESH_MS = 250;
-/** Where a priest's heal goes from and to: the chest. */
-const priestChest = (enemy: Enemy): Vec2 => ({ x: enemy.x, y: enemy.y - 25 * enemy.size });
 
 /** What the enemies need of the battle. */
 export interface EnemyAIWorld {
@@ -84,11 +67,10 @@ export interface EnemyAIEvents {
  * follows the soldiers and heals the wounded around it.
  */
 export class EnemyAI {
-  /** Cached aim per enemy archer. */
-  private readonly archerAim = new Map<Foe, { angle: number; ageMs: number }>();
   /** Regeneration clock per troll. */
   private readonly regen = new WeakMap<Enemy, RegenState>();
-  private readonly shamanSpells: ShamanSpells;
+  private readonly ranged: EnemyRanged;
+  private readonly priests: EnemyPriests;
   /** Each soldier's heed of the kamikazes (systems/blastAwareness.ts). */
   private readonly dodges = new WeakMap<Enemy, BlastDodge<Enemy>>();
   /** The kamikazes on the field this frame (their x) and the ground their bombs are about to blast (beginFrame). */
@@ -101,7 +83,8 @@ export class EnemyAI {
     private readonly events: EnemyAIEvents,
     private readonly actions: { detonate(kamikaze: Enemy): void },
   ) {
-    this.shamanSpells = new ShamanSpells(world);
+    this.ranged = new EnemyRanged(world, events);
+    this.priests = new EnemyPriests(world);
   }
 
   /**
@@ -159,17 +142,17 @@ export class EnemyAI {
       this.regenerate(enemy, deltaMs);
     }
     if (enemy instanceof DragonEnemy) {
-      this.updateDragon(enemy, deltaMs);
+      this.ranged.updateDragon(enemy, deltaMs);
       this.drawDebugHitboxes(enemy);
       return;
     }
     if (enemy.isArcher) {
-      this.updateArcher(enemy, deltaMs);
+      this.ranged.updateArcher(enemy, deltaMs, this.escortPost(enemy));
       this.drawDebugHitboxes(enemy);
       return;
     }
     if (enemyArchetype(enemy.kind).heals || enemyArchetype(enemy.kind).buffs) {
-      this.updatePriest(enemy, deltaMs);
+      this.priests.update(enemy, deltaMs);
       this.drawDebugHitboxes(enemy);
       return;
     }
@@ -339,9 +322,9 @@ export class EnemyAI {
     const toX = engaged ? enemy.x : goalX;
     // A carrier sets his banner in the ground to fight and takes it up again once he's done.
     if (engaged) {
-      enemy.plantBanner(foe.x);
+      enemy.banner.plant(enemy, foe.x);
     } else if (!enemy.isAttacking) {
-      enemy.liftBanner();
+      enemy.banner.lift();
     }
     enemy.target = melee?.ally ? 'ally' : 'bowman';
     enemy.update(deltaMs, { x: toX, y: groundAt(toX) }, 2);
@@ -417,77 +400,6 @@ export class EnemyAI {
     }
   }
 
-  /**
-   * Priest: never attacks. It walks behind the front soldier on its side of the bowman (or the keep while everyone
-   * hides), dashes past the bowman to the soldiers beyond him when none are left on its side and, with no soldier left,
-   * retreats to the enemy keep (systems/healing.ts); meanwhile it heals. Once only priests are left and no more are to
-   * come, it walks off the field's right edge and has escaped (counts as defeated). The goblin shaman moves the same
-   * way and casts its spells instead (ShamanSpells).
-   */
-  private updatePriest(priest: Enemy, deltaMs: number): void {
-    const { heals } = enemyArchetype(priest.kind);
-    priest.updateMana(deltaMs);
-    const bowman = nearestExposedBowman(this.world.bowmen, priest.x);
-    priest.target = bowman ? 'bowman' : 'tower';
-    const others = this.world.enemies.filter((other) => other !== priest && other.isAlive() && !enemyArchetype(other.kind).heals && !enemyArchetype(other.kind).buffs);
-    const soldiers = others.filter((other) => !(other instanceof DragonEnemy)).map((other) => other.x);
-    const escaping = others.length === 0 && !this.world.reinforcementsDue();
-    const escapeX = worldWidth() + PRIEST_ESCAPE_BEYOND;
-    const retreatX = escaping ? escapeX + PRIEST_POST_SLACK : enemyKeepX();
-    const post = priestPost(priest.x, soldiers, bowman ? bowman.x : this.world.playerTower.x, retreatX);
-    priest.update(deltaMs, { x: post, y: groundAt(Math.min(post, worldWidth())) }, PRIEST_POST_SLACK);
-    priest.updateAnimation(deltaMs, priest.isMoving());
-    if (escaping && priest.x >= escapeX) {
-      priest.escape();
-      return;
-    }
-    if (priest.isDown || priest.afflictions.isFrozen || priest.afflictions.inVortex) {
-      // Knocked down, thrown, frozen or in a vortex: a cast under way is lost (its mana too).
-      priest.actions.interrupt();
-    } else if (heals) {
-      this.castHeal(priest);
-    } else {
-      this.shamanSpells.update(priest, deltaMs);
-    }
-    priest.clearHitTint();
-  }
-
-  /**
-   * Priest: when the pause is over and it has the mana, raises its scepter for a cast. The mana goes now, the heals land
-   * when the cast ends (systems/healing.ts): the wounded around it then, nearest first, never itself or the undead, up to
-   * the mana spent; red crosses rise from each one. Cut short, the cast is lost.
-   */
-  private castHeal(priest: Enemy): void {
-    const { mana } = priest;
-    if (!mana?.canCast || priest.isCasting || priest.isAttacking) {
-      return;
-    }
-    const spent = this.planPriestHeals(priest, mana.mana).reduce((sum, { amount }) => sum + amount, 0);
-    if (spent === 0) {
-      return;
-    }
-    mana.spend(spent);
-    priest.castHeal(() => {
-      const heals = this.planPriestHeals(priest, spent);
-      if (heals.length === 0) {
-        return;
-      }
-      this.world.effects.healPulse({ x: priest.x, y: priest.y });
-      heals.forEach(({ enemy, amount }) => {
-        enemy.heal(amount);
-        this.world.effects.healCrosses(priestChest(enemy));
-      });
-    });
-  }
-
-  /** Who a cast of the priest's with `mana` heals now, and by how much (planHeals). */
-  private planPriestHeals(priest: Enemy, mana: number): { enemy: Enemy; amount: number }[] {
-    const wounded = this.world.enemies.filter((other): other is Enemy =>
-      other !== priest && !(other instanceof DragonEnemy) && other.isAlive() && other.missingHealth > 0 && enemyTraits(other.kind).healable);
-    return planHeals(priestChest(priest), wounded.map((enemy) => ({ at: priestChest(enemy), missing: enemy.missingHealth })), mana)
-      .map(({ index, amount }) => ({ enemy: wounded[index], amount }));
-  }
-
   private drawDebugHitboxes(enemy: Foe): void {
     if (!SHOW_HITBOX_DEBUG) {
       return;
@@ -497,130 +409,5 @@ export class EnemyAI {
     foeHitBoxes(enemy).forEach(({ bounds, headshot, leg }) => {
       debug.rect(bounds.x, bounds.y, bounds.width, bounds.height).stroke({ width: 1, color: headshot ? 0xffd23f : leg ? 0xff9a3c : 0xff5555, alpha: 0.9 });
     });
-  }
-
-  /**
-   * Enemy archer: walk until the bowman (or the keep, if he's hiding in it) is in range, then stop,
-   * aim with the real ballistics and shoot with a little spread.
-   */
-  private updateArcher(enemy: Enemy, deltaMs: number): void {
-    // Banners: a soldier carrying ours off is the one to shoot.
-    const thief = this.world.banners?.thief('enemy');
-    const aimPoint = thief ? { x: thief.x, y: thief.y - 25 * thief.size } : this.aimPointFrom(enemy.x, true);
-    const inRange = Math.abs(aimPoint.x - enemy.x) <= ENEMY_ATTACK.archerRange;
-    // Escorting their bearer, an archer keeps to its post and shoots what comes in range from there.
-    const post = thief ? undefined : this.escortPost(enemy);
-    const strayed = post !== undefined && Math.abs(enemy.x - post) > BANNERS.escortRange;
-
-    if (enemy.isDown || !inRange || strayed) {
-      const toX = post ?? aimPoint.x;
-      enemy.update(deltaMs, { x: toX, y: GROUND_Y }, post === undefined ? 0 : 4);
-      enemy.relaxBow(deltaMs);
-      this.archerAim.delete(enemy);
-    } else {
-      const speed = bowSpeed(ENEMY_ARROW_POWER);
-      const cached = this.archerAim.get(enemy);
-      let angle = cached?.angle;
-      if (!cached || cached.ageMs >= ARCHER_AIM_REFRESH_MS) {
-        angle = solveLaunchAngle(enemy.getBowReleasePoint(), aimPoint, speed, Arrow.getFlightParams('normal', this.world.wind()), GROUND_Y);
-        this.archerAim.set(enemy, { angle, ageMs: 0 });
-      } else {
-        cached.ageMs += deltaMs;
-      }
-      if (enemy.aimBow(angle ?? Math.PI, deltaMs)) {
-        const spread = (Math.random() * 2 - 1) * ENEMY_ATTACK.archerSpread * this.world.enemyEdge.aimSpread;
-        this.events.enemyShot(enemy.getBowReleasePoint(), (angle ?? Math.PI) + spread, speed * (0.97 + Math.random() * 0.06), enemy.kind as EnemyType);
-      }
-    }
-    enemy.updateAnimation(deltaMs, enemy.isMoving());
-  }
-
-  /**
-   * Dragon archer: flies to its hover point in front of the bowman (or the keep, if he's hiding), and
-   * while the target is in range below it the rider aims with the same ballistics and wind and shoots.
-   */
-  private updateDragon(dragon: DragonEnemy, deltaMs: number): void {
-    const bowman = nearestExposedBowman(this.world.bowmen, dragon.x);
-    const aimPoint = this.aimPointFrom(dragon.x);
-    // Everyone hiding in the keep: the fire dragon (its fire can't hurt the keep) waits away from it.
-    dragon.update(deltaMs, aimPoint.x, !bowman);
-    if (enemyArchetype(dragon.kind).breathesFire) {
-      this.updateFireDragon(dragon, bowman, aimPoint, deltaMs);
-      return;
-    }
-    const release = dragon.getBowReleasePoint();
-    // In front of it (it faces either way) and in range; it doesn't shoot while turning round.
-    const ahead = (aimPoint.x - release.x) * dragon.facingX;
-    const inRange = !dragon.isTurning && ahead > 0 && ahead <= DRAGON_RANGE;
-    if (!inRange || this.world.bowmen.every((candidate) => candidate.isDead)) {
-      dragon.relax(deltaMs);
-      this.archerAim.delete(dragon);
-    } else {
-      const speed = bowSpeed(ENEMY_ARROW_POWER);
-      const cached = this.archerAim.get(dragon);
-      let angle = cached?.angle;
-      if (!cached || cached.ageMs >= ARCHER_AIM_REFRESH_MS) {
-        angle = solveLaunchAngle(release, aimPoint, speed, Arrow.getFlightParams('normal', this.world.wind()), GROUND_Y);
-        this.archerAim.set(dragon, { angle, ageMs: 0 });
-      } else {
-        cached.ageMs += deltaMs;
-      }
-      // In flight between hovers he shoots less often and much wider (DRAGON_FLIGHT).
-      const moving = dragon.flightSpeed;
-      if (dragon.aim(angle ?? Math.PI, deltaMs, 1 + (DRAGON_FLIGHT.movingShotPace - 1) * moving)) {
-        // Buffeted by turbulence the rider can't aim well.
-        const turbulence = dragon.afflictions.isTurbulent ? DRAGON_TURBULENCE_SPREAD : 1;
-        const flight = 1 + (DRAGON_FLIGHT.movingSpread - 1) * moving;
-        const spread = (Math.random() * 2 - 1) * ENEMY_ATTACK.archerSpread * this.world.enemyEdge.aimSpread * turbulence * flight;
-        this.events.enemyShot(dragon.getBowReleasePoint(), (angle ?? Math.PI) + spread, speed * (0.97 + Math.random() * 0.06), 'dragon');
-      }
-    }
-    dragon.updateAnimation(deltaMs);
-  }
-
-  /**
-   * Fire dragon: hovers lower and closer (DragonEnemy) and breathes fire at the bowman whenever he's within
-   * FIRE_DRAGON_RANGE of its mouth, ahead of and below it (or strafes him, DragonEnemy); with everyone hiding in
-   * the keep it waits away from it, no fire. Its flames
-   * set the bowman alight (systems/burning.ts); the burn's damage is applied in update.
-   */
-  private updateFireDragon(dragon: DragonEnemy, bowman: Bowman | undefined, aimPoint: Vec2, deltaMs: number): void {
-    // The hot gas rises towards the end of the stream: aim at his legs rather than his chest.
-    const target = bowman ? { x: aimPoint.x, y: bowman.y - FIRE_AIM_ABOVE_FEET } : aimPoint;
-    const mouth = dragon.getMouthPoint();
-    const dx = target.x - mouth.x;
-    const dy = target.y - mouth.y;
-    const inReach = dx * dragon.facingX > 0 && dy > 0 && Math.hypot(dx, dy) <= FIRE_DRAGON_RANGE;
-    if (inReach && bowman) {
-      dragon.breathe(Math.atan2(dy, dx));
-    }
-    dragon.updateAnimation(deltaMs);
-    // The flames set any bowman they touch alight (not inside the keep); staying in them keeps relighting the burn.
-    const flames = dragon.getFlames();
-    if (flames.length === 0) {
-      return;
-    }
-    this.world.bowmen
-      .filter((candidate) => !candidate.isInTower && !candidate.isDead && flamesTouch(flames, bowmanBox(candidate)))
-      .forEach((candidate) => {
-        if (candidate.ignite()) {
-          this.events.bowmanIgnited(candidate);
-        }
-      });
-  }
-
-  /**
-   * Where ranged enemies at `fromX` aim: the chest of the nearest bowman out in the open, or the keep when
-   * everyone left is hiding in it.
-   */
-  /** The chest of the nearest bowman out in the open (archers on foot: or soldier), else the keep's wall. */
-  private aimPointFrom(fromX: number, soldiersToo = false): Vec2 {
-    const target = nearestMeleeTarget(this.world.bowmen, soldiersToo ? this.world.allies : [], fromX);
-    if (target?.ally) {
-      return { x: target.ally.x, y: target.ally.y - 25 * target.ally.size };
-    }
-    return target?.bowman
-      ? { x: target.bowman.x, y: target.bowman.y - BOWMAN_CHEST }
-      : { x: this.world.playerTower.x, y: GROUND_Y - TOWER_HEIGHT * 0.55 };
   }
 }

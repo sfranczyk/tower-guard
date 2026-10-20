@@ -10,6 +10,8 @@
   drains downward like the soldiers' pause (`.slot-shade`/`.slot-wait`, `DomUi.updateWeaponCooldowns`; `ARROW_COOLDOWN` / `ARROW_CHARGES` in config/arrows, `systems/arrowCooldowns.ts`, per
   `Player`, checked in `BattlePlayers.update`; while the chosen arrow loads the bow isn't drawn and the aim circles are grey, `canDrawBow` in scenes/PlayerControl); built from the quiver (`DomUi.setLoadout`). Right of them the soldiers' slots (`allySlots`, `ICON_ALLIES`: key, `alive/limit`, a shade for
   the pause) and the order button (`ICON_ORDERS`): `DomUi.setAllies` once, `updateAllies` every frame. Banners: a line under the level chip (`DomUi.updateBanners`, `ICON_BANNERS`), off with the drawer's "Banner markers" (`session.bannerMarkers`).
+- **DomUi parts**: `ui.settings` (`SettingsDrawer.ts`, the drawer's options), `ui.dialogs` (`BattleDialogs.ts`, end screen
+  and pause dialog), `UiHandlers` in `uiHandlers.ts`, `queryIn` / `onClickIn` in `domQuery.ts`.
 - **Overlays on the canvas** (menu, sandbox/sound panels, end screen, pause dialog `[data-pause]` (`PauseView`: restart button; in the keep the compact quiver editor `compactQuiver` (icon tiles, names in tooltips) left of the buttons) placed under the
   settings drawer and the tuning panel, settings drawer) are laid out for a canvas at
   scale 1 and zoom with it (`--ui-scale`, set in `fitCanvas`, `UI_SCALE` limits); the sandbox's buttons stay pinned

@@ -1,12 +1,10 @@
 import { Container, Graphics } from 'pixi.js';
 import {
-  ARROWS,
   ENEMY_KEEP_HEALTH,
   GROUND_Y,
   MIN_SHOT_POWER,
   PLAYER_TOWER_X,
   SHOW_HITBOX_DEBUG,
-  SNOW_WIND_DRIFT,
   SURVIVAL_WORLD_WIDTH,
   WORLD_WIDTH,
 } from '../config';
@@ -17,8 +15,7 @@ import { viewWidth } from '../core/viewport';
 import { BATTLEGROUNDS, aimColorsOf, type Battleground } from '../data/battlegrounds';
 import { enemyEdge, wavePacing } from '../data/difficulty';
 import { runBattleground, runLevelCount, survivalLevel, type SurvivalLevel } from '../data/sandbox';
-import type { ManualInput } from '../input/PlayerInput';
-import { enterBattle, isPresent, loadoutOf } from '../net/coopLink';
+import { enterBattle, loadoutOf } from '../net/coopLink';
 import type { GuestSync } from '../net/GuestSync';
 import type { HostSync } from '../net/HostSync';
 import Tower from '../objects/Tower';
@@ -34,7 +31,7 @@ import { BattleRelief } from './BattleRelief';
 import { BattlePlayers } from './BattlePlayers';
 import { startBattleSync } from './battleSync';
 import { DEFAULT_STATUS, clockText, windLabel } from './battleText';
-import { mishapStatus, weatherArrowNote } from '../systems/weatherArrows';
+import { weatherArrowNote } from '../systems/weatherArrows';
 import { rollWind, WindShifts } from '../systems/windShift';
 import { PlayerControl, canDrawBow, type Player } from './PlayerControl';
 import { AimOverlay } from '../rendering/AimOverlay';
@@ -42,9 +39,8 @@ import { Background } from '../rendering/Background';
 import { CombatSystem, type Foe } from '../systems/CombatSystem';
 import { EffectsSystem } from '../systems/EffectsSystem';
 import { DamageNumbers } from '../objects/DamageNumbers';
-import { Sand } from '../rendering/Sand';
-import { Snow } from '../rendering/Snow';
-import { WeatherSystem } from '../systems/WeatherSystem';
+import { BattleWeather } from './BattleWeather';
+import { battleCombatEvents } from './battleCombatEvents';
 import { firstArrow, type Loadout } from '../data/loadout';
 import type Enemy from '../objects/enemy/Enemy';
 import DragonEnemy from '../objects/dragon/DragonEnemy';
@@ -81,9 +77,7 @@ export class GameScene extends Scene {
   private damageNumbers!: DamageNumbers;
   private combat!: CombatSystem;
   /** Storm battlegrounds only: lightning. */
-  private weather?: WeatherSystem;
-  private snow?: Snow;
-  private sand?: Sand;
+  private weather?: BattleWeather;
   /** The wind now (px/s² on a normal arrow), rolled from the battleground's strongest; it may change mid-level. */
   private wind: number;
   private readonly windShifts: WindShifts;
@@ -99,8 +93,6 @@ export class GameScene extends Scene {
   private readonly role: 'solo' | 'host' | 'guest';
   private readonly localIndex: number;
   private hostSync?: HostSync;
-  /** Host: the guest whose Esc paused the battle (their leaving resumes it). */
-  private pausedBy?: number;
   private guestSync?: GuestSync;
 
   private readonly camera = new BattleCamera();
@@ -239,31 +231,7 @@ export class GameScene extends Scene {
         enemyEdge: enemyEdge(this.ctx.session.sandbox.difficulty),
         banners: this.banners?.field,
       },
-      {
-        bowmanDamaged: (bowman, amount, hit) => {
-          const player = this.team.of(bowman);
-          player.health = Math.max(0, player.health - amount);
-          bowman.noteHit(hit);
-        },
-        headshot: () => this.ctx.ui.setStatus(`Headshot! ×${ARROWS.headshotMultiplier} damage`),
-        bowmanIgnited: (bowman) => this.team.status(this.team.of(bowman), 'You are on fire! Get out of the flames'),
-        enemyShot: (from, angle, speed, shooter) => this.shots.fireEnemy(from, angle, speed, shooter),
-        sound: (id, at) => this.playSound(id, at),
-        bowmanHealth: (bowman) => ({ health: this.team.of(bowman).health, max: this.ctx.session.sandbox.bowmanHealth }),
-        bowmanHealed: (bowman, amount) => {
-          const player = this.team.of(bowman);
-          player.health = Math.min(this.ctx.session.sandbox.bowmanHealth, player.health + amount);
-        },
-        arrowMishap: (arrow, kind) => {
-          if (kind === 'douse') {
-            this.shots.douse(arrow);
-          }
-          const shooter = this.team.list.find((player) => player.index === arrow.owner);
-          if (shooter) {
-            this.team.status(shooter, mishapStatus(kind));
-          }
-        },
-      },
+      battleCombatEvents({ ctx: this.ctx, team: this.team, shots: this.shots, playSound: (id, at) => this.playSound(id, at) }),
     );
 
     this.outcome = new BattleOutcome({
@@ -321,11 +289,7 @@ export class GameScene extends Scene {
       setSurvivalClock: (ms) => this.survival?.sync(ms),
     }));
     if (this.hostSync) {
-      this.hostSync.onPauseRequest = (paused, from) => {
-        this.pausedBy = paused ? from : undefined;
-        controls.setPaused(paused, true);
-        this.hostSync?.sendPause(paused);
-      };
+      this.hostSync.onPauseRequest = (paused, from) => controls.pauseFor(from, paused);
     }
     if (SHOW_HITBOX_DEBUG) {
       // Debug console hook (?debug): window.__towerGuard.scene gives access to the running level.
@@ -334,23 +298,15 @@ export class GameScene extends Scene {
         delete (window as unknown as { __towerGuard?: unknown }).__towerGuard;
       });
     }
-    if (this.battleground.weather === 'storm') {
-      this.weather = new WeatherSystem(this.world, this.ctx.root, this.background, {
-        // After the level is decided lightning still flashes but no longer hurts anyone.
-        // A co-op guest's own bolts are only for show (the host's strikes arrive as effects).
-        groundStrike: (point) => (this.outcome.ended || this.role === 'guest' ? this.effects.lightningStrike(point) : this.combat.lightningStrike(point)),
-        thunder: (at, close) => {
-          const mix = spatialMix(at.x, this.camera.x, viewWidth());
-          this.ctx.sound.play('thunder', { ...mix, gain: mix.gain * (close ? 1 : 0.45) });
-        },
-      });
-    }
-    if (this.battleground.weather === 'snow') {
-      this.snow = new Snow(this.ctx.root, this.wind * SNOW_WIND_DRIFT);
-    }
-    if (this.battleground.weather === 'sandstorm') {
-      this.sand = new Sand(this.ctx.root, this.wind < 0 ? -1 : 1);
-    }
+    this.weather = new BattleWeather(this.battleground, this.world, this.ctx.root, this.background, this.wind, {
+      // After the level is decided lightning still flashes but no longer hurts anyone.
+      // A co-op guest's own bolts are only for show (the host's strikes arrive as effects).
+      groundStrike: (point) => (this.outcome.ended || this.role === 'guest' ? this.effects.lightningStrike(point) : this.combat.lightningStrike(point)),
+      thunder: (at, close) => {
+        const mix = spatialMix(at.x, this.camera.x, viewWidth());
+        this.ctx.sound.play('thunder', { ...mix, gain: mix.gain * (close ? 1 : 0.45) });
+      },
+    });
     const hint = this.battleground.weather === 'storm' ? 'beware of lightning' : this.wind !== 0 ? windLabel(this.wind, this.battleground.wind ?? 0)
       : this.survival ? `hold out for ${clockText(this.survival.durationMs)}` : 'defend your keep';
     const note = weatherArrowNote(this.battleground.weather);
@@ -359,22 +315,7 @@ export class GameScene extends Scene {
 
   /** The world keeps running after the level ends; the end screen just overlays it. */
   public update(deltaMs: number): void {
-    // A guest left mid-level: their bowman stands still from now on (and a pause they asked for ends).
-    if (this.hostSync) {
-      this.players.forEach((player) => {
-        if (player.index > 0 && !isPresent(this.ctx.session, player.index)) {
-          (player.input as ManualInput).set({ direction: 0, sprint: false, aim: undefined });
-          if (this.pausedBy === player.index && this.controls?.paused) {
-            this.pausedBy = undefined;
-            this.controls.setPaused(false, false);
-            this.hostSync?.sendPause(false);
-          }
-        }
-      });
-    }
-    if (!this.controls?.paused) {
-      this.pausedBy = undefined;
-    }
+    this.controls?.releaseLeftGuests();
     if (this.controls?.paused) {
       return;
     }
@@ -393,11 +334,6 @@ export class GameScene extends Scene {
     }
     this.relief?.update(deltaMs);
     this.weather?.update(deltaMs, this.camera.x);
-    this.snow?.update(deltaMs, this.camera.x);
-    if (this.sand) {
-      this.sand.intensity = 1 - (this.background.night?.calm ?? 0);
-      this.sand.update(deltaMs, this.camera.x);
-    }
     // A co-op guest moves only its own bowman; the host's comes from the host.
     this.players.filter((player) => this.role !== 'guest' || player.local).forEach((player) => this.team.update(player, deltaMs));
     this.playerTower.update(deltaMs);
@@ -427,12 +363,7 @@ export class GameScene extends Scene {
   /** The wind changed mid-level: arrows loosed from now on, the aim's path and the snow follow it. */
   private setWind(wind: number): void {
     this.wind = wind;
-    if (this.snow) {
-      this.snow.drift = wind * SNOW_WIND_DRIFT;
-    }
-    if (this.sand) {
-      this.sand.direction = wind < 0 ? -1 : 1;
-    }
+    this.weather?.setWind(wind);
     this.ctx.ui.setStatus(`The wind shifts · ${windLabel(wind, this.battleground.wind ?? 0)}`);
   }
 

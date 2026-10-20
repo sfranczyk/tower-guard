@@ -14,6 +14,7 @@ open the one you need:
 - `Mount.ts`: the horse's health, lame leg, bolting, death state.
 - `EnemyBars.ts`: health, horse and mana bars and their placement.
 - `EnemyBow.ts` (pure, tested): an archer's bow (raise, draw, aim, pause).
+- `BannerHold.ts`: `enemy.banner` (held / planted at `plantX`, `carrySpeed`; `plant`, `lift`).
 - Hit shape: `systems/bodyHitShape.ts` (pure, tested, shared with the bowman): head box on the skull the look draws
   (`HumanoidLook.headHit`), body round the joints of the pose last drawn (`EnemyFigure.drawn`), `separate` cuts the body
   back to the head's edge (touch at the neck, never overlap; also the mounted rider's torso); stuck-arrow torso.

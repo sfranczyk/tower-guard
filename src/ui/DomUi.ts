@@ -2,15 +2,17 @@ import { GAME_WIDTH } from '../config';
 import { fitView, type ViewFit } from '../core/viewport';
 import type { ProjectileType } from '../types';
 import type { AudioSettings } from '../audio/audioSettings';
-import type { SoundId } from '../audio/SoundManager';
 import type { SandboxSettings } from '../data/sandbox';
-import type { ArrowType, Loadout } from '../data/loadout';
+import type { ArrowType } from '../data/loadout';
 import { Hud, type HudValues } from './Hud';
 import { CoopPanel, type CoopView } from './CoopPanel';
 import { SandboxForm } from './SandboxForm';
-import { compactQuiver, type PartnerQuiver } from './quiverPage';
-import { editQuiverIn, type QuiverEdit } from './quiverEditing';
+import { type PartnerQuiver } from './quiverPage';
 import { TuningPanel } from './TuningPanel';
+import type { UiHandlers } from './uiHandlers';
+import { BattleDialogs } from './BattleDialogs';
+import { SettingsDrawer } from './SettingsDrawer';
+import { onClickIn, queryIn } from './domQuery';
 import { SoundLabPanel, type SoundLabMusic, type SoundLabMusicState, type SoundLabRow } from './SoundLabPanel';
 import { HUD_BOTTOM_TEMPLATE, HUD_TOP_TEMPLATE, OVERLAY_TEMPLATE, allySlots, weaponSlots } from './template';
 import { ICON_BANNERS, ICON_ORDERS } from './icons';
@@ -44,26 +46,7 @@ export interface AllyHudView {
   orderLabel: string;
 }
 
-/** What the battle's pause dialog shows. */
-export interface PauseView {
-  byPartner: boolean;
-  coop: boolean;
-  /** Alone or the co-op host: "Restart level" (the guest waits for the host). */
-  canRestart: boolean;
-  /** The local bowman is in the keep: his quiver, editable in the dialog. */
-  quiver?: Loadout;
-}
-
-export interface EndScreenOptions {
-  title: string;
-  /** Colours the title: green for a win, red for a loss. */
-  outcome: 'win' | 'loss';
-  copy: string;
-  /** Small figures shown in a row under the copy (e.g. enemies defeated, keep health). */
-  stats?: ReadonlyArray<{ label: string; value: string }>;
-  buttonLabel: string;
-  onButton: () => void;
-}
+export type { EndScreenOptions, PauseView } from './BattleDialogs';
 
 /** Page colours behind the game, taken from the current battleground. */
 export interface UiTheme {
@@ -72,55 +55,7 @@ export interface UiTheme {
 }
 
 /** Callbacks wired to DOM controls. Scenes assign the ones they care about. */
-export interface UiHandlers {
-  start?: () => void;
-  openAnimationLab?: () => void;
-  openSoundLab?: () => void;
-  openDesignLab?: () => void;
-  toggleTuning?: () => void;
-  /** The end screen's "View battlefield" (true) or "Back to results" (false). */
-  viewBattlefield?: (viewing: boolean) => void;
-  /** Animation and design lab: back to the main menu. */
-  labMenu?: () => void;
-  /** Animation lab: leave the zoomed view and return to the list. */
-  labBack?: () => void;
-  toggleOptions?: () => void;
-  /** The pause dialog's "Resume", "Restart level" and "Main menu" buttons. */
-  pauseResume?: () => void;
-  pauseRestart?: () => void;
-  pauseMenu?: () => void;
-  /** The pause dialog's quiver (shown while the bowman is in the keep) was changed. */
-  pauseLoadout?: (loadout: Loadout) => void;
-  selectProjectile?: (type: ProjectileType) => void;
-  summonAlly?: (type: AllyType) => void;
-  cycleAllyOrder?: () => void;
-  /** `level`: the level being edited (its battleground is shown behind the form). */
-  sandboxChange?: (settings: SandboxSettings, level: number) => void;
-  sandboxStart?: () => void;
-  sandboxBack?: () => void;
-  openCoop?: () => void;
-  coopHost?: () => void;
-  coopJoin?: (code: string) => void;
-  coopSetup?: () => void;
-  coopLeave?: () => void;
-  coopLoadout?: (loadout: Loadout) => void;
-  trajectoryChange?: (enabled: boolean) => void;
-  cursorCircleChange?: (enabled: boolean) => void;
-  /** Damage numbers over the enemies' heads toggled in the settings drawer. */
-  damageNumbersChange?: (enabled: boolean) => void;
-  bannerMarkersChange?: (enabled: boolean) => void;
-  /** Friendly fire (the players' arrows and their effects hit the bowmen too) toggled in the settings drawer. */
-  friendlyFireChange?: (enabled: boolean) => void;
-  /** Number of shots that keep their trail (0..3) picked in the settings drawer. */
-  arrowTrailsChange?: (count: number) => void;
-  /** A music or effects toggle/volume (0..1) changed in the settings drawer. */
-  audioChange?: (changes: Partial<AudioSettings>) => void;
-  soundLabPlay?: (id: SoundId, variant?: number) => void;
-  soundLabToggleMusic?: () => void;
-  soundLabMusicSeam?: () => void;
-  soundLabAudioChange?: (changes: Partial<AudioSettings>) => void;
-  soundLabBack?: () => void;
-}
+export type { UiHandlers } from './uiHandlers';
 
 /**
  * HTML around and over the canvas. Lays out [HUD top][canvas + overlay][HUD bottom], scales the
@@ -128,6 +63,8 @@ export interface UiHandlers {
  */
 export class DomUi {
   public readonly handlers: UiHandlers = {};
+  public readonly settings: SettingsDrawer;
+  public readonly dialogs: BattleDialogs;
 
   private readonly host: HTMLElement;
   private readonly canvas: HTMLCanvasElement;
@@ -136,21 +73,9 @@ export class DomUi {
   private readonly menuScreen: HTMLElement;
   private readonly labScreen: HTMLElement;
   private readonly optionsDrawer: HTMLElement;
-  private readonly endScreen: HTMLElement;
-  private readonly pauseScreen: HTMLElement;
-  private readonly pauseCopy: HTMLElement;
-  private readonly pauseCard: HTMLElement;
-  private readonly pauseQuiverRoot: HTMLElement;
-  private readonly pauseRestart: HTMLElement;
-  /** The quiver being edited in the pause dialog (undefined while none is shown). */
-  private pauseQuiver?: QuiverEdit;
-  private readonly endTitle: HTMLElement;
-  private readonly endCopy: HTMLElement;
-  private readonly endButton: HTMLButtonElement;
   private readonly labBackButton: HTMLButtonElement;
   private readonly statusElement: HTMLElement;
   private readonly hud: Hud;
-  private readonly endStats: HTMLElement;
   private readonly devTools: HTMLElement;
   private readonly sandboxScreen: HTMLElement;
   private readonly sandboxForm: SandboxForm;
@@ -162,19 +87,8 @@ export class DomUi {
   private readonly weaponsRoot: HTMLElement;
   private readonly alliesRoot: HTMLElement;
   private shownOrder?: string;
-  private readonly trajectoryInput: HTMLInputElement;
-  private readonly cursorCircleInput: HTMLInputElement;
-  private readonly damageNumbersInput: HTMLInputElement;
-  private readonly bannerMarkersInput: HTMLInputElement;
   private readonly bannersLine: HTMLElement;
   private shownBanners = '';
-  private readonly friendlyFireInput: HTMLInputElement;
-  private readonly trailButtons: HTMLButtonElement[];
-  private readonly soundInput: HTMLInputElement;
-  private readonly volumeInput: HTMLInputElement;
-  private readonly musicInput: HTMLInputElement;
-  private readonly musicVolumeInput: HTMLInputElement;
-  private onEndButton?: () => void;
 
   public constructor(host: HTMLElement, canvas: HTMLCanvasElement) {
     this.host = host;
@@ -191,26 +105,10 @@ export class DomUi {
     this.menuScreen = this.query('[data-menu]');
     this.labScreen = this.query('[data-test]');
     this.optionsDrawer = this.query('[data-drawer]');
-    this.endScreen = this.query('[data-end]');
-    this.pauseScreen = this.query('[data-pause]');
-    this.pauseCopy = this.query('[data-pause-copy]');
-    this.pauseCard = this.query('[data-pause] .end-card');
-    this.pauseQuiverRoot = this.query('[data-pause-quiver]');
-    this.pauseRestart = this.query('[data-pause-restart]');
-    editQuiverIn(this.pauseQuiverRoot, () => this.pauseQuiver, ({ loadout, slot, changed }) => {
-      this.pauseQuiver = { loadout, slot };
-      this.renderPauseQuiver();
-      if (changed) {
-        this.handlers.pauseLoadout?.(loadout);
-      }
-    });
-    this.endTitle = this.query('[data-end-title]');
-    this.endCopy = this.query('[data-end-copy]');
-    this.endButton = this.query<HTMLButtonElement>('[data-end-button]');
+    this.dialogs = new BattleDialogs(host, this.handlers);
     this.labBackButton = this.query<HTMLButtonElement>('[data-lab-back]');
     this.statusElement = this.query('[data-status]');
     this.hud = new Hud(this.hudTop);
-    this.endStats = this.query('[data-end-stats]');
     this.devTools = this.query('[data-dev-tools]');
     this.sandboxScreen = this.query('[data-sandbox]');
     this.sandboxForm = new SandboxForm(this.query('[data-sandbox-form]'), {
@@ -235,17 +133,8 @@ export class DomUi {
       back: () => this.handlers.soundLabBack?.(),
     });
     this.weaponsRoot = this.query<HTMLElement>('[data-projectiles]');
-    this.trajectoryInput = this.query<HTMLInputElement>('[data-trajectory]');
-    this.cursorCircleInput = this.query<HTMLInputElement>('[data-cursor-circle]');
-    this.damageNumbersInput = this.query<HTMLInputElement>('[data-damage-numbers]');
-    this.bannerMarkersInput = this.query<HTMLInputElement>('[data-banner-markers]');
+    this.settings = new SettingsDrawer(host, this.handlers);
     this.bannersLine = this.query<HTMLElement>('[data-banners]');
-    this.friendlyFireInput = this.query<HTMLInputElement>('[data-friendly-fire]');
-    this.trailButtons = Array.from(this.host.querySelectorAll<HTMLButtonElement>('[data-trail-count]'));
-    this.soundInput = this.query<HTMLInputElement>('[data-sound]');
-    this.volumeInput = this.query<HTMLInputElement>('[data-volume]');
-    this.musicInput = this.query<HTMLInputElement>('[data-music]');
-    this.musicVolumeInput = this.query<HTMLInputElement>('[data-music-volume]');
 
     this.onClick('[data-start]', () => this.handlers.start?.());
     this.onClick('[data-open-coop]', () => this.handlers.openCoop?.());
@@ -258,13 +147,6 @@ export class DomUi {
     this.onClick('[data-lab-menu]', () => this.handlers.labMenu?.());
     this.onClick('[data-lab-back]', () => this.handlers.labBack?.());
     this.onClick('[data-close-options]', () => this.handlers.toggleOptions?.());
-    this.endButton.addEventListener('click', () => this.onEndButton?.());
-    this.onClick('[data-end-view]', () => this.setEndViewing(true));
-    this.onClick('[data-end-back]', () => this.setEndViewing(false));
-    this.onClick('[data-pause-resume]', () => this.handlers.pauseResume?.());
-    this.onClick('[data-pause-restart]', () => this.handlers.pauseRestart?.());
-    this.onClick('[data-pause-settings]', () => this.handlers.toggleOptions?.());
-    this.onClick('[data-pause-menu]', () => this.handlers.pauseMenu?.());
     this.alliesRoot = this.query<HTMLElement>('[data-allies]');
     this.alliesRoot.addEventListener('click', (event) => {
       const button = (event.target as HTMLElement).closest<HTMLButtonElement>('[data-ally], [data-ally-order]');
@@ -287,21 +169,6 @@ export class DomUi {
         button.blur();
       }
     });
-    this.trajectoryInput.addEventListener('change', () => this.handlers.trajectoryChange?.(this.trajectoryInput.checked));
-    this.cursorCircleInput.addEventListener('change', () => this.handlers.cursorCircleChange?.(this.cursorCircleInput.checked));
-    this.damageNumbersInput.addEventListener('change', () => this.handlers.damageNumbersChange?.(this.damageNumbersInput.checked));
-    this.bannerMarkersInput.addEventListener('change', () => this.handlers.bannerMarkersChange?.(this.bannerMarkersInput.checked));
-    this.friendlyFireInput.addEventListener('change', () => this.handlers.friendlyFireChange?.(this.friendlyFireInput.checked));
-    this.trailButtons.forEach((button) => button.addEventListener('click', () => {
-      this.handlers.arrowTrailsChange?.(Number(button.dataset.trailCount));
-      // Drop focus so Space (shrapnel burst) doesn't press it again.
-      button.blur();
-    }));
-    const audioChange = (changes: Partial<AudioSettings>): void => this.handlers.audioChange?.(changes);
-    this.soundInput.addEventListener('change', () => audioChange({ effectsEnabled: this.soundInput.checked }));
-    this.volumeInput.addEventListener('input', () => audioChange({ effectsVolume: Number(this.volumeInput.value) / 100 }));
-    this.musicInput.addEventListener('change', () => audioChange({ musicEnabled: this.musicInput.checked }));
-    this.musicVolumeInput.addEventListener('input', () => audioChange({ musicVolume: Number(this.musicVolumeInput.value) / 100 }));
 
     window.addEventListener('resize', () => this.fitCanvas());
     this.watchPixelRatio();
@@ -318,9 +185,7 @@ export class DomUi {
     this.hudTop.hidden = screen !== 'game';
     this.hudBottom.hidden = screen !== 'game';
     this.labBackButton.hidden = true;
-    this.endScreen.hidden = true;
-    this.endScreen.classList.remove('viewing');
-    this.pauseScreen.hidden = true;
+    this.dialogs.hide();
     this.optionsDrawer.hidden = true;
     this.fitCanvas();
   }
@@ -426,7 +291,6 @@ export class DomUi {
     this.sandboxForm.back();
   }
 
-
   /** Co-op host: the guests' quivers, shown on the battle setup's Quiver page (undefined alone). */
   public setSandboxPartners(partners: PartnerQuiver[] | undefined): void {
     this.sandboxForm.setPartners(partners);
@@ -440,18 +304,6 @@ export class DomUi {
     this.soundLabPanel.updateMusic(state);
   }
 
-  public setTrajectoryOption(showTrajectory: boolean): void {
-    this.trajectoryInput.checked = showTrajectory;
-  }
-
-  public setCursorCircleOption(showCursorCircle: boolean): void {
-    this.cursorCircleInput.checked = showCursorCircle;
-  }
-
-  public setBannerMarkersOption(enabled: boolean): void {
-    this.bannerMarkersInput.checked = enabled;
-  }
-
   /** Each frame: where both banners are (undefined: no banners, or markers off); touched only when it changes. */
   public updateBanners(view: { player: BannerAt; enemy: BannerAt } | undefined): void {
     const text = view ? `${ICON_BANNERS.player} Ours: ${BANNER_STATE_LABELS[view.player]} · ${ICON_BANNERS.enemy} Theirs: ${BANNER_STATE_LABELS[view.enemy]}` : '';
@@ -461,76 +313,6 @@ export class DomUi {
     this.shownBanners = text;
     this.bannersLine.hidden = !view;
     this.bannersLine.innerHTML = text;
-  }
-
-  public setDamageNumbersOption(enabled: boolean): void {
-    this.damageNumbersInput.checked = enabled;
-  }
-
-  public setFriendlyFireOption(enabled: boolean): void {
-    this.friendlyFireInput.checked = enabled;
-  }
-
-  public setArrowTrailsOption(count: number): void {
-    this.trailButtons.forEach((button) => {
-      const active = Number(button.dataset.trailCount) === count;
-      button.classList.toggle('active', active);
-      button.setAttribute('aria-checked', `${active}`);
-    });
-  }
-
-  public setAudioOptions(settings: Readonly<AudioSettings>): void {
-    this.soundInput.checked = settings.effectsEnabled;
-    this.volumeInput.value = `${Math.round(settings.effectsVolume * 100)}`;
-    this.musicInput.checked = settings.musicEnabled;
-    this.musicVolumeInput.value = `${Math.round(settings.musicVolume * 100)}`;
-  }
-
-  public showEndScreen(options: EndScreenOptions): void {
-    this.endTitle.textContent = options.title;
-    this.endTitle.dataset.outcome = options.outcome;
-    this.endCopy.textContent = options.copy;
-    this.endStats.innerHTML = (options.stats ?? [])
-      .map(({ label, value }) => `<div><strong>${value}</strong><span>${label}</span></div>`).join('');
-    this.endStats.hidden = !options.stats?.length;
-    this.endButton.textContent = options.buttonLabel;
-    this.onEndButton = options.onButton;
-    this.endScreen.hidden = false;
-    this.endScreen.classList.remove('viewing');
-  }
-
-  /**
-   * Hides the end card to look over the battlefield (only a "Back to results" button stays), or brings it back; tells
-   * the scene (`handlers.viewBattlefield`).
-   */
-  public setEndViewing(viewing: boolean): void {
-    if (this.endScreen.hidden || this.endScreen.classList.contains('viewing') === viewing) {
-      return;
-    }
-    this.endScreen.classList.toggle('viewing', viewing);
-    this.handlers.viewBattlefield?.(viewing);
-  }
-
-  /**
-   * The battle's pause dialog (hidden with `undefined`). It lies under the settings drawer and the tuning panel, so
-   * both stay usable while paused.
-   */
-  public showPause(pause: PauseView | undefined): void {
-    this.pauseScreen.hidden = !pause;
-    if (pause) {
-      this.pauseCopy.textContent = pause.byPartner ? 'Another player paused the battle.' : pause.coop ? 'Paused for all players.' : 'The battle waits for you.';
-      this.pauseRestart.hidden = !pause.canRestart;
-      this.pauseQuiver = pause.quiver ? { loadout: [...pause.quiver], slot: 0 } : undefined;
-      this.renderPauseQuiver();
-    }
-  }
-
-  /** In the keep: the quiver editor; out in the open: a hint where to change it. */
-  private renderPauseQuiver(): void {
-    this.pauseCard.classList.toggle('pause-wide', this.pauseQuiver !== undefined);
-    this.pauseQuiverRoot.innerHTML = this.pauseQuiver
-      ? compactQuiver(this.pauseQuiver.loadout, this.pauseQuiver.slot)
-      : '<p class="pause-quiver-hint">Hide in the keep to change your quiver.</p>';
   }
 
   /** The dev tuning panel (`?tune`), over the canvas's right edge. */
@@ -593,14 +375,10 @@ export class DomUi {
   }
 
   private onClick(selector: string, handler: () => void): void {
-    this.query<HTMLButtonElement>(selector).addEventListener('click', handler);
+    onClickIn(this.host, selector, handler);
   }
 
   private query<T extends HTMLElement = HTMLElement>(selector: string): T {
-    const element = this.host.querySelector<T>(selector);
-    if (!element) {
-      throw new Error(`Missing UI element: ${selector}`);
-    }
-    return element;
+    return queryIn<T>(this.host, selector);
   }
 }

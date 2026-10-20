@@ -76,7 +76,7 @@ export class BattleOutcome {
     this.ended = true;
     this.won = info.outcome === 'win';
     this.deps.stopInput();
-    this.deps.ctx.ui.showEndScreen({ ...info, buttonLabel: 'Waiting for the host…', onButton: () => {} });
+    this.deps.ctx.ui.dialogs.showEndScreen({ ...info, buttonLabel: 'Waiting for the host…', onButton: () => {} });
   }
 
   private end(won: boolean, levelCleared = false): void {
