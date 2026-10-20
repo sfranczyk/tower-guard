@@ -42,7 +42,7 @@ src/
   enemies, `LevelSetup`), each releasing its enemies in *waves* (`WaveDirector`). Same names in UI and code.
 - **Scenes** never touch the DOM: they call `DomUi` and assign `ui.handlers.*`. Only menus, the settings drawer and the
   end screen overlay the canvas; the HUD sits outside it.
-- **Coordinates**: the view is `viewWidth()`×`GAME_HEIGHT` (590, world y `VIEW_TOP`..`VIEW_BOTTOM`; never use `GAME_WIDTH` for anything spanning the screen), the
+- **Coordinates**: the view is `viewWidth()`×`GAME_HEIGHT` (680, world y `VIEW_TOP`..`VIEW_BOTTOM`; never use `GAME_WIDTH` for anything spanning the screen), the
   battlefield `worldWidth()` (`systems/battlefield.ts`: 2400 in battle, 1800 in survival; keeps at `PLAYER_TOWER_X` /
   `enemyKeepX()`, never the `WORLD_WIDTH` / `ENEMY_TOWER_X` defaults at run time). Anything touching the ground uses
   `groundAt(x)`, not `GROUND_Y`.

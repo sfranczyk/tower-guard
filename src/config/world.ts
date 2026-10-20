@@ -4,18 +4,18 @@
  * window, or one big enough to pass MAX_VIEW_SCALE, widens the view (more landscape) instead of scaling
  * everything up, up to MAX_VIEW_WIDTH (see core/viewport.ts).
  */
-export const GAME_WIDTH = 1260;
-export const GAME_HEIGHT = 590;
-export const MAX_VIEW_WIDTH = 1970;
+export const GAME_WIDTH = 1455;
+export const GAME_HEIGHT = 680;
+export const MAX_VIEW_WIDTH = 2270;
 /**
- * World y at the view's bottom and top edge. The ground and scenery are laid out for a view bottom at 540, so
- * a taller view shows more sky: world y 0 sits -VIEW_TOP below the top of the screen (scenery containers and
- * the battle camera are moved down by that much).
+ * World y at the view's bottom and top edge. The ground and scenery were laid out for a view bottom at 540 and a
+ * 590 tall view; the view is now zoomed out ~15% (680 tall), showing 30 px more ground and 60 px more sky. World y 0 sits -VIEW_TOP below the top
+ * of the screen (scenery containers and the battle camera are moved down by that much).
  */
-export const VIEW_BOTTOM = 540;
+export const VIEW_BOTTOM = 570;
 export const VIEW_TOP = VIEW_BOTTOM - GAME_HEIGHT;
 /** Largest on-screen scale (CSS px per game px) before the view widens instead of growing. */
-export const MAX_VIEW_SCALE = 1.4;
+export const MAX_VIEW_SCALE = 1.2;
 /** Upper limit of the renderer resolution (backing pixels per game px) for big windows and browser zoom. */
 export const MAX_RENDER_RESOLUTION = 4;
 /**
