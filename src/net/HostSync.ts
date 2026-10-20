@@ -137,6 +137,7 @@ export class HostSync {
         this.push({ e: 'stick', id, enemy, x: point.x, y: point.y });
       },
       gone: () => this.push({ e: 'gone', id }),
+      doused: () => this.push({ e: 'douse', id }),
     };
   }
 

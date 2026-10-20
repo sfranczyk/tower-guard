@@ -76,6 +76,11 @@ from `anchor` (3.6, `resistsVortex`) not caught, walks at `VORTEX.heavyWalk` (`s
 Dragons get a ring of wind (`drawAirVortex`) and turbulence (`DRAGON_TURBULENCE_MS`, `AfflictionLayer.stir`,
 `buffetOffset`: no fire breath, archer `DRAGON_TURBULENCE_SPREAD`× wider). Visuals: `magicVisuals.ts` via EffectsSystem.
 
+## Weather and arrows (`weatherArrows.ts`, pure, tested; tuning `WEATHER_ARROWS`, `CombatWorld.weather`)
+On loosing (host, `BattleArrows.launchPlayer`) `rollArrowMishap` gives an explosive arrow in a sandstorm / a fire arrow in the
+rain an `Arrow.mishap` at a random `atMs`; `CombatSystem.update` sets it off (`explode`) or puts it out (`Arrow.douse`, flies on
+as plain, `fizzle`), event `arrowMishap` → shooter's status. `groundFireChance` (rain lower, snow 0), `frostFreezesAtOnce` on snow.
+
 ## Dragon manoeuvres (`dragonManoeuvre.ts`, pure, tested)
 Dragon archer phases approach → hover → transit (`stepManoeuvre`, `pickAltitude`, `kick` spring jolt, `flightShare`);
 tuning `DRAGON_FLIGHT`. Hover points and turning stay in `dragonFlight.ts`. The fire dragon may leave a hover for a

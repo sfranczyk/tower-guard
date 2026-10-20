@@ -62,6 +62,7 @@ export const startBattleSync = (setup: BattleSyncSetup): { hostSync?: HostSync; 
     enemyTower,
     spawnEnemy: setup.spawnEnemy,
     launchArrow: (launch) => setup.shots.launchReplica(launch),
+    douseArrow: (arrow) => setup.shots.douse(arrow),
     playSound: setup.playSound,
     setStatus: (text) => ctx.ui.setStatus(text),
     setWind: setup.windChanged,

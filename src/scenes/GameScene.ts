@@ -33,6 +33,7 @@ import { BattleRelief } from './BattleRelief';
 import { BattlePlayers } from './BattlePlayers';
 import { startBattleSync } from './battleSync';
 import { DEFAULT_STATUS, clockText, windLabel } from './battleText';
+import { mishapStatus, weatherArrowNote } from '../systems/weatherArrows';
 import { rollWind, WindShifts } from '../systems/windShift';
 import { PlayerControl, canDrawBow, type Player } from './PlayerControl';
 import { AimOverlay } from '../rendering/AimOverlay';
@@ -228,6 +229,7 @@ export class GameScene extends Scene {
         effects: this.effects,
         debug: this.debugGraphics,
         wind: () => this.wind,
+        weather: this.battleground.weather,
         friendlyFire: () => this.ctx.session.friendlyFire,
         reinforcementsDue: () => this.foes.reinforcementsDue,
         enemyEdge: enemyEdge(this.ctx.session.sandbox.difficulty),
@@ -247,6 +249,15 @@ export class GameScene extends Scene {
         bowmanHealed: (bowman, amount) => {
           const player = this.team.of(bowman);
           player.health = Math.min(this.ctx.session.sandbox.bowmanHealth, player.health + amount);
+        },
+        arrowMishap: (arrow, kind) => {
+          if (kind === 'douse') {
+            this.shots.douse(arrow);
+          }
+          const shooter = this.team.list.find((player) => player.index === arrow.owner);
+          if (shooter) {
+            this.team.status(shooter, mishapStatus(kind));
+          }
         },
       },
     );
@@ -338,7 +349,8 @@ export class GameScene extends Scene {
     }
     const hint = this.battleground.weather === 'storm' ? 'beware of lightning' : this.wind !== 0 ? windLabel(this.wind, this.battleground.wind ?? 0)
       : this.survival ? `hold out for ${clockText(this.survival.durationMs)}` : 'defend your keep';
-    ui.setStatus(`Level ${run.levelIndex + 1} of ${runLevelCount(sandbox)} · ${this.battleground.name} · ${hint}`);
+    const note = weatherArrowNote(this.battleground.weather);
+    ui.setStatus(`Level ${run.levelIndex + 1} of ${runLevelCount(sandbox)} · ${this.battleground.name} · ${hint}${note ? ` · ${note}` : ''}`);
   }
 
   /** The world keeps running after the level ends; the end screen just overlays it. */

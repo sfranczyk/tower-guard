@@ -12,6 +12,7 @@ import { ArrowShards } from '../objects/ArrowShards';
 import type { EffectsSystem } from '../systems/EffectsSystem';
 import { isMagicArrow } from '../systems/ArrowMagic';
 import { simulateTrajectory } from '../systems/ballistics';
+import { rollArrowMishap } from '../systems/weatherArrows';
 import { groundAt } from '../systems/terrain';
 import type { EnemyType, ProjectileType, Vec2 } from '../types';
 import type { Player } from './PlayerControl';
@@ -98,6 +99,10 @@ export class BattleArrows {
     arrow.owner = owner;
     arrow.wind = this.deps.wind();
     arrow.fire(angle, speed, type);
+    // The weather may get it in flight (the host decides; a guest's copy hears of it).
+    if (!this.deps.guestSync()) {
+      arrow.mishap = rollArrowMishap(this.deps.battleground.weather, type);
+    }
     if (this.deps.arrowTrails() === 0) {
       arrow.hideTrail();
     }
@@ -105,6 +110,11 @@ export class BattleArrows {
     this.deps.world.addChild(arrow);
     this.deps.hostSync()?.trackArrow(arrow, { owner, type, from, angle, speed, hostile: false });
     return arrow;
+  }
+
+  /** A fire arrow the rain put out: it flies on looking like a plain one. */
+  public douse(arrow: Arrow): void {
+    arrow.douse(this.deps.textures.arrows.normal);
   }
 
   /** Space: every shrapnel arrow of this player still in flight bursts into small arrows fanned around its heading. */

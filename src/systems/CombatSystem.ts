@@ -9,6 +9,7 @@ import {
 import type { SoundId } from '../audio/SoundManager';
 import type Arrow from '../objects/Arrow';
 import type { EnemyEdge } from '../data/difficulty';
+import type { Weather } from '../data/battlegrounds';
 import { enemyDamage, explosionDamage, rollDamage } from '../data/enemies';
 import { enemyArchetype } from '../data/enemyKinds';
 import { burnDamage } from './burning';
@@ -20,6 +21,7 @@ import type Tower from '../objects/Tower';
 import type { EnemyType, UnitType, Vec2 } from '../types';
 import { struckBy } from './lightning';
 import { groundAt } from './terrain';
+import type { ArrowMishapKind } from './weatherArrows';
 import type { EffectsSystem } from './EffectsSystem';
 import { ArrowMagic } from './ArrowMagic';
 import { ArrowHits } from './ArrowHits';
@@ -63,6 +65,8 @@ export interface CombatWorld {
   readonly debug: Graphics;
   /** The level's wind now (px/s² on a normal arrow; it may change mid-level); enemy archers aim with it. */
   wind(): number;
+  /** The battleground's weather: it may set off or put out arrows in flight, and changes fire and frost (weatherArrows.ts). */
+  readonly weather: Weather;
   /** Friendly fire (settings drawer): the players' arrows and their effects hit the bowmen too. */
   readonly friendlyFire: () => boolean;
   /** More enemies still to come this level (a priest left alone walks off the field only when none are). */
@@ -86,6 +90,8 @@ export interface CombatEvents {
   /** `bowman`'s health and his full health (the medic bandages him). */
   bowmanHealth(bowman: Bowman): { health: number; max: number };
   bowmanHealed(bowman: Bowman, amount: number): void;
+  /** The weather got player `owner`'s arrow in flight: it went off (`blast`) or the rain put it out (`douse`). */
+  arrowMishap(arrow: Arrow, kind: ArrowMishapKind): void;
 }
 
 /**
@@ -109,7 +115,7 @@ export class CombatSystem {
     private readonly world: CombatWorld,
     private readonly events: CombatEvents,
   ) {
-    const magic = new ArrowMagic(world.effects, {
+    const magic = new ArrowMagic(world.effects, world.weather, {
       detonate: (kamikaze) => this.detonate(kamikaze),
       shatter: (enemy, fromX) => this.shatter(enemy, fromX),
       sound: (id, at) => events.sound(id, at),
@@ -166,6 +172,22 @@ export class CombatSystem {
 
     const { arrows } = this.world;
     arrows.filter((arrow) => arrow.isActive).forEach((arrow) => arrow.update(deltaMs));
+    // The weather gets an arrow in flight: an explosive one goes off where it is, a fire one goes out.
+    arrows
+      .filter((arrow) => arrow.isActive && !arrow.isStuck && arrow.mishap && arrow.flightMs >= arrow.mishap.atMs)
+      .forEach((arrow) => {
+        const point = { x: arrow.x, y: arrow.y };
+        const kind = arrow.mishap!.kind;
+        if (kind === 'blast') {
+          this.explode(point, arrowTargets);
+          arrow.deactivate();
+        } else {
+          this.world.effects.fizzle(point);
+        }
+        // The scene puts out a fire arrow (its look) and tells the shooter.
+        this.events.arrowMishap(arrow, kind);
+        arrow.mishap = undefined;
+      });
     arrows
       .filter((arrow) => arrow.isActive && !arrow.isStuck)
       .forEach((arrow) => (arrow.hostile ? this.hits.resolveHostile(arrow) : this.hits.resolve(arrow, arrowTargets, friendly)));

@@ -154,10 +154,23 @@ export const FIRE_SPREAD = tunable('FIRE_SPREAD', 'Fire spreading', {
  * fire `radius` px wide for `ms`, which sets alight whoever walks through it (as fire caught from another).
  */
 export const FIRE_PATCH = tunable('FIRE_PATCH', 'Fire in the ground', {
-  chance: 0.05,
+  chance: 0.15,
   radius: 14,
   ms: 3500,
 }, { meta: { chance: { max: 1 }, radius: { max: 60 }, ms: { max: 10000, step: 100 } } });
+/**
+ * Weather and arrows (systems/weatherArrows.ts): on loosing, an explosive arrow in a sandstorm goes unstable with
+ * `sandstormBlastChance` and a fire arrow in the rain with `rainDouseChance`; an unstable one goes off (or out) in flight
+ * at a moment rolled between `minMs` and `maxMs` after the shot, unless it lands first. A doused fire arrow flies on as a
+ * plain one. Fire in the ground catches with `rainGroundFire` in the rain (never on snow); on snow a frost hit freezes at once.
+ */
+export const WEATHER_ARROWS = tunable('WEATHER_ARROWS', 'Weather and arrows', {
+  sandstormBlastChance: 0.3,
+  rainDouseChance: 0.45,
+  minMs: 300,
+  maxMs: 3000,
+  rainGroundFire: 0.03,
+}, { meta: { sandstormBlastChance: { max: 1 }, rainDouseChance: { max: 1 }, rainGroundFire: { max: 1 }, minMs: { max: 10000, step: 50 }, maxMs: { max: 20000, step: 50 } } });
 /**
  * Frost arrow: hits for FROST_ARROW_DAMAGE × a normal arrow's hit and chills for FROST_CHILL_MS (everything it does
  * runs at FROST_SLOW speed). The FROST_FREEZE_HITS-th hit in a row (while still chilled), or a headshot, freezes it solid for

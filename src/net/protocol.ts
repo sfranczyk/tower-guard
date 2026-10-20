@@ -153,6 +153,8 @@ export type GameEvent =
   /** An arrow stuck into an enemy (at a world point) or the ground. */
   | { e: 'stick'; id: number; enemy?: number; x: number; y: number }
   | { e: 'gone'; id: number }
+  /** A fire arrow put out in flight by the rain (systems/weatherArrows.ts): it flies on as a plain one. */
+  | { e: 'douse'; id: number }
   | { e: 'fx'; kind: EffectKind; x: number; y: number; scale?: number }
   | { e: 'sound'; id: SoundId; x: number; y: number }
   | { e: 'knock'; player: number; fromX: number; strength: number }

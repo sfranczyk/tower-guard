@@ -13,6 +13,8 @@ import Bowman from '../objects/bowman/Bowman';
 import DragonEnemy from '../objects/dragon/DragonEnemy';
 import type Enemy from '../objects/enemy/Enemy';
 import type { ProjectileType, Vec2 } from '../types';
+import type { Weather } from '../data/battlegrounds';
+import { frostFreezesAtOnce, groundFireChance } from './weatherArrows';
 import type { BowmanHit } from './bowmanDeath';
 import {
   VORTEX_CORE, VORTEX_SPIN, fallDamage, flingVelocity, funnelCeiling, funnelPosition, levitateHeight, massPace, resistsVortex, throwVelocity,
@@ -104,7 +106,11 @@ export class ArrowMagic {
   private fleeing: Enemy[] = [];
   private burnClockMs = 0;
 
-  public constructor(private readonly effects: EffectsSystem, private readonly hooks: ArrowMagicHooks) {}
+  public constructor(
+    private readonly effects: EffectsSystem,
+    private readonly weather: Weather,
+    private readonly hooks: ArrowMagicHooks,
+  ) {}
 
   /**
    * A fire, frost or vortex arrow hit `enemy` (its damage is already dealt): the fire sets it alight (a corpse
@@ -117,7 +123,9 @@ export class ArrowMagic {
       this.ignite(enemy);
     } else if (type === 'frost') {
       this.effects.frostBurst(impact);
-      const froze = enemy instanceof Bowman ? enemy.chill(headshot) : enemy.isAlive() && enemy.afflictions.chill(headshot);
+      // On snow it freezes at once, as a headshot does.
+      const freezes = headshot || frostFreezesAtOnce(this.weather);
+      const froze = enemy instanceof Bowman ? enemy.chill(freezes) : enemy.isAlive() && enemy.afflictions.chill(freezes);
       if (froze) {
         this.hooks.sound('shrapnelBurst', impact);
       }
@@ -153,8 +161,8 @@ export class ArrowMagic {
   /** A magic arrow in the ground: the fire may keep burning there, frost puffs, a vortex opens. */
   public groundImpact(type: ProjectileType, point: Vec2): void {
     if (type === 'fire') {
-      // The ground catches only now and then; else nothing happens.
-      if (Math.random() < FIRE_PATCH.chance) {
+      // The ground catches only now and then (less in the rain, never on snow); else nothing happens.
+      if (Math.random() < groundFireChance(this.weather)) {
         this.effects.firePatch(point);
         this.patches.push({ x: point.x, msLeft: FIRE_PATCH.ms });
       }

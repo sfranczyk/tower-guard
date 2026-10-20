@@ -2,6 +2,7 @@ import { Graphics, Sprite, Texture } from 'pixi.js';
 import { ARROWS, VIEW_BOTTOM, SCENERY_MARGIN, WORLD_WIDTH } from '../config';
 import { DEFAULT_AIM_COLORS } from '../data/battlegrounds';
 import { flightParams } from '../data/projectiles';
+import type { ArrowMishap } from '../systems/weatherArrows';
 import { advanceProjectile, type FlightParams } from '../systems/ballistics';
 import type { BodyAnchor } from '../systems/bodyAnchor';
 import type { EnemyType, ProjectileType, Vec2 } from '../types';
@@ -27,6 +28,8 @@ export default class Arrow extends Sprite {
   private trailVisible = true;
   private activeProjectile = false;
   private projectileType: ProjectileType = 'normal';
+  /** The type it was loosed as: it flies by that (a doused fire arrow keeps its flight). */
+  private flightType: ProjectileType = 'normal';
   private hitCount = 0;
   /** Shot by an enemy archer: hurts the bowman/keep, ignores enemies. */
   private hostileShot = false;
@@ -35,11 +38,13 @@ export default class Arrow extends Sprite {
   /** Which player loosed a player arrow (co-op: their trails and shrapnel bursts are their own). */
   public owner = 0;
   /** Co-op host: told when the arrow sticks (into a target or the ground) or is gone, for the guest. */
-  public netHooks?: { stuck(target: AnchorTarget | undefined, point: Vec2): void; gone(): void };
+  public netHooks?: { stuck(target: AnchorTarget | undefined, point: Vec2): void; gone(): void; doused(): void };
   /** The battleground's wind (px/s² for a normal arrow), set before firing. */
   public wind = 0;
   /** How long it has been flying (ms; friendly fire spares the one who loosed it at first). */
   public flightMs = 0;
+  /** The weather gets it in flight (systems/weatherArrows.ts; host only): it goes off or out at `atMs`. */
+  public mishap?: ArrowMishap;
 
   public constructor(
     x: number,
@@ -72,6 +77,8 @@ export default class Arrow extends Sprite {
     this.visible = true;
     this.activeProjectile = true;
     this.projectileType = projectileType;
+    this.flightType = projectileType;
+    this.mishap = undefined;
     this.hitCount = 0;
     this.flightMs = 0;
     this.rotation = angle;
@@ -100,7 +107,7 @@ export default class Arrow extends Sprite {
     this.flightMs += deltaMs;
     this.segmentStart = { x: this.x, y: this.y };
     const state = { x: this.x, y: this.y, vx: this.velocity.x, vy: this.velocity.y };
-    advanceProjectile(state, deltaMs / 1000, Arrow.getFlightParams(this.projectileType, this.wind));
+    advanceProjectile(state, deltaMs / 1000, Arrow.getFlightParams(this.flightType, this.wind));
     this.position.set(state.x, state.y);
     this.velocity.x = state.vx;
     this.velocity.y = state.vy;
@@ -235,6 +242,17 @@ export default class Arrow extends Sprite {
   public dispose(): void {
     this.trail.destroy();
     this.destroy();
+  }
+
+  /** A fire arrow put out in flight (rain): it flies on as a plain arrow, `texture` its look. */
+  public douse(texture: Texture): void {
+    this.mishap = undefined;
+    if (this.projectileType !== 'fire') {
+      return;
+    }
+    this.projectileType = 'normal';
+    this.texture = texture;
+    this.netHooks?.doused();
   }
 
   public get hostile(): boolean {

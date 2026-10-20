@@ -37,6 +37,8 @@ export interface GuestWorld {
   readonly enemyTower: Tower;
   spawnEnemy(type: EnemyType, place?: SpawnPlace): Foe;
   launchArrow(launch: ArrowLaunch): Arrow;
+  /** A fire arrow the rain put out: it flies on as a plain one. */
+  douseArrow(arrow: Arrow): void;
   playSound(id: SoundId, at: Vec2): void;
   setStatus(text: string): void;
   /** The host's wind changed mid-level. */
@@ -185,6 +187,13 @@ export class GuestSync {
         } else if (arrow && !arrow.isStuck) {
           arrow.position.set(event.x, event.y);
           arrow.stickToGround(event.y);
+        }
+        break;
+      }
+      case 'douse': {
+        const arrow = this.arrowById.get(event.id);
+        if (arrow) {
+          this.world.douseArrow(arrow);
         }
         break;
       }

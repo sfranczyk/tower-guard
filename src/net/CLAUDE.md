@@ -25,7 +25,7 @@ dialog's "Main menu" leaves the room.
   test with the others driven from the console, `scene.players[1].input.set({ direction: 1 })`),
   `RecordingInput` (guest: passes through and records presses).
 - **Host** (`net/HostSync.ts`): ids for enemies and arrows, `netHooks` on Enemy/DragonEnemy (hits, swings), Arrow
-  (stuck, gone), Bowman (knockdown, fire) and `EffectsSystem.onEffect`; sounds, deaths, cheers and per-player status
+  (stuck, gone, douse: a fire arrow the rain put out), Bowman (knockdown, fire) and `EffectsSystem.onEffect`; sounds, deaths, cheers and per-player status
   lines as events; a `frame` (snapshot + events, `net/protocol.ts`) every 50 ms; `start` / `end` / `lobby` messages
   around levels. Each guest's `input` drives their own player (`from`).
 - **Guest** (`net/GuestSync.ts`): no WaveDirector, AI or CombatSystem; applies events in order with the same objects
