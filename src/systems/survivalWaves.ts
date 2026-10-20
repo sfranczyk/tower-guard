@@ -6,7 +6,7 @@ import { groupByKind } from './waveDirector';
 
 /**
  * A survival level's enemies (pure, tested): the setup names only the kinds and the time; this decides how many come.
- * A wave every SURVIVAL.waveEveryMs (or SURVIVAL.clearedDelayMs after the field is cleared), growing up to the
+ * Waves `survivalWaveGap` apart (or SURVIVAL.clearedDelayMs after the field is cleared), growing up to the
  * difficulty's peak wave and then about that size (`survivalWaveSize`, ± SURVIVAL.sizeJitter), drawn from the kinds
  * whose `arrival` share of the time has passed (tougher kinds later and rarer) around a lead kind (`pickLead`), released
  * with the difficulty's pacing and never more than SURVIVAL.maxAlive standing. Long levels end with a big finale wave
@@ -20,6 +20,10 @@ export const survivalWaveSize = (index: number, levelIndex: number, difficulty: 
   const size = (SURVIVAL.firstSize + SURVIVAL.growth * grown) * SURVIVAL.levelGrowth ** levelIndex * SURVIVAL[`${difficulty}Scale`];
   return Math.max(1, Math.round(size * factor));
 };
+
+/** The wait before wave `index` (from 1): SURVIVAL.waveEveryMs, longer by waveGapStepMs each wave up to maxWaveEveryMs. */
+export const survivalWaveGap = (index: number): number =>
+  Math.min(SURVIVAL.waveEveryMs + SURVIVAL.waveGapStepMs * Math.max(0, index - 1), SURVIVAL.maxWaveEveryMs);
 
 /** The kinds that may come `share` (0..1) of the way through the level: arrived ones, else the earliest. */
 export const kindsArrived = (kinds: readonly EnemyType[], share: number): EnemyType[] => {
@@ -132,7 +136,7 @@ export class SurvivalDirector {
       this.finaleSent = true;
       this.releaseWave(SURVIVAL.finaleScale);
     } else if (!this.quiet && (this.waveTimerMs <= 0 || this.clearedMs >= SURVIVAL.clearedDelayMs)) {
-      const preFinale = this.finaleAtMs !== undefined && this.elapsedMs >= this.finaleAtMs - SURVIVAL.waveEveryMs;
+      const preFinale = this.finaleAtMs !== undefined && this.elapsedMs >= this.finaleAtMs - survivalWaveGap(this.waveIndex);
       this.releaseWave(preFinale ? SURVIVAL.preFinaleScale : 1);
     }
     return this.spawn(deltaMs, alive);
@@ -154,7 +158,7 @@ export class SurvivalDirector {
     const wave = drawWave(kinds, size, this.random, this.lead);
     this.queue.push(...(this.options.pacing.groupSize > 1 ? groupByKind(wave) : shuffle(wave, this.random)));
     this.waveIndex += 1;
-    this.waveTimerMs = SURVIVAL.waveEveryMs;
+    this.waveTimerMs = survivalWaveGap(this.waveIndex);
     this.clearedMs = 0;
   }
 

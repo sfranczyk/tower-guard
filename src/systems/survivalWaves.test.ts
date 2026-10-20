@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { SURVIVAL } from '../config';
 import { wavePacing } from '../data/difficulty';
-import { SurvivalDirector, drawWave, kindsArrived, pickLead, survivalWaveSize } from './survivalWaves';
+import { SurvivalDirector, drawWave, kindsArrived, pickLead, survivalWaveGap, survivalWaveSize } from './survivalWaves';
 
 const run = (director: SurvivalDirector, ms: number, alive = () => 0): number => {
   let spawned = 0;
@@ -34,6 +34,12 @@ describe('survival waves', () => {
     expect(pickLead(['raider'], 'raider', new Set(['raider']), Math.random)).toBe('raider');
     expect(pickLead(['priest', 'shaman', 'raider'], undefined, new Set(), () => 0)).toBe('raider');
     expect(pickLead(['priest', 'shaman'], undefined, new Set(), () => 0)).toBeUndefined();
+  });
+
+  it('wait longer between later waves, up to SURVIVAL.maxWaveEveryMs', () => {
+    expect(survivalWaveGap(1)).toBe(SURVIVAL.waveEveryMs);
+    expect(survivalWaveGap(2)).toBe(SURVIVAL.waveEveryMs + SURVIVAL.waveGapStepMs);
+    expect(survivalWaveGap(20)).toBe(SURVIVAL.maxWaveEveryMs);
   });
 
   it('send the next wave SURVIVAL.clearedDelayMs after the field is cleared', () => {
