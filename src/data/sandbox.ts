@@ -42,7 +42,7 @@ export const RUN_MODE_DESCRIPTIONS: Readonly<Record<RunMode, string>> = {
   survival: 'Hold the keep through the night until dawn while the chosen kinds keep coming, more the longer it lasts. No support: you stand alone.',
 };
 
-export const SURVIVAL_MINUTES = { min: 1, max: 15 } as const;
+export const SURVIVAL_MINUTES = { min: 1, max: 20 } as const;
 
 /** A survival level: where, which kinds come (how many is up to systems/survivalWaves.ts) and for how long. */
 export interface SurvivalLevel {
@@ -151,7 +151,7 @@ const renameTypes = (enemies: Partial<Record<string, unknown>> | undefined): Par
 const isBattleground = (value: unknown, mode: RunMode): value is BattlegroundId =>
   battlegroundsFor(mode).includes(value as BattlegroundId);
 
-/** Stored survival levels, clamped: known kinds only (catalogue order, renamed ids moved), at least one, 1–15 minutes. */
+/** Stored survival levels, clamped: known kinds only (catalogue order, renamed ids moved), at least one, 1–20 minutes. */
 const normalizeSurvival = (input: Partial<SurvivalSetup> | undefined, defaults: SurvivalSetup): SurvivalSetup => ({
   levelCount: clampInt(input?.levelCount, MIN_LEVELS, MAX_SURVIVAL_LEVELS, defaults.levelCount),
   levels: defaults.levels.map((fallback, index) => {
