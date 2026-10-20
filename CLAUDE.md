@@ -60,14 +60,27 @@ src/
 - New tuning numbers go in `config/<area>.ts`, sandbox defaults in `data/sandbox.ts`.
 - Files of roughly 150–400 lines; split by responsibility rather than growing `GameScene` or `Enemy`.
 - Game text in the UI is English.
-- Commit straight to master.
+- Branching and releases: see below.
+
+## Trunk and releases
+
+Trunk-based: `master` is the trunk and is always releasable.
+
+- Work lands on master in small commits, straight or through a branch that lives under a day (one feature or fix,
+  merged as soon as `npm run verify` and CI pass; no long-lived branches). Unfinished work stays unreachable from the
+  menu (URL flag, lab row, sandbox option) instead of waiting on a branch.
+- CI (`.github/workflows/ci.yml`) verifies and builds every PR and branch push.
+- Two pages from one GitHub Pages site (`.github/workflows/deploy-page.yml`, `scripts/build-pages.sh`):
+  **development** at `/dev/` = master, redeployed on every push; **production** at `/` = the latest `v*` tag.
+  Both share one origin, so localStorage (settings, sandbox, tuning) is shared too.
+- Production changes only through `/release` (version tag on master, rollback = new higher tag). Never tag unasked.
 
 ## Working economically
 
 Token use matters on this project. Follow these every session:
 
 - **Find before reading**: grep for symbols; read files over ~300 lines with offset/limit around what you need.
-- **Skills** hold the file checklists: `/new-enemy`, `/new-arrow`, `/new-animation`, `/verify`. Use them instead of
+- **Skills** hold the file checklists: `/new-enemy`, `/new-arrow`, `/new-animation`, `/verify`, `/release`. Use them instead of
   exploring the codebase to find where things go.
 - **Plan first** (plan mode) when a feature touches more than ~3 files or adds a new system; small changes go straight in.
 - **Effort**: for mechanical work (numbers, renames, small fixes) lower the session's effort/model yourself and say so;

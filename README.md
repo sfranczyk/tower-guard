@@ -12,6 +12,11 @@ npm run dev
 
 Then open http://localhost:8080. `npm run build` makes a production build in `dist/`.
 
+## Pages
+
+Hosted on GitHub Pages: the **production** page (latest release tag `v*`) at the site root and the **development**
+page (current `master`) under `/dev/`. See "Trunk and releases" in [CLAUDE.md](CLAUDE.md).
+
 ## Credits
 
 - Background music: generated with [Suno](https://suno.com).
