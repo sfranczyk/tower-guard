@@ -1,6 +1,5 @@
 import type { Graphics } from 'pixi.js';
 import { ENEMY_SPEED } from '../../config';
-import { armoredFallPose, drawArmoredJointPose } from '../armoredPose';
 import { ZOMBIE_BODY } from '../bodyColors';
 import { DRAGON_PALETTES } from '../dragon';
 import { drawDragonRider } from '../dragonArt';
@@ -22,16 +21,12 @@ import { blackKnightLook, darkPriestLook, heavyKnightLook } from './knightSkins'
 import { drawMountedKnight } from './warhorse';
 import { HORSE_DEATH_MS, getHorseDeath, type HorseDeathKind } from '../horseDeath';
 import { gaitGroundSpeed, getHorsePose, type HorsePose } from '../horseRider';
-import { rangerLook, wardenLook } from './playerSkins';
-import { huntsmanLook, steppeLook } from './coopSkins';
-import { KEEP_ENTRIES } from './keepDesigns';
 import { drawHumanoid, type HumanoidLook } from './skinKit';
 import { drawEnemyGibs } from '../enemyBody';
 import { GibSimulation } from '../stickmanGibs';
 import type { UnitType } from '../../types';
 import { allyKnightLook, medicLook, squireLook } from './allySkins';
 import { BANDAGE_LOOP_MS, bandageKneel } from '../bandaging';
-import { BANNER_STYLES } from './bannerDesigns';
 
 /** One animation of a design: a tile in the zoomed view. */
 export interface DesignView {
@@ -42,8 +37,6 @@ export interface DesignView {
   /** Framing: scale on top of the tile's fit, and a shift right (figure units). */
   scale?: number;
   offsetX?: number;
-  /** Drawn first, under `draw` (the bowmen behind the keep's parapets). */
-  behind?: (g: Graphics, timeMs: number) => void;
 }
 
 export interface DesignEntry {
@@ -193,8 +186,6 @@ const SHAMAN_SPEED = (ENEMY_SPEED * 1.1) / 1000;
 /** The priest's heal: the scepter raised, held, lowered, then a pause. */
 const CAST_LOOP_MS = 1500;
 const CAST_MS = 900;
-/** The bowman's walking speed, px/ms. */
-const PLAYER_SPEED = 0.12;
 /** The goblin is three quarters of the player's height. */
 const GOBLIN_SIZE = 0.75;
 
@@ -447,128 +438,12 @@ const ENEMIES: DesignEntry[] = [
   },
 ];
 
-/** Player bow cycle: raise, draw slowly, hold, loose, lower. */
-const PLAYER_SHOT_MS = 2600;
-const playerShot = (t: number): { ready: number; tension: number } => {
-  const c = (t % PLAYER_SHOT_MS) / PLAYER_SHOT_MS;
-  return {
-    ready: c < 0.85 ? Math.min(1, c * 5) : Math.max(0, 1 - (c - 0.85) * 7),
-    tension: c < 0.72 ? Math.max(0, Math.min(1, (c - 0.18) / 0.45)) : 0,
-  };
-};
-
-const playerViews = (look: (timeMs: number, moving: number) => HumanoidLook): DesignView[] => [
-  posed('Draw and loose', (t) => look(t, 0), (t) => {
-    const { ready, tension } = playerShot(t);
-    return archerBody(-0.25, tension, ready);
-  }),
-  posed('Standing, bow lowered', (t) => look(t, 0), () => archerBody(0, 0, 0)),
-  posed('Walk', (t) => look(t, 1), (t) => archerBody(0, 0, 0, (t * PLAYER_SPEED) / WALK_CYCLE_PX), PLAYER_SPEED),
-  knockdown((t) => ({ ...look(t, 0), bow: undefined })),
-];
-
-const PLAYER: DesignEntry[] = [
-  {
-    id: 'player-now',
-    name: 'Old: armored archer',
-    tagline: 'The player before',
-    description: 'The player as he was, for comparison: the stickman skeleton with thick dark limbs, hood, armor plates, quiver and bow drawn over it (colours changed per battleground).',
-    views: [
-      now((t) => {
-        const { ready, tension } = playerShot(t);
-        return { phase: 0, idleBlend: 1, archerPose: true, skin: 'armored', bowReady: ready, bowTension: tension, bowAngle: -0.25 };
-      }, undefined, 'Old'),
-      now(() => ({ phase: 0, idleBlend: 1, archerPose: true, bowReady: 0, skin: 'armored' }), undefined, 'Old'),
-      now((t) => ({ phase: walkPhase(t, PLAYER_SPEED), archerPose: true, bowReady: 0, skin: 'armored' }), PLAYER_SPEED, 'Old'),
-      {
-        label: 'Knocked down, gets up',
-        draw: (g, t) => {
-          const down = FALL_DURATION_MS.knockback;
-          const phase = t % (down + 500 + FALL_DURATION_MS.getUp + FALL_HOLD_MS);
-          const pose = phase < down + 500
-            ? armoredFallPose('knockback', Math.min(1, phase / down))
-            : armoredFallPose('getUp', Math.min(1, (phase - down - 500) / FALL_DURATION_MS.getUp));
-          drawArmoredJointPose(g, pose);
-        },
-      },
-    ],
-  },
-  {
-    id: 'ranger',
-    name: 'Ranger',
-    tagline: 'Player 1',
-    description: 'A woodland ranger: green hood with the face in its shadow, a cloak that streams out behind him as he walks, a leather jerkin with a crossed strap and bracers, a quiver of white-fletched arrows and a pale longbow. In the game: player 1. Every animation stays (same archer rig); the hood, cloak and sleeves take the battleground\'s player colour (shown here in green).',
-    views: playerViews(rangerLook),
-  },
-  {
-    id: 'warden',
-    name: 'Keep warden',
-    tagline: 'Player 2 in co-op',
-    description: 'A soldier of the keep he defends: a steel kettle helm over a mail coif, a blue tabard with the keep\'s gold tower (the same tower as the one behind him), padded sleeves, leather gloves and a dark recurve bow. In the game: the second player in co-op. The tabard takes the battleground\'s player colour, the helm its plate (bronze for player 2) and the tower its trim.',
-    views: playerViews(() => wardenLook()),
-  },
-  {
-    id: 'steppe',
-    name: 'Steppe archer',
-    tagline: 'Player 3 in co-op',
-    description: 'A rider of the steppe on foot: a pointed cap leaning back over a thick fur brim, a long black braid, a drooping moustache, a kaftan to mid-thigh with a fur-edged crossover and hem, a sash with its ends flying behind, red riding boots, a quiver slung low at the hip and a short reflex bow with pale horn tips. In the game: the third player in co-op. The cap and kaftan take the battleground\'s player colour, the sash its trim.',
-    views: playerViews(steppeLook),
-  },
-  {
-    id: 'huntsman',
-    name: 'Huntsman',
-    tagline: 'Player 4 in co-op',
-    description: 'A hunter from the deep woods under a wolf pelt: the wolf\'s head for a hood (ears up, snout over his brow), its forepaws on his chest and the hide trailing down his back to the tail. A full beard, a short tunic, a belt with a hunting horn, leather bracers, fur-wrapped shins, a birch-bark quiver and a plain yew longbow. In the game: the fourth player in co-op. The tunic takes the battleground\'s player colour.',
-    views: playerViews(huntsmanLook),
-  },
-];
-
 const IDEAS: DesignEntry[] = ENEMY_DESIGNS.map((design) => ({
   id: `idea-${design.id}`,
   name: design.name,
   tagline: design.tagline,
   description: design.description,
   views: [{ label: 'Walk', draw: design.draw, speed: design.speed }],
-}));
-
-/** Banner proposals (rendering/designs/bannerDesigns.ts): ours and theirs, and a close-up of ours. */
-const BANNER_GROUND = 58;
-/** The lab's breeze turns round once in this long. */
-const BREEZE_TURN_MS = 9000;
-const BANNER_ENTRIES: DesignEntry[] = BANNER_STYLES.map((style) => ({
-  id: `banner-${style.id}`,
-  name: style.name,
-  tagline: style.tagline,
-  description: style.description,
-  views: [
-    {
-      label: 'Ours and theirs, one breeze',
-      draw: (g: Graphics, timeMs: number) => {
-        g.clear();
-        style.draw(g, 'player', timeMs / 1000, { x: -38, y: BANNER_GROUND, flip: 1 });
-        style.draw(g, 'enemy', timeMs / 1000 + 0.7, { x: 12, y: BANNER_GROUND, flip: 1 });
-      },
-      scale: 1.3,
-    },
-    {
-      label: 'Lull and turn',
-      draw: (g: Graphics, timeMs: number) => {
-        // The breeze dies down, turns and picks up again (as systems/bannerBreeze.ts eases it).
-        const lean = Math.cos((timeMs / BREEZE_TURN_MS) * Math.PI * 2);
-        g.clear();
-        style.draw(g, 'player', timeMs / 1000, { x: 0, y: BANNER_GROUND, flip: lean < 0 ? -1 : 1 }, Math.abs(lean));
-      },
-      scale: 1.6,
-    },
-    {
-      label: 'Close-up',
-      draw: (g: Graphics, timeMs: number) => {
-        g.clear();
-        style.draw(g, 'player', timeMs / 1000, { x: -10, y: BANNER_GROUND, flip: 1 });
-      },
-      scale: 2.2,
-    },
-  ],
 }));
 
 const SQUIRE_SPEED = (ENEMY_SPEED * 1.2) / 1000;
@@ -628,9 +503,6 @@ const ALLIES: DesignEntry[] = [
 
 export const DESIGN_SECTIONS: readonly DesignSection[] = [
   { id: 'enemies', tab: 'Enemies', intro: 'Every enemy as it looks in the game now, over its own moves. Click one for all its animations and the old stickman.', entries: ENEMIES },
-  { id: 'player', tab: 'Player', intro: 'The player looks: the ranger (player 1), the keep warden, the steppe archer and the huntsman (players 2–4 in co-op), next to the old armored archer.', entries: PLAYER },
-  { id: 'keeps', tab: 'Keeps', intro: 'The player\'s keep with one tower per bowman: alone, and for co-op of two, three and four. Each lower tower stands at its own height; click one for its damage stages.', entries: KEEP_ENTRIES },
   { id: 'allies', tab: 'Allies', intro: 'The player\'s soldiers as they look in the game: summoned from beyond the left edge (Z, X, C), they follow the order button (V).', entries: ALLIES },
-  { id: 'banners', tab: 'Banners', intro: 'Five proposals for the keeps\' banners (the Banners option): blue ours, red theirs, both in one breeze. The game draws BANNER_STYLE (rendering/banner.ts): the pennon.', entries: BANNER_ENTRIES },
   { id: 'ideas', tab: 'Ideas', intro: 'Proposals for new enemy looks, from the most human to the least (not tied to an enemy yet).', entries: IDEAS },
 ];

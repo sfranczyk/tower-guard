@@ -33,8 +33,6 @@ const SCROLLBAR = { x: PANEL.x + PANEL.width - 12, width: 5 };
 interface Figure {
   view: DesignView;
   sprite: Graphics;
-  /** The view's `behind` layer, under the sprite. */
-  behind?: Graphics;
   ground?: Graphics;
   /** Half the width of ground to draw, in the figure's own units. */
   halfWidth: number;
@@ -247,10 +245,6 @@ export class DesignLabScene extends Scene {
       figure.halfWidth = width / 2 / scale + Math.abs(view.offsetX ?? entry.offsetX ?? 0) + 4;
       holder.addChild(figure.ground);
     }
-    if (view.behind) {
-      figure.behind = new Graphics();
-      holder.addChild(figure.behind);
-    }
     holder.addChild(sprite);
     parent.addChild(clip, holder);
     this.figures.push(figure);
@@ -258,9 +252,6 @@ export class DesignLabScene extends Scene {
 
   private drawFigure(figure: Figure): void {
     const { view, ground, halfWidth } = figure;
-    if (figure.behind) {
-      view.behind?.(figure.behind, this.time);
-    }
     view.draw(figure.sprite, this.time);
     if (!ground) {
       return;

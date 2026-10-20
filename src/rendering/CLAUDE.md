@@ -64,14 +64,13 @@ animation gets a row in `scenes/labRows.ts` (or `scenes/labSequences.ts` for one
 ## Effects and world
 - Burning flames (`burning.ts`: `burnFlames`, `burnSmoke`, `BURN_FLAME_SIZE`). Affliction art (`afflictionArt.ts`),
   vortex (`vortexArt.ts`).
-- **Banner** (`banner.ts`): `drawBanner` in `BANNER_STYLE` = pennon (designs/bannerDesigns.ts, keep colours; `strength` of the
+- **Banner** (`banner.ts`): `drawBanner`: a pennon in the keep colours (`BANNER_POLE`, `bannerColors`; `strength` of the
   breeze curls it down). Carrying: `withBanner` /
   `BANNER_GRIP` (bodyPoses.ts; `EnemyBodyState` `banner`, `Enemy.bannerHold` held/planted), lab row `banner-carry`.
 - **Keep** (`keep.ts`): flat tower, 200×406 at half size (`TOWER_HEIGHT`), stone tinted by `keepTones`,
   `keepDamageStage` (cracks ≤60%, broken merlons/banners/rubble ≤30%, fire ≤10%), `keepHitParts` (pure).
   One tower per bowman (`KeepLook.towers` 1–4): `KEEP_TURRETS` = right-wall tower, left-wall tower, bastion beyond the
-  right wall (longer plinth), each lower; `keepTurrets(towers)`, `keepHideSpot(index, towers)`. Design-lab tab Keeps
-  (`designs/keepDesigns.ts`; `DesignView.behind` draws the bowmen under the keep).
+  right wall (longer plinth), each lower; `keepTurrets(towers)`, `keepHideSpot(index, towers)`.
 - **Background** (`Background.ts`, `landscape.ts`): hills drawing is one `BACKDROP_WIDTH` stretch repeated, every other
   copy mirrored; scenery extends `SCENERY_MARGIN` past the ends; calls `useTerrain`. Clouds (`clouds.ts`, pure, seeded
   per map, cached as textures, higher = slower). Rain (`Rain.ts`, `RAIN_*`) and snow (`Snow.ts`, `SNOW_*`) are screen

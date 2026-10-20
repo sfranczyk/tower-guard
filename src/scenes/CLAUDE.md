@@ -41,7 +41,7 @@ everything under `ctx.root` on each switch. Scenes never touch the DOM: they cal
 - **AnimationLabScene**: every animation once on the bare skeleton, in tabs Movement, Combat, Hurt, Death, Cheer (Pixi on
   a cream panel; "← Menu"). Rows `LAB_CATEGORIES` in `labRows.ts` (ids for `?lab=<id>`), looping falls and gibs in
   `labSequences.ts`.
-- **DesignLabScene**: looks in tabs Enemies (each with an "Old" stickman tile), Player, Ideas; catalogue
+- **DesignLabScene**: looks in tabs Enemies (each with an "Old" stickman tile), Allies, Ideas; catalogue
   `rendering/designs/catalog.ts`; grid scrolls with the wheel.
 - **SoundLabScene** + `ui/SoundLabPanel.ts`: every effect and variant, the theme with a jump to its loop seam.
 - **CoopScene**: the lobby (net/CLAUDE.md).
