@@ -1,8 +1,13 @@
 name: Deploy to GitHub Pages
 
+# One Pages site, two pages:
+#   /      production  = the latest v* tag (promoted with /release)
+#   /dev/  development = master, redeployed on every push
+# Each run rebuilds both halves (scripts/build-pages.sh), so a deploy never drops the other page.
 on:
   push:
     branches: ["master"]
+    tags: ["v*"]
   workflow_dispatch:
 
 permissions:
@@ -22,8 +27,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
+      - name: Checkout (full history and tags)
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -31,19 +38,20 @@ jobs:
           node-version: 20
           cache: npm
 
-      - name: Install dependencies
-        run: npm ci
+      - name: Verify master
+        if: github.ref == 'refs/heads/master'
+        run: npm ci && npm run verify
 
-      - name: Build application
-        run: npm run build
+      - name: Build production (/) and development (/dev/)
+        run: sh scripts/build-pages.sh site
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
 
-      - name: Upload build artifact
+      - name: Upload site
         uses: actions/upload-pages-artifact@v3
         with:
-          path: ./dist
+          path: ./site
 
       - name: Deploy to GitHub Pages
         id: deployment

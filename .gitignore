@@ -4,6 +4,7 @@ yarn.lock
 
 # Build output
 dist/
+site/
 build/
 
 # IDE
