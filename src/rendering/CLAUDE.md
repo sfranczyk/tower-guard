@@ -4,8 +4,8 @@ Pure pose math lives next to the drawing and is tested (limb lengths, ground con
 animation gets a row in `scenes/labRows.ts` (or `scenes/labSequences.ts` for one-shot falls and gibs).
 
 ## Stickman core
-- `drawStickman(sprite, phase, pose)` (`stickman.ts`): bowman, enemies and the animation lab all use it. `pose.skin`:
-  `'skeleton'` (thin white bones, labs) or `'armored'` (`armor.ts`, `ArmorPalette`; no longer used in the game).
+- `drawStickman(sprite, phase, pose)` (`stickman.ts`): the bare skeleton (thin white bones) for
+  enemies' old look and the labs. The bowman's colours: `ArmorPalette` (`armor.ts`, per battleground).
 - **Walk and march** (`walkCycle.ts`): `walkFrame` is the natural walk (heel strike, roll, toe-off, `WALK_CYCLE_PX` per
   cycle); `march` (`marchKneeBend`, `MARCH_HALF_STRIDE`) for knights; the zombie's shuffle is the march dragged.
   `walkBody(p, { style })`, drawStickman's `walkStyle`; feet turned by `*ShinAngle`. Run: `runCycle.ts`.
@@ -22,7 +22,7 @@ animation gets a row in `scenes/labRows.ts` (or `scenes/labSequences.ts` for one
 - **Gibs** (`stickmanGibs.ts`): `GibSimulation`, 10 pieces + blood, seeded; game force 1–1.7×, lab 1; lab figures
   clipped to their frame.
 - **Archer** (`archer.ts`): `getArcherRig()`, pivots at the neck, drawn inside the sprite. `pose.bowReady` 0..1.
-- **Armored pose** (`armoredPose.ts`): `drawArmoredJointPose` for the bowman's falls.
+- **Armored pose** (`armoredPose.ts`): `armoredFallPose` (the bowman's falls), `bowInRearHand`.
 
 ## Looks
 - **Enemy bodies** (`enemyBody.ts`): `drawEnemyBody` builds the BodyPose with drawStickman's numbers and draws the look

@@ -5,10 +5,6 @@ import { HUMAN_BODY, type BodyColors } from './bodyColors';
 import { ATTACK_REST, CLUBS, ZOMBIE_REST, getAttackPose, type AttackStyle } from './attackSwing';
 import { RUN_GROUND_Y, runArmSwing, runBounce, runFoot } from './runCycle';
 import { marchKneeBend, walkFrame, type WalkStyle } from './walkCycle';
-import { ARMOR_COLORS, type ArmorPalette, drawArmor, drawArmoredBow, drawHood, drawPauldron, drawQuiver } from './armor';
-
-/** skeleton = thin white bones (enemies, previews); armored = the player's armored archer look. */
-export type StickmanSkin = 'skeleton' | 'armored';
 
 export interface StickmanPose {
   /** 0 = walk cycle, 1 = standing idle. */
@@ -40,9 +36,6 @@ export interface StickmanPose {
    * after a turn so the lean swings over smoothly instead of flipping.
    */
   leanDirection?: number;
-  skin?: StickmanSkin;
-  /** Colours of the armored skin (default ARMOR_COLORS); the bowman's follow the battleground. */
-  armorColors?: ArmorPalette;
   /** Bone colours of the skeleton skin (default HUMAN_BODY; zombies are greenish). */
   bodyColors?: BodyColors;
   /** Zombie: both arms held out in front (swaying), leaning forward; attacks with the 'grab' style. */
@@ -116,15 +109,12 @@ export const drawStickman: StickmanRenderer = (sprite, phase, pose = {}) => {
     bowAngle = 0,
     facingDirection = 1,
     leanDirection = Math.sign(facingDirection || 1),
-    skin = 'skeleton',
-    armorColors = ARMOR_COLORS,
     bodyColors = HUMAN_BODY,
     zombie = false,
     bomb = false,
     walkStyle = 'walk',
   } = pose;
   const marching = zombie || walkStyle === 'march';
-  const armored = skin === 'armored';
   sprite.clear();
   const motionBlend = running ? 1 : runningBlend;
   // Club swing: whole-body keyframes (rendering/attackSwing.ts); attackPhase runs 0..2π per swing.
@@ -170,25 +160,19 @@ export const drawStickman: StickmanRenderer = (sprite, phase, pose = {}) => {
   /** Direction of the club out of the fist for a forearm angle: across the fist, tilted by the wrist. */
   const clubDirection = (forearmAngle: number): Point => ({ x: Math.cos(clubTilt - forearmAngle), y: Math.sin(clubTilt - forearmAngle) });
 
-  const frontColor = armored ? armorColors.limb : skeleton;
-  const rearColor = armored ? armorColors.limbRear : rear;
-  // Armored limbs are drawn about 2.3× thicker, without joint rings.
-  const widthScale = armored ? 2.3 : 1;
   const line = (a: Point, b: Point, isRear = false, width = 3.5): void => {
     sprite.moveTo(a.x, a.y).lineTo(b.x, b.y).stroke({
-      width: (isRear ? width - 0.5 : width) * widthScale,
-      color: isRear ? rearColor : frontColor,
+      width: isRear ? width - 0.5 : width,
+      color: isRear ? rear : skeleton,
       cap: 'round',
       join: 'round',
     });
   };
   const joint = (point: Point, isRear = false): void => {
-    if (!armored) {
-      sprite.circle(point.x, point.y, 3).stroke({ width: 1.5, color: isRear ? rear : skeleton });
-    }
+    sprite.circle(point.x, point.y, 3).stroke({ width: 1.5, color: isRear ? rear : skeleton });
   };
   const endpoint = (point: Point, isRear = false): void => {
-    sprite.circle(point.x, point.y, armored ? 4.5 : 2.5).fill({ color: isRear ? rearColor : frontColor });
+    sprite.circle(point.x, point.y, 2.5).fill({ color: isRear ? rear : skeleton });
   };
 
   /** `pitch`: the walking foot's own angle (heel to toe), blended away into the run's and the standing foot. */
@@ -320,9 +304,7 @@ export const drawStickman: StickmanRenderer = (sprite, phase, pose = {}) => {
   // drawing hand stays visible in front of the face.
   if (archerRig) {
     drawArcherArm(archerRig.woodElbow, archerRig.woodHand, true);
-    if (!armored) {
-      drawArcherArm(archerRig.stringElbow, archerRig.stringHand, false);
-    }
+    drawArcherArm(archerRig.stringElbow, archerRig.stringHand, false);
   } else {
     if (armed && club.twoHanded) {
       // Both hands on the club: the rear hand reaches the shaft just behind the front fist.
@@ -336,29 +318,16 @@ export const drawStickman: StickmanRenderer = (sprite, phase, pose = {}) => {
       drawArm(rearArmAngle, true, zombie);
     }
   }
-  if (armored) {
-    // Back to front: quiver, torso, front leg, armor over the legs, hood, drawing arm, shoulder plate.
-    drawQuiver(sprite, armorColors);
-    line(hip, shoulder);
-    drawLeg(blendPoint(rightFoot, idleRightFoot), rightKneeBend, false, walk?.front.pitch);
-    drawArmor(sprite, armorColors);
-    drawHood(sprite, STICKMAN_HEAD, armorColors);
-    if (archerRig) {
-      drawArcherArm(archerRig.stringElbow, archerRig.stringHand, false);
-    }
-    drawPauldron(sprite, shoulder, armorColors);
-  } else {
-    line(hip, shoulder);
-    joint(hip);
-    line(shoulder, along(43));
-    const head = along(-STICKMAN_HEAD.y);
-    sprite.circle(head.x, head.y, STICKMAN_HEAD.radius).stroke({ width: 2, color: skeleton });
-    drawLeg(blendPoint(rightFoot, idleRightFoot), rightKneeBend, false, walk?.front.pitch);
-    if (bomb) {
-      // On the chest, just in front of the spine.
-      const chest = along(19);
-      drawBomb(sprite, { x: chest.x + Math.cos(torsoLean) * 7, y: chest.y + Math.sin(torsoLean) * 7 }, phase);
-    }
+  line(hip, shoulder);
+  joint(hip);
+  line(shoulder, along(43));
+  const head = along(-STICKMAN_HEAD.y);
+  sprite.circle(head.x, head.y, STICKMAN_HEAD.radius).stroke({ width: 2, color: skeleton });
+  drawLeg(blendPoint(rightFoot, idleRightFoot), rightKneeBend, false, walk?.front.pitch);
+  if (bomb) {
+    // On the chest, just in front of the spine.
+    const chest = along(19);
+    drawBomb(sprite, { x: chest.x + Math.cos(torsoLean) * 7, y: chest.y + Math.sin(torsoLean) * 7 }, phase);
   }
   const weaponHand = archerPose
     ? { x: 0, y: 0 }
@@ -371,10 +340,6 @@ export const drawStickman: StickmanRenderer = (sprite, phase, pose = {}) => {
     sprite.moveTo(butt.x, butt.y).lineTo(tip.x, tip.y).stroke({ width: club.width / 2, color: 0xe3ad4f, cap: 'round' });
   }
   if (archerRig) {
-    if (armored) {
-      drawArmoredBow(sprite, archerRig, bowTension * bowReady * bowReady * (3 - 2 * bowReady), armorColors);
-    } else {
-      drawBow(sprite, archerRig);
-    }
+    drawBow(sprite, archerRig);
   }
 };
