@@ -71,13 +71,15 @@ export interface Battleground {
     /** The battle map this is the survival version of (a stored survival level on it moves here). */
     nightOf: BattlegroundId;
     /**
-     * night (default): stars, a moon crossing the sky, the sun rising at the end. eclipse: the sun stands at `sunAt`
-     * behind the moon, which slides off it; stars and a corona while it's dark. dust: no moon or stars, the sun at
+     * night (default): stars, a moon crossing the sky, the sun rising at the end. eclipse: the sun drifts from `sunAt`
+     * to `sunTo` while the moon crosses it, total halfway; stars and a corona while it's dark. dust: no moon or stars, the sun at
      * `sunAt` dim behind the dust and brightening as it clears.
      */
     kind?: 'night' | 'eclipse' | 'dust';
     /** eclipse / dust: where the sun stands, across the view (0..1) and world y. */
     sunAt?: { x: number; y: number };
+    /** eclipse: where the sun has drifted to from `sunAt` as the time runs out. */
+    sunTo?: { x: number; y: number };
     /** How bright the stars shine (default 1; dimmer behind storm clouds). */
     stars?: number;
     /** The weather (rain, lightning, clouds, sand and haze) dies down as day comes (`calm`). */
@@ -353,8 +355,9 @@ export const BATTLEGROUNDS: Readonly<Record<BattlegroundId, Battleground>> = {
     id: 'eclipsePass',
     player: PLAYER_COLORS.eclipsePass,
     name: 'Eclipse Pass',
-    // Survival: Crimson Pass under a total eclipse: a pale corona round the hidden sun, stars over a dark crimson sky.
-    // Then a crescent of sun shows and grows, and the light comes back fast to the pass's red-orange evening sky.
+    // Survival: Crimson Pass through a total eclipse. The moon eats into the sun of the pass's red-orange evening, the
+    // light goes late and fast; halfway a pale corona round the hidden sun, stars over a dark crimson sky (a diamond
+    // ring either side); then the crescent grows back and the evening returns.
     sky: [0x12070f, 0x1e0b18, 0x2c1020, 0x3d1626, 0x52202a],
     weather: 'clear',
     cloudColor: 0xffffff,
@@ -367,7 +370,8 @@ export const BATTLEGROUNDS: Readonly<Record<BattlegroundId, Battleground>> = {
     nightCycle: {
       nightOf: 'crimsonPass',
       kind: 'eclipse',
-      sunAt: { x: 0.62, y: 120 },
+      sunAt: { x: 0.56, y: 112 },
+      sunTo: { x: 0.68, y: 138 },
       dawn: [0x2a1838, 0x4a2244, 0x6e2c48, 0x9c4044, 0xc05c40],
       day: [0x3b2a52, 0x5e3456, 0x8e4152, 0xc65c45, 0xe8894a],
       // Only the map thumbnail's dark disc: in the game the moon just hides the sun.

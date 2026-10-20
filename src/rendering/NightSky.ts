@@ -48,9 +48,13 @@ const drawAurora = (g: Graphics, colors: readonly number[], width: number, secon
   });
 };
 
-/** Eclipse maps: the way the moon slides off the sun (up and to the left), and the corona's streamers. */
+/**
+ * Eclipse maps: the way the moon crosses the sun (from lower right to upper left: this is the side it leaves to), the
+ * corona's streamers and the diamond ring's colour.
+ */
 const ECLIPSE_ANGLE = Math.atan2(-0.6, -0.8);
 const CORONA_STREAMERS = 14;
+const DIAMOND_COLOR = 0xfffbf0;
 
 /** A small seeded random (the same stars every time). */
 const seeded = (seed: number): (() => number) => () => {
@@ -87,6 +91,8 @@ export class NightSky {
   private readonly sunColor: number;
   private readonly kind: 'night' | 'eclipse' | 'dust';
   private readonly sunAt: { x: number; y: number };
+  /** Eclipse maps: where the sun has drifted to as the time runs out (else it stays at `sunAt`). */
+  private readonly sunTo: { x: number; y: number };
   private readonly starsAlpha: number;
   private readonly calms: boolean;
   /** How far the weather has died down (0..1) on maps whose storm calms (`nightCycle.calms`); 0 elsewhere. */
@@ -120,6 +126,7 @@ export class NightSky {
     this.sun.circle(0, 0, SUN_RADIUS).fill({ color: cycle.sun, alpha: 0.95 });
     this.kind = cycle.kind ?? 'night';
     this.sunAt = cycle.sunAt ?? { x: SUN_X, y: VIEW_TOP + 120 };
+    this.sunTo = cycle.sunTo ?? this.sunAt;
     this.starsAlpha = this.kind === 'dust' ? 0 : cycle.stars ?? 1;
     this.calms = !!cycle.calms;
     this.sunColor = cycle.sun;
@@ -177,27 +184,35 @@ export class NightSky {
       this.sun.position.set(viewLeft + this.sunAt.x * viewWidth, this.sunAt.y);
       this.sun.alpha = 0.25 + 0.75 * state.calm;
     } else {
-      this.drawEclipse(state.eclipse, state.corona, viewLeft + this.sunAt.x * viewWidth);
+      const p = Math.max(0, Math.min(1, progress));
+      const x = this.sunAt.x + (this.sunTo.x - this.sunAt.x) * p;
+      const y = this.sunAt.y + (this.sunTo.y - this.sunAt.y) * p;
+      this.crescent.position.set(viewLeft + x * viewWidth, y);
+      this.drawEclipse(state.eclipse, state.corona, state.diamond);
     }
     this.shade.alpha = SHADE_ALPHA * state.shade;
   }
 
   /**
-   * The eclipse at world x `x` (sunAt.y): the sun's crescent left by the moon `offset` sun radii off it, its glow
-   * growing with it, and the corona round the sun at `corona`, fading first on the side the sun comes out.
+   * The eclipse round the crescent's position: the sun's crescent left by the moon `offset` sun radii along its path
+   * (positive before the total eclipse, on the side it comes from), its glow growing with it, the corona round the sun
+   * at `corona`, fading first on the side the sun shows, and the diamond ring's bead on the rim at `diamond`.
    */
-  private drawEclipse(offset: number, corona: number, x: number): void {
+  private drawEclipse(offset: number, corona: number, diamond: number): void {
     const color = this.sunColor;
-    const showing = sunShowing(offset);
+    const showing = sunShowing(Math.abs(offset));
+    const moonAngle = offset >= 0 ? ECLIPSE_ANGLE + Math.PI : ECLIPSE_ANGLE;
     this.crescent.clear();
-    this.crescent.position.set(x, this.sunAt.y);
     if (showing > 0) {
       this.crescent.circle(0, 0, SUN_RADIUS * 1.9).fill({ color, alpha: 0.12 * showing });
       this.crescent.circle(0, 0, SUN_RADIUS * 1.3).fill({ color, alpha: 0.18 * showing });
     }
-    const crescent = sunCrescent(offset, ECLIPSE_ANGLE);
+    const crescent = sunCrescent(Math.abs(offset), moonAngle);
     if (crescent.length > 0) {
       this.crescent.poly(crescent.map((value) => value * SUN_RADIUS)).fill({ color, alpha: 0.95 });
+    }
+    if (diamond > 0) {
+      this.drawDiamond(moonAngle + Math.PI, diamond);
     }
     this.corona.clear();
     this.corona.position.copyFrom(this.crescent.position);
@@ -212,7 +227,7 @@ export class NightSky {
     for (let index = 0; index < CORONA_STREAMERS; index += 1) {
       const angle = (index / CORONA_STREAMERS) * Math.PI * 2 + 0.2 * Math.sin(index * 2.3);
       // 1 on the moon's side, 0 where the sun comes out: that side goes first.
-      const side = (1 + Math.cos(angle - ECLIPSE_ANGLE)) / 2;
+      const side = (1 + Math.cos(angle - moonAngle)) / 2;
       const alpha = 0.22 * Math.max(0, Math.min(1, corona * 2 - (1 - side)));
       if (alpha <= 0.01) {
         continue;
@@ -223,6 +238,25 @@ export class NightSky {
         Math.cos(angle) * reach, Math.sin(angle) * reach,
         Math.cos(angle + 0.12) * SUN_RADIUS, Math.sin(angle + 0.12) * SUN_RADIUS,
       ]).fill({ color: 0xfff4e0, alpha });
+    }
+  }
+
+  /** The diamond ring: a bead of sun on the rim at `angle`, flaring into a glow and four rays, at `strength` (0..1). */
+  private drawDiamond(angle: number, strength: number): void {
+    const x = Math.cos(angle) * SUN_RADIUS;
+    const y = Math.sin(angle) * SUN_RADIUS;
+    this.crescent.circle(x, y, 34).fill({ color: DIAMOND_COLOR, alpha: 0.12 * strength });
+    this.crescent.circle(x, y, 16).fill({ color: DIAMOND_COLOR, alpha: 0.3 * strength });
+    this.crescent.circle(x, y, 5.5).fill({ color: DIAMOND_COLOR, alpha: strength });
+    for (let index = 0; index < 4; index += 1) {
+      const ray = angle + Math.PI / 4 + (index * Math.PI) / 2;
+      const reach = (index % 2 === 0 ? 46 : 30) * strength;
+      const side = ray + Math.PI / 2;
+      this.crescent.poly([
+        x + Math.cos(side) * 2, y + Math.sin(side) * 2,
+        x + Math.cos(ray) * reach, y + Math.sin(ray) * reach,
+        x - Math.cos(side) * 2, y - Math.sin(side) * 2,
+      ]).fill({ color: DIAMOND_COLOR, alpha: 0.7 * strength });
     }
   }
 

@@ -50,16 +50,41 @@ describe('storms and eclipses on the same timeline', () => {
     expect(nightSky(1).calm).toBe(1);
   });
 
-  it('holds a total eclipse, then the light comes back fast as the moon slides off', () => {
-    const total = nightSky(SURVIVAL.eclipseFrom, 'eclipse');
-    expect(total).toMatchObject({ eclipse: 0, corona: 1, stars: 1, dawn: 0, day: 0, shade: 1 });
-    expect(total.moon.visible).toBe(false);
-    // A quarter of the sun showing already lights more than half the sky.
-    const offsets = Array.from({ length: 50 }, (_, index) => SURVIVAL.eclipseFrom + (index / 50) * (SURVIVAL.eclipseTo - SURVIVAL.eclipseFrom));
-    const quarter = offsets.map((p) => nightSky(p, 'eclipse')).find((sky) => sunShowing(sky.eclipse) >= 0.25)!;
+  it('runs an eclipse from first touch through totality halfway to last touch', () => {
+    const start = nightSky(0, 'eclipse');
+    expect(start).toMatchObject({ eclipse: ECLIPSE_CLEAR, corona: 0, stars: 0, day: 1, shade: 0, diamond: 0 });
+    expect(start.moon.visible).toBe(false);
+    const total = nightSky(0.5, 'eclipse');
+    expect(total).toMatchObject({ corona: 1, stars: 1, dawn: 0, day: 0, shade: 1, diamond: 0 });
+    expect(sunShowing(Math.abs(total.eclipse))).toBe(0);
+    expect(sunShowing(Math.abs(nightSky(SURVIVAL.eclipseTotalFrom, 'eclipse').eclipse))).toBe(0);
+    expect(sunShowing(Math.abs(nightSky(SURVIVAL.eclipseTotalTo, 'eclipse').eclipse))).toBe(0);
+    const end = nightSky(1, 'eclipse');
+    expect(end).toMatchObject({ eclipse: -ECLIPSE_CLEAR, corona: 0, stars: 0, day: 1, shade: 0, diamond: 0 });
+  });
+
+  it('darkens to the total eclipse and lightens after it, the moon moving one way all along', () => {
+    const steps = Array.from({ length: 101 }, (_, index) => nightSky(index / 100, 'eclipse'));
+    steps.slice(1).forEach((sky, index) => {
+      expect(sky.eclipse).toBeLessThan(steps[index].eclipse);
+      if (index < 50) {
+        expect(sky.hillsLight).toBeLessThanOrEqual(steps[index].hillsLight);
+      } else {
+        expect(sky.hillsLight).toBeGreaterThanOrEqual(steps[index].hillsLight);
+      }
+    });
+    // A quarter of the sun showing still lights more than half the sky.
+    const quarter = steps.find((sky) => sunShowing(Math.abs(sky.eclipse)) <= 0.25)!;
     expect(quarter.hillsLight).toBeGreaterThan(0.5);
-    const clear = nightSky(SURVIVAL.eclipseTo, 'eclipse');
-    expect(clear).toMatchObject({ eclipse: ECLIPSE_CLEAR, corona: 0, stars: 0, day: 1, shade: 0 });
+  });
+
+  it('flares the diamond ring just before and just after the total eclipse', () => {
+    const width = SURVIVAL.eclipseDiamond;
+    expect(nightSky(SURVIVAL.eclipseTotalFrom - width / 2, 'eclipse').diamond).toBeCloseTo(1);
+    expect(nightSky(SURVIVAL.eclipseTotalTo + width / 2, 'eclipse').diamond).toBeCloseTo(1);
+    expect(nightSky(SURVIVAL.eclipseTotalFrom - width * 1.5, 'eclipse').diamond).toBe(0);
+    expect(nightSky(0.5, 'eclipse').diamond).toBe(0);
+    expect(nightSky(0.9).diamond).toBe(0);
   });
 
   it('cuts the sun to a crescent where the moon covers it', () => {

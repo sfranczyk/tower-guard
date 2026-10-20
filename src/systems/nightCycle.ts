@@ -5,7 +5,7 @@ import { SURVIVAL } from '../config';
  * has come at `progress` (0 = the level starts, 1 = its time is up). The moon is up at nightfall and crosses the sky,
  * setting at SURVIVAL.moonSetAt; dawn starts at SURVIVAL.dawnAt (stars fade, the sky warms, then turns to day) and the
  * sun's disc clears the horizon exactly at 1. The same timeline drives the other survival skies: the storm or the
- * sandstorm dies down with `calm`, and an eclipse's moon slides off the sun (`eclipse`). rendering/NightSky.ts draws it.
+ * sandstorm dies down with `calm`, and an eclipse's moon crosses the sun (`eclipse`). rendering/NightSky.ts draws it.
  */
 export interface NightSkyState {
   /** Across the view (0 left .. 1 right) and above the horizon (0 on it .. 1 at the top); hidden once set. */
@@ -22,10 +22,15 @@ export interface NightSkyState {
   sunRise: number;
   /** How far a storm or sandstorm has died down (0 raging .. 1 over). */
   calm: number;
-  /** Eclipse maps: the moon's offset from the sun's centre in sun radii (0 total .. ECLIPSE_CLEAR fully off). */
+  /**
+   * Eclipse maps: the moon's offset from the sun's centre in sun radii along its path, positive on the side it comes
+   * from, negative on the side it leaves to (ECLIPSE_CLEAR: just touching, 0: centred).
+   */
   eclipse: number;
   /** Eclipse maps: how bright the corona glows around the covered sun (1 total .. 0). */
   corona: number;
+  /** Eclipse maps: the diamond ring, the last (or first) bead of sun flaring on the rim just outside totality (0..1). */
+  diamond: number;
 }
 
 /** The moon's radius in sun radii, and its offset at which it no longer touches the sun. */
@@ -97,13 +102,23 @@ export const sunShowing = (offset: number): number => {
 };
 
 /**
- * An eclipse map's sky at `progress`: total until SURVIVAL.eclipseFrom, then the moon slides off the sun, clear by
- * SURVIVAL.eclipseTo. The light comes back fast with the first crescent (a little sun lights a lot of sky), and the
- * corona fades as it does.
+ * An eclipse map's sky at `progress`: the moon touches the sun as the level starts, slides across it at an even pace,
+ * covers it all from SURVIVAL.eclipseTotalFrom to eclipseTotalTo and has left it as the time runs out. The light
+ * fades only once most of the sun is hidden (a little sun lights a lot of sky) and comes back the same way; the corona
+ * shows while it's dark, and the diamond ring flares just before and just after the total eclipse.
  */
 const eclipseSky = (p: number): NightSkyState => {
-  const eclipse = ECLIPSE_CLEAR * smoothstep(SURVIVAL.eclipseFrom, SURVIVAL.eclipseTo, p);
-  const light = sunShowing(eclipse) ** 0.45;
+  const from = SURVIVAL.eclipseTotalFrom;
+  const to = SURVIVAL.eclipseTotalTo;
+  const hidden = ECLIPSE_MOON_RADIUS - 1;
+  const eclipse = p < from
+    ? hidden + (ECLIPSE_CLEAR - hidden) * (1 - p / from)
+    : p > to
+      ? -hidden - (ECLIPSE_CLEAR - hidden) * ((p - to) / (1 - to))
+      : hidden * (1 - 2 * (p - from) / (to - from));
+  const light = sunShowing(Math.abs(eclipse)) ** 0.45;
+  const width = SURVIVAL.eclipseDiamond;
+  const flare = (t: number): number => (t > 0 && t < 1 ? Math.sin(Math.PI * t) ** 2 : 0);
   return {
     moon: { x: 0, height: 0, visible: false },
     stars: 1 - smoothstep(0, 0.35, light),
@@ -115,6 +130,7 @@ const eclipseSky = (p: number): NightSkyState => {
     calm: 0,
     eclipse,
     corona: 1 - smoothstep(0, 0.4, light),
+    diamond: Math.max(flare((p - (from - width)) / width), flare((p - to) / width)),
   };
 };
 
@@ -140,5 +156,6 @@ export const nightSky = (progress: number, kind: 'night' | 'eclipse' | 'dust' = 
     calm: smoothstep(0.05, 0.85, dawn),
     eclipse: ECLIPSE_CLEAR,
     corona: 0,
+    diamond: 0,
   };
 };
