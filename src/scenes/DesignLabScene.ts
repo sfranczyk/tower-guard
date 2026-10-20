@@ -2,7 +2,7 @@ import { Container, Graphics, Rectangle, Text } from 'pixi.js';
 import { BACKDROP_WIDTH, GAME_HEIGHT, GAME_WIDTH } from '../config';
 import { Scene } from '../core/Scene';
 import { centeredCameraX, viewWidth } from '../core/viewport';
-import { DESIGN_LAB_PARAM, getUrlParam, setUrlParam } from '../core/urlState';
+import { DESIGN_LAB_PARAM, getDevUrlParam, setUrlParam } from '../core/urlState';
 import { BATTLEGROUNDS } from '../data/battlegrounds';
 import { Background } from '../rendering/Background';
 import { DESIGN_SECTIONS, type DesignEntry, type DesignSection, type DesignView } from '../rendering/designs/catalog';
@@ -86,7 +86,7 @@ export class DesignLabScene extends Scene {
         }
       }
     });
-    const wanted = getUrlParam(DESIGN_LAB_PARAM);
+    const wanted = getDevUrlParam(DESIGN_LAB_PARAM);
     const section = DESIGN_SECTIONS.find((candidate) => candidate.id === wanted);
     const entrySection = DESIGN_SECTIONS.find((candidate) => candidate.entries.some((entry) => entry.id === wanted));
     this.show(section ?? entrySection ?? DESIGN_SECTIONS[0], entrySection?.entries.find((entry) => entry.id === wanted));

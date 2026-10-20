@@ -1,5 +1,5 @@
 import type { GameContext, GameSession, NetLink } from '../core/Scene';
-import { getUrlParam } from '../core/urlState';
+import { getDevUrlParam } from '../core/urlState';
 import { normalizeLoadout, type Loadout } from '../data/loadout';
 import type { NetMessage } from './protocol';
 import { RoomHub, guestLink } from './RoomHub';
@@ -7,7 +7,7 @@ import { hasGaps, seatCount } from './seats';
 import type { HostedRoom, RoomLink, Transport, TransportMode } from './Transport';
 
 /** `?net=local` links tabs of this browser (no internet needed) instead of PeerJS. */
-export const transportMode = (): TransportMode => (getUrlParam('net') === 'local' ? 'local' : 'peer');
+export const transportMode = (): TransportMode => (getDevUrlParam('net') === 'local' ? 'local' : 'peer');
 
 /** A co-op room holds the host and up to three guests. */
 export const MAX_PLAYERS = 4;

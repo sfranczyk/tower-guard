@@ -12,20 +12,24 @@ work=${RUNNER_TEMP:-${TMPDIR:-/tmp}}/tower-guard-pages
 rm -rf "$out" "$work"
 mkdir -p "$out" "$work"
 
-# build <ref> <dir under $out>
+# build <ref> <dir under $out> <npm build script>: production uses build:release (no developer tools), /dev/ build.
 build() {
   sha=$(git rev-parse "$1^{commit}")
   src="$work/$sha"
   if [ ! -d "$src" ]; then
     git worktree add --detach "$src" "$sha" >/dev/null
-    (cd "$src" && npm ci --no-audit --no-fund --loglevel=error && npm run -s build)
+    (cd "$src" && npm ci --no-audit --no-fund --loglevel=error)
   fi
+  script=$3
+  # Tags older than build:release have no developer-tool switch: fall back to their plain build.
+  (cd "$src" && grep -q "\"$script\":" package.json) || script=build
+  (cd "$src" && npm run -s "$script")
   mkdir -p "$out/$2"
   cp -R "$src/dist/." "$out/$2"
   printf '%s %s\n' "$1" "$sha" > "$out/$2/version.txt"
   echo "built $1 ($sha) -> /$2"
 }
 
-build "$prod_ref" ""
-build "$dev_ref" "dev"
+build "$prod_ref" "" build:release
+build "$dev_ref" "dev" build
 for dir in "$work"/*; do git worktree remove --force "$dir"; done

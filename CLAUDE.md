@@ -73,6 +73,9 @@ Trunk-based: `master` is the trunk and is always releasable.
 - Two pages from one GitHub Pages site (`.github/workflows/deploy-page.yml`, `scripts/build-pages.sh`):
   **development** at `/dev/` = master, redeployed on every push; **production** at `/` = the latest `v*` tag.
   Both share one origin, so localStorage (settings, sandbox, tuning) is shared too.
+- Developer tools (labs, `?tune`, `?debug`, `?coop`, `?net=local`, the menu's Dev tools row) exist only in local and
+  `/dev/` builds: production is built with `npm run build:release`, which turns `DEV_TOOLS` (`core/devTools.ts`) off.
+  Read new dev-only URL flags with `getDevUrlParam`, gate other dev-only UI on `DEV_TOOLS`.
 - Production changes only through `/release` (version tag on master, rollback = new higher tag). Never tag unasked.
 
 ## Working economically

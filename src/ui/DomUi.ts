@@ -18,6 +18,7 @@ import { HUD_BOTTOM_TEMPLATE, HUD_TOP_TEMPLATE, OVERLAY_TEMPLATE, allySlots, wea
 import { ICON_BANNERS, ICON_ORDERS } from './icons';
 import { BANNER_STATE_LABELS, type BannerAt } from '../systems/banners';
 import type { AllyType } from '../types';
+import { DEV_TOOLS } from '../core/devTools';
 
 /** Breathing room kept around the canvas + HUD stack inside the window. */
 const PAGE_MARGIN = 16;
@@ -110,6 +111,10 @@ export class DomUi {
     this.statusElement = this.query('[data-status]');
     this.hud = new Hud(this.hudTop);
     this.devTools = this.query('[data-dev-tools]');
+    if (!DEV_TOOLS) {
+      this.query('[data-dev-toggle]').remove();
+      this.devTools.remove();
+    }
     this.sandboxScreen = this.query('[data-sandbox]');
     this.sandboxForm = new SandboxForm(this.query('[data-sandbox-form]'), {
       change: (settings, level) => this.handlers.sandboxChange?.(settings, level),
