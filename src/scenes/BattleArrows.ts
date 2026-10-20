@@ -1,5 +1,5 @@
 import { Graphics, type Container } from 'pixi.js';
-import { WORLD_WIDTH } from '../config';
+
 import type { SoundId } from '../audio/SoundManager';
 import { aimColorsOf, type Battleground } from '../data/battlegrounds';
 import { launchSpeed, shrapnelBurst } from '../data/projectiles';
@@ -16,6 +16,7 @@ import { rollArrowMishap } from '../systems/weatherArrows';
 import { groundAt } from '../systems/terrain';
 import type { EnemyType, ProjectileType, Vec2 } from '../types';
 import type { Player } from './PlayerControl';
+import { worldWidth } from '../systems/battlefield';
 
 const ENEMY_ARROW_TINT = 0xff8f80;
 /** Fragments from a shrapnel burst are drawn at this scale (normal arrows: 0.5). */
@@ -178,7 +179,7 @@ export class BattleArrows {
       // Same surface (and offset) at which flying arrows stick into the ground.
       groundY: (x) => groundAt(x) - 3,
       minX: 0,
-      maxX: WORLD_WIDTH,
+      maxX: worldWidth(),
     });
   }
 }

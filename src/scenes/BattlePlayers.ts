@@ -1,5 +1,5 @@
 import type { Container } from 'pixi.js';
-import { ARROW_COOLDOWN_SLACK_MS, BOWMAN_Y, GAME_HEIGHT, MIN_SHOT_POWER, WORLD_WIDTH } from '../config';
+import { ARROW_COOLDOWN_SLACK_MS, BOWMAN_Y, GAME_HEIGHT, MIN_SHOT_POWER } from '../config';
 import type { GameContext } from '../core/Scene';
 import type { Battleground } from '../data/battlegrounds';
 import { firstArrow, type ArrowType } from '../data/loadout';
@@ -20,6 +20,7 @@ import type { ProjectileType } from '../types';
 import type { BattleArrows } from './BattleArrows';
 import { PROJECTILE_LABELS } from './battleText';
 import { playerStartX, type PlayerControl, type Player } from './PlayerControl';
+import { worldWidth } from '../systems/battlefield';
 
 export interface BattlePlayersDeps {
   ctx: GameContext;
@@ -51,7 +52,7 @@ export class BattlePlayers {
     const { sandbox, run, playerCount } = session;
     const armor = deps.battleground.player;
     this.list = Array.from({ length: Math.max(1, playerCount) }, (_, index) => {
-      const bowman = new Bowman(playerStartX(index), BOWMAN_Y, { x: 0, y: 0, width: WORLD_WIDTH, height: GAME_HEIGHT }, {
+      const bowman = new Bowman(playerStartX(index), BOWMAN_Y, { x: 0, y: 0, width: worldWidth(), height: GAME_HEIGHT }, {
         armorColors: index === 1 ? secondPlayerArmor(armor) : armor,
         // Player 1 is the ranger; in co-op the keep warden, the steppe archer and the huntsman follow.
         look: BOWMAN_LOOKS[index % BOWMAN_LOOKS.length],

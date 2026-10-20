@@ -1,4 +1,4 @@
-import { WORLD_WIDTH } from '../../config';
+
 import { horseDeathThrow } from '../../rendering/horseDeath';
 import { mountedHitZones } from '../../rendering/horseHitZones';
 import { gaitGroundSpeed, getHorsePose, type HorseGait, type HorsePose } from '../../rendering/horseRider';
@@ -11,6 +11,7 @@ import type { HitBox } from './enemyTypes';
 import type Enemy from './Enemy';
 import { BODY_SCALE } from './EnemyFigure';
 import { HORSE_BOLT, Mount } from './Mount';
+import { worldWidth } from '../../systems/battlefield';
 
 /** A dying horse lets its rider slide off backwards (lying down) or tips him forwards over its neck (dropping): this hard. */
 const RIDER_OFF_FORCE = { back: 1, forward: 1.5 } as const;
@@ -124,10 +125,10 @@ export class MountedRider {
     }
     const step = (enemy.speed * HORSE_BOLT.speedFactor * enemy.afflictions.headwind * deltaMs) / 1000;
     enemy.x += step;
-    enemy.y = groundAt(Math.min(enemy.x, WORLD_WIDTH));
+    enemy.y = groundAt(Math.min(enemy.x, worldWidth()));
     enemy.figure.face(1);
     this.stride('gallop', step);
-    if (enemy.x > WORLD_WIDTH + HORSE_BOLT.beyondEdge) {
+    if (enemy.x > worldWidth() + HORSE_BOLT.beyondEdge) {
       bolt.gone = true;
       enemy.figure.body.clear();
       enemy.afflictions.art.clear();

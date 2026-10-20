@@ -1,11 +1,12 @@
 import { Graphics, type Container } from 'pixi.js';
 import { viewWidth } from '../core/viewport';
-import { GAME_HEIGHT, LIGHTNING_FIRST_DELAY_MS, MAX_VIEW_WIDTH, LIGHTNING_GROUND_CHANCE, LIGHTNING_WARNING_MS, WORLD_WIDTH } from '../config';
+import { GAME_HEIGHT, LIGHTNING_FIRST_DELAY_MS, MAX_VIEW_WIDTH, LIGHTNING_GROUND_CHANCE, LIGHTNING_WARNING_MS } from '../config';
 import type { Background } from '../rendering/Background';
 import { Rain } from '../rendering/Rain';
 import type { Vec2 } from '../types';
 import { createBolt, planStrike, type Bolt, type StrikePlan } from './lightning';
 import { groundAt } from './terrain';
+import { worldWidth } from './battlefield';
 
 export interface WeatherEvents {
   /** A bolt hit the ground here (the scene applies damage and effects). */
@@ -95,9 +96,9 @@ export class WeatherSystem {
   }
 
   private trigger(plan: StrikePlan, cameraX: number): void {
-    const view = { left: Math.max(0, cameraX), right: Math.min(WORLD_WIDTH, cameraX + viewWidth()) };
+    const view = { left: Math.max(0, cameraX), right: Math.min(worldWidth(), cameraX + viewWidth()) };
     if (plan.reachesGround) {
-      const targetX = Math.min(WORLD_WIDTH - 20, Math.max(20, random(view.left + 60, view.right - 60)));
+      const targetX = Math.min(worldWidth() - 20, Math.max(20, random(view.left + 60, view.right - 60)));
       const target = { x: targetX, y: groundAt(targetX) };
       const startX = target.x + random(-70, 70);
       const marker = new Graphics();

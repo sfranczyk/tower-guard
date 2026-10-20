@@ -1,8 +1,9 @@
-import { VIEW_TOP, WORLD_WIDTH } from '../config';
+import { VIEW_TOP } from '../config';
 import { CAMERA_LOOK, aimLookAhead, easeTowards, nextLookShift } from '../core/camera';
 import { centeredCameraX, viewWidth } from '../core/viewport';
 import type { Vec2 } from '../types';
 import { clamp } from '../utils/math';
+import { worldWidth } from '../systems/battlefield';
 
 /** The camera eases after its target with this time constant (ms). */
 const CAMERA_FOLLOW_MS = 160;
@@ -37,9 +38,9 @@ export class BattleCamera {
   public pan(deltaMs: number, direction: number, fast: boolean, shake: Vec2): Vec2 {
     const width = viewWidth();
     const speed = CAMERA_LOOK.panSpeed * (fast ? CAMERA_LOOK.panSprint : 1);
-    this.x = width >= WORLD_WIDTH
-      ? centeredCameraX(width, WORLD_WIDTH)
-      : clamp(this.x + direction * speed * deltaMs / 1000, 0, WORLD_WIDTH - width);
+    this.x = width >= worldWidth()
+      ? centeredCameraX(width, worldWidth())
+      : clamp(this.x + direction * speed * deltaMs / 1000, 0, worldWidth() - width);
     return { x: -this.x + shake.x, y: -VIEW_TOP + shake.y };
   }
 
@@ -54,9 +55,9 @@ export class BattleCamera {
       this.lookGoal = 0;
       this.lookShift = easeTowards(this.lookShift, 0, deltaMs, CAMERA_LOOK.returnMs);
     }
-    const target = width >= WORLD_WIDTH
-      ? centeredCameraX(width, WORLD_WIDTH)
-      : clamp(focus.bowmanX + this.lookShift - width / 2, 0, WORLD_WIDTH - width);
+    const target = width >= worldWidth()
+      ? centeredCameraX(width, worldWidth())
+      : clamp(focus.bowmanX + this.lookShift - width / 2, 0, worldWidth() - width);
     this.x = this.placed ? easeTowards(this.x, target, deltaMs, CAMERA_FOLLOW_MS) : target;
     this.placed = true;
     return { x: -this.x + shake.x, y: -VIEW_TOP + shake.y };

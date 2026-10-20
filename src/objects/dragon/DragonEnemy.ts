@@ -1,5 +1,5 @@
 import { Container, Graphics } from 'pixi.js';
-import { DRAGON_SCALE, FIRE_DRAGON_STRAFE, WORLD_WIDTH } from '../../config';
+import { DRAGON_SCALE, FIRE_DRAGON_STRAFE } from '../../config';
 import { dragonHitZones, type DragonHitZone, type DragonPose } from '../../rendering/dragon';
 import { dragonKnightLook, drawDragonWithRider } from '../../rendering/designs/heavySkins';
 import { HUMAN_BODY } from '../../rendering/bodyColors';
@@ -21,6 +21,7 @@ import { DragonCorpse } from './DragonCorpse';
 import { DragonMotion, type FlightNet } from './DragonMotion';
 import { frameLocalAngle, frameToLocal, frameToWorld, frameWorldAngle, type DragonFrame } from './dragonFrame';
 import { DRAGON_ARCHER_LOOK, DRAGON_KINDS, type DragonKind, type DragonLook } from './dragonKinds';
+import { worldWidth } from '../../systems/battlefield';
 
 export type { DragonKind } from './dragonKinds';
 
@@ -124,7 +125,7 @@ export default class DragonEnemy extends Container {
     const seconds = (realDeltaMs * this.afflictions.timeScale) / 1000;
     this.x += this.speed * DRAGON_FLEE.speedFactor * seconds;
     this.y = Math.max(DRAGON_FLEE.topY, this.y - DRAGON_FLEE.climb * seconds);
-    if (this.x > WORLD_WIDTH + DRAGON_FLEE.beyond) {
+    if (this.x > worldWidth() + DRAGON_FLEE.beyond) {
       this.escaped = true;
     }
   }

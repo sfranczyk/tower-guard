@@ -1,5 +1,6 @@
-import { DRAGON_ALTITUDE, DRAGON_HOVER_OFFSET, DRAGON_TURN_PAST, WORLD_WIDTH } from '../config';
+import { DRAGON_ALTITUDE, DRAGON_HOVER_OFFSET, DRAGON_TURN_PAST } from '../config';
 import { clamp } from '../utils/math';
+import { worldWidth } from './battlefield';
 
 /**
  * Dragon flight as pure functions (objects/dragon/DragonEnemy.ts uses them): where it hovers, which side of its target
@@ -15,7 +16,7 @@ export type HoverSide = 1 | -1;
 
 /** Where the dragon wants to hover: `offset` (default DRAGON_HOVER_OFFSET) from its target on `side`, inside the world. */
 export const hoverX = (targetX: number, offset = DRAGON_HOVER_OFFSET, side: HoverSide = 1): number =>
-  clamp(targetX + side * Math.max(MIN_HOVER_GAP, offset), EDGE_MARGIN, WORLD_WIDTH - EDGE_MARGIN);
+  clamp(targetX + side * Math.max(MIN_HOVER_GAP, offset), EDGE_MARGIN, worldWidth() - EDGE_MARGIN);
 
 /** Whether there is room to hover on `side` of the target (the world's edge doesn't push it too close or past). */
 const fits = (targetX: number, offset: number, side: HoverSide): boolean =>

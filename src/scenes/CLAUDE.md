@@ -25,8 +25,8 @@ everything under `ctx.root` on each switch. Scenes never touch the DOM: they cal
   `handlers.viewBattlefield` → `BattleControls.viewBattlefield`; Esc or "Back to results" at the top returns): after a win
   the bowman walks again without shooting (`WalkingInput`), after a loss the keys move the camera (`BattleCamera.pan`,
   `CAMERA_LOOK.panSpeed`); Space doesn't act on the hidden card.
-  `players` / `PlayerControl.ts`: see net/CLAUDE.md. Follows the bowman across `WORLD_WIDTH` (centred,
-  `centeredCameraX(width, WORLD_WIDTH)`, in a wider view); scrolls `world` by `cameraX`.
+  `players` / `PlayerControl.ts`: see net/CLAUDE.md. Follows the bowman across `worldWidth()` (centred,
+  `centeredCameraX(width, worldWidth())`, in a wider view); scrolls `world` by `cameraX`.
 - **Aim camera** (`core/camera.ts`, pure): while the local player draws, `GameScene.updateAim` simulates the shot every
   frame; `aimLookAhead` ignores a landing within `CAMERA_LOOK.deadZone` of the view, then slides up to the bowman
   `CAMERA_LOOK.edgeMargin` from the edge, eased (`CAMERA_LOOK.aimMs`); only slides further out unless he aims the other way

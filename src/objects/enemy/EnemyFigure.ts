@@ -1,5 +1,5 @@
 import { Graphics } from 'pixi.js';
-import { KAMIKAZE_GIB_FORCE, PLAYER_TOWER_X, WORLD_WIDTH } from '../../config';
+import { KAMIKAZE_GIB_FORCE, PLAYER_TOWER_X } from '../../config';
 import { toArcherLocalAngle } from '../../rendering/archer';
 import { MARCH_STRIDE_PER_RADIAN, WALK_STRIDE_PER_RADIAN } from '../../rendering/stickman';
 import { RUN_STRIDE_PER_RADIAN } from '../../rendering/runCycle';
@@ -19,13 +19,20 @@ import type { Vec2 } from '../../types';
 import type Enemy from './Enemy';
 import { torsoOf } from '../../systems/bodyHitShape';
 import { KNOCKDOWN_LIE_MS, fallProgress, startFallState, stepFall, type FallState } from './enemyFall';
+import { worldWidth } from '../../systems/battlefield';
 
 /** Body sprite scale (x is mirrored by facing). */
 export const BODY_SCALE = { x: 0.5, y: 0.52 };
 const BODY_ORIGIN_Y = -25;
 /** Pushed or thrown enemies stay this far inside the world and out of the player's keep. */
 const PUSH_MARGIN = 30;
-export const FIELD = { min: PLAYER_TOWER_X + PUSH_MARGIN, max: WORLD_WIDTH - PUSH_MARGIN } as const;
+export const FIELD = {
+  min: PLAYER_TOWER_X + PUSH_MARGIN,
+  /** Follows the level's battlefield (shorter in survival). */
+  get max(): number {
+    return worldWidth() - PUSH_MARGIN;
+  },
+};
 /** Explosive kills throw the pieces with a random force in this range (the lab uses 1). */
 const GIB_FORCE_MIN = 1;
 const GIB_FORCE_MAX = 1.7;

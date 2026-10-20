@@ -1,6 +1,7 @@
 import { Graphics, type Container } from 'pixi.js';
-import { ENEMY_TOWER_X, GAME_WIDTH, MAX_VIEW_WIDTH, SANDSTORM, SCENERY_MARGIN, VIEW_BOTTOM, VIEW_TOP, WORLD_WIDTH } from '../config';
+import { GAME_WIDTH, MAX_VIEW_WIDTH, SANDSTORM, SCENERY_MARGIN, VIEW_BOTTOM, VIEW_TOP } from '../config';
 import { groundAt } from '../systems/terrain';
+import { enemyKeepX, worldWidth } from '../systems/battlefield';
 
 type Grain = { x: number; y: number; length: number; speed: number; phase: number };
 
@@ -30,8 +31,8 @@ export class Sand {
     this.grains.y = -VIEW_TOP;
     container.addChild(this.haze, this.grains);
     this.flecks = Array.from({ length: Math.round(SANDSTORM.grains * MAX_VIEW_WIDTH / GAME_WIDTH) }, () => Sand.newGrain());
-    for (let x = -SCENERY_MARGIN; x < WORLD_WIDTH + SCENERY_MARGIN; x += HAZE_STEP) {
-      const far = Math.max(0, Math.min(1, (x - SANDSTORM.hazeFrom) / (ENEMY_TOWER_X - SANDSTORM.hazeFrom)));
+    for (let x = -SCENERY_MARGIN; x < worldWidth() + SCENERY_MARGIN; x += HAZE_STEP) {
+      const far = Math.max(0, Math.min(1, (x - SANDSTORM.hazeFrom) / (enemyKeepX() - SANDSTORM.hazeFrom)));
       const alpha = SANDSTORM.haze + SANDSTORM.farHaze * far * far * (3 - 2 * far);
       this.haze.rect(x, VIEW_TOP, HAZE_STEP + 1, VIEW_BOTTOM - VIEW_TOP).fill({ color: HAZE_COLOR, alpha });
     }

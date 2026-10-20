@@ -108,6 +108,9 @@ hit the bowman (not dead) or a soldier, or the keep while he hides, never enemie
 `LIGHTNING_WARNING_MS` first. `CombatSystem.lightningStrike`: `LIGHTNING_DAMAGE` within `LIGHTNING_RADIUS` (cause
 `'lightning'`); the bowman is safe in the keep.
 
+## Battlefield (`battlefield.ts`)
+`worldWidth()` / `enemyKeepX()`: the level's field, `WORLD_WIDTH` or `SURVIVAL_WORLD_WIDTH` (GameScene's `useBattlefield`).
+
 ## Terrain (`terrain.ts`)
 `groundAt(x)`: waves of `TERRAIN_AMPLITUDE` around `GROUND_Y`, flat at both keeps. Use it, not `GROUND_Y`, for anything
 touching the ground.

@@ -1,6 +1,6 @@
 import { shownDamage } from '../rendering/damagePopup';
 import type { Container } from 'pixi.js';
-import { WORLD_WIDTH } from '../config';
+
 import type { DifficultyLevel, WavePacing } from '../data/difficulty';
 import { getEnemyStats } from '../data/enemies';
 import { ENEMY_KINDS, isFlyingType } from '../data/enemyKinds';
@@ -13,9 +13,10 @@ import type { Foe } from '../systems/CombatSystem';
 import { SurvivalDirector } from '../systems/survivalWaves';
 import { WaveDirector } from '../systems/waveDirector';
 import type { EnemyType } from '../types';
+import { worldWidth } from '../systems/battlefield';
 
 /** Enemies come in from beyond the right edge of the battlefield (out of view), past the enemy keep. */
-const ENEMY_SPAWN_X = WORLD_WIDTH + 60;
+const enemySpawnX = (): number => worldWidth() + 60;
 
 /** What a level sends: set counts (battle) or as many as survivalWaves decides of some kinds for a while (survival). */
 export type LevelEnemies =
@@ -118,8 +119,8 @@ export class BattleEnemies {
   public spawn(type: EnemyType, place?: SpawnPlace): Foe {
     const stats = getEnemyStats(type, 1);
     const enemy = isFlyingType(type)
-      ? new DragonEnemy(ENEMY_SPAWN_X, stats.health, stats.speed, type)
-      : new Enemy(place?.x ?? ENEMY_SPAWN_X, stats.health, stats.speed, 'bowman', type);
+      ? new DragonEnemy(enemySpawnX(), stats.health, stats.speed, type)
+      : new Enemy(place?.x ?? enemySpawnX(), stats.health, stats.speed, 'bowman', type);
     enemy.visible = this.visible;
     this.list.push(enemy);
     this.spawned += 1;

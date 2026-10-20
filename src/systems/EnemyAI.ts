@@ -7,7 +7,6 @@ import {
   DRAGON_TURBULENCE_SPREAD,
   ENEMY_ARROW_POWER,
   ENEMY_ATTACK,
-  ENEMY_TOWER_X,
   EXPLOSION_RADIUS,
   FIRE_DRAGON_RANGE,
   GROUND_Y,
@@ -15,7 +14,6 @@ import {
   PRIEST_POST_SLACK,
   REGEN,
   SHOW_HITBOX_DEBUG,
-  WORLD_WIDTH,
 } from '../config';
 import type { EnemyEdge } from '../data/difficulty';
 import { enemyDamage, rollDamage } from '../data/enemies';
@@ -41,6 +39,7 @@ import type { EffectsSystem } from './EffectsSystem';
 import { meleeBlow } from './AllyAI';
 import { nearestExposedBowman, nearestMeleeTarget } from './targeting';
 import { groundAt } from './terrain';
+import { enemyKeepX, worldWidth } from './battlefield';
 
 const MELEE_REACH = 25;
 const TOWER_ATTACK_REACH = 40;
@@ -178,7 +177,7 @@ export class EnemyAI {
     if (banners && !enemyArchetype(enemy.kind).detonates) {
       // Banners: a carrier takes his banner home, the one sent for a fallen banner goes to pick it up, the rest go
       // for the soldier carrying ours off (kamikazes keep to their own business).
-      const goal = banners.carriedBy(enemy) ? ENEMY_TOWER_X : banners.fetchX(enemy);
+      const goal = banners.carriedBy(enemy) ? enemyKeepX() : banners.fetchX(enemy);
       if (goal !== undefined) {
         this.walkOnGuard(enemy, goal, deltaMs);
         return;
@@ -227,7 +226,7 @@ export class EnemyAI {
     const dodge = this.heedBombs(enemy, bowman ? enemy.x >= bowman.x : true, deltaMs);
     if (dodge.kind !== 'free') {
       // Getting away from a kamikaze's blast (or waiting a moment before coming back): no attacking meanwhile.
-      const toX = dodge.kind === 'flee' ? Math.min(WORLD_WIDTH, Math.max(playerTower.x + keepReach, dodge.toX)) : enemy.x;
+      const toX = dodge.kind === 'flee' ? Math.min(worldWidth(), Math.max(playerTower.x + keepReach, dodge.toX)) : enemy.x;
       enemy.update(deltaMs, { x: toX, y: groundAt(toX) }, 2);
       enemy.updateAnimation(deltaMs, enemy.isMoving());
       this.drawDebugHitboxes(enemy);
@@ -297,7 +296,7 @@ export class EnemyAI {
     const meleeReach = enemy.reach?.bowman ?? MELEE_REACH;
     const dodge = this.heedBombs(enemy, enemy.x >= ally.x, deltaMs);
     if (dodge.kind !== 'free') {
-      const toX = dodge.kind === 'flee' ? Math.min(WORLD_WIDTH, Math.max(this.world.playerTower.x, dodge.toX)) : enemy.x;
+      const toX = dodge.kind === 'flee' ? Math.min(worldWidth(), Math.max(this.world.playerTower.x, dodge.toX)) : enemy.x;
       enemy.update(deltaMs, { x: toX, y: groundAt(toX) }, 2);
       enemy.updateAnimation(deltaMs, enemy.isMoving());
       this.drawDebugHitboxes(enemy);
@@ -408,9 +407,9 @@ export class EnemyAI {
       enemy.updateAnimation(deltaMs);
       return;
     }
-    const escapeX = WORLD_WIDTH + PRIEST_ESCAPE_BEYOND;
+    const escapeX = worldWidth() + PRIEST_ESCAPE_BEYOND;
     enemy.target = 'bowman';
-    enemy.update(deltaMs, { x: escapeX + PRIEST_POST_SLACK, y: groundAt(WORLD_WIDTH) });
+    enemy.update(deltaMs, { x: escapeX + PRIEST_POST_SLACK, y: groundAt(worldWidth()) });
     enemy.updateAnimation(deltaMs, enemy.isMoving());
     enemy.clearHitTint();
     if (enemy.x >= escapeX) {
@@ -433,10 +432,10 @@ export class EnemyAI {
     const others = this.world.enemies.filter((other) => other !== priest && other.isAlive() && !enemyArchetype(other.kind).heals && !enemyArchetype(other.kind).buffs);
     const soldiers = others.filter((other) => !(other instanceof DragonEnemy)).map((other) => other.x);
     const escaping = others.length === 0 && !this.world.reinforcementsDue();
-    const escapeX = WORLD_WIDTH + PRIEST_ESCAPE_BEYOND;
-    const retreatX = escaping ? escapeX + PRIEST_POST_SLACK : ENEMY_TOWER_X;
+    const escapeX = worldWidth() + PRIEST_ESCAPE_BEYOND;
+    const retreatX = escaping ? escapeX + PRIEST_POST_SLACK : enemyKeepX();
     const post = priestPost(priest.x, soldiers, bowman ? bowman.x : this.world.playerTower.x, retreatX);
-    priest.update(deltaMs, { x: post, y: groundAt(Math.min(post, WORLD_WIDTH)) }, PRIEST_POST_SLACK);
+    priest.update(deltaMs, { x: post, y: groundAt(Math.min(post, worldWidth())) }, PRIEST_POST_SLACK);
     priest.updateAnimation(deltaMs, priest.isMoving());
     if (escaping && priest.x >= escapeX) {
       priest.escape();

@@ -1,4 +1,5 @@
-import { ALLIES, ENEMY_TOWER_X } from '../config';
+import { ALLIES } from '../config';
+import { enemyKeepX } from './battlefield';
 
 /**
  * What the player's soldiers are told (pure, tested; the HUD's order button, key V cycles them): hold the line in front
@@ -26,7 +27,7 @@ const ADVANCE_SHORT_OF_KEEP = 90;
  * the one before, so they don't stand in each other.
  */
 export const orderPost = (order: AllyOrder, rank = 0): number => {
-  const front = order === 'hold' ? ALLIES.holdX : order === 'retreat' ? ALLIES.retreatX : ENEMY_TOWER_X - ADVANCE_SHORT_OF_KEEP;
+  const front = order === 'hold' ? ALLIES.holdX : order === 'retreat' ? ALLIES.retreatX : enemyKeepX() - ADVANCE_SHORT_OF_KEEP;
   return front - rank * ALLIES.spacing;
 };
 

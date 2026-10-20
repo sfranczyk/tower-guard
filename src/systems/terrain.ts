@@ -1,4 +1,5 @@
-import { ENEMY_TOWER_X, GROUND_Y, PLAYER_TOWER_X, TERRAIN_AMPLITUDE } from '../config';
+import { GROUND_Y, PLAYER_TOWER_X, TERRAIN_AMPLITUDE } from '../config';
+import { enemyKeepX } from './battlefield';
 
 /**
  * The ground's surface: gentle waves around GROUND_Y, flattened at both keeps so they stand level.
@@ -21,7 +22,7 @@ const smoothstep = (t: number): number => {
 
 /** 0 on the flat ground at a keep, 1 out in the field. */
 const flatness = (x: number): number => {
-  const nearestKeep = Math.min(Math.abs(x - PLAYER_TOWER_X), Math.abs(x - ENEMY_TOWER_X));
+  const nearestKeep = Math.min(Math.abs(x - PLAYER_TOWER_X), Math.abs(x - enemyKeepX()));
   return smoothstep((nearestKeep - FLAT_RADIUS) / (BLEND_RADIUS - FLAT_RADIUS));
 };
 

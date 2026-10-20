@@ -1,9 +1,10 @@
 import { Graphics } from 'pixi.js';
-import { BACKDROP_WIDTH, MOUNTAIN_MIST, VIEW_BOTTOM, WORLD_WIDTH } from '../config';
+import { BACKDROP_WIDTH, MOUNTAIN_MIST, VIEW_BOTTOM } from '../config';
 import type { Battleground } from '../data/battlegrounds';
 import { groundAt } from '../systems/terrain';
 import { treeDesign } from './designs/treeDesigns';
 import { meadowTreeAt } from './meadowTrees';
+import { worldWidth } from '../systems/battlefield';
 
 /** Far and near hills (or lower, smoother dunes) between the sky and the ground, one BACKDROP_WIDTH stretch (Background repeats it). */
 export const drawHills = ({ hills: [far, near], hillShape, sky }: Battleground): Graphics => {
@@ -116,7 +117,7 @@ const drawCactus = (graphics: Graphics, x: number, height: number, colors: reado
  * The row of trees (round, pine) or sparse cacti standing on the horizon, from x `left` to `right`, each on the ground
  * where it stands (`groundAt`: in a dip it stands lower, on a rise its foot is behind the ground).
  */
-export const drawVegetation = ({ trees }: Battleground, left = 0, right = WORLD_WIDTH): Graphics => {
+export const drawVegetation = ({ trees }: Battleground, left = 0, right = worldWidth()): Graphics => {
   const forest = new Graphics();
   const [main, light, dark] = trees.colors;
   if (trees.style === 'cactus') {

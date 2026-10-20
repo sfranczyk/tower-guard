@@ -1,7 +1,8 @@
-import { FIRE_DRAGON_STRAFE, WORLD_WIDTH } from '../config';
+import { FIRE_DRAGON_STRAFE } from '../config';
 import { FIRE_BREATH, FIRE_REACH } from '../rendering/dragonFire';
 import { clamp } from '../utils/math';
 import type { HoverSide } from './dragonFlight';
+import { worldWidth } from './battlefield';
 
 /**
  * The fire dragon's strafing run, as geometry (pure; systems/dragonManoeuvre.ts flies it): where it starts and how
@@ -77,7 +78,7 @@ export const strafeDistance = (reach: number): number => reach + runDistance(FIR
  * side it may go up to edgeOut past the world's edge.
  */
 export const strafeStartX = (targetX: number, side: HoverSide, reach: number): number =>
-  clamp(unclampedStartX(targetX, side, reach), -FIRE_DRAGON_STRAFE.edgeOut, WORLD_WIDTH - EDGE_MARGIN);
+  clamp(unclampedStartX(targetX, side, reach), -FIRE_DRAGON_STRAFE.edgeOut, worldWidth() - EDGE_MARGIN);
 
 const unclampedStartX = (targetX: number, side: HoverSide, reach: number): number => targetX + side * strafeDistance(reach);
 
@@ -126,7 +127,7 @@ export const lurkStep = (strafe: StrafeState, dragonX: number, targetX: number, 
 /** Flying at `vx` it has to brake now not to stop past edgeOut beyond the world's edge (or the far edge's margin). */
 export const nearWorldEdge = (x: number, vx: number): boolean => {
   const stopsAt = x + (vx * Math.abs(vx)) / (2 * Math.max(1, FIRE_DRAGON_STRAFE.accel));
-  return stopsAt < -FIRE_DRAGON_STRAFE.edgeOut || stopsAt > WORLD_WIDTH - EDGE_MARGIN;
+  return stopsAt < -FIRE_DRAGON_STRAFE.edgeOut || stopsAt > worldWidth() - EDGE_MARGIN;
 };
 
 /** The pass is over: the dragon (at `dragonX`) is passBeyond past its target and has stopped pouring fire. */

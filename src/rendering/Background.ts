@@ -1,10 +1,11 @@
 import { Graphics, type Container } from 'pixi.js';
-import { BACKDROP_WIDTH, GAME_HEIGHT, GROUND_Y, SCENERY_MARGIN, VIEW_BOTTOM, VIEW_TOP, WORLD_WIDTH } from '../config';
+import { BACKDROP_WIDTH, GAME_HEIGHT, GROUND_Y, SCENERY_MARGIN, VIEW_BOTTOM, VIEW_TOP } from '../config';
 import type { Battleground } from '../data/battlegrounds';
 import { layoutClouds, mixColor, type CloudLayer, type CloudShape } from './clouds';
 import { drawHills, drawVegetation } from './landscape';
 import { groundAt, useTerrain } from '../systems/terrain';
 import { NightSky } from './NightSky';
+import { worldWidth } from '../systems/battlefield';
 
 
 type Cloud = {
@@ -30,7 +31,7 @@ export interface CloudSpot {
 
 /**
  * Sky, sun, hills (or dunes), trees, drifting clouds (by weather) and the ground strip of a battleground, across
- * `width` (the battlefield, WORLD_WIDTH, or BACKDROP_WIDTH behind menus) plus SCENERY_MARGIN on both sides.
+ * `width` (the battlefield, worldWidth(), or BACKDROP_WIDTH behind menus) plus SCENERY_MARGIN on both sides.
  */
 export class Background {
   private readonly clouds: Cloud[];
@@ -39,7 +40,7 @@ export class Background {
   /** Maps where night falls (`nightCycle`): moon, dawn and sunrise (rendering/NightSky.ts). */
   public readonly night?: NightSky;
 
-  public constructor(container: Container, battleground: Battleground, width = WORLD_WIDTH) {
+  public constructor(container: Container, battleground: Battleground, width = worldWidth()) {
     this.left = -SCENERY_MARGIN;
     this.right = width + SCENERY_MARGIN;
     const sceneryWidth = this.right - this.left;

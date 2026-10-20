@@ -18,8 +18,12 @@ export const VIEW_TOP = VIEW_BOTTOM - GAME_HEIGHT;
 export const MAX_VIEW_SCALE = 1.4;
 /** Upper limit of the renderer resolution (backing pixels per game px) for big windows and browser zoom. */
 export const MAX_RENDER_RESOLUTION = 4;
-/** The battlefield, keep to keep (independent of the view width); the camera follows the bowman across it. */
+/**
+ * The battlefield of a battle level, keep to keep (independent of the view width); the camera follows the bowman across
+ * it. A survival level is shorter (SURVIVAL_WORLD_WIDTH). At run time ask systems/battlefield.ts (`worldWidth()`).
+ */
 export const WORLD_WIDTH = 2400;
+export const SURVIVAL_WORLD_WIDTH = 1800;
 /**
  * Width of the backdrop behind menus, labs and the lobby (centred in the view), and of one stretch of the hills
  * drawing, which repeats (mirrored every other time) across the battlefield.
@@ -32,7 +36,10 @@ export const GROUND_Y = 490;
 /** The ground surface waves up and down by this much around GROUND_Y (see systems/terrain.ts). */
 export const TERRAIN_AMPLITUDE = 7;
 export const PLAYER_TOWER_X = 160;
-export const ENEMY_TOWER_X = WORLD_WIDTH - 160;
+/** The enemy keep stands this far in from the battlefield's right end (`enemyKeepX()`). */
+export const KEEP_INSET = 160;
+/** The enemy keep on a battle level's battlefield; at run time `enemyKeepX()`. */
+export const ENEMY_TOWER_X = WORLD_WIDTH - KEEP_INSET;
 export const BOWMAN_START_X = 250;
 export const BOWMAN_Y = GROUND_Y;
 

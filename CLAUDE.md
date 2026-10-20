@@ -43,7 +43,8 @@ src/
 - **Scenes** never touch the DOM: they call `DomUi` and assign `ui.handlers.*`. Only menus, the settings drawer and the
   end screen overlay the canvas; the HUD sits outside it.
 - **Coordinates**: the view is `viewWidth()`×`GAME_HEIGHT` (590, world y `VIEW_TOP`..`VIEW_BOTTOM`; never use `GAME_WIDTH` for anything spanning the screen), the
-  battlefield `WORLD_WIDTH` (2400; keeps at `PLAYER_TOWER_X` / `ENEMY_TOWER_X`). Anything touching the ground uses
+  battlefield `worldWidth()` (`systems/battlefield.ts`: 2400 in battle, 1800 in survival; keeps at `PLAYER_TOWER_X` /
+  `enemyKeepX()`, never the `WORLD_WIDTH` / `ENEMY_TOWER_X` defaults at run time). Anything touching the ground uses
   `groundAt(x)`, not `GROUND_Y`.
 - **Flight**: one ballistics (`systems/ballistics.ts`) for arrows, the trajectory preview, the aim camera and enemy aim.
 - **Enemies** are entries in `data/enemyKinds.ts`; gameplay asks `enemyArchetype(type)` / `enemyTraits(type)`, never

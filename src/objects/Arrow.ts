@@ -1,11 +1,12 @@
 import { Graphics, Sprite, Texture } from 'pixi.js';
-import { ARROWS, VIEW_BOTTOM, SCENERY_MARGIN, WORLD_WIDTH } from '../config';
+import { ARROWS, VIEW_BOTTOM, SCENERY_MARGIN } from '../config';
 import { DEFAULT_AIM_COLORS } from '../data/battlegrounds';
 import { flightParams } from '../data/projectiles';
 import type { ArrowMishap } from '../systems/weatherArrows';
 import { advanceProjectile, type FlightParams } from '../systems/ballistics';
 import type { BodyAnchor } from '../systems/bodyAnchor';
 import type { EnemyType, ProjectileType, Vec2 } from '../types';
+import { worldWidth } from '../systems/battlefield';
 
 /** Something an arrow can be pinned to that moves and changes pose (an enemy). */
 export interface AnchorTarget {
@@ -130,7 +131,7 @@ export default class Arrow extends Sprite {
 
     // Off the drawn landscape (wide views show past the world's ends).
     const margin = 48;
-    if (this.x < -SCENERY_MARGIN || this.x > WORLD_WIDTH + SCENERY_MARGIN || this.y > VIEW_BOTTOM + margin) {
+    if (this.x < -SCENERY_MARGIN || this.x > worldWidth() + SCENERY_MARGIN || this.y > VIEW_BOTTOM + margin) {
       this.deactivate();
     }
   }

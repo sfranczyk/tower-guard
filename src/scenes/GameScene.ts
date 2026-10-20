@@ -2,12 +2,13 @@ import { Container, Graphics } from 'pixi.js';
 import {
   ARROWS,
   ENEMY_KEEP_HEALTH,
-  ENEMY_TOWER_X,
   GROUND_Y,
   MIN_SHOT_POWER,
   PLAYER_TOWER_X,
   SHOW_HITBOX_DEBUG,
   SNOW_WIND_DRIFT,
+  SURVIVAL_WORLD_WIDTH,
+  WORLD_WIDTH,
 } from '../config';
 import type { SoundId } from '../audio/SoundManager';
 import { spatialMix } from '../audio/spatial';
@@ -49,6 +50,7 @@ import type Enemy from '../objects/enemy/Enemy';
 import DragonEnemy from '../objects/dragon/DragonEnemy';
 import { ALLY_ORDER_LABELS } from '../systems/allyOrders';
 import type { Vec2 } from '../types';
+import { enemyKeepX, useBattlefield } from '../systems/battlefield';
 
 /**
  * One level of a sandbox run: the bowman defends the left keep on the level's battleground. Clearing
@@ -109,6 +111,8 @@ export class GameScene extends Scene {
     super(ctx);
     const { sandbox, run } = ctx.session;
     this.survivalSetup = survivalLevel(sandbox, run.levelIndex);
+    // Before anything is laid out on it: a survival level's field is shorter (host and guest build the same).
+    useBattlefield(this.survivalSetup ? SURVIVAL_WORLD_WIDTH : WORLD_WIDTH);
     this.battleground = BATTLEGROUNDS[runBattleground(sandbox, run.levelIndex)];
     this.role = ctx.session.net?.role ?? 'solo';
     this.localIndex = ctx.session.net?.localIndex ?? 0;
@@ -182,7 +186,7 @@ export class GameScene extends Scene {
     const towers = this.ctx.session.playerCount;
     this.playerTower = new Tower(PLAYER_TOWER_X, GROUND_Y, { hillColor, enemy: false, towers }, sandbox.keepHealth, run.keepHealth);
     // Survival: the enemy has no keep (they come from beyond the field).
-    this.enemyTower = new Tower(ENEMY_TOWER_X, GROUND_Y, { hillColor, enemy: true, absent: !!this.survivalSetup }, ENEMY_KEEP_HEALTH, run.enemyKeepHealth);
+    this.enemyTower = new Tower(enemyKeepX(), GROUND_Y, { hillColor, enemy: true, absent: !!this.survivalSetup }, ENEMY_KEEP_HEALTH, run.enemyKeepHealth);
     if (this.survivalSetup) {
       this.survival = new BattleSurvival(this.survivalSetup, this.background);
       this.relief = new BattleRelief(this.world);
@@ -435,6 +439,7 @@ export class GameScene extends Scene {
   public exit(): void {
     super.exit();
     this.controls?.destroy();
+    useBattlefield();
   }
 
   /** Panned and faded by where it happens relative to the camera (co-op host: the guest hears it too). */
