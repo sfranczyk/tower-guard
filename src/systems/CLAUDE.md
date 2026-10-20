@@ -45,7 +45,7 @@ groups of `DIFFICULTY_SCALE.groupSize` (kinds together, `groupByKind`), `groupSp
 ## Survival (`survivalWaves.ts`, `nightCycle.ts`, pure, tested; tuning `SURVIVAL`)
 `SurvivalDirector` (BattleEnemies in survival): a wave every `waveEveryMs` (or `clearedDelayMs` after the field is
 cleared), `survivalWaveSize` growing up to the difficulty's `*PeakWave` then flat ± `sizeJitter`, × level and difficulty;
-kinds by `arrival` (`kindsArrived`) around a lead kind (`pickLead`, `drawWave` `leadShare`); levels over `finaleMinMs`
+kinds by `arrival` (`kindsArrived`) around a lead kind (`pickLead`, never a healer or shaman; `drawWave` `leadShare`); levels over `finaleMinMs`
 end with a finale (× `finaleScale`) `finaleAtMs` before the end, nothing after; at most `maxAlive` standing. `nightSky(progress)`: moon, stars, dawn/day weights, shade, `sunRise`. Time up: `Enemy`/`DragonEnemy.flee`,
 `EnemyAI.runOff` (off the right edge, `escape`).
 

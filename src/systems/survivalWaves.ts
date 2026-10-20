@@ -1,5 +1,5 @@
 import { SURVIVAL } from '../config';
-import { ENEMY_KINDS } from '../data/enemyKinds';
+import { ENEMY_KINDS, enemyArchetype } from '../data/enemyKinds';
 import type { DifficultyLevel, WavePacing } from '../data/difficulty';
 import type { EnemyType } from '../types';
 import { groupByKind } from './waveDirector';
@@ -51,11 +51,15 @@ export const drawWave = (kinds: readonly EnemyType[], size: number, random: () =
   return [...Array<EnemyType>(leading).fill(lead!), ...rest];
 };
 
+/** Supporters (healers, shamans) only back the others up: a wave of them alone makes no sense. */
+const canLead = (kind: EnemyType): boolean => !enemyArchetype(kind).heals && !enemyArchetype(kind).buffs;
+
 /**
  * A wave's lead kind: a kind that hasn't led yet (just arrived; the earliest first), else one drawn by weight, never
- * `previous` when there is another.
+ * `previous` when there is another; never a supporter (none if only supporters came).
  */
-export const pickLead = (kinds: readonly EnemyType[], previous: EnemyType | undefined, led: ReadonlySet<EnemyType>, random: () => number): EnemyType | undefined => {
+export const pickLead = (arrived: readonly EnemyType[], previous: EnemyType | undefined, led: ReadonlySet<EnemyType>, random: () => number): EnemyType | undefined => {
+  const kinds = arrived.filter(canLead);
   const fresh = kinds.filter((kind) => !led.has(kind)).sort((a, b) => ENEMY_KINDS[a].arrival - ENEMY_KINDS[b].arrival);
   if (fresh.length > 0) {
     return fresh[0];

@@ -32,6 +32,8 @@ describe('survival waves', () => {
     expect(pickLead(['raider', 'tank'], 'raider', new Set(['raider']), () => 0)).toBe('tank');
     expect(pickLead(['raider', 'tank'], 'tank', new Set(['raider', 'tank']), () => 0.99)).toBe('raider');
     expect(pickLead(['raider'], 'raider', new Set(['raider']), Math.random)).toBe('raider');
+    expect(pickLead(['priest', 'shaman', 'raider'], undefined, new Set(), () => 0)).toBe('raider');
+    expect(pickLead(['priest', 'shaman'], undefined, new Set(), () => 0)).toBeUndefined();
   });
 
   it('send the next wave SURVIVAL.clearedDelayMs after the field is cleared', () => {
