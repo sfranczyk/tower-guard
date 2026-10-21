@@ -320,7 +320,7 @@ export const ENEMY_KINDS: Readonly<Record<UnitType, EnemyKind>> = {
   // kamikazes' bombs bigger and mends the undead (systems/shamanBuffs.ts).
   shaman: {
     label: 'Goblin shaman', archetype: 'shaman', race: 'goblin', magical: true, arrival: 0.25, threat: 1.5,
-    stats: { health: 30, speed: 25 }, damage: { melee: [0, 0] }, build: { size: 0.9, strikeReach: 0 },
+    stats: { health: 30, speed: 23 }, damage: { melee: [0, 0] }, build: { size: 0.9, strikeReach: 0 },
   },
   // The player's soldiers (`side: 'ally'`, summoned from beyond the left edge, scenes/BattleAllies.ts). `damage` is
   // what their blows deal to the enemies. A squire is a raider's match: cheap, quick and soon down.
