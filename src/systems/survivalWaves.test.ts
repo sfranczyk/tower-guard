@@ -49,14 +49,23 @@ describe('survival waves', () => {
     expect(run(director, waveAt - 20_000 - 1_000)).toBeGreaterThan(0);
   });
 
-  it('end long levels with a big finale and nothing after it', () => {
+  it('end long levels with a big finale, after it new waves only once the field is cleared', () => {
     const duration = SURVIVAL.finaleMinMs + 60_000;
     const director = new SurvivalDirector(['raider'], duration, { levelIndex: 0, difficulty: 'medium', pacing: wavePacing('medium'), random: () => 0.5 });
     const busy = () => 1; // no early waves
     run(director, duration - SURVIVAL.finaleAtMs - 100, busy);
     const finale = run(director, 30_000, busy);
     expect(finale).toBeGreaterThanOrEqual(survivalWaveSize(99, 0, 'medium', SURVIVAL.finaleScale));
-    expect(run(director, SURVIVAL.finaleAtMs - 30_000, busy)).toBe(0);
+    expect(run(director, SURVIVAL.finaleAtMs - 60_000, busy)).toBe(0);
+    // Finale beaten with a minute to go: the field doesn't stay empty until dawn.
+    expect(run(director, SURVIVAL.clearedDelayMs + 1_000)).toBeGreaterThan(0);
+  });
+
+  it('send nothing new in the last SURVIVAL.quietEndMs', () => {
+    const duration = SURVIVAL.finaleMinMs + 60_000;
+    const director = new SurvivalDirector(['raider'], duration, { levelIndex: 0, difficulty: 'medium', pacing: wavePacing('medium') });
+    run(director, duration - SURVIVAL.quietEndMs + 100);
+    expect(run(director, SURVIVAL.quietEndMs)).toBe(0);
   });
 
   it('bring tougher kinds only once their time has come', () => {

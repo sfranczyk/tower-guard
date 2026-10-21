@@ -46,7 +46,7 @@ groups of `DIFFICULTY_SCALE.groupSize` (kinds together, `groupByKind`), `groupSp
 `SurvivalDirector` (BattleEnemies in survival): waves `survivalWaveGap` apart (25, 35, then 45 s: `waveEveryMs`, `waveGapStepMs`, `maxWaveEveryMs`; or `clearedDelayMs` after the field is
 cleared), `survivalWaveSize` growing up to the difficulty's `*PeakWave` then flat ± `sizeJitter`, × level and difficulty;
 kinds by `arrival` (`kindsArrived`) around a lead kind (`pickLead`, never a healer or shaman; `drawWave` `leadShare`); levels over `finaleMinMs`
-end with a finale (× `finaleScale`) `finaleAtMs` before the end, nothing after; at most `maxAlive` standing. `nightSky(progress)`: moon, stars, dawn/day weights, shade, `sunRise`. Time up: `Enemy`/`DragonEnemy.flee`,
+end with a finale (× `finaleScale`) `finaleAtMs` before the end, after it waves only when the field is cleared; none in the last `quietEndMs`; at most `maxAlive` standing. `nightSky(progress)`: moon, stars, dawn/day weights, shade, `sunRise`. Time up: `Enemy`/`DragonEnemy.flee`,
 `EnemyAI.runOff` (off the right edge, `escape`).
 
 ## Arrow flight (`ballistics.ts`)
