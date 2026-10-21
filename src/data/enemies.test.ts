@@ -4,7 +4,7 @@ import { rollArrowDamage, ENEMY_DAMAGE, ENEMY_LOOKS, enemyDamage, blowsApart, ex
 
 describe('getEnemyStats', () => {
   it('returns base stats at difficulty 1', () => {
-    expect(getEnemyStats('raider', 1)).toEqual({ health: 29, speed: 22 });
+    expect(getEnemyStats('raider', 1)).toEqual({ health: 29, speed: 26 });
   });
 
   it('makes fast enemies quicker and frailer, tanks slower and tougher', () => {
@@ -20,7 +20,7 @@ describe('getEnemyStats', () => {
   it('scales with difficulty and rounds health', () => {
     const stats = getEnemyStats('raider', 1.35);
     expect(stats.health).toBe(Math.round(29 * 1.35));
-    expect(stats.speed).toBeCloseTo(22 * 1.35);
+    expect(stats.speed).toBeCloseTo(26 * 1.35);
   });
 });
 

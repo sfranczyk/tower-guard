@@ -232,7 +232,7 @@ export interface EnemyKind {
 export const ENEMY_KINDS: Readonly<Record<UnitType, EnemyKind>> = {
   raider: {
     label: 'Raider', archetype: 'fighter', race: 'human', magical: false, arrival: 0, threat: 1,
-    stats: { health: 29, speed: 22 }, damage: { melee: [6, 10] }, build: { size: 1, strikeReach: 55 },
+    stats: { health: 29, speed: 26 }, damage: { melee: [6, 10] }, build: { size: 1, strikeReach: 55 },
   },
   // Goblins, three quarters of a man's height.
   fast: {
@@ -242,13 +242,13 @@ export const ENEMY_KINDS: Readonly<Record<UnitType, EnemyKind>> = {
   // Ogres stand half again as tall: their long club is hard to step away from.
   tank: {
     label: 'Ogre brute', archetype: 'heavy', race: 'ogre', magical: false, arrival: 0.3, threat: 2.5,
-    stats: { health: 90, speed: ENEMY_SPEED * 0.5 }, damage: { melee: [14, 22] }, keepDamage: { melee: 2 }, build: { size: 1.5, strikeReach: 85 },
+    stats: { health: 90, speed: 18 }, damage: { melee: [14, 22] }, keepDamage: { melee: 2 }, build: { size: 1.5, strikeReach: 85 },
   },
   // A troll: taller and slower than the brute, with long arms and a stone club. Its wounds close (REGEN): set it alight
   // to stop that, then finish it while it burns.
   troll: {
     label: 'Troll', archetype: 'heavy', race: 'ogre', magical: false, arrival: 0.4, threat: 5, boss: { escorts: 'nonHumans' }, regenerates: true,
-    stats: { health: 100, speed: 14 }, damage: { melee: [16, 24] }, keepDamage: { melee: 2 }, build: { size: 1.6, strikeReach: 90 },
+    stats: { health: 100, speed: 15 }, damage: { melee: [16, 24] }, keepDamage: { melee: 2 }, build: { size: 1.6, strikeReach: 90 },
     traits: { burnFactor: TROLL_BURN_FACTOR },
   },
   // Fragile, keeps its distance and shoots.
@@ -290,13 +290,13 @@ export const ENEMY_KINDS: Readonly<Record<UnitType, EnemyKind>> = {
   knight: {
     label: 'Black knight', archetype: 'fighter', race: 'human', magical: false, arrival: 0.2, threat: 1.5, armor: KNIGHT_ARMOR,
     attackStyles: ['overhead', 'swordRise', 'thrust'],
-    stats: { health: 40, speed: 20 }, damage: { melee: [9, 14] }, build: { size: 1, strikeReach: 60, walkStyle: 'march' },
+    stats: { health: 40, speed: 24 }, damage: { melee: [9, 14] }, build: { size: 1, strikeReach: 60, walkStyle: 'march' },
     traits: { mass: 1.9 },
   },
   // A head taller, in the same black plate, with a war hammer in both hands.
   heavyKnight: {
     label: 'Heavy knight', archetype: 'heavy', race: 'human', magical: false, arrival: 0.35, threat: 2.5, armor: KNIGHT_ARMOR,
-    stats: { health: 60, speed: 18 }, damage: { melee: [16, 24] }, keepDamage: { melee: 2 }, build: { size: 1.1, strikeReach: 75, walkStyle: 'march' },
+    stats: { health: 60, speed: 20 }, damage: { melee: [16, 24] }, keepDamage: { melee: 2 }, build: { size: 1.1, strikeReach: 75, walkStyle: 'march' },
     // Trusts its plate: slower to heed a bomb.
     traits: { mass: 2.5, blastAwareness: 0.7 },
   },
@@ -314,7 +314,7 @@ export const ENEMY_KINDS: Readonly<Record<UnitType, EnemyKind>> = {
   // Frail and never attacks, but it keeps the others standing: kill it first.
   priest: {
     label: 'Dark priest', archetype: 'healer', race: 'human', magical: true, arrival: 0.15, threat: 1.5,
-    stats: { health: 20, speed: 25 }, damage: { melee: [0, 0] }, build: { size: 1, strikeReach: 0 },
+    stats: { health: 20, speed: 27 }, damage: { melee: [0, 0] }, build: { size: 1, strikeReach: 0 },
   },
   // Small and quick, never attacks: hastens the soldiers, hardens the heavies, speeds the archers' draw, makes the
   // kamikazes' bombs bigger and mends the undead (systems/shamanBuffs.ts).
