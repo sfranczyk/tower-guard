@@ -26,9 +26,9 @@ export const survivalBudget = (index: number, levelIndex: number, difficulty: Di
   return budget * coopFactor(players) * factor;
 };
 
-/** The wait after a wave that cost `budget`: gapTopMs less gapPerBudgetMs per point (bigger waves come sooner), within gapMinMs..gapMaxMs. */
+/** The wait after a wave that cost `budget`: gapBaseMs plus gapPerBudgetMs per point (bigger waves wait longer), within gapMinMs..gapMaxMs. */
 export const survivalWaveGap = (budget: number): number =>
-  Math.min(SURVIVAL.gapMaxMs, Math.max(SURVIVAL.gapMinMs, SURVIVAL.gapTopMs - SURVIVAL.gapPerBudgetMs * budget));
+  Math.min(SURVIVAL.gapMaxMs, Math.max(SURVIVAL.gapMinMs, SURVIVAL.gapBaseMs + SURVIVAL.gapPerBudgetMs * budget));
 
 /** Most enemies standing at once at `difficulty`: its `*MaxAlive` (0 = no limit), more in co-op. */
 export const maxAliveFor = (difficulty: DifficultyLevel, players: number): number => {

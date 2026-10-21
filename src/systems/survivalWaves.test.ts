@@ -42,10 +42,10 @@ describe('survival waves', () => {
     expect(pickLead(['troll'], undefined, new Set(), () => 0, false)).toBe('troll');
   });
 
-  it('wait 20-50 s after a wave: shorter after a costly one', () => {
-    expect(survivalWaveGap(0)).toBe(SURVIVAL.gapMaxMs);
-    expect(survivalWaveGap(5)).toBeLessThan(survivalWaveGap(3));
-    expect(survivalWaveGap(100)).toBe(SURVIVAL.gapMinMs);
+  it('wait 40-60 s after a wave: longer after a costly one', () => {
+    expect(survivalWaveGap(0)).toBe(SURVIVAL.gapMinMs);
+    expect(survivalWaveGap(20)).toBeGreaterThan(survivalWaveGap(10));
+    expect(survivalWaveGap(100)).toBe(SURVIVAL.gapMaxMs);
   });
 
   it('bring the next wave SURVIVAL.clearedDelayMs after the field is cleared', () => {
