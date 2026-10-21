@@ -19,47 +19,61 @@ export const WAVES = tunable('WAVES', 'Waves', {
 });
 
 /**
- * Survival mode (systems/survivalWaves.ts): the first wave after `startDelayMs`, the second `waveEveryMs` after it,
- * each next gap `waveGapStepMs` longer up to `maxWaveEveryMs`; or `clearedDelayMs` after the field is cleared if that
- * comes sooner. The n-th wave (from 0) has `firstSize + growth × n`
- * enemies until the difficulty's `*PeakWave` (1-based), the same as that one after it, × `levelGrowth` per level after
- * the first and × the difficulty's `*Scale`, each wave ± `sizeJitter`. On levels longer than `finaleMinMs` the last
- * wave (× `finaleScale`) comes `finaleAtMs` before the end, the ones in the gap before it × `preFinaleScale`;
- * nothing after it. On shorter levels no new wave in the last `quietEndMs`. Each wave has a lead kind (`leadShare` of
- * it; a kind that just arrived leads first, never the same twice running). Never more than `maxAlive` standing (the
- * rest wait). The night cycle (systems/nightCycle.ts): dawn starts at `dawnAt` of the time, the moon has set by
- * `moonSetAt`; on eclipse maps the moon crosses the sun at an even pace from the level's start to its end, covering it
- * all for `eclipseTotal` of the time halfway (which sets how much bigger than the sun it is); the diamond ring flashes
- * for `eclipseDiamond` of the time before and after the total eclipse.
+ * Survival mode (systems/survivalWaves.ts, systems/survivalRoles.ts): the first wave after `startDelayMs`; each next one
+ * `gapMs` after the last, or `gapPerBudgetMs` per point of that wave's budget when longer, at most `maxGapMs` (no
+ * shortcut when the field is cleared). Waves are sized by a threat budget (each kind's `threat` in data/enemyKinds, a
+ * raider 1): wave n (from 0) has `firstBudget + budgetGrowth × n` until the difficulty's `*PeakWave` (1-based), the
+ * same as that one after it, × `levelGrowth` per level after the first, × the difficulty's `*Scale`, × (1 +
+ * `coopBudgetPerPlayer` per extra bowman), each wave ± `sizeJitter`. On levels longer than `finaleMinMs` the last big
+ * wave (× `finaleScale`) comes `finaleAtMs` before the end, the one just before it × `preFinaleScale`. No new wave in
+ * the last `quietEndMs`. Each wave has a lead kind (`leadShare` of the budget; a kind that just arrived leads first,
+ * never the same twice running). Bosses (`boss` in data/enemyKinds) come only as a lead, from wave `bossMinWave`
+ * (1-based), never two boss waves running: `*BossMin`..`*BossMax` of them on top of the budget, with escorts of their
+ * group worth `bossEscortShare` of it (a second escort lead with `secondLeadChance`); the next gap counts each boss as
+ * its threat. Never more than `maxAlive` (+ `coopAlivePerPlayer` per extra bowman) standing (the rest wait). The night
+ * cycle (systems/nightCycle.ts): dawn starts at `dawnAt` of the time, the moon has set by `moonSetAt`; on eclipse maps
+ * the moon crosses the sun at an even pace from the level's start to its end, covering it all for `eclipseTotal` of the
+ * time halfway (which sets how much bigger than the sun it is); the diamond ring flashes for `eclipseDiamond` of the
+ * time before and after the total eclipse.
  */
 export const SURVIVAL = tunable('SURVIVAL', 'Survival', {
   startDelayMs: 3000,
-  waveEveryMs: 25000,
-  waveGapStepMs: 10000,
-  maxWaveEveryMs: 45000,
-  clearedDelayMs: 5000,
-  firstSize: 3,
-  growth: 1.5,
+  gapMs: 40000,
+  gapPerBudgetMs: 5000,
+  maxGapMs: 60000,
+  firstBudget: 3,
+  budgetGrowth: 1,
   easyPeakWave: 3,
   mediumPeakWave: 4,
   hardPeakWave: 5,
   sizeJitter: 0.2,
-  levelGrowth: 1.25,
+  levelGrowth: 1.15,
   easyScale: 0.8,
   mediumScale: 1,
   hardScale: 1.3,
+  coopBudgetPerPlayer: 0.6,
+  bossMinWave: 3,
+  easyBossMin: 1,
+  easyBossMax: 1,
+  mediumBossMin: 1,
+  mediumBossMax: 2,
+  hardBossMin: 1,
+  hardBossMax: 3,
+  bossEscortShare: 0.5,
+  secondLeadChance: 0.5,
   finaleMinMs: 240000,
   finaleAtMs: 120000,
   finaleScale: 1.5,
   preFinaleScale: 0.8,
   leadShare: 0.55,
-  maxAlive: 24,
+  maxAlive: 18,
+  coopAlivePerPlayer: 6,
   quietEndMs: 8000,
   dawnAt: 0.72,
   moonSetAt: 0.86,
   eclipseTotal: 0.06,
   eclipseDiamond: 0.02,
-});
+}, { meta: { secondLeadChance: { max: 1 }, bossEscortShare: { max: 1 }, leadShare: { max: 1 } } });
 
 /**
  * The player's soldiers (scenes/BattleAllies.ts, systems/AllyAI.ts): how many of each may stand on the field at once

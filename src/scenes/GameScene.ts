@@ -121,7 +121,7 @@ export class GameScene extends Scene {
     const { difficulty } = sandbox;
     const survival = this.survivalSetup;
     this.foes = new BattleEnemies(survival
-      ? { survival: { kinds: survival.kinds, durationMs: survival.minutes * 60_000, levelIndex: run.levelIndex, difficulty } }
+      ? { survival: { kinds: survival.kinds, durationMs: survival.minutes * 60_000, levelIndex: run.levelIndex, difficulty, players: this.ctx.session.playerCount } }
       : { counts: sandbox.levels[run.levelIndex].enemies }, {
       world: this.world,
       list: this.enemies,

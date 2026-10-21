@@ -42,11 +42,14 @@ enemy counts. `data/difficulty.ts` `enemyEdge` (`CombatWorld.enemyEdge`; easy 1,
 every enemy hit on bowmen and keep × `damage` (melee, arrows, kamikaze, dragon burn), archer aim error × `aimSpread`; `wavePacing`: medium/hard send a wave in
 groups of `DIFFICULTY_SCALE.groupSize` (kinds together, `groupByKind`), `groupSpawnIntervalMs` apart, `groupGapMs` between.
 
-## Survival (`survivalWaves.ts`, `nightCycle.ts`, pure, tested; tuning `SURVIVAL`)
-`SurvivalDirector` (BattleEnemies in survival): waves `survivalWaveGap` apart (25, 35, then 45 s: `waveEveryMs`, `waveGapStepMs`, `maxWaveEveryMs`; or `clearedDelayMs` after the field is
-cleared), `survivalWaveSize` growing up to the difficulty's `*PeakWave` then flat ± `sizeJitter`, × level and difficulty;
-kinds by `arrival` (`kindsArrived`) around a lead kind (`pickLead`, never a healer or shaman; `drawWave` `leadShare`); levels over `finaleMinMs`
-end with a finale (× `finaleScale`) `finaleAtMs` before the end, after it waves only when the field is cleared; none in the last `quietEndMs`; at most `maxAlive` standing. `nightSky(progress)`: moon, stars, dawn/day weights, shade, `sunRise`. Time up: `Enemy`/`DragonEnemy.flee`,
+## Survival (`survivalWaves.ts`, `survivalRoles.ts`, `nightCycle.ts`, pure, tested; tuning `SURVIVAL`)
+`SurvivalDirector` (BattleEnemies in survival): each wave a threat budget (`survivalBudget`: `firstBudget` + `budgetGrowth`
+per wave up to the difficulty's `*PeakWave`, × level, difficulty, co-op players, ± `sizeJitter`) filled by kinds' `threat`
+(`drawByBudget`), the next one `survivalWaveGap` of what it cost later (40–60 s; clearing the field doesn't hurry it).
+Roles (`enemyRole`): supporters never lead; bosses (`boss` in data/enemyKinds: troll, dragons) only as a lead from
+`bossMinWave`, never two boss waves running, `bossCount` of them on top with escorts of their group (`drawBossWave`).
+Kinds by `arrival` (`kindsArrived`) around a lead (`pickLead`); levels over `finaleMinMs` end with a finale (× `finaleScale`)
+`finaleAtMs` before the end; none in the last `quietEndMs`; at most `maxAliveFor(players)` standing. `nightSky(progress)`: moon, stars, dawn/day weights, shade, `sunRise`. Time up: `Enemy`/`DragonEnemy.flee`,
 `EnemyAI.runOff` (off the right edge, `escape`).
 
 ## Arrow flight (`ballistics.ts`)
