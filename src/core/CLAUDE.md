@@ -10,4 +10,5 @@
   `MAX_RENDER_RESOLUTION`, refit on browser zoom).
 - **Camera** (`camera.ts`): aim look-ahead, see scenes/CLAUDE.md; `centeredCameraX()`.
 - `GameContext` / `GameSession` (in `Scene.ts`): `ctx.session` (sandbox, run, net, playerCount, browser-session settings).
-- `sandboxStorage.ts`: setups in localStorage. `urlState.ts`: the URL flags (`?debug`, `?lab`, …).
+- `sandboxStorage.ts`: setups in localStorage. `urlState.ts`: the URL flags (`?debug`, `?lab`, …); dev-only ones through `getDevUrlParam`, off in the
+  release build (`devTools.ts`, `DEV_TOOLS` from webpack `--env release`).

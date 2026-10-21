@@ -11,7 +11,7 @@ import { SoundLabScene } from '../scenes/SoundLabScene';
 import { DEFAULT_ARROW_TRAILS, ENEMY_KEEP_HEALTH, MAX_ARROW_TRAILS } from '../config';
 import { loadSandbox } from './sandboxStorage';
 import { newRun, type GameContext, type GameTextures, type Scene, type SceneName } from './Scene';
-import { COOP_PARAM, DESIGN_LAB_PARAM, LAB_PARAM, SOUND_LAB_PARAM, TUNE_PARAM, getUrlParam, setUrlParam } from './urlState';
+import { COOP_PARAM, DESIGN_LAB_PARAM, LAB_PARAM, SOUND_LAB_PARAM, TUNE_PARAM, getDevUrlParam, setUrlParam } from './urlState';
 
 /** Owns the active scene, switches between scenes and forwards ticker updates. */
 export class SceneManager {
@@ -21,7 +21,7 @@ export class SceneManager {
   public constructor(app: Application, ui: DomUi, textures: GameTextures, sound: SoundManager) {
     const sandbox = loadSandbox();
     // A local co-op test: ?coop gives two bowmen, ?coop=3 or ?coop=4 more (the others driven from the console).
-    const coop = getUrlParam(COOP_PARAM);
+    const coop = getDevUrlParam(COOP_PARAM);
     const playerCount = coop === null ? 1 : Math.max(2, Math.min(4, Number(coop) || 2));
     const root = new Container();
     root.sortableChildren = true;
@@ -91,20 +91,20 @@ export class SceneManager {
 
   /** Opens the animation lab, design lab or sound panel when the URL says so (e.g. after a refresh), otherwise the menu. */
   public start(): void {
-    this.ctx.ui.setTuningOpen(getUrlParam(TUNE_PARAM) !== null);
-    if (getUrlParam(LAB_PARAM) !== null) {
+    this.ctx.ui.setTuningOpen(getDevUrlParam(TUNE_PARAM) !== null);
+    if (getDevUrlParam(LAB_PARAM) !== null) {
       this.goTo('animationLab');
-    } else if (getUrlParam(DESIGN_LAB_PARAM) !== null) {
+    } else if (getDevUrlParam(DESIGN_LAB_PARAM) !== null) {
       this.goTo('designLab');
     } else {
-      this.goTo(getUrlParam(SOUND_LAB_PARAM) !== null ? 'soundLab' : 'menu');
+      this.goTo(getDevUrlParam(SOUND_LAB_PARAM) !== null ? 'soundLab' : 'menu');
     }
   }
 
   public goTo(name: SceneName): void {
     if (name !== 'animationLab') {
       setUrlParam(LAB_PARAM, null);
-    } else if (getUrlParam(LAB_PARAM) === null) {
+    } else if (getDevUrlParam(LAB_PARAM) === null) {
       setUrlParam(LAB_PARAM, '');
     }
     setUrlParam(SOUND_LAB_PARAM, name === 'soundLab' ? '' : null);

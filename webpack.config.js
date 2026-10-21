@@ -1,7 +1,9 @@
 const path = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
+const { DefinePlugin } = require('webpack');
 
-module.exports = {
+// `--env release` (npm run build:release, the production page) strips the developer tools (src/core/devTools.ts).
+module.exports = (env = {}) => ({
   mode: process.env.NODE_ENV || 'development',
   entry: './src/main.ts',
   output: {
@@ -33,9 +35,10 @@ module.exports = {
     compress: true,
   },
   plugins: [
+    new DefinePlugin({ __DEV_TOOLS__: JSON.stringify(!env.release) }),
     new HtmlWebpackPlugin({
       template: './index.html',
       filename: 'index.html',
     }),
   ],
-};
+});

@@ -1,4 +1,6 @@
 /** View, battlefield and ground layout. */
+import { DEV_TOOLS } from '../core/devTools';
+
 /**
  * The view (screen) in game px: always GAME_HEIGHT tall and at least GAME_WIDTH wide (~2.14:1). A wider
  * window, or one big enough to pass MAX_VIEW_SCALE, widens the view (more landscape) instead of scaling
@@ -49,6 +51,6 @@ export const BOWMAN_Y = GROUND_Y;
 export const TOWER_ENTRY_ZONE_WIDTH = 100;
 export const TOWER_ENTRY_ZONE_HEIGHT = 90;
 
-// Enable with ?debug in the URL.
-export const SHOW_HITBOX_DEBUG = typeof window !== 'undefined'
+// Enable with ?debug in the URL (not in the release build, core/devTools.ts).
+export const SHOW_HITBOX_DEBUG = DEV_TOOLS && typeof window !== 'undefined'
   && new URLSearchParams(window.location.search).has('debug');

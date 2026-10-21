@@ -1,6 +1,11 @@
 /** Small helpers for state kept in the URL query (survives refresh, can be shared as a link). */
 
+import { DEV_TOOLS } from './devTools';
+
 export const getUrlParam = (name: string): string | null => new URLSearchParams(window.location.search).get(name);
+
+/** A developer-only URL flag (`?lab`, `?tune`, `?debug`, …): always absent in the release build (core/devTools.ts). */
+export const getDevUrlParam = (name: string): string | null => (DEV_TOOLS ? getUrlParam(name) : null);
 
 /** Sets (or removes, with null) a query parameter without reloading or adding a history entry. */
 export const setUrlParam = (name: string, value: string | null): void => {

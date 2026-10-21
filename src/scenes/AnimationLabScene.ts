@@ -2,7 +2,7 @@ import { Container, Graphics, Rectangle, Text } from 'pixi.js';
 import { BACKDROP_WIDTH, GAME_HEIGHT, GAME_WIDTH, SHOW_HITBOX_DEBUG } from '../config';
 import { Scene } from '../core/Scene';
 import { centeredCameraX, viewWidth } from '../core/viewport';
-import { LAB_PARAM, getUrlParam, setUrlParam } from '../core/urlState';
+import { LAB_PARAM, getDevUrlParam, setUrlParam } from '../core/urlState';
 import { BATTLEGROUNDS } from '../data/battlegrounds';
 import { Background } from '../rendering/Background';
 import { LAB_CATEGORIES, LabClock, type LabCategory, type LabRow } from './labRows';
@@ -86,7 +86,7 @@ export class AnimationLabScene extends Scene {
       }
     });
 
-    const wanted = getUrlParam(LAB_PARAM);
+    const wanted = getDevUrlParam(LAB_PARAM);
     const category = LAB_CATEGORIES.find((candidate) => candidate.id === wanted);
     const rowCategory = LAB_CATEGORIES.find((candidate) => candidate.rows.some((row) => row.id === wanted));
     this.showCategory(category ?? rowCategory ?? LAB_CATEGORIES[0]);

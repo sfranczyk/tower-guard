@@ -26,3 +26,4 @@ jobs:
       - run: npm ci
       - run: npm run verify
       - run: npm run build
+      - run: npm run build:release

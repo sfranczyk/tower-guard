@@ -6,6 +6,7 @@
     "dev": "webpack serve --mode development",
     "start": "webpack serve --mode development --open",
     "build": "webpack --mode production",
+    "build:release": "webpack --mode production --env release",
     "check": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
