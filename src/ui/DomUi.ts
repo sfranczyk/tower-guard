@@ -111,10 +111,6 @@ export class DomUi {
     this.statusElement = this.query('[data-status]');
     this.hud = new Hud(this.hudTop);
     this.devTools = this.query('[data-dev-tools]');
-    if (!DEV_TOOLS) {
-      this.query('[data-dev-toggle]').remove();
-      this.devTools.remove();
-    }
     this.sandboxScreen = this.query('[data-sandbox]');
     this.sandboxForm = new SandboxForm(this.query('[data-sandbox-form]'), {
       change: (settings, level) => this.handlers.sandboxChange?.(settings, level),
@@ -149,6 +145,11 @@ export class DomUi {
     this.onClick('[data-open-sound-lab]', () => this.handlers.openSoundLab?.());
     this.onClick('[data-open-design-lab]', () => this.handlers.openDesignLab?.());
     this.onClick('[data-open-tuning]', () => this.handlers.toggleTuning?.());
+    // After the dev buttons are wired: query() throws on a missing element.
+    if (!DEV_TOOLS) {
+      this.query('[data-dev-toggle]').remove();
+      this.devTools.remove();
+    }
     this.onClick('[data-lab-menu]', () => this.handlers.labMenu?.());
     this.onClick('[data-lab-back]', () => this.handlers.labBack?.());
     this.onClick('[data-close-options]', () => this.handlers.toggleOptions?.());
