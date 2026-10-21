@@ -10,11 +10,11 @@ import {
 } from '../config';
 import type { SoundId } from '../audio/SoundManager';
 import { spatialMix } from '../audio/spatial';
-import { Scene, type GameContext } from '../core/Scene';
+import { Scene, isMultiplayer, type GameContext } from '../core/Scene';
 import { viewWidth } from '../core/viewport';
 import { BATTLEGROUNDS, aimColorsOf, type Battleground } from '../data/battlegrounds';
 import { enemyEdge, wavePacing } from '../data/difficulty';
-import { runBattleground, runLevelCount, survivalLevel, type SurvivalLevel } from '../data/sandbox';
+import { bannersInPlay, friendlyFireOn, runBattleground, runLevelCount, survivalLevel, type SurvivalLevel } from '../data/sandbox';
 import { enterBattle, loadoutOf } from '../net/coopLink';
 import type { GuestSync } from '../net/GuestSync';
 import type { HostSync } from '../net/HostSync';
@@ -208,7 +208,7 @@ export class GameScene extends Scene {
     });
 
     // Banners: solo only (the guest doesn't see the soldiers yet, net/CLAUDE.md).
-    if (sandbox.banners && !this.ctx.session.net && !this.survival) {
+    if (bannersInPlay(sandbox, this.ctx.session.net !== undefined)) {
       this.banners = new BattleBanners({
         world: this.world,
         units: () => [...this.allies, ...this.enemies.filter((foe): foe is Enemy => !(foe instanceof DragonEnemy))],
@@ -218,6 +218,9 @@ export class GameScene extends Scene {
         wind: () => this.wind,
       });
     }
+    // The drawer's banner markers option only in a battle with banners.
+    this.ctx.ui.settings.showBannerMarkersOption(this.banners !== undefined);
+    this.onExit(() => this.ctx.ui.settings.showBannerMarkersOption(false));
     this.combat = new CombatSystem(
       {
         bowmen: this.team.bowmen,
@@ -231,7 +234,7 @@ export class GameScene extends Scene {
         debug: this.debugGraphics,
         wind: () => this.wind,
         weather: this.battleground.weather,
-        friendlyFire: () => this.ctx.session.friendlyFire,
+        friendlyFire: () => friendlyFireOn(this.ctx.session.sandbox, isMultiplayer(this.ctx.session)),
         reinforcementsDue: () => this.foes.reinforcementsDue,
         enemyEdge: enemyEdge(this.ctx.session.sandbox.difficulty),
         banners: this.banners?.field,

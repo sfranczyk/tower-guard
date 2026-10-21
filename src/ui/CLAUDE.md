@@ -9,7 +9,7 @@
   `weaponSlots`): icon only (name in the tooltip), key in the corner, shots ready/held underneath; while one loads a shade
   drains downward like the soldiers' pause (`.slot-shade`/`.slot-wait`, `DomUi.updateWeaponCooldowns`; `ARROW_COOLDOWN` / `ARROW_CHARGES` in config/arrows, `systems/arrowCooldowns.ts`, per
   `Player`, checked in `BattlePlayers.update`; while the chosen arrow loads the bow isn't drawn and the aim circles are grey, `canDrawBow` in scenes/PlayerControl); built from the quiver (`DomUi.setLoadout`). Right of them the soldiers' slots (`allySlots`, `ICON_ALLIES`: key, `alive/limit`, a shade for
-  the pause) and the order button (`ICON_ORDERS`): `DomUi.setAllies` once, `updateAllies` every frame. Banners: a line under the level chip (`DomUi.updateBanners`, `ICON_BANNERS`), off with the drawer's "Banner markers" (`session.bannerMarkers`).
+  the pause) and the order button (`ICON_ORDERS`): `DomUi.setAllies` once, `updateAllies` every frame. Banners: a line under the level chip (`DomUi.updateBanners`, `ICON_BANNERS`), off with the drawer's "Banner markers" (`session.bannerMarkers`; the option shows only in a battle with banners, `showBannerMarkersOption`).
 - **DomUi parts**: `ui.settings` (`SettingsDrawer.ts`, the drawer's options), `ui.dialogs` (`BattleDialogs.ts`, end screen
   and pause dialog), `UiHandlers` in `uiHandlers.ts`, `queryIn` / `onClickIn` in `domQuery.ts`.
 - **Overlays on the canvas** (menu, sandbox/sound panels, end screen, pause dialog `[data-pause]` (`PauseView`: restart button; in the keep the compact quiver editor `compactQuiver` (icon tiles, names in tooltips) left of the buttons) placed under the
@@ -17,17 +17,19 @@
   scale 1 and zoom with it (`--ui-scale`, set in `fitCanvas`, `UI_SCALE` limits); the sandbox's buttons stay pinned
   at the bottom of its card.
 - **Sandbox form** (`SandboxForm.ts`): opens on the mode picker (`step 'mode'`: two big cards, Battle / Survival, map +
-  `RUN_MODE_DESCRIPTIONS`); Back/Esc returns there (`DomUi.sandboxBack`). Then three pages, no mode switch. Levels:
+  `RUN_MODE_DESCRIPTIONS`); Back/Esc returns there (`DomUi.sandboxBack`). Then three pages (Rules, Levels, Quiver; opens on Rules), no mode switch. Levels:
   level tabs (map thumbnail, enemy count, add; "Remove level N" right of the editor head asks first, `removeDialog` over the card, Esc cancels; battle 1–5, survival 1–3), the selected level's battleground (map cards,
   `mapThumbnail.ts`) and enemies (a card per type with − / +); survival levels: time stepper and kind toggles
-  (`survivalEditor.ts`). Rules (`rulesPage`, `.option-row`, one per row): bowman/keep health, difficulty, Banners
+  (`survivalEditor.ts`). Rules (`rulesPage`, `.option-row`, one per row): bowman/keep health, difficulty, Friendly fire
+  (`friendlyFireOn`: `friendlyFire` solo, on by default; `coopFriendlyFire` with more bowmen, off; `isMultiplayer`), Banners
   (battle only), Support (`SandboxSettings.support`, `supportAllowed`: soldiers only in battle with it on; shown off and
   disabled in survival). Quiver (`quiverPage.ts`): fill the three slots (click a slot then an arrow, or drag:
   `quiverDrag.ts`; editing shared with co-op: `quiverEditing.ts`). HUD in survival: the clock "m:ss to dawn"
   (`HudValues.clockMs`) and the defeated count.
-- **Settings drawer** (handlers in `SceneManager`; menu, and in battle from the pause dialog: "Settings" or I, Esc closes it first): sound/music toggles and volumes
-  (persisted), trajectory preview (off by default), arrow trails (0–3, `DEFAULT_ARROW_TRAILS` = 1), cursor circle,
-  damage numbers (on), friendly fire; these live in `ctx.session` for the browser session.
+- **Settings drawer** (handlers in `SceneManager`; menu, and in battle from the pause dialog: "Settings" or I, Esc closes it first): three groups (`.drawer-group`):
+  Sound (music, music volume, effects, effects volume; persisted), HUD ("Hit visibility" = damage numbers, on; banner
+  markers), Aim helpers (arrow trails 0–3, `DEFAULT_ARROW_TRAILS` = 1; trajectory preview, off; "Aim cursor helper" =
+  cursor circle); these live in `ctx.session` for the browser session.
 - `CoopPanel.ts`: the co-op lobby (net/CLAUDE.md). `SoundLabPanel.ts`: the sound test panel.
 - Dev views (animation, design, sound lab) all have "← Menu" in their panel's top-right corner.
 - **Tuning panel** (`TuningPanel.ts`, `?tune` or menu → Dev tools → "Tuning panel"; a collapsible side panel over the

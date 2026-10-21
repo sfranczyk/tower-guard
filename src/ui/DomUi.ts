@@ -306,8 +306,8 @@ export class DomUi {
   }
 
   /** Opens the battle setup on its mode picker. */
-  public openSandbox(settings: SandboxSettings): void {
-    this.sandboxForm.open(settings);
+  public openSandbox(settings: SandboxSettings, multiplayer: boolean): void {
+    this.sandboxForm.open(settings, multiplayer);
   }
 
   /** Esc in the battle setup: as its Back button. */

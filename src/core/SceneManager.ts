@@ -39,7 +39,6 @@ export class SceneManager {
         playerCount,
         showTrajectory: false,
         showCursorCircle: false,
-        friendlyFire: true,
         showDamageNumbers: true,
         bannerMarkers: true,
         arrowTrails: DEFAULT_ARROW_TRAILS,
@@ -70,9 +69,6 @@ export class SceneManager {
     ui.handlers.damageNumbersChange = (enabled) => {
       this.ctx.session.showDamageNumbers = enabled;
     };
-    ui.handlers.friendlyFireChange = (enabled) => {
-      this.ctx.session.friendlyFire = enabled;
-    };
     ui.handlers.arrowTrailsChange = (count) => {
       this.ctx.session.arrowTrails = Math.max(0, Math.min(MAX_ARROW_TRAILS, Math.round(count)));
       ui.settings.setArrowTrailsOption(this.ctx.session.arrowTrails);
@@ -80,7 +76,6 @@ export class SceneManager {
     ui.handlers.audioChange = (changes) => sound.updateSettings(changes);
     ui.settings.setTrajectoryOption(this.ctx.session.showTrajectory);
     ui.settings.setCursorCircleOption(this.ctx.session.showCursorCircle);
-    ui.settings.setFriendlyFireOption(this.ctx.session.friendlyFire);
     ui.settings.setDamageNumbersOption(this.ctx.session.showDamageNumbers);
     ui.settings.setBannerMarkersOption(this.ctx.session.bannerMarkers);
     ui.settings.setArrowTrailsOption(this.ctx.session.arrowTrails);

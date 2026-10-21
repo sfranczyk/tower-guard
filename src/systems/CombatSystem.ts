@@ -67,7 +67,7 @@ export interface CombatWorld {
   wind(): number;
   /** The battleground's weather: it may set off or put out arrows in flight, and changes fire and frost (weatherArrows.ts). */
   readonly weather: Weather;
-  /** Friendly fire (settings drawer): the players' arrows and their effects hit the bowmen too. */
+  /** Friendly fire (battle setup's Rules, `friendlyFireOn`): the players' arrows and their effects hit the bowmen too. */
   readonly friendlyFire: () => boolean;
   /** More enemies still to come this level (a priest left alone walks off the field only when none are). */
   readonly reinforcementsDue: () => boolean;

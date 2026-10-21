@@ -17,7 +17,7 @@ export const GRAVITY = 2200;
  */
 export const BOWMAN_KNOCKBACK = { pushMax: 40, minStrength: 0.35, lieMs: 250, animationSpeed: 1.3 } as const;
 /**
- * Friendly fire (settings drawer, on by default): the players' arrows and what they do (blasts, fire, frost,
+ * Friendly fire (battle setup's Rules, on by default alone, off in co-op): the players' arrows and what they do (blasts, fire, frost,
  * vortices, pins) hit the bowmen out in the open as they hit enemies. An arrow spares the bowman who loosed it for
  * its first FRIENDLY_FIRE_GRACE_MS (it leaves the bow inside his hit box).
  */
