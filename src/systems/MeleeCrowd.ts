@@ -71,16 +71,10 @@ export class MeleeCrowd {
 
   /**
    * Units that keep hiding one another ease apart (crowding.spreadApart); those fighting at a post, down or held stay
-   * put, priests and shamans are left alone.
+   * put.
    */
   public spread(units: readonly Enemy[], deltaMs: number): void {
-    const ground = units.filter((unit) => {
-      if (unit instanceof DragonEnemy || !unit.isAlive()) {
-        return false;
-      }
-      const { heals, buffs } = enemyArchetype(unit.kind);
-      return !heals && !buffs;
-    });
+    const ground = units.filter((unit) => !(unit instanceof DragonEnemy) && unit.isAlive());
     const { xs, hiddenMs } = spreadApart(ground.map((unit) => ({
       x: unit.x, vx: unit.velocity.x, width: BODY_WIDTH * unit.size, fixed: this.holdsPlace(unit), hiddenMs: this.hiddenMs.get(unit) ?? 0,
     })), (CROWD.spreadSpeed * deltaMs) / 1000, deltaMs);
