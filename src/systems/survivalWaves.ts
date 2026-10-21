@@ -10,8 +10,9 @@ import { groupByKind } from './waveDirector';
  * difficulty's peak wave and then about that size (`survivalWaveSize`, ± SURVIVAL.sizeJitter), drawn from the kinds
  * whose `arrival` share of the time has passed (tougher kinds later and rarer) around a lead kind (`pickLead`), released
  * with the difficulty's pacing and never more than SURVIVAL.maxAlive standing. Long levels end with a big finale wave
- * SURVIVAL.finaleAtMs before the end (the waves just before it smaller) and nothing after it; short ones send nothing
- * new in the last SURVIVAL.quietEndMs. `finished` once the time is up. GameScene calls `update` every frame (so it pauses with the game) and spawns what it returns.
+ * SURVIVAL.finaleAtMs before the end (the waves just before it smaller); after it a new wave comes only once the field
+ * is cleared, so a quickly beaten finale doesn't leave minutes of empty field. No level sends anything new in the last
+ * SURVIVAL.quietEndMs. `finished` once the time is up. GameScene calls `update` every frame (so it pauses with the game) and spawns what it returns.
  */
 
 /** Enemies in wave `index` (from 0) of level `levelIndex` at `difficulty`, × `factor` (jitter, finale). */
@@ -135,16 +136,16 @@ export class SurvivalDirector {
     if (this.finaleAtMs !== undefined && !this.finaleSent && this.elapsedMs >= this.finaleAtMs) {
       this.finaleSent = true;
       this.releaseWave(SURVIVAL.finaleScale);
-    } else if (!this.quiet && (this.waveTimerMs <= 0 || this.clearedMs >= SURVIVAL.clearedDelayMs)) {
+    } else if (!this.quiet && ((this.waveTimerMs <= 0 && !this.finaleSent) || this.clearedMs >= SURVIVAL.clearedDelayMs)) {
       const preFinale = this.finaleAtMs !== undefined && this.elapsedMs >= this.finaleAtMs - survivalWaveGap(this.waveIndex);
       this.releaseWave(preFinale ? SURVIVAL.preFinaleScale : 1);
     }
     return this.spawn(deltaMs, alive);
   }
 
-  /** No new waves: after the finale, or (short levels) in the last SURVIVAL.quietEndMs. */
+  /** No new waves in the last SURVIVAL.quietEndMs. */
   private get quiet(): boolean {
-    return this.finaleAtMs !== undefined ? this.finaleSent : this.remainingMs <= SURVIVAL.quietEndMs;
+    return this.remainingMs <= SURVIVAL.quietEndMs;
   }
 
   private releaseWave(scale: number): void {
