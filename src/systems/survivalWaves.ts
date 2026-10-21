@@ -147,7 +147,9 @@ export class SurvivalDirector {
 
   private releaseWave(scale: number): void {
     const { levelIndex, difficulty } = this.options;
-    const kinds = kindsArrived(this.kinds, this.elapsedMs / this.durationMs);
+    const arrived = kindsArrived(this.kinds, this.elapsedMs / this.durationMs);
+    // Supporters never come alone: while no fighter has arrived, the setup's fighters come now instead.
+    const kinds = arrived.some(canLead) ? arrived : this.kinds.filter(canLead);
     const bossAllowed = this.waveIndex + 1 >= SURVIVAL.bossMinWave && !this.lastWasBoss;
     this.lead = pickLead(kinds, this.lead, this.led, this.random, bossAllowed);
     if (this.lead) {

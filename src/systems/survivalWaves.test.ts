@@ -118,6 +118,16 @@ describe('survival waves', () => {
     expect(director.update(100, 0)).toEqual([]);
   });
 
+  it('never sends priests or shamans without a fighter; the setup\'s fighters come first instead', () => {
+    const director = new SurvivalDirector(['priest', 'tank'], 600_000, { levelIndex: 0, difficulty: 'easy', pacing: wavePacing('easy'), random: () => 0.5 });
+    const sent: string[] = [];
+    for (let time = 0; time < SURVIVAL.startDelayMs + 1_000; time += 100) {
+      sent.push(...director.update(100, sent.length));
+    }
+    expect(sent).toContain('tank');
+    expect(sent).not.toContain('priest');
+  });
+
   it('never fills the field past the difficulty\'s maxAlive', () => {
     const director = new SurvivalDirector(['raider'], 600_000, { levelIndex: 4, difficulty: 'medium', pacing: wavePacing('medium') });
     let alive = 0;
