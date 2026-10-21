@@ -11,6 +11,7 @@ import {
   RUN_MODE_LABELS,
   SURVIVAL_MINUTES,
   battlegroundsFor,
+  friendlyFireOn,
   levelEnemyTotal,
   maxLevelsFor,
   runBattleground,
@@ -20,6 +21,7 @@ import {
   type SandboxSettings,
   type LevelSetup,
   type SurvivalLevel,
+  withFriendlyFire,
 } from '../data/sandbox';
 import type { EnemyType } from '../types';
 import { ICON_BOWMAN, ICON_ENEMIES, ICON_KEEP, ICON_TRASH } from './icons';
@@ -29,11 +31,11 @@ import { editQuiverIn } from './quiverEditing';
 import { quiverPage, type PartnerQuiver } from './quiverPage';
 import { survivalEditor, survivalTabText } from './survivalEditor';
 
-/** The form's pages: the levels (maps and enemies), the rules (health, difficulty, banners, support) and the quiver. */
+/** The form's pages: the rules (health, difficulty, friendly fire, banners, support), the levels (maps and enemies) and the quiver. */
 type SandboxPage = 'levels' | 'rules' | 'quiver';
 const PAGES: ReadonlyArray<{ id: SandboxPage; label: string }> = [
-  { id: 'levels', label: 'Levels' },
   { id: 'rules', label: 'Rules' },
+  { id: 'levels', label: 'Levels' },
   { id: 'quiver', label: 'Quiver' },
 ];
 
@@ -45,9 +47,10 @@ export interface SandboxFormCallbacks {
 }
 
 /**
- * The sandbox setup form. It opens on the mode picker (Battle or Survival, two big cards); then three pages. Levels: the run is a row of levels (tabs, each with its map and enemy
+ * The sandbox setup form. It opens on the mode picker (Battle or Survival, two big cards); then three pages. Rules:
+ * health, difficulty, friendly fire, banners, support, one per row. Levels: the run is a row of levels (tabs, each with its map and enemy
  * count, plus add and remove); below, the selected level's battleground (map cards) and enemies (a card per type
- * with − / +). Rules: health, difficulty, banners, support, one per row. Quiver: which arrow goes in each weapon slot
+ * with − / +). Quiver: which arrow goes in each weapon slot
  * (`quiverPage`). Back (to the mode picker) and Start sit in the top bar, the pages under it; only the page scrolls (SandboxSettings.levels; a level's enemies then come in waves, systems/waveDirector).
  */
 export class SandboxForm {
@@ -56,7 +59,9 @@ export class SandboxForm {
   private selected = 0;
   /** The mode picker first, then the setup of the picked mode. */
   private step: 'mode' | 'setup' = 'mode';
-  private page: SandboxPage = 'levels';
+  private page: SandboxPage = 'rules';
+  /** Played by more than one bowman: friendly fire is the co-op setting (`friendlyFireOn`). */
+  private multiplayer = false;
   /** The level whose removal waits for the player's confirmation (the dialog over the form). */
   private confirmRemove?: number;
   /** The quiver slot the next picked arrow goes into. */
@@ -94,10 +99,11 @@ export class SandboxForm {
   }
 
   /** Shows the form from its start, the mode picker. */
-  public open(settings: SandboxSettings): void {
+  public open(settings: SandboxSettings, multiplayer: boolean): void {
     this.step = 'mode';
     this.confirmRemove = undefined;
-    this.page = 'levels';
+    this.page = 'rules';
+    this.multiplayer = multiplayer;
     this.render(settings);
   }
 
@@ -163,7 +169,7 @@ export class SandboxForm {
     </div>`;
   }
 
-  /** The run's rules, one per row: health, difficulty, banners (battle) and support (battle; survival never has it). */
+  /** The run's rules, one per row: health, difficulty, friendly fire, banners (battle) and support (battle; survival never has it). */
   private rulesPage(settings: SandboxSettings): string {
     const survival = settings.mode === 'survival';
     const numberInput = (attribute: string, value: number, limits: { min: number; max: number; step: number }): string =>
@@ -182,6 +188,8 @@ export class SandboxForm {
       ${row('Bowman health', 'Each bowman starts the run with this; it carries over between levels', numberInput('data-bowman-health', settings.bowmanHealth, HEALTH_LIMITS.bowman), ICON_BOWMAN)}
       ${row('Keep health', 'Your keep falls and the run is lost when this runs out', numberInput('data-keep-health', settings.keepHealth, HEALTH_LIMITS.keep), ICON_KEEP)}
       ${row('Difficulty', 'How hard enemies hit and how well their archers aim', choice('Difficulty', 'data-difficulty', DIFFICULTY_LEVELS, settings.difficulty, (level) => DIFFICULTY_LABELS[level]))}
+      ${row('Friendly fire', 'Your arrows and what they do (blasts, fire, frost, vortices, pins) hit your own side too',
+    choice('Friendly fire', 'data-friendly-fire', [false, true], friendlyFireOn(settings, this.multiplayer), onOff))}
       ${survival ? '' : row('Banners', "Bring the enemy's banner to your keep to win a level; lose yours and the level is lost (solo only)", choice('Banners', 'data-banners', [false, true], settings.banners, onOff))}
       ${row('Support', survival ? 'Survival: you hold the night alone' : 'Summon squires, knights and medics to fight beside you (solo only)',
     choice('Support', 'data-support', [false, true], supportAllowed(settings), onOff, survival))}
@@ -299,6 +307,8 @@ export class SandboxForm {
       this.update({ ...settings, difficulty }, this.selected);
     } else if (target.closest('[data-banners]')) {
       this.update({ ...settings, banners: target.closest<HTMLElement>('[data-banners]')!.dataset.banners === 'true' }, this.selected);
+    } else if (target.closest('[data-friendly-fire]')) {
+      this.update(withFriendlyFire(settings, this.multiplayer, target.closest<HTMLElement>('[data-friendly-fire]')!.dataset.friendlyFire === 'true'), this.selected);
     } else if (target.closest('[data-support]') && !survival) {
       this.update({ ...settings, support: target.closest<HTMLElement>('[data-support]')!.dataset.support === 'true' }, this.selected);
     } else if (map) {

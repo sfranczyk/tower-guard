@@ -1,6 +1,6 @@
 import { Container } from 'pixi.js';
 import { BACKDROP_WIDTH, ENEMY_KEEP_HEALTH } from '../config';
-import { Scene, newRun } from '../core/Scene';
+import { Scene, isMultiplayer, newRun } from '../core/Scene';
 import { centeredCameraX } from '../core/viewport';
 import { saveSandbox } from '../core/sandboxStorage';
 import { BATTLEGROUNDS } from '../data/battlegrounds';
@@ -25,7 +25,7 @@ export class SandboxScene extends Scene {
   public enter(): void {
     const { ui, session } = this.ctx;
     ui.showScreen('sandbox');
-    ui.openSandbox(session.sandbox);
+    ui.openSandbox(session.sandbox, isMultiplayer(session));
     this.showPreview(session.sandbox);
     // Co-op host: the guests pick their own quivers in the lobby; they show (as they change) on the Quiver page.
     settleSeats(session);

@@ -50,6 +50,10 @@ export const newRun = (sandbox: SandboxSettings, playerCount: number, enemyKeepH
   enemyKeepHealth,
 });
 
+/** Whether the session is played by more than one bowman (online co-op, or the local `?coop` test). */
+export const isMultiplayer = (session: Pick<GameSession, 'net' | 'playerCount'>): boolean =>
+  session.net !== undefined || session.playerCount > 1;
+
 /** State that survives between scenes. */
 export interface GameSession {
   /** Setup from the sandbox screen (remembered in localStorage). */
@@ -65,12 +69,7 @@ export interface GameSession {
   showTrajectory: boolean;
   /** Draw the aim circles at the drag start too, not just at the bow (settings drawer, on by default). */
   showCursorCircle: boolean;
-  /**
-   * Friendly fire (settings drawer, on by default): the players' arrows and what they do hit the bowmen as they hit
-   * enemies. In co-op the host's setting counts.
-   */
-  friendlyFire: boolean;
-  /** Damage numbers over an enemy's head on an arrow hit (settings drawer, on by default). */
+  /** Hit visibility: damage numbers over an enemy's head on an arrow hit (settings drawer, on by default). */
   showDamageNumbers: boolean;
   /** Banners: their state in the HUD and markers at the view's edge for a carried one out of view (settings drawer, on). */
   bannerMarkers: boolean;

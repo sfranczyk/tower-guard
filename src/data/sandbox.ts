@@ -76,6 +76,10 @@ export interface SandboxSettings {
   banners: boolean;
   /** Support: the player may summon soldiers (squire, knight, medic) in battle mode; never in survival (`supportAllowed`). */
   support: boolean;
+  /** Friendly fire alone (on by default): the player's arrows and their effects hit the bowman and soldiers too. */
+  friendlyFire: boolean;
+  /** Friendly fire with others (off by default), kept apart so each keeps its own default (`friendlyFireOn`). */
+  coopFriendlyFire: boolean;
 }
 
 /** Default levels get a little harder each time and alternate battlegrounds. */
@@ -128,6 +132,8 @@ export const createDefaultSandbox = (): SandboxSettings => ({
   difficulty: DEFAULT_DIFFICULTY,
   banners: false,
   support: true,
+  friendlyFire: true,
+  coopFriendlyFire: false,
 });
 
 const clampInt = (value: unknown, min: number, max: number, fallback: number): number => {
@@ -197,6 +203,8 @@ export const normalizeSandbox = (input: (Partial<SandboxSettings> & LegacySandbo
     difficulty: isDifficultyLevel(input.difficulty) ? input.difficulty : defaults.difficulty,
     banners: typeof input.banners === 'boolean' ? input.banners : defaults.banners,
     support: typeof input.support === 'boolean' ? input.support : defaults.support,
+    friendlyFire: typeof input.friendlyFire === 'boolean' ? input.friendlyFire : defaults.friendlyFire,
+    coopFriendlyFire: typeof input.coopFriendlyFire === 'boolean' ? input.coopFriendlyFire : defaults.coopFriendlyFire,
   };
 };
 
@@ -220,3 +228,15 @@ export const survivalLevel = (sandbox: SandboxSettings, index: number): Survival
 
 /** Whether the run's player may summon soldiers: battle mode with support on (survival never). */
 export const supportAllowed = (sandbox: SandboxSettings): boolean => sandbox.mode === 'battle' && sandbox.support;
+
+/** Whether the run's arrows hit their own side: the solo setting alone, the co-op one with others (`multiplayer`). */
+export const friendlyFireOn = (sandbox: SandboxSettings, multiplayer: boolean): boolean =>
+  (multiplayer ? sandbox.coopFriendlyFire : sandbox.friendlyFire);
+
+/** The setting `friendlyFireOn` reads, set to `enabled`. */
+export const withFriendlyFire = (sandbox: SandboxSettings, multiplayer: boolean, enabled: boolean): SandboxSettings =>
+  (multiplayer ? { ...sandbox, coopFriendlyFire: enabled } : { ...sandbox, friendlyFire: enabled });
+
+/** Whether the run is played with banners: battle mode with banners on, solo only (online co-op never). */
+export const bannersInPlay = (sandbox: SandboxSettings, online: boolean): boolean =>
+  sandbox.mode === 'battle' && sandbox.banners && !online;

@@ -48,18 +48,20 @@ export const OVERLAY_TEMPLATE = `
       <div class="drawer" data-drawer hidden>
         <div class="drawer-header"><h2>Settings</h2><button class="round-button" data-close-options aria-label="Close settings">×</button></div>
         <div class="drawer-body">
-        <label class="field toggle-field"><span>Trajectory preview</span><input data-trajectory type="checkbox"></label>
-        <label class="field toggle-field"><span>Aim circle at cursor</span><input data-cursor-circle type="checkbox"></label>
-        <label class="field toggle-field" title="How much each arrow hit takes off, over the enemy's head"><span>Damage numbers</span><input data-damage-numbers type="checkbox" checked></label>
-        <label class="field toggle-field" title="With Banners on: where both banners are, in the HUD, and a marker at the edge for one carried out of view"><span>Banner markers</span><input data-banner-markers type="checkbox" checked></label>
-        <label class="field toggle-field" title="Your arrows, their blasts, fire, frost, vortices and pins hit bowmen too"><span>Friendly fire</span><input data-friendly-fire type="checkbox" checked></label>
-        <div class="field toggle-field"><span>Arrow trails</span><div class="segmented" data-arrow-trails role="radiogroup" aria-label="Arrow trails">
-          <button class="chip-button" data-trail-count="0" role="radio">0</button><button class="chip-button" data-trail-count="1" role="radio">1</button><button class="chip-button" data-trail-count="2" role="radio">2</button><button class="chip-button" data-trail-count="3" role="radio">3</button>
-        </div></div>
+        <h3 class="drawer-group">Sound</h3>
         <label class="field toggle-field"><span>Music</span><input data-music type="checkbox" checked></label>
         <label class="field"><span>Music volume</span><input data-music-volume type="range" min="0" max="100" step="5" value="35"></label>
         <label class="field toggle-field"><span>Sound effects</span><input data-sound type="checkbox" checked></label>
         <label class="field"><span>Effects volume</span><input data-volume type="range" min="0" max="100" step="5" value="70"></label>
+        <h3 class="drawer-group">HUD</h3>
+        <label class="field toggle-field" title="How much each arrow hit takes off, over the enemy's head"><span>Hit visibility</span><input data-damage-numbers type="checkbox" checked></label>
+        <label class="field toggle-field" data-banner-markers-row hidden title="Where both banners are, in the HUD, and a marker at the edge for one carried out of view"><span>Banner markers</span><input data-banner-markers type="checkbox" checked></label>
+        <h3 class="drawer-group">Aim helpers</h3>
+        <div class="field toggle-field"><span>Arrow trails</span><div class="segmented" data-arrow-trails role="radiogroup" aria-label="Arrow trails">
+          <button class="chip-button" data-trail-count="0" role="radio">0</button><button class="chip-button" data-trail-count="1" role="radio">1</button><button class="chip-button" data-trail-count="2" role="radio">2</button><button class="chip-button" data-trail-count="3" role="radio">3</button>
+        </div></div>
+        <label class="field toggle-field"><span>Trajectory preview</span><input data-trajectory type="checkbox"></label>
+        <label class="field toggle-field" title="The aim circles at the drag start too, not just at the bow"><span>Aim cursor helper</span><input data-cursor-circle type="checkbox"></label>
         </div>
       </div>
       <section class="screen panel-screen" data-sound-lab hidden>

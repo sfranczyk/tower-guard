@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { BATTLEGROUND_IDS, BATTLEGROUNDS } from './battlegrounds';
-import { DEFAULT_SURVIVAL_MINUTES, MAX_ENEMIES_PER_TYPE, MAX_LEVELS, MAX_SURVIVAL_LEVELS, SURVIVAL_MINUTES, battlegroundsFor, createDefaultSandbox, normalizeSandbox, levelEnemyTotal, runBattleground, runLevelCount, supportAllowed } from './sandbox';
+import { DEFAULT_SURVIVAL_MINUTES, MAX_ENEMIES_PER_TYPE, MAX_LEVELS, MAX_SURVIVAL_LEVELS, SURVIVAL_MINUTES, battlegroundsFor, createDefaultSandbox, normalizeSandbox, levelEnemyTotal, runBattleground, runLevelCount, supportAllowed, friendlyFireOn, withFriendlyFire, bannersInPlay } from './sandbox';
 
 describe('sandbox settings', () => {
   it('defaults to one level with five prepared levels that get harder', () => {
@@ -57,6 +57,25 @@ describe('sandbox settings', () => {
     expect(supportAllowed({ ...sandbox, support: false })).toBe(false);
     expect(supportAllowed({ ...sandbox, mode: 'survival' })).toBe(false);
     expect(normalizeSandbox({ support: 'no' } as never).support).toBe(true);
+  });
+
+  it('keeps friendly fire apart for solo (on by default) and co-op (off by default)', () => {
+    const sandbox = normalizeSandbox(undefined);
+    expect(friendlyFireOn(sandbox, false)).toBe(true);
+    expect(friendlyFireOn(sandbox, true)).toBe(false);
+    const coopOn = withFriendlyFire(sandbox, true, true);
+    expect(friendlyFireOn(coopOn, true)).toBe(true);
+    expect(friendlyFireOn(withFriendlyFire(coopOn, false, false), false)).toBe(false);
+    expect(friendlyFireOn(withFriendlyFire(coopOn, false, false), true)).toBe(true);
+    expect(normalizeSandbox({ friendlyFire: 'no', coopFriendlyFire: 1 } as never)).toMatchObject({ friendlyFire: true, coopFriendlyFire: false });
+  });
+
+  it('plays banners only in a solo battle with them on', () => {
+    const sandbox = { ...normalizeSandbox(undefined), banners: true };
+    expect(bannersInPlay(sandbox, false)).toBe(true);
+    expect(bannersInPlay(sandbox, true)).toBe(false);
+    expect(bannersInPlay({ ...sandbox, mode: 'survival' }, false)).toBe(false);
+    expect(bannersInPlay({ ...sandbox, banners: false }, false)).toBe(false);
   });
 });
 

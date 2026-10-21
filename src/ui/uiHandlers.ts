@@ -42,8 +42,6 @@ export interface UiHandlers {
   /** Damage numbers over the enemies' heads toggled in the settings drawer. */
   damageNumbersChange?: (enabled: boolean) => void;
   bannerMarkersChange?: (enabled: boolean) => void;
-  /** Friendly fire (the players' arrows and their effects hit the bowmen too) toggled in the settings drawer. */
-  friendlyFireChange?: (enabled: boolean) => void;
   /** Number of shots that keep their trail (0..3) picked in the settings drawer. */
   arrowTrailsChange?: (count: number) => void;
   /** A music or effects toggle/volume (0..1) changed in the settings drawer. */
