@@ -1,6 +1,6 @@
 import type { NetMessage } from './protocol';
 import { compactOrder, firstFreeSeat } from './seats';
-import type { HostedRoom, RoomLink, Transport } from './Transport';
+import type { HostedRoom, RoomLink, Traffic, Transport } from './Transport';
 
 /** A refused guest gets this long to read the `full` message before the link closes. */
 const REFUSE_CLOSE_MS = 600;
@@ -42,6 +42,14 @@ export class RoomHub implements RoomLink {
 
   public sendTo(player: number, message: NetMessage): void {
     this.seats[player]?.send(message);
+  }
+
+  public sendState(message: NetMessage): void {
+    this.seats.forEach((guest) => (guest?.sendState ? guest.sendState(message) : guest?.send(message)));
+  }
+
+  public traffic(player = 1): Traffic {
+    return this.seats[player]?.traffic?.() ?? { sent: 0, received: 0 };
   }
 
   public onMessage(handler: (message: NetMessage, from: number) => void): void {
@@ -96,6 +104,8 @@ export class RoomHub implements RoomLink {
 export const guestLink = (transport: Transport): RoomLink => ({
   send: (message) => transport.send(message),
   sendTo: (_player, message) => transport.send(message),
+  sendState: (message) => (transport.sendState ? transport.sendState(message) : transport.send(message)),
+  traffic: () => transport.traffic?.() ?? { sent: 0, received: 0 },
   onMessage: (handler) => transport.onMessage((message) => handler(message, 0)),
   close: () => transport.close(),
 });

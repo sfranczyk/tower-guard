@@ -19,6 +19,7 @@ import { enterBattle, loadoutOf } from '../net/coopLink';
 import type { GuestSync } from '../net/GuestSync';
 import type { HostSync } from '../net/HostSync';
 import Tower from '../objects/Tower';
+import { BattleNetReadout } from './BattleNetReadout';
 import { BattleArrows } from './BattleArrows';
 import { BattleCamera } from './BattleCamera';
 import { BattleAllies } from './BattleAllies';
@@ -94,6 +95,8 @@ export class GameScene extends Scene {
   private readonly localIndex: number;
   private hostSync?: HostSync;
   private guestSync?: GuestSync;
+  /** Co-op with ?debug: ping, jitter and traffic in a corner. */
+  private netReadout?: BattleNetReadout;
 
   private readonly camera = new BattleCamera();
   /** Where the local player's drawn shot would land (x), while aiming. */
@@ -293,6 +296,11 @@ export class GameScene extends Scene {
     if (this.hostSync) {
       this.hostSync.onPauseRequest = (paused, from) => controls.pauseFor(from, paused);
     }
+    if (SHOW_HITBOX_DEBUG && (this.hostSync || this.guestSync)) {
+      const readout = new BattleNetReadout(this.ctx, this.hostSync, this.guestSync);
+      this.netReadout = readout;
+      this.onExit(() => readout.close());
+    }
     if (SHOW_HITBOX_DEBUG) {
       // Debug console hook (?debug): window.__towerGuard.scene gives access to the running level.
       (window as unknown as { __towerGuard?: unknown }).__towerGuard = { scene: this };
@@ -360,6 +368,7 @@ export class GameScene extends Scene {
       this.outcome.check();
     }
     this.hostSync?.update(deltaMs);
+    this.netReadout?.update(deltaMs);
   }
 
   /** The wind changed mid-level: arrows loosed from now on, the aim's path and the snow follow it. */

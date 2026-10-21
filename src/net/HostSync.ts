@@ -8,10 +8,15 @@ import type { EffectsSystem } from '../systems/EffectsSystem';
 import type { Foe } from '../systems/CombatSystem';
 import type { EnemyType, ProjectileType, Vec2 } from '../types';
 import { fromNetAim, type EndInfo, type GameEvent, type InputMessage, type Snapshot, type SpawnPlace } from './protocol';
+import { encodeSnapshot } from './snapCodec';
 import type { RoomLink } from './Transport';
 
 /** Frames (snapshot + events) go to the guests this often. */
-const FRAME_MS = 50;
+export const FRAME_MS = 50;
+/** A guest whose controls stop coming this long lets go of them (else a stalled link keeps him walking). */
+const INPUT_STALE_MS = 400;
+/** Each side measures the round trip this often (the ?debug readout). */
+export const PING_MS = 1000;
 
 /** What the host's battle exposes to the sync. */
 export interface HostWorld {
@@ -47,6 +52,12 @@ export class HostSync {
   private readonly enemyIds = new Map<Foe, number>();
   private nextEnemyId = 1;
   private nextArrowId = 1;
+  private stateSeq = 0;
+  private sincePingMs = 0;
+  /** By player: the newest held controls applied, when any input last came, the round trip (ms). */
+  private readonly inputSeq: number[] = [];
+  private readonly inputAt: Array<number | undefined> = [];
+  private readonly rtt: number[] = [];
   /** A guest pressed Esc (the host decides and answers with `sendPause`). */
   public onPauseRequest?: (paused: boolean, from: number) => void;
 
@@ -59,23 +70,33 @@ export class HostSync {
       if (message.t === 'input') {
         // A guest who joined mid-level has no bowman until the next one.
         if (guest) {
-          HostSync.applyInput(guest.input as ManualInput, message);
+          this.applyInput(from, guest.input as ManualInput, message);
         }
+      } else if (message.t === 'ping') {
+        transport.sendTo(from, { t: 'pong', at: message.at });
+      } else if (message.t === 'pong') {
+        const sample = performance.now() - message.at;
+        this.rtt[from] = this.rtt[from] === undefined ? sample : this.rtt[from] + (sample - this.rtt[from]) * 0.3;
       } else if (message.t === 'pause') {
         this.onPauseRequest?.(message.paused, from);
       }
     });
   }
 
-  private static applyInput(input: ManualInput, message: InputMessage): void {
-    input.set({ direction: message.direction, sprint: message.sprint, aim: message.aim ? fromNetAim(message.aim) : undefined });
+  private applyInput(from: number, input: ManualInput, message: InputMessage): void {
+    this.inputAt[from] = performance.now();
+    // Held controls come lossy and unordered: only newer ones count (the one-off actions always do).
+    if (message.n > (this.inputSeq[from] ?? -1)) {
+      this.inputSeq[from] = message.n;
+      input.set({ direction: message.direction, sprint: message.sprint, aim: message.aim ? fromNetAim(message.aim) : undefined });
+    }
     if (message.jump) {
       input.pressJump();
     }
     if (message.exit) {
       input.pressExit();
     }
-    message.shots.forEach((shot) => input.shoot(fromNetAim(shot)));
+    message.shots?.forEach((shot) => input.shoot(fromNetAim(shot)));
     if (message.burst) {
       input.pressBurst();
     }
@@ -148,20 +169,49 @@ export class HostSync {
   public update(deltaMs: number): void {
     this.sinceFrameMs += deltaMs;
     if (this.sinceFrameMs >= FRAME_MS) {
+      // Keep the 20 Hz pace on hosts running at 30 or 50 fps (but don't catch up after a stall).
+      this.sinceFrameMs = Math.min(this.sinceFrameMs - FRAME_MS, FRAME_MS);
       this.flush();
     }
+    this.sincePingMs += deltaMs;
+    if (this.sincePingMs >= PING_MS) {
+      this.sincePingMs = 0;
+      this.transport.send({ t: 'ping', at: performance.now() });
+    }
+    this.releaseStaleInputs();
+  }
+
+  /** The round trip to each guest (ms, by player index; the ?debug readout). */
+  public roundTrips(): readonly number[] {
+    return this.rtt;
+  }
+
+  private releaseStaleInputs(): void {
+    const now = performance.now();
+    this.world.players.forEach(({ input, index }) => {
+      const at = this.inputAt[index];
+      if (index > 0 && at !== undefined && now - at > INPUT_STALE_MS) {
+        (input as ManualInput).set({ direction: 0, sprint: false, aim: undefined });
+        this.inputAt[index] = undefined;
+      }
+    });
   }
 
   /** The level is over: the last frame, then what the guest's end screen shows. */
   public sendEnd(info: EndInfo): void {
+    this.sinceFrameMs = 0;
     this.flush();
     this.transport.send({ t: 'end', info });
   }
 
+  /** Events reliably (when there are any), then the world, lossy. */
   private flush(): void {
-    this.sinceFrameMs = 0;
-    this.transport.send({ t: 'frame', snap: this.snapshot(), events: this.events });
-    this.events = [];
+    if (this.events.length > 0) {
+      this.transport.send({ t: 'events', events: this.events });
+      this.events = [];
+    }
+    this.transport.sendState({ t: 'state', n: this.stateSeq, ht: performance.now(), snap: encodeSnapshot(this.snapshot()) });
+    this.stateSeq += 1;
   }
 
   private snapshot(): Snapshot {

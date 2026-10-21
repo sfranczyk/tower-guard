@@ -10,11 +10,13 @@ import type { EnemyType, ProjectileType } from '../types';
 import type { AfflictionNet } from '../objects/AfflictionLayer';
 import type { BowmanNet } from '../objects/bowman/Bowman';
 import type { EffectKind } from '../systems/EffectsSystem';
+import type { WireSnapshot } from './snapCodec';
 
 /**
- * Co-op messages (host-authoritative): the host runs the battle and sends `frame`s (a snapshot of the world
- * plus the events since the last frame); the guest sends its controls as `input`. Plain JSON over the
- * transport (PeerJS data channel, or BroadcastChannel between two tabs).
+ * Co-op messages (host-authoritative): the host runs the battle and sends, 20 times a second, the events since the
+ * last time (`events`, reliable) and a snapshot of the world (`state`, lossy: a lost one is simply superseded); the
+ * guest sends its held controls as lossy `input` and its one-off actions in a reliable one. Plain JSON over the
+ * transport (PeerJS data channels, or BroadcastChannel between two tabs).
  */
 
 /** A drawn bow on the wire: direction, power, and the drag's start and current points (for the aim overlay). */
@@ -46,17 +48,21 @@ export const fromNetAim = (aim: NetAim): AimInput => ({
   current: { x: aim.cx, y: aim.cy },
 });
 
-/** Guest → host: held controls, plus the one-off actions since the last message. */
+/**
+ * Guest → host: held controls (`n` counts up: an older one arriving late is ignored), plus, only in the reliable
+ * ones, the one-off actions since the last message.
+ */
 export interface InputMessage {
   t: 'input';
+  n: number;
   direction: number;
   sprint: boolean;
   aim?: NetAim;
-  jump: boolean;
+  jump?: true;
   /** Leave the keep (S). */
-  exit: boolean;
-  shots: NetAim[];
-  burst: boolean;
+  exit?: true;
+  shots?: NetAim[];
+  burst?: true;
   projectile?: ProjectileType;
 }
 
@@ -186,7 +192,13 @@ export type NetMessage =
   | { t: 'full' }
   /** Host → guest: a level starts with this setup (the guest builds the same battlefield). */
   | { t: 'start'; sandbox: SandboxSettings; run: RunState; wind: number }
-  | { t: 'frame'; snap: Snapshot; events: GameEvent[] }
+  /** Host → guest, reliable: what happened since the last `events`. */
+  | { t: 'events'; events: GameEvent[] }
+  /** Host → guest, lossy: the world (`n` counts up, `ht` is the host's performance.now()). */
+  | { t: 'state'; n: number; ht: number; snap: WireSnapshot }
+  /** Either way, lossy: how long the round trip takes (the other side answers `pong` with the same `at`). */
+  | { t: 'ping'; at: number }
+  | { t: 'pong'; at: number }
   | { t: 'end'; info: EndInfo }
   /** Host → guest: the host went back to the battle setup. */
   | { t: 'lobby' }

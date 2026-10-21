@@ -11,12 +11,14 @@ import type { EffectsSystem } from '../systems/EffectsSystem';
 import type { Foe } from '../systems/CombatSystem';
 import { groundAt } from '../systems/terrain';
 import type { EnemyType, ProjectileType, Vec2 } from '../types';
-import type { ArrowLaunch } from './HostSync';
-import { toNetAim, type EndInfo, type GameEvent, type NetMessage, type Snapshot, type SpawnPlace } from './protocol';
+import { FRAME_MS, PING_MS, type ArrowLaunch } from './HostSync';
+import { PlaybackClock } from './playbackClock';
+import { toNetAim, type EndInfo, type GameEvent, type InputMessage, type NetMessage, type Snapshot, type SpawnPlace } from './protocol';
+import { decodeSnapshot } from './snapCodec';
 import type { RoomLink } from './Transport';
 
-/** The guest shows the world this far in the past, between two frames, so motion stays smooth. */
-const INTERPOLATION_DELAY_MS = 100;
+/** Frames older than this behind the shown time are let go. */
+const FRAME_KEEP_MS = 500;
 /** Controls go to the host this often. */
 const INPUT_MS = 33;
 /** The guest's own bowman is put where the host has him when they disagree by this much (px). */
@@ -64,8 +66,12 @@ const lerp = (from: number, to: number, t: number): number => from + (to - from)
 export class GuestSync {
   private readonly enemyById = new Map<number, Foe>();
   private readonly arrowById = new Map<number, Arrow>();
-  private frames: Array<{ at: number; snap: Snapshot }> = [];
-  private clockMs = 0;
+  /** The host's frames by host time (the playback clock drops ones that come out of order). */
+  private frames: Array<{ ht: number; snap: Snapshot }> = [];
+  private readonly playback = new PlaybackClock(FRAME_MS);
+  private inputSeq = 0;
+  private sincePingMs = 0;
+  private rtt?: number;
   private sinceInputMs = 0;
   private keepMismatchMs = 0;
   private shots: AimInput[] = [];
@@ -109,12 +115,27 @@ export class GuestSync {
 
   private receive(message: NetMessage): void {
     switch (message.t) {
-      case 'frame':
+      case 'events':
         message.events.forEach((event) => this.apply(event));
-        this.frames.push({ at: this.clockMs, snap: message.snap });
-        // Keep enough to interpolate (and a little more).
-        this.frames = this.frames.filter((frame) => frame.at >= this.clockMs - INTERPOLATION_DELAY_MS * 4);
         break;
+      case 'state':
+        if (this.playback.arrive(message.n, message.ht, performance.now())) {
+          this.frames.push({ ht: message.ht, snap: decodeSnapshot(message.snap) });
+          // Keep enough to interpolate (and a little more).
+          const oldest = (this.playback.showAt(performance.now()) ?? message.ht) - FRAME_KEEP_MS;
+          while (this.frames.length > 2 && this.frames[0].ht < oldest) {
+            this.frames.shift();
+          }
+        }
+        break;
+      case 'ping':
+        this.transport.send({ t: 'pong', at: message.at });
+        break;
+      case 'pong': {
+        const sample = performance.now() - message.at;
+        this.rtt = this.rtt === undefined ? sample : this.rtt + (sample - this.rtt) * 0.3;
+        break;
+      }
       case 'end':
         this.world.showEnd(message.info);
         break;
@@ -263,10 +284,16 @@ export class GuestSync {
 
   /** Every frame: the world as the host had it a moment ago, local arrows, and the guest's controls out. */
   public update(deltaMs: number): void {
-    this.clockMs += deltaMs;
+    this.playback.advance(deltaMs);
     const latest = this.frames[this.frames.length - 1]?.snap;
-    if (latest) {
-      this.applySnapshot(deltaMs, latest);
+    const showAt = this.playback.showAt(performance.now());
+    if (latest && showAt !== undefined) {
+      this.applySnapshot(deltaMs, latest, showAt);
+    }
+    this.sincePingMs += deltaMs;
+    if (this.sincePingMs >= PING_MS) {
+      this.sincePingMs = 0;
+      this.transport.send({ t: 'ping', at: performance.now() });
     }
     this.animateEnemies(deltaMs);
     this.flyArrows(deltaMs);
@@ -276,24 +303,30 @@ export class GuestSync {
     }
   }
 
-  private applySnapshot(deltaMs: number, latest: Snapshot): void {
+  /** The link as the guest sees it (the ?debug readout). */
+  public get stats(): { rttMs?: number; jitterMs: number; delayMs: number; lossRatio: number } {
+    return { rttMs: this.rtt, ...this.playback.stats };
+  }
+
+  private applySnapshot(deltaMs: number, latest: Snapshot, renderAt: number): void {
     const { players, localIndex, playerTower, enemyTower } = this.world;
-    const renderAt = this.clockMs - INTERPOLATION_DELAY_MS;
-    const nextIndex = this.frames.findIndex((frame) => frame.at > renderAt);
+    const nextIndex = this.frames.findIndex((frame) => frame.ht > renderAt);
     const to = nextIndex === -1 ? this.frames[this.frames.length - 1] : this.frames[nextIndex];
     const from = nextIndex > 0 ? this.frames[nextIndex - 1] : to;
-    const t = to.at === from.at ? 1 : Math.max(0, Math.min(1, (renderAt - from.at) / (to.at - from.at)));
+    const t = to.ht === from.ht ? 1 : Math.max(0, Math.min(1, (renderAt - from.ht) / (to.ht - from.ht)));
+    const enemiesBefore = new Map(from.snap.enemies.map((state) => [state.id, state]));
+    const dragonsBefore = new Map(from.snap.dragons.map((state) => [state.id, state]));
 
     to.snap.enemies.forEach((state) => {
       const enemy = this.enemyById.get(state.id);
-      const before = from.snap.enemies.find((candidate) => candidate.id === state.id) ?? state;
+      const before = enemiesBefore.get(state.id) ?? state;
       if (enemy && !(enemy instanceof DragonEnemy)) {
         enemy.applyNetState({ ...state, x: lerp(before.x, state.x, t), y: lerp(before.y, state.y, t) });
       }
     });
     to.snap.dragons.forEach((state) => {
       const dragon = this.enemyById.get(state.id);
-      const before = from.snap.dragons.find((candidate) => candidate.id === state.id) ?? state;
+      const before = dragonsBefore.get(state.id) ?? state;
       if (dragon instanceof DragonEnemy) {
         dragon.applyNetState({ ...state, x: lerp(before.x, state.x, t), y: lerp(before.y, state.y, t) });
       }
@@ -383,20 +416,28 @@ export class GuestSync {
       });
   }
 
+  /** Held controls go lossy; when there are one-off actions too, the whole message goes reliably. */
   private sendInput(): void {
     this.sinceInputMs = 0;
     const aim = this.input.getAim();
-    this.transport.send({
+    const message: InputMessage = {
       t: 'input',
+      n: this.inputSeq,
       direction: this.input.getMovementDirection(),
       sprint: this.input.isSprintDown(),
       aim: aim ? toNetAim(aim) : undefined,
-      jump: this.input.takeJump(),
-      exit: this.input.takeExit(),
-      shots: this.shots.map(toNetAim),
-      burst: this.burst,
+      jump: this.input.takeJump() || undefined,
+      exit: this.input.takeExit() || undefined,
+      shots: this.shots.length > 0 ? this.shots.map(toNetAim) : undefined,
+      burst: this.burst || undefined,
       projectile: this.projectile,
-    });
+    };
+    this.inputSeq += 1;
+    if (message.jump || message.exit || message.shots || message.burst || message.projectile) {
+      this.transport.send(message);
+    } else {
+      this.transport.sendState(message);
+    }
     this.shots = [];
     this.burst = false;
     this.projectile = undefined;
