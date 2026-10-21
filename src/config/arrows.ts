@@ -55,7 +55,7 @@ export const ARROW_COOLDOWN = tunable('ARROW_COOLDOWN', 'Arrow cooldowns (s)', {
   fire: 4,
   frost: 4,
   pinning: 8,
-  shrapnel: 1,
+  shrapnel: 3,
   explosive: 7,
   vortex: 15,
 }, { meta: { normal: { min: 0, max: 5, step: 0.1 } } });
@@ -65,7 +65,7 @@ export const ARROW_CHARGES = tunable('ARROW_CHARGES', 'Arrow charges', {
   fire: 1,
   frost: 1,
   pinning: 5,
-  shrapnel: 3,
+  shrapnel: 4,
   explosive: 1,
   vortex: 4,
 }, { meta: Object.fromEntries(['normal', 'piercing', 'fire', 'frost', 'pinning', 'shrapnel', 'explosive', 'vortex'].map((type) => [type, { min: 1, max: 10, step: 1 }])) });
