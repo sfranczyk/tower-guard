@@ -89,7 +89,7 @@ export const DRAGON_BUFFET = { x: 14, y: 20, tilt: 0.16 } as const;
  * frozen, it waits.
  */
 export const REGEN = tunable('REGEN', 'Troll regeneration', {
-  perSecond: 6,
+  perSecond: 5,
   tickMs: 500,
   afterFireMs: 12000,
 });

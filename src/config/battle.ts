@@ -1,7 +1,5 @@
 import { tunable } from '../core/tuning';
 /** The run: keep health, waves, survival, allies, banners, medic, difficulty. */
-/** The enemy keep's health in every sandbox run (destroying it wins immediately). */
-export const ENEMY_KEEP_HEALTH = 650;
 /**
  * A run is a row of levels (each its own map and enemies); a level's enemies come in waves
  * (systems/waveDirector.ts): the first after WAVES.startDelayMs, the enemies of a wave WAVES.spawnIntervalMs
@@ -144,7 +142,7 @@ export const MEDIC = tunable('MEDIC', 'Medic', {
  * harder every enemy hit lands on the bowmen and the keep than on easy; `*Spread`: enemy archers' aim error (dragon
  * riders' too) as a share of easy's ENEMY_ATTACK.archerSpread. On medium and hard a
  * wave comes in groups of `groupSize` (same kinds together), `groupSpawnIntervalMs` apart inside a group and
- * `groupGapMs` between groups; easy sends them one by one, WAVES.spawnIntervalMs apart. `*ChainFalloff`: in a chain of
+ * `groupGapMs` between groups; easy sends them one by one, WAVES.spawnIntervalMs apart. `*EnemyKeep`: the enemy keep's health as a share of ours. `*ChainFalloff`: in a chain of
  * kamikaze bombs each link is this much less likely to go off than the one before (a dud is only knocked down, unhurt;
  * the bomb a bowman's arrow, fire, lightning or contact sets off always counts as the first link; easy: always).
  */
@@ -162,4 +160,8 @@ export const DIFFICULTY_SCALE = tunable('DIFFICULTY_SCALE', 'Difficulty', {
   hardLevelHeal: 0.1,
   mediumChainFalloff: 0.1,
   hardChainFalloff: 0.2,
+  // The enemy keep's health as a share of the player's (sandbox keepHealth): weaker walls on easy, stronger on hard.
+  easyEnemyKeep: 0.8,
+  mediumEnemyKeep: 1,
+  hardEnemyKeep: 1.1,
 }, { meta: { mediumChainFalloff: { max: 1 }, hardChainFalloff: { max: 1 } } });

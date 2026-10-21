@@ -1,14 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import { BATTLEGROUND_IDS, BATTLEGROUNDS } from './battlegrounds';
-import { DEFAULT_SURVIVAL_MINUTES, MAX_ENEMIES_PER_TYPE, MAX_LEVELS, MAX_SURVIVAL_LEVELS, SURVIVAL_MINUTES, battlegroundsFor, createDefaultSandbox, normalizeSandbox, levelEnemyTotal, runBattleground, runLevelCount, supportAllowed, friendlyFireOn, withFriendlyFire, bannersInPlay } from './sandbox';
+import { DEFAULT_SURVIVAL_MINUTES, HEALTH_LIMITS, MAX_ENEMIES_PER_TYPE, MAX_LEVELS, MAX_SURVIVAL_LEVELS, SURVIVAL_MINUTES, battlegroundsFor, createDefaultSandbox, normalizeSandbox, levelEnemyTotal, runBattleground, runLevelCount, supportAllowed, friendlyFireOn, withFriendlyFire, bannersInPlay } from './sandbox';
 
 describe('sandbox settings', () => {
-  it('defaults to one level with five prepared levels that get harder', () => {
+  it('defaults to one varied level of 24, then prepared levels that get harder', () => {
     const settings = createDefaultSandbox();
     expect(settings.levelCount).toBe(1);
     expect(settings.levels).toHaveLength(MAX_LEVELS);
     const totals = settings.levels.map((level) => levelEnemyTotal(level.enemies));
-    expect(totals).toEqual([...totals].sort((a, b) => a - b));
+    expect(totals[0]).toBe(24);
+    const later = totals.slice(1);
+    expect(later).toEqual([...later].sort((a, b) => a - b));
     settings.levels.forEach((level) => expect(BATTLEGROUND_IDS).toContain(level.battleground));
   });
 
@@ -20,7 +22,7 @@ describe('sandbox settings', () => {
       levels: [{ enemies: { raider: 99, fast: -2, tank: 1.6, hunter: 1, dragon: 0 } as never, battleground: 'moon' as never }],
     });
     expect(settings.levelCount).toBe(MAX_LEVELS);
-    expect(settings.bowmanHealth).toBe(20);
+    expect(settings.bowmanHealth).toBe(HEALTH_LIMITS.bowman.min);
     expect(settings.keepHealth).toBe(createDefaultSandbox().keepHealth);
     // Types missing from a stored level (added later) default to none.
     expect(settings.levels[0].enemies).toEqual({ raider: MAX_ENEMIES_PER_TYPE, fast: 0, tank: 2, troll: 0, hunter: 1, dragon: 0, fireDragon: 0, kamikaze: 0, goblinKamikaze: 0, zombie: 0, knight: 0, heavyKnight: 0, horseKnight: 0, priest: 0, shaman: 0 });

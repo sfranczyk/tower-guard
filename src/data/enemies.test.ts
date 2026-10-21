@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { ARROWS, ENEMY_SPEED, EXPLOSION_DAMAGE, PIN_DAMAGE, PIN_DURATION_MS, PIN_DURATION_ZOMBIE_MS } from '../config';
+import { ARROWS, EXPLOSION_DAMAGE, PIN_DAMAGE, PIN_DURATION_MS, PIN_DURATION_ZOMBIE_MS } from '../config';
 import { rollArrowDamage, ENEMY_DAMAGE, ENEMY_LOOKS, enemyDamage, blowsApart, explosionDamage, getEnemyStats, knockbackPush, pinDurationMs, rollDamage, splashGibChance } from './enemies';
 
 describe('getEnemyStats', () => {
   it('returns base stats at difficulty 1', () => {
-    expect(getEnemyStats('raider', 1)).toEqual({ health: 35, speed: ENEMY_SPEED });
+    expect(getEnemyStats('raider', 1)).toEqual({ health: 29, speed: 22 });
   });
 
   it('makes fast enemies quicker and frailer, tanks slower and tougher', () => {
@@ -19,8 +19,8 @@ describe('getEnemyStats', () => {
 
   it('scales with difficulty and rounds health', () => {
     const stats = getEnemyStats('raider', 1.35);
-    expect(stats.health).toBe(Math.round(35 * 1.35));
-    expect(stats.speed).toBeCloseTo(ENEMY_SPEED * 1.35);
+    expect(stats.health).toBe(Math.round(29 * 1.35));
+    expect(stats.speed).toBeCloseTo(22 * 1.35);
   });
 });
 
@@ -46,14 +46,16 @@ describe('enemy toughness and damage', () => {
     expect(getEnemyStats('kamikaze', 1).health).toBeGreaterThan(ARROWS.damageMax);
     expect(getEnemyStats('kamikaze', 1).health).toBeLessThanOrEqual(rollArrowDamage(true, 1));
     expect(arrowsToKill('kamikaze', bestBody)).toBe(2);
+    // Runners and priests may fall to one strong body hit, hunters never; any headshot kills all three.
     (['fast', 'hunter', 'priest'] as const).forEach((type) => {
-      expect(arrowsToKill(type, bestBody)).toBe(2);
+      expect(arrowsToKill(type, averageBody)).toBe(2);
       expect(arrowsToKill(type, worstHead)).toBe(1);
     });
-    expect(arrowsToKill('raider', averageBody)).toBe(3);
+    expect(arrowsToKill('hunter', bestBody)).toBe(2);
+    expect(arrowsToKill('raider', averageBody)).toBe(2);
     expect(arrowsToKill('raider', worstHead)).toBe(2);
     expect(arrowsToKill('tank', averageBody)).toBe(6);
-    expect(arrowsToKill('dragon', averageBody)).toBe(9);
+    expect(arrowsToKill('dragon', averageBody)).toBe(7);
   });
 
   it('hits differently per type: runners least, brutes most', () => {

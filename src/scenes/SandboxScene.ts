@@ -1,5 +1,5 @@
 import { Container } from 'pixi.js';
-import { BACKDROP_WIDTH, ENEMY_KEEP_HEALTH } from '../config';
+import { BACKDROP_WIDTH } from '../config';
 import { Scene, isMultiplayer, newRun } from '../core/Scene';
 import { centeredCameraX } from '../core/viewport';
 import { saveSandbox } from '../core/sandboxStorage';
@@ -81,7 +81,7 @@ export class SandboxScene extends Scene {
 
   private startRun(): void {
     const { session } = this.ctx;
-    session.run = newRun(session.sandbox, session.playerCount, ENEMY_KEEP_HEALTH);
+    session.run = newRun(session.sandbox, session.playerCount);
     this.ctx.goTo('game');
   }
 }

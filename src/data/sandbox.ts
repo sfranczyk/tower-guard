@@ -21,8 +21,8 @@ export const MAX_LEVELS = 5;
 export const MAX_SURVIVAL_LEVELS = 3;
 export const MAX_ENEMIES_PER_TYPE = 50;
 export const HEALTH_LIMITS = {
-  bowman: { min: 20, max: 600, step: 10 },
-  keep: { min: 100, max: 5000, step: 100 },
+  bowman: { min: 100, max: 1000, step: 10 },
+  keep: { min: 1000, max: 10000, step: 100 },
 } as const;
 
 export type LevelEnemyCounts = Record<EnemyType, number>;
@@ -82,9 +82,9 @@ export interface SandboxSettings {
   coopFriendlyFire: boolean;
 }
 
-/** Default levels get a little harder each time and alternate battlegrounds. */
+/** Default levels alternate battlegrounds; the first (a new run's only level) is a varied one of 24 in four waves. */
 const DEFAULT_LEVEL_ENEMIES: readonly LevelEnemyCounts[] = [
-  { raider: 4, fast: 0, tank: 0, troll: 0, hunter: 1, dragon: 0, fireDragon: 0, kamikaze: 0, goblinKamikaze: 0, zombie: 0, knight: 0, heavyKnight: 0, horseKnight: 0, priest: 0, shaman: 0 },
+  { raider: 7, fast: 3, tank: 1, troll: 0, hunter: 3, dragon: 1, fireDragon: 0, kamikaze: 1, goblinKamikaze: 2, zombie: 2, knight: 2, heavyKnight: 0, horseKnight: 1, priest: 1, shaman: 0 },
   { raider: 4, fast: 2, tank: 0, troll: 0, hunter: 1, dragon: 0, fireDragon: 0, kamikaze: 0, goblinKamikaze: 0, zombie: 1, knight: 0, heavyKnight: 0, horseKnight: 0, priest: 0, shaman: 0 },
   { raider: 4, fast: 3, tank: 1, troll: 0, hunter: 2, dragon: 0, fireDragon: 0, kamikaze: 0, goblinKamikaze: 1, zombie: 2, knight: 1, heavyKnight: 0, horseKnight: 0, priest: 0, shaman: 0 },
   { raider: 5, fast: 3, tank: 2, troll: 0, hunter: 2, dragon: 1, fireDragon: 0, kamikaze: 1, goblinKamikaze: 1, zombie: 2, knight: 2, heavyKnight: 0, horseKnight: 1, priest: 1, shaman: 0 },
@@ -126,8 +126,8 @@ export const createDefaultSandbox = (): SandboxSettings => ({
     enemies: { ...enemies },
     battleground: battlegroundsFor('battle')[index % battlegroundsFor('battle').length],
   })),
-  bowmanHealth: 150,
-  keepHealth: 1000,
+  bowmanHealth: 300,
+  keepHealth: 3300,
   loadout: [...DEFAULT_LOADOUT],
   difficulty: DEFAULT_DIFFICULTY,
   banners: false,

@@ -57,3 +57,7 @@ export const wavePacing = (level: DifficultyLevel): WavePacing => (level === 'ea
 export const healAfterLevel = (level: DifficultyLevel, health: number, max: number): number => (health <= 0
   ? 0
   : Math.min(max, health + max * DIFFICULTY_SCALE[`${level}LevelHeal`]));
+
+/** The enemy keep's health in a run at `level` against a player keep of `keepHealth` (DIFFICULTY_SCALE.*EnemyKeep). */
+export const enemyKeepHealth = (level: DifficultyLevel, keepHealth: number): number =>
+  Math.round(keepHealth * DIFFICULTY_SCALE[`${level}EnemyKeep`]);

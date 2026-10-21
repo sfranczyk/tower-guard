@@ -50,13 +50,13 @@ export const ARROWS = tunable('ARROWS', 'Arrows', {
  * host gives a co-op guest's shots ARROW_COOLDOWN_SLACK_MS of network leeway (BattlePlayers).
  */
 export const ARROW_COOLDOWN = tunable('ARROW_COOLDOWN', 'Arrow cooldowns (s)', {
-  normal: 0.5,
+  normal: 0.33,
   piercing: 2,
   fire: 4,
   frost: 4,
-  pinning: 4,
+  pinning: 8,
   shrapnel: 5,
-  explosive: 10,
+  explosive: 7,
   vortex: 15,
 }, { meta: { normal: { min: 0, max: 5, step: 0.1 } } });
 export const ARROW_CHARGES = tunable('ARROW_CHARGES', 'Arrow charges', {
@@ -64,7 +64,7 @@ export const ARROW_CHARGES = tunable('ARROW_CHARGES', 'Arrow charges', {
   piercing: 1,
   fire: 1,
   frost: 1,
-  pinning: 1,
+  pinning: 5,
   shrapnel: 1,
   explosive: 1,
   vortex: 4,
@@ -99,7 +99,7 @@ export const FIRE_DRAGON_BLAST_POWER = 3;
  * Explosion damage by distance from the blast: `centre` at the middle (and for the enemy an explosive arrow hits
  * directly), falling off linearly to `edge` at EXPLOSION_RADIUS. The arrow itself does no damage.
  */
-export const EXPLOSION_DAMAGE = { centre: 35, edge: 10 } as const;
+export const EXPLOSION_DAMAGE = { centre: 45, edge: 10 } as const;
 /**
  * Shrapnel arrow: Space in flight bursts it into SHRAPNEL_FRAGMENTS small arrows fanned SHRAPNEL_SPREAD
  * radians apart around its heading, each dealing SHRAPNEL_FRAGMENT_DAMAGE × a normal arrow's hit.
@@ -123,7 +123,9 @@ export const KNOCKBACK_PUSH_MAX = 110;
 export const PIN_DURATION_MS = 20000;
 export const PIN_DURATION_ZOMBIE_MS = 20000;
 export const PIN_DAMAGE: readonly [number, number] = [0, 4];
+/** An arrow's damage to the enemy keep; an explosive bolt deals KEEP_BLAST_FACTOR times as much (siege). */
 export const ENEMY_TOWER_DAMAGE = 16;
+export const KEEP_BLAST_FACTOR = 3;
 /**
  * Fire arrow (systems/afflictions.ts, systems/ArrowMagic.ts): hits for FIRE_ARROW_DAMAGE × a normal arrow's hit and
  * sets the enemy alight for ENEMY_BURN_MS (zombies × ENEMY_BURN_ZOMBIE_FACTOR, trolls × TROLL_BURN_FACTOR; the fire
