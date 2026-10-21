@@ -21,7 +21,8 @@ patient (`bandaging.ts`, pure, tested: `pickPatient`, `bandageHeal`; tuning `MED
 Bowmen via `bowmanHealth` / `bowmanHealed` events. Enemies:
 `nearestMeleeTarget` (`targeting.ts`) stops melee enemies at a soldier (`EnemyAI.fightAlly`), archers on foot aim at
 them, hostile arrows (`ArrowHits.hostileHitAlly`), kamikaze blasts and lightning hurt them; players' arrows only with
-friendly fire (`arrowTargets`). Limits and pauses: `allyRoster.ts` (pure, tested), tuning `ALLIES`.
+friendly fire (`arrowTargets`). Reserve: `allyRoster.ts` (pure, tested; one trained at a time per kind, `*TrainMs`, while
+reserve + field < `*Limit`; summon what is ready), tuning `ALLIES`.
 
 ## Banners (`banners.ts`, pure, tested; tuning `BANNERS`)
 The run's Banners option (`SandboxSettings.banners`, solo only): `Banners<Enemy>` (`CombatWorld.banners`) holds each

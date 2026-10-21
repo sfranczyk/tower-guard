@@ -77,7 +77,8 @@ export const SURVIVAL = tunable('SURVIVAL', 'Survival', {
 
 /**
  * The player's soldiers (scenes/BattleAllies.ts, systems/AllyAI.ts): how many of each may stand on the field at once
- * (`*Limit`; a fallen one frees his place), the pause after each summons (`*CooldownMs`), where they come in
+ * (`*Limit`, reserve and field together; a fallen one frees his place), how long training the next for the reserve takes
+ * (`*TrainMs`, systems/allyRoster.ts), where they come in
  * (`spawnX`, beyond the left edge), the posts of the orders (`holdX` for "Hold the line", `retreatX` in front of the
  * keep for "Fall back") and how far from his post a soldier holding the line steps out to fight (`engageRange`).
  */
@@ -85,9 +86,9 @@ export const ALLIES = tunable('ALLIES', 'Allies', {
   squireLimit: 5,
   allyKnightLimit: 3,
   medicLimit: 2,
-  squireCooldownMs: 1000,
-  allyKnightCooldownMs: 4000,
-  medicCooldownMs: 2000,
+  squireTrainMs: 10000,
+  allyKnightTrainMs: 20000,
+  medicTrainMs: 25000,
   spawnX: -30,
   holdX: 420,
   retreatX: 230,

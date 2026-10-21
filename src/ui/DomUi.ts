@@ -42,7 +42,7 @@ export type { HudValues } from './Hud';
 
 /** The soldiers' slots in the HUD now: standing / allowed of each kind, the share of its pause left, the order. */
 export interface AllyHudView {
-  slots: ReadonlyArray<{ type: AllyType; alive: number; limit: number; cooldown: number }>;
+  slots: ReadonlyArray<{ type: AllyType; ready: number; alive: number; limit: number; cooldown: number }>;
   order: 'hold' | 'advance' | 'retreat';
   orderLabel: string;
 }
@@ -270,13 +270,14 @@ export class DomUi {
     if (this.alliesRoot.hidden) {
       return;
     }
-    view.slots.forEach(({ type, alive, limit, cooldown }) => {
+    view.slots.forEach(({ type, ready, alive, limit, cooldown }) => {
       const count = this.alliesRoot.querySelector<HTMLElement>(`[data-ally-count="${type}"]`);
-      const text = `${alive}/${limit}`;
+      const text = `${ready} · ${alive}/${limit}`;
       if (count && count.textContent !== text) {
         count.textContent = text;
       }
-      this.alliesRoot.querySelector(`[data-ally="${type}"]`)?.classList.toggle('full', alive >= limit);
+      // Dimmed while none waits in the reserve.
+      this.alliesRoot.querySelector(`[data-ally="${type}"]`)?.classList.toggle('full', ready === 0);
       const wait = this.alliesRoot.querySelector<HTMLElement>(`[data-ally-wait="${type}"]`);
       if (wait) {
         wait.style.height = `${Math.round(cooldown * 100)}%`;
