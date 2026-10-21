@@ -247,7 +247,7 @@ export const ENEMY_KINDS: Readonly<Record<UnitType, EnemyKind>> = {
   // A troll: taller and slower than the brute, with long arms and a stone club. Its wounds close (REGEN): set it alight
   // to stop that, then finish it while it burns.
   troll: {
-    label: 'Troll', archetype: 'heavy', race: 'ogre', magical: false, arrival: 0.4, threat: 5, boss: { escorts: 'nonHumans' }, regenerates: true,
+    label: 'Troll', archetype: 'heavy', race: 'ogre', magical: false, arrival: 0.4, threat: 3.5, boss: { escorts: 'nonHumans' }, regenerates: true,
     stats: { health: 130, speed: 15 }, damage: { melee: [16, 24] }, keepDamage: { melee: 2 }, build: { size: 1.6, strikeReach: 90 },
     traits: { burnFactor: TROLL_BURN_FACTOR },
   },
@@ -259,7 +259,7 @@ export const ENEMY_KINDS: Readonly<Record<UnitType, EnemyKind>> = {
   },
   // Flying archer mount: tough, flies in steadily (speed is its horizontal flight speed). Never melees.
   dragon: {
-    label: 'Dragon archer', archetype: 'skyArcher', race: 'dragon', magical: true, arrival: 0.35, threat: 5, boss: { escorts: 'humans' },
+    label: 'Dragon archer', archetype: 'skyArcher', race: 'dragon', magical: true, arrival: 0.35, threat: 2.5,
     stats: { health: 100, speed: ENEMY_SPEED * 1.2 }, damage: { melee: [0, 0], arrow: [12, 16] }, build: { size: 1, strikeReach: 0 },
   },
   // Flies in lower and closer to breathe fire. No hits of its own: its fire sets the bowman alight (BURN_* in config.ts).
@@ -276,13 +276,13 @@ export const ENEMY_KINDS: Readonly<Record<UnitType, EnemyKind>> = {
   },
   // The goblin's cheap version: smaller and quicker, one round bomb, a weaker blast; any arrow puts it down.
   goblinKamikaze: {
-    label: 'Goblin bomber', archetype: 'kamikaze', race: 'goblin', magical: false, arrival: 0.2, threat: 0.5,
+    label: 'Goblin bomber', archetype: 'kamikaze', race: 'goblin', magical: false, arrival: 0.2, threat: 1,
     stats: { health: 1, speed: ENEMY_SPEED * 2.2 }, damage: { melee: [12, 18] }, keepDamage: { melee: 2 }, build: { size: 0.8, strikeReach: 0 },
     traits: { mass: 1 },
   },
   // Slow, arms out, hard to put down. Its shuffle is the march with the feet dragged.
   zombie: {
-    label: 'Zombie', archetype: 'grabber', race: 'undead', magical: false, arrival: 0.1, threat: 1.5,
+    label: 'Zombie', archetype: 'grabber', race: 'undead', magical: false, arrival: 0.1, threat: 1,
     stats: { health: 65, speed: ENEMY_SPEED * 0.4 }, damage: { melee: [8, 12] }, build: { size: 1, strikeReach: 50, stepMs: 240, walkStyle: 'march' },
   },
   // Black plate (the knights march, rendering/walkCycle): body hits barely dent it (KNIGHT_ARMOR), so aim for the visor or use piercing arrows. A sword: it cuts
@@ -295,7 +295,7 @@ export const ENEMY_KINDS: Readonly<Record<UnitType, EnemyKind>> = {
   },
   // A head taller, in the same black plate, with a war hammer in both hands.
   heavyKnight: {
-    label: 'Heavy knight', archetype: 'heavy', race: 'human', magical: false, arrival: 0.35, threat: 2.5, armor: KNIGHT_ARMOR,
+    label: 'Heavy knight', archetype: 'heavy', race: 'human', magical: false, arrival: 0.35, threat: 2, armor: KNIGHT_ARMOR,
     stats: { health: 60, speed: 20 }, damage: { melee: [16, 24] }, keepDamage: { melee: 2 }, build: { size: 1.1, strikeReach: 75, walkStyle: 'march' },
     // Trusts its plate: slower to heed a bomb.
     traits: { mass: 2.5, blastAwareness: 0.7 },
@@ -304,7 +304,7 @@ export const ENEMY_KINDS: Readonly<Record<UnitType, EnemyKind>> = {
   // and horse have their own health: the rider's plate (`armor`, on his torso only) turns body hits, the horse has none. The horse killed, the knight is
   // thrown off and fights on foot with the health he has left; the rider killed (or pulled out of the saddle by a vortex), the horse bolts.
   horseKnight: {
-    label: 'Mounted knight', archetype: 'cavalry', race: 'human', magical: false, arrival: 0.45, threat: 3, unhorsed: 'knight', armor: KNIGHT_ARMOR,
+    label: 'Mounted knight', archetype: 'cavalry', race: 'human', magical: false, arrival: 0.45, threat: 2, unhorsed: 'knight', armor: KNIGHT_ARMOR,
     mount: { health: 60 },
     stats: { health: 40, speed: ENEMY_SPEED * 2 }, damage: { melee: [14, 20] }, keepDamage: { melee: 1.5 },
     build: { size: 1.15, strikeReach: 64, reach: { bowman: 42, keep: 82 } },

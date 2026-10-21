@@ -48,10 +48,10 @@ every enemy hit on bowmen and keep × `damage` (melee, arrows, kamikaze, dragon 
 groups of `DIFFICULTY_SCALE.groupSize` (kinds together, `groupByKind`), `groupSpawnIntervalMs` apart, `groupGapMs` between.
 
 ## Survival (`survivalWaves.ts`, `survivalRoles.ts`, `nightCycle.ts`, pure, tested; tuning `SURVIVAL`)
-`SurvivalDirector` (BattleEnemies in survival): each wave a threat budget (`survivalBudget`: `firstBudget` + `budgetGrowth`
-per wave up to the difficulty's `*PeakWave`, × level, difficulty, co-op players, ± `sizeJitter`) filled by kinds' `threat`
-(`drawByBudget`), the next one `survivalWaveGap` of what it cost later (40–60 s, or `clearedDelayMs` = 5 s after the field is cleared).
-Roles (`enemyRole`): supporters never lead; bosses (`boss` in data/enemyKinds: troll, dragons) only as a lead from
+`SurvivalDirector` (BattleEnemies in survival): each wave a threat budget (`survivalBudget`: the difficulty's `*FirstBudget` +
+`*BudgetGrowth` per wave up to `*MaxBudget`, × level, co-op players, ± `sizeJitter`) filled by kinds' `threat`
+(`drawByBudget`), the next one `survivalWaveGap` of what it cost later (20–50 s, or `clearedDelayMs` = 5 s after the field is cleared).
+Roles (`enemyRole`): supporters never lead; bosses (`boss` in data/enemyKinds: troll, fire dragon) only as a lead from
 `bossMinWave`, never two boss waves running, `bossCount` of them on top with escorts of their group (`drawBossWave`).
 Kinds by `arrival` (`kindsArrived`) around a lead (`pickLead`); levels over `finaleMinMs` end with a finale (× `finaleScale`)
 `finaleAtMs` before the end; none in the last `quietEndMs`; at most `maxAliveFor(difficulty, players)` standing. `nightSky(progress)`: moon, stars, dawn/day weights, shade, `sunRise`. Time up: `Enemy`/`DragonEnemy.flee`,

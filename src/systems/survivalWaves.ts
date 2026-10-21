@@ -12,7 +12,7 @@ import { groupByKind } from './waveDirector';
  * leads a boss wave, systems/survivalRoles.ts). The next wave waits `survivalWaveGap` of what this one cost; clearing
  * the field brings it SURVIVAL.clearedDelayMs later. Released with the difficulty's pacing, never more than `maxAliveFor` standing.
  * Long levels end with a big finale wave SURVIVAL.finaleAtMs before the end (the wave just before it smaller). No
- * level sends anything new in the last SURVIVAL.quietEndMs. `finished` once the time is up. GameScene calls `update`
+ * level sends anything new in the last SURVIVAL.quietEndMs (not even what is still queued). `finished` once the time is up. GameScene calls `update`
  * every frame (so it pauses with the game) and spawns what it returns.
  */
 
@@ -21,8 +21,8 @@ const coopFactor = (players: number): number => 1 + SURVIVAL.coopBudgetPerPlayer
 
 /** The threat budget of wave `index` (from 0) of level `levelIndex` at `difficulty` for `players`, × `factor` (jitter, finale). */
 export const survivalBudget = (index: number, levelIndex: number, difficulty: DifficultyLevel, factor = 1, players = 1): number => {
-  const grown = Math.min(index, SURVIVAL[`${difficulty}PeakWave`] - 1);
-  const budget = (SURVIVAL.firstBudget + SURVIVAL.budgetGrowth * grown) * SURVIVAL.levelGrowth ** levelIndex * SURVIVAL[`${difficulty}Scale`];
+  const base = Math.min(SURVIVAL[`${difficulty}MaxBudget`], SURVIVAL[`${difficulty}FirstBudget`] + SURVIVAL[`${difficulty}BudgetGrowth`] * index);
+  const budget = base * SURVIVAL.levelGrowth ** levelIndex;
   return budget * coopFactor(players) * factor;
 };
 
@@ -137,7 +137,8 @@ export class SurvivalDirector {
       const preFinale = this.finaleAtMs !== undefined && !this.finaleSent && this.elapsedMs >= this.finaleAtMs - SURVIVAL.gapMaxMs;
       this.releaseWave(preFinale ? SURVIVAL.preFinaleScale : 1);
     }
-    return this.spawn(deltaMs, alive);
+    // Whatever is still queued stays out in the last quiet seconds.
+    return this.quiet ? [] : this.spawn(deltaMs, alive);
   }
 
   /** No new waves in the last SURVIVAL.quietEndMs. */

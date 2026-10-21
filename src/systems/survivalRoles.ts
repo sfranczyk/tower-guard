@@ -5,7 +5,7 @@ import type { EnemyType } from '../types';
 
 /**
  * Who a survival wave is made of (pure, tested). Every kind has a role: a supporter (priest, shaman) only backs the
- * others up and never leads; a boss (`boss` in data/enemyKinds: troll, both dragons) comes only as a wave's lead, a few
+ * others up and never leads; a boss (`boss` in data/enemyKinds: troll, fire dragon) comes only as a wave's lead, a few
  * at a time with escorts of its group; a fighter is anyone else. Waves are filled by a threat budget (`enemyThreat`).
  */
 

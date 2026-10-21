@@ -13,7 +13,8 @@ const run = (director: SurvivalDirector, ms: number, alive = () => 0): number =>
 
 describe('survival waves', () => {
   it('grow with each wave, each level, the difficulty and the players', () => {
-    expect(survivalBudget(0, 0, 'medium')).toBe(SURVIVAL.firstBudget);
+    expect(survivalBudget(0, 0, 'medium')).toBe(SURVIVAL.mediumFirstBudget);
+    expect(survivalBudget(1, 0, 'easy')).toBe(SURVIVAL.easyFirstBudget + SURVIVAL.easyBudgetGrowth);
     expect(survivalBudget(3, 0, 'medium')).toBeGreaterThan(survivalBudget(1, 0, 'medium'));
     expect(survivalBudget(2, 3, 'medium')).toBeGreaterThan(survivalBudget(2, 0, 'medium'));
     expect(survivalBudget(2, 0, 'hard')).toBeGreaterThan(survivalBudget(2, 0, 'easy'));
@@ -22,11 +23,9 @@ describe('survival waves', () => {
     expect(maxAliveFor('hard', 3)).toBe(Infinity);
   });
 
-  it('stop growing after the difficulty\'s peak wave', () => {
-    const peak = SURVIVAL.mediumPeakWave - 1;
-    expect(survivalBudget(peak, 0, 'medium')).toBeGreaterThan(survivalBudget(peak - 1, 0, 'medium'));
-    expect(survivalBudget(peak + 10, 0, 'medium')).toBe(survivalBudget(peak, 0, 'medium'));
-    expect(survivalBudget(peak, 0, 'medium', 1.5)).toBeGreaterThan(survivalBudget(peak, 0, 'medium'));
+  it('stop growing at the difficulty\'s max budget', () => {
+    expect(survivalBudget(100, 0, 'hard')).toBe(SURVIVAL.hardMaxBudget);
+    expect(survivalBudget(100, 0, 'medium', 1.5)).toBeGreaterThan(survivalBudget(100, 0, 'medium'));
   });
 
   it('lead each wave with one kind, a newly arrived one first, never the same twice running', () => {
@@ -51,7 +50,7 @@ describe('survival waves', () => {
 
   it('bring the next wave SURVIVAL.clearedDelayMs after the field is cleared', () => {
     const director = new SurvivalDirector(['raider'], 600_000, { levelIndex: 0, difficulty: 'easy', pacing: wavePacing('easy'), random: () => 0.5 });
-    run(director, SURVIVAL.startDelayMs + 3_000, () => 1); // first wave out and standing
+    run(director, SURVIVAL.startDelayMs + 6_000, () => 1); // first wave out and standing
     expect(run(director, SURVIVAL.clearedDelayMs - 200)).toBe(0); // cleared now
     expect(run(director, 400)).toBeGreaterThan(0);
   });
@@ -59,15 +58,16 @@ describe('survival waves', () => {
   it('wait for the timer while enemies stand', () => {
     const director = new SurvivalDirector(['raider'], 600_000, { levelIndex: 0, difficulty: 'easy', pacing: wavePacing('easy'), random: () => 0.5 });
     run(director, SURVIVAL.startDelayMs + 5_000, () => 1);
-    expect(run(director, survivalWaveGap(2) - 7_000, () => 1)).toBe(0);
+    expect(run(director, survivalWaveGap(SURVIVAL.easyFirstBudget) - 7_000, () => 1)).toBe(0);
     expect(run(director, 4_000, () => 1)).toBeGreaterThan(0);
   });
 
   it('send bosses only from SURVIVAL.bossMinWave, never two boss waves running', () => {
-    const director = new SurvivalDirector(['raider', 'troll'], 200_000, { levelIndex: 0, difficulty: 'hard', pacing: wavePacing('easy'), random: () => 0 });
+    // Short enough for the troll (arrival 0.4) to have come by the third wave.
+    const director = new SurvivalDirector(['raider', 'troll'], 100_000, { levelIndex: 0, difficulty: 'hard', pacing: wavePacing('easy'), random: () => 0 });
     const waves: string[][] = [];
     let last = -Infinity;
-    for (let time = 0; time < 200_000; time += 100) {
+    for (let time = 0; time < 100_000; time += 100) {
       director.update(100, 1).forEach((kind) => {
         if (time - last > 10_000) {
           waves.push([]);
@@ -97,7 +97,7 @@ describe('survival waves', () => {
     const duration = SURVIVAL.finaleMinMs + 60_000;
     const director = new SurvivalDirector(['raider'], duration, { levelIndex: 0, difficulty: 'medium', pacing: wavePacing('medium'), random: () => 0.5 });
     run(director, duration - SURVIVAL.quietEndMs);
-    run(director, SURVIVAL.quietEndMs - 2_000); // a wave sent just before still walks in
+    run(director, SURVIVAL.quietEndMs - 2_000);
     expect(run(director, 2_000)).toBe(0);
   });
 
@@ -112,7 +112,7 @@ describe('survival waves', () => {
     const director = new SurvivalDirector(['raider'], 60_000, { levelIndex: 0, difficulty: 'easy', pacing: wavePacing('easy'), random: () => 0.5 });
     expect(run(director, SURVIVAL.startDelayMs - 100)).toBe(0);
     const spawned = run(director, 60_000);
-    expect(spawned).toBeGreaterThan(SURVIVAL.firstBudget); // two waves, at the start and a gap later
+    expect(spawned).toBeGreaterThan(SURVIVAL.easyFirstBudget); // two waves, at the start and a gap later
     expect(director.finished).toBe(true);
     expect(director.remainingMs).toBe(0);
     expect(director.update(100, 0)).toEqual([]);

@@ -7,7 +7,8 @@ describe('survival roles', () => {
   it('sort the kinds into supporters, bosses and fighters', () => {
     expect(enemyRole('priest')).toBe('supporter');
     expect(enemyRole('shaman')).toBe('supporter');
-    expect(['troll', 'dragon', 'fireDragon'].map((kind) => enemyRole(kind as never))).toEqual(['boss', 'boss', 'boss']);
+    expect(['troll', 'fireDragon'].map((kind) => enemyRole(kind as never))).toEqual(['boss', 'boss']);
+    expect(enemyRole('dragon')).toBe('fighter');
     expect(enemyRole('raider')).toBe('fighter');
     expect(canLead('priest')).toBe(false);
     expect(canLead('troll')).toBe(true);
@@ -36,7 +37,7 @@ describe('survival roles', () => {
 
   it('escort a boss with its own group, else anyone who came', () => {
     expect(escortsOf('troll', ['raider', 'fast', 'tank', 'dragon'])).toEqual(['fast', 'tank']);
-    expect(escortsOf('dragon', ['raider', 'fast', 'knight'])).toEqual(['raider', 'knight']);
+    expect(escortsOf('fireDragon', ['raider', 'fast', 'knight'])).toEqual(['raider', 'knight']);
     expect(escortsOf('troll', ['raider'])).toEqual(['raider']);
   });
 
@@ -45,6 +46,6 @@ describe('survival roles', () => {
     expect(wave.filter((kind) => kind === 'troll')).toHaveLength(3);
     const escort = wave.filter((kind) => kind !== 'troll');
     expect(waveCost(escort)).toBeLessThanOrEqual(8 * SURVIVAL.bossEscortShare);
-    expect(gapBudget).toBe(waveCost(wave));
+    expect(gapBudget).toBeCloseTo(waveCost(wave));
   });
 });
