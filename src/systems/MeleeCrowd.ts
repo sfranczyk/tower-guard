@@ -8,18 +8,23 @@ import { meleePosts, spreadApart, weaponReaches, type MeleePost } from './crowdi
 import { nearestMeleeTarget } from './targeting';
 import { groundAt } from './terrain';
 
+/** A stickman's body width at size 1 (px): how much of the one behind it it covers. */
+const BODY_WIDTH = 14;
+
 /** How close an enemy comes to strike when it has no reach of its own (EnemyAI). */
 export const MELEE_REACH = 25;
 
 /**
  * The melee enemies' places around their targets this frame (systems/crowding.ts): `plan` before the enemies move gives
  * each its attack post or its place in the queue; `approach` walks it there and says whether it may strike; `lands` is
- * whether a blow reaches; `spread` keeps everyone not fighting from standing on one another.
+ * whether a blow reaches; `spread` eases apart units that keep hiding one another.
  */
 export class MeleeCrowd {
   private posts = new Map<Enemy, MeleePost>();
   /** Standing at an attack post this frame (they may overlap; the rest keep apart). */
   private readonly engaged = new Set<Enemy>();
+  /** How long each has been hidden behind another (crowding.spreadApart). */
+  private readonly hiddenMs = new WeakMap<Enemy, number>();
 
   /** The melee fighters (not archers, kamikazes, healers, shamans or dragons) and the foe each goes for. */
   public plan(enemies: readonly Foe[], bowmen: readonly Bowman[], allies: readonly Enemy[]): void {
@@ -64,11 +69,23 @@ export class MeleeCrowd {
     return weaponReaches(attacker.x, attacker.figure.facing, targetX, attacker.strikeReach);
   }
 
-  /** Neighbours too close step apart (crowding.spreadApart); those fighting at a post, down or held stay put. */
+  /**
+   * Units that keep hiding one another ease apart (crowding.spreadApart); those fighting at a post, down or held stay
+   * put, priests and shamans are left alone.
+   */
   public spread(units: readonly Enemy[], deltaMs: number): void {
-    const ground = units.filter((unit) => !(unit instanceof DragonEnemy) && unit.isAlive());
-    const xs = spreadApart(ground.map((unit) => ({ x: unit.x, fixed: this.holdsPlace(unit) })), (CROWD.spreadSpeed * deltaMs) / 1000);
+    const ground = units.filter((unit) => {
+      if (unit instanceof DragonEnemy || !unit.isAlive()) {
+        return false;
+      }
+      const { heals, buffs } = enemyArchetype(unit.kind);
+      return !heals && !buffs;
+    });
+    const { xs, hiddenMs } = spreadApart(ground.map((unit) => ({
+      x: unit.x, vx: unit.velocity.x, width: BODY_WIDTH * unit.size, fixed: this.holdsPlace(unit), hiddenMs: this.hiddenMs.get(unit) ?? 0,
+    })), (CROWD.spreadSpeed * deltaMs) / 1000, deltaMs);
     ground.forEach((unit, index) => {
+      this.hiddenMs.set(unit, hiddenMs[index]);
       if (xs[index] !== unit.x) {
         unit.x = xs[index];
         unit.y = groundAt(unit.x);

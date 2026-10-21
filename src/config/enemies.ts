@@ -126,7 +126,8 @@ export const ENEMY_ATTACK = tunable('ENEMY_ATTACK', 'Enemy attacks', {
 /**
  * Crowding (systems/crowding.ts): around a target, `slotsPerSide` attack posts per side `slotSpacing` px apart from the
  * attackers' reach, `perSlot` to a post; the rest queue `queueGap` px behind them, `queueSpacing` px apart, and don't
- * strike. Units not at a post keep at least `minGap` px apart, stepping up to `spreadSpeed` px/s. A blow lands only
+ * strike. Two units closer than `visibleShare` of the narrower body's width hide one another; hidden for `hiddenMs`
+ * (longer than passing takes) they ease apart at up to `spreadSpeed` px/s until both show. A blow lands only
  * ahead of the attacker, from `minReachShare` of its strike reach to the full reach.
  */
 export const CROWD = tunable('CROWD', 'Crowding', {
@@ -135,10 +136,11 @@ export const CROWD = tunable('CROWD', 'Crowding', {
   slotSpacing: 8,
   queueGap: 10,
   queueSpacing: 6,
-  minGap: 4,
+  visibleShare: 0.3,
+  hiddenMs: 1000,
   spreadSpeed: 40,
   minReachShare: 0.25,
-}, { meta: { minReachShare: { max: 1 }, slotsPerSide: { min: 1, max: 8, step: 1 }, perSlot: { min: 1, max: 4, step: 1 } } });
+}, { meta: { minReachShare: { max: 1 }, visibleShare: { max: 1 }, hiddenMs: { max: 5000, step: 50 }, slotsPerSide: { min: 1, max: 8, step: 1 }, perSlot: { min: 1, max: 4, step: 1 } } });
 /** Draw power (0..1) of enemy shots (their damage per shooter is in data/enemies.ts, ENEMY_DAMAGE). */
 export const ENEMY_ARROW_POWER = 0.75;
 /**

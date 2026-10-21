@@ -31,12 +31,28 @@ describe('crowding', () => {
     expect(weaponReaches(100, -1, 40, 55)).toBe(false); // beyond its reach
   });
 
-  it('moves piled-up units apart, at most maxStep a frame, the fixed ones not at all', () => {
-    const xs = spreadApart([{ x: 100, fixed: false }, { x: 100, fixed: false }], 10);
-    expect(xs[1] - xs[0]).toBeCloseTo(CROWD.minGap);
-    expect(spreadApart([{ x: 100, fixed: true }, { x: 100, fixed: false }], 10)).toEqual([100, 100 + CROWD.minGap]);
-    expect(spreadApart([{ x: 100, fixed: true }, { x: 100, fixed: true }], 10)).toEqual([100, 100]);
-    expect(spreadApart([{ x: 100, fixed: false }, { x: 100, fixed: false }], 1)).toEqual([99, 101]);
-    expect(spreadApart([{ x: 100, fixed: false }, { x: 110, fixed: false }], 10)).toEqual([100, 110]);
+  const unit = (x: number, vx = 0, fixed = false, hiddenMs = CROWD.hiddenMs): { x: number; vx: number; width: number; fixed: boolean; hiddenMs: number } =>
+    ({ x, vx, width: 14, fixed, hiddenMs });
+  const gap = CROWD.visibleShare * 14;
+
+  it('eases apart units that keep hiding one another, until both show', () => {
+    const { xs } = spreadApart([unit(100, -22), unit(100, -22)], 10, 16);
+    expect(xs[1] - xs[0]).toBeCloseTo(gap);
+    expect(spreadApart([unit(100, 0, true), unit(100)], 10, 16).xs).toEqual([100, 100 + gap]);
+    expect(spreadApart([unit(100, 0, true), unit(100, 0, true)], 10, 16).xs).toEqual([100, 100]);
+    expect(spreadApart([unit(100), unit(110)], 10, 16).xs).toEqual([100, 110]);
+  });
+
+  it('leaves a unit passing another alone for CROWD.hiddenMs', () => {
+    const passing = spreadApart([unit(100, -22, false, 0), unit(101, -63, false, 0)], 10, 16);
+    expect(passing.xs).toEqual([100, 101]);
+    expect(passing.hiddenMs).toEqual([16, 16]);
+    expect(spreadApart([unit(100), unit(200, 0, false, 500)], 10, 16).hiddenMs).toEqual([0, 0]);
+  });
+
+  it('puts the faster one ahead, so it is never held back', () => {
+    // Both walking left; the runner (faster) behind the raider ends up on the left, ahead.
+    const { xs } = spreadApart([unit(100, -22), unit(101, -63)], 10, 16);
+    expect(xs[1]).toBeLessThan(xs[0]);
   });
 });
