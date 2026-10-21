@@ -48,11 +48,18 @@ describe('survival waves', () => {
     expect(survivalWaveGap(100)).toBe(SURVIVAL.maxGapMs);
   });
 
-  it('don\'t bring the next wave sooner when the field is cleared', () => {
+  it('bring the next wave SURVIVAL.clearedDelayMs after the field is cleared', () => {
     const director = new SurvivalDirector(['raider'], 600_000, { levelIndex: 0, difficulty: 'easy', pacing: wavePacing('easy'), random: () => 0.5 });
-    run(director, SURVIVAL.startDelayMs + 10_000); // first wave out, field empty since
-    expect(run(director, SURVIVAL.gapMs - 12_000)).toBe(0);
-    expect(run(director, 4_000)).toBeGreaterThan(0);
+    run(director, SURVIVAL.startDelayMs + 3_000, () => 1); // first wave out and standing
+    expect(run(director, SURVIVAL.clearedDelayMs - 200)).toBe(0); // cleared now
+    expect(run(director, 400)).toBeGreaterThan(0);
+  });
+
+  it('wait for the timer while enemies stand', () => {
+    const director = new SurvivalDirector(['raider'], 600_000, { levelIndex: 0, difficulty: 'easy', pacing: wavePacing('easy'), random: () => 0.5 });
+    run(director, SURVIVAL.startDelayMs + 5_000, () => 1);
+    expect(run(director, SURVIVAL.gapMs - 7_000, () => 1)).toBe(0);
+    expect(run(director, 4_000, () => 1)).toBeGreaterThan(0);
   });
 
   it('send bosses only from SURVIVAL.bossMinWave, never two boss waves running', () => {
@@ -60,7 +67,7 @@ describe('survival waves', () => {
     const waves: string[][] = [];
     let last = -Infinity;
     for (let time = 0; time < 200_000; time += 100) {
-      director.update(100, 0).forEach((kind) => {
+      director.update(100, 1).forEach((kind) => {
         if (time - last > 10_000) {
           waves.push([]);
         }

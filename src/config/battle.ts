@@ -20,8 +20,8 @@ export const WAVES = tunable('WAVES', 'Waves', {
 
 /**
  * Survival mode (systems/survivalWaves.ts, systems/survivalRoles.ts): the first wave after `startDelayMs`; each next one
- * `gapMs` after the last, or `gapPerBudgetMs` per point of that wave's budget when longer, at most `maxGapMs` (no
- * shortcut when the field is cleared). Waves are sized by a threat budget (each kind's `threat` in data/enemyKinds, a
+ * `gapMs` after the last, or `gapPerBudgetMs` per point of that wave's budget when longer, at most `maxGapMs`; or `clearedDelayMs`
+ * after the field is cleared, if that comes sooner. Waves are sized by a threat budget (each kind's `threat` in data/enemyKinds, a
  * raider 1): wave n (from 0) has `firstBudget + budgetGrowth × n` until the difficulty's `*PeakWave` (1-based), the
  * same as that one after it, × `levelGrowth` per level after the first, × the difficulty's `*Scale`, × (1 +
  * `coopBudgetPerPlayer` per extra bowman), each wave ± `sizeJitter`. On levels longer than `finaleMinMs` the last big
@@ -41,6 +41,7 @@ export const SURVIVAL = tunable('SURVIVAL', 'Survival', {
   gapMs: 40000,
   gapPerBudgetMs: 5000,
   maxGapMs: 60000,
+  clearedDelayMs: 5000,
   firstBudget: 3,
   budgetGrowth: 1,
   easyPeakWave: 3,

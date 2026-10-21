@@ -10,7 +10,7 @@ import { groupByKind } from './waveDirector';
  * Each wave has a threat budget (`survivalBudget`) growing up to the difficulty's peak wave, filled from the kinds
  * whose `arrival` share of the time has passed (tougher kinds later and rarer) around a lead kind (`pickLead`; a boss
  * leads a boss wave, systems/survivalRoles.ts). The next wave waits `survivalWaveGap` of what this one cost; clearing
- * the field doesn't bring it sooner. Released with the difficulty's pacing, never more than `maxAliveFor` standing.
+ * the field brings it SURVIVAL.clearedDelayMs later. Released with the difficulty's pacing, never more than `maxAliveFor` standing.
  * Long levels end with a big finale wave SURVIVAL.finaleAtMs before the end (the wave just before it smaller). No
  * level sends anything new in the last SURVIVAL.quietEndMs. `finished` once the time is up. GameScene calls `update`
  * every frame (so it pauses with the game) and spawns what it returns.
@@ -83,6 +83,8 @@ export class SurvivalDirector {
   private waveIndex = 0;
   /** Until the next wave is due. */
   private waveTimerMs: number;
+  /** How long the field has stood empty since the last wave was out. */
+  private clearedMs = 0;
   private lead?: EnemyType;
   private lastWasBoss = false;
   private readonly led = new Set<EnemyType>();
@@ -120,10 +122,14 @@ export class SurvivalDirector {
     }
     this.elapsedMs += deltaMs;
     this.waveTimerMs -= deltaMs;
+    // A cleared field doesn't wait out the whole gap.
+    const empty = alive === 0 && this.queue.length === 0 && this.waveIndex > 0;
+    this.clearedMs = empty ? this.clearedMs + deltaMs : 0;
+    const cleared = this.clearedMs >= SURVIVAL.clearedDelayMs;
     if (this.finaleAtMs !== undefined && !this.finaleSent && this.elapsedMs >= this.finaleAtMs) {
       this.finaleSent = true;
       this.releaseWave(SURVIVAL.finaleScale);
-    } else if (!this.quiet && this.waveTimerMs <= 0) {
+    } else if (!this.quiet && (this.waveTimerMs <= 0 || cleared)) {
       // The wave whose wait would run past the finale is the smaller one before it.
       const preFinale = this.finaleAtMs !== undefined && !this.finaleSent && this.elapsedMs >= this.finaleAtMs - SURVIVAL.gapMs;
       this.releaseWave(preFinale ? SURVIVAL.preFinaleScale : 1);
@@ -159,6 +165,7 @@ export class SurvivalDirector {
     this.queue.push(...(this.options.pacing.groupSize > 1 ? groupByKind(wave) : shuffle(wave, this.random)));
     this.waveIndex += 1;
     this.waveTimerMs = survivalWaveGap(gapBudget);
+    this.clearedMs = 0;
   }
 
   private spawn(deltaMs: number, alive: number): EnemyType[] {

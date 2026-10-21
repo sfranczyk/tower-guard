@@ -50,7 +50,7 @@ groups of `DIFFICULTY_SCALE.groupSize` (kinds together, `groupByKind`), `groupSp
 ## Survival (`survivalWaves.ts`, `survivalRoles.ts`, `nightCycle.ts`, pure, tested; tuning `SURVIVAL`)
 `SurvivalDirector` (BattleEnemies in survival): each wave a threat budget (`survivalBudget`: `firstBudget` + `budgetGrowth`
 per wave up to the difficulty's `*PeakWave`, × level, difficulty, co-op players, ± `sizeJitter`) filled by kinds' `threat`
-(`drawByBudget`), the next one `survivalWaveGap` of what it cost later (40–60 s; clearing the field doesn't hurry it).
+(`drawByBudget`), the next one `survivalWaveGap` of what it cost later (40–60 s, or `clearedDelayMs` = 5 s after the field is cleared).
 Roles (`enemyRole`): supporters never lead; bosses (`boss` in data/enemyKinds: troll, dragons) only as a lead from
 `bossMinWave`, never two boss waves running, `bossCount` of them on top with escorts of their group (`drawBossWave`).
 Kinds by `arrival` (`kindsArrived`) around a lead (`pickLead`); levels over `finaleMinMs` end with a finale (× `finaleScale`)
