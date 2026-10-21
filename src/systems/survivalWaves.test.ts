@@ -63,9 +63,10 @@ describe('survival waves', () => {
 
   it('send nothing new in the last SURVIVAL.quietEndMs', () => {
     const duration = SURVIVAL.finaleMinMs + 60_000;
-    const director = new SurvivalDirector(['raider'], duration, { levelIndex: 0, difficulty: 'medium', pacing: wavePacing('medium') });
-    run(director, duration - SURVIVAL.quietEndMs + 100);
-    expect(run(director, SURVIVAL.quietEndMs)).toBe(0);
+    const director = new SurvivalDirector(['raider'], duration, { levelIndex: 0, difficulty: 'medium', pacing: wavePacing('medium'), random: () => 0.5 });
+    run(director, duration - SURVIVAL.quietEndMs);
+    run(director, SURVIVAL.quietEndMs - 2_000); // a wave sent just before still walks in
+    expect(run(director, 2_000)).toBe(0);
   });
 
   it('bring tougher kinds only once their time has come', () => {
