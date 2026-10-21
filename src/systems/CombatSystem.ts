@@ -148,6 +148,7 @@ export class CombatSystem {
     this.ai.beginFrame();
     activeEnemies.forEach((enemy) => this.ai.update(enemy, deltaMs));
     livingAllies.forEach((ally) => this.allyAI.update(ally, deltaMs));
+    this.ai.spread(deltaMs);
     this.world.allies.filter((ally) => !ally.isAlive()).forEach((ally) => ally.updateAnimation(deltaMs, false));
     // Burning: steady damage until the burn runs out (each bowman counts it down in his animation); a dragon's fire, so the difficulty's.
     this.world.bowmen

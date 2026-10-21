@@ -1,5 +1,5 @@
 import type { Graphics } from 'pixi.js';
-import { ALLIES, MEDIC, PLAYER_TOWER_X, PRIEST_POST_SLACK, SHOW_HITBOX_DEBUG } from '../config';
+import { ALLIES, CROWD, MEDIC, PLAYER_TOWER_X, PRIEST_POST_SLACK, SHOW_HITBOX_DEBUG } from '../config';
 import { enemyDamage, rollDamage } from '../data/enemies';
 import { enemyArchetype, enemyArmor, enemyTraits } from '../data/enemyKinds';
 import type Bowman from '../objects/bowman/Bowman';
@@ -9,6 +9,7 @@ import type { Vec2 } from '../types';
 import { escortPost, orderPost, pickFoe, type AllyOrder } from './allyOrders';
 import { bannerHomeX, type Banners } from './banners';
 import { foeHitBoxes, type Foe } from './combatGeometry';
+import { weaponReaches } from './crowding';
 import type { EffectsSystem } from './EffectsSystem';
 import { bandageHeal, pickPatient } from './bandaging';
 import { priestPost } from './healing';
@@ -136,7 +137,12 @@ export class AllyAI {
     // An enemy carrying our banner off comes first.
     const foe = banners?.thief('player') ?? (pick === undefined ? undefined : foes[pick]);
     if (foe) {
-      ally.update(deltaMs, { x: foe.x, y: groundAt(foe.x) }, ALLY_MELEE_REACH);
+      // Up to his sword's reach on his side of it; too close for the blade, he steps back.
+      const side = ally.x <= foe.x ? -1 : 1;
+      const off = (ally.x - foe.x) * side;
+      const placed = off >= Math.min(ALLY_MELEE_REACH, ally.strikeReach * CROWD.minReachShare) && off <= ALLY_MELEE_REACH;
+      const toX = placed ? ally.x : foe.x + side * ALLY_MELEE_REACH;
+      ally.update(deltaMs, { x: toX, y: groundAt(toX) }, placed ? Infinity : 1);
     } else {
       ally.update(deltaMs, { x: post, y: groundAt(post) }, 2);
     }
@@ -150,9 +156,9 @@ export class AllyAI {
     }
     if (Math.abs(ally.x - foe.x) <= IN_REACH && ally.canAttack()) {
       ally.faceTowards(foe.x);
-      // The blow lands with the sword: an enemy that got beyond its reach meanwhile is missed.
+      // The blow lands with the sword, ahead of him: an enemy that got beyond its reach (or past him) meanwhile is missed.
       ally.playAttackAnimation(() => {
-        if (foe.isAlive() && Math.abs(ally.x - foe.x) <= ally.strikeReach) {
+        if (foe.isAlive() && weaponReaches(ally.x, ally.figure.facing, foe.x, ally.strikeReach)) {
           meleeBlow(foe, rollDamage(enemyDamage(ally.kind, 'melee', 'bowman')), ally.x, this.world.effects);
         }
       });
@@ -181,7 +187,7 @@ export class AllyAI {
     }
     ally.faceTowards(foe.x);
     ally.playAttackAnimation(() => {
-      if (foe.isAlive() && Math.abs(ally.x - foe.x) <= ally.strikeReach) {
+      if (foe.isAlive() && weaponReaches(ally.x, ally.figure.facing, foe.x, ally.strikeReach)) {
         meleeBlow(foe, rollDamage(enemyDamage(ally.kind, 'melee', 'bowman')), ally.x, this.world.effects);
       }
     });

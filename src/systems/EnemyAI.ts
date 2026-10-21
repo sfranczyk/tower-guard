@@ -27,11 +27,11 @@ import type { BowmanHit } from './bowmanDeath';
 import { TOWER_HALF_WIDTH, foeHitBoxes, type Foe } from './combatGeometry';
 import type { EffectsSystem } from './EffectsSystem';
 import { meleeBlow } from './AllyAI';
+import { MELEE_REACH, MeleeCrowd } from './MeleeCrowd';
 import { nearestMeleeTarget } from './targeting';
 import { groundAt } from './terrain';
 import { enemyKeepX, worldWidth } from './battlefield';
 
-const MELEE_REACH = 25;
 const TOWER_ATTACK_REACH = 40;
 
 /** What the enemies need of the battle. */
@@ -78,6 +78,8 @@ export class EnemyAI {
   private bombs: { kamikazes: Map<Enemy, number>; zones: BlastZone<Enemy>[] } = { kamikazes: new Map(), zones: [] };
   /** Banners: this frame's escort of the enemies' bearer, each with his rank (nearest to the bearer first). */
   private escortRanks = new Map<Enemy, number>();
+  /** The melee fighters' posts around their targets (systems/MeleeCrowd.ts). */
+  private readonly crowd = new MeleeCrowd();
 
   public constructor(
     private readonly world: EnemyAIWorld,
@@ -94,6 +96,7 @@ export class EnemyAI {
    * bomb doesn't go off.
    */
   public beginFrame(): void {
+    this.crowd.plan(this.world.enemies, this.world.bowmen, this.world.allies);
     const kamikazes = this.world.enemies.filter((enemy): enemy is Enemy =>
       !(enemy instanceof DragonEnemy) && enemy.isAlive() && enemyArchetype(enemy.kind).detonates && !enemy.afflictions.isFrozen);
     const spots = kamikazes.flatMap((kamikaze): BombSpot<Enemy>[] => {
@@ -118,6 +121,12 @@ export class EnemyAI {
         .sort((a, b) => Math.abs(a.x - bearer.x) - Math.abs(b.x - bearer.x))
         .forEach((enemy, rank) => this.escortRanks.set(enemy, rank));
     }
+  }
+
+  /** After everyone's frame: enemies and soldiers standing on one another step apart (MeleeCrowd.spread). */
+  public spread(deltaMs: number): void {
+    this.crowd.spread(this.world.enemies.filter((enemy): enemy is Enemy => !(enemy instanceof DragonEnemy)), deltaMs);
+    this.crowd.spread(this.world.allies, deltaMs);
   }
 
   /** Banners: where `enemy` walks escorting his team's bearer, if it is one of the escort. */
@@ -202,10 +211,6 @@ export class EnemyAI {
     // A mounted knight stops further off: its horse's head is ahead of it and its lance reaches past it.
     const meleeReach = enemy.reach?.bowman ?? MELEE_REACH;
     const keepReach = enemy.reach?.keep ?? TOWER_ATTACK_REACH;
-    const bowmanBehindEnemy = bowman !== undefined && bowman.x > enemy.x + MELEE_REACH;
-    const targetPosition = bowman
-      ? { x: bowmanBehindEnemy ? enemy.x + 100 : bowman.x, y: BOWMAN_Y }
-      : { x: playerTower.x, y: GROUND_Y };
 
     const dodge = this.heedBombs(enemy, bowman ? enemy.x >= bowman.x : true, deltaMs);
     if (dodge.kind !== 'free') {
@@ -221,7 +226,14 @@ export class EnemyAI {
       enemy.clearHitTint();
       return;
     }
-    enemy.update(deltaMs, targetPosition, enemy.target === 'tower' ? keepReach : meleeReach);
+    // At the bowman: to its post beside him (MeleeCrowd), a kamikaze straight at him; else at the keep.
+    const detonates = enemyArchetype(enemy.kind).detonates;
+    let atPost = false;
+    if (bowman && !detonates) {
+      atPost = this.crowd.approach(enemy, bowman, bowman.x, deltaMs);
+    } else {
+      enemy.update(deltaMs, bowman ? { x: bowman.x, y: BOWMAN_Y } : { x: playerTower.x, y: GROUND_Y }, bowman ? meleeReach : keepReach);
+    }
     enemy.updateAnimation(deltaMs, enemy.isMoving());
     this.drawDebugHitboxes(enemy);
 
@@ -231,7 +243,7 @@ export class EnemyAI {
     }
 
     // Kamikaze: no swing, it blows itself up on reaching the bowman (jumping doesn't help) or the keep.
-    if (enemyArchetype(enemy.kind).detonates) {
+    if (detonates) {
       const atKeep = !bowman && enemy.x <= playerTower.x + TOWER_ATTACK_REACH;
       const atBowman = bowman !== undefined && Math.abs(enemy.x - bowman.x) <= MELEE_REACH && Math.abs(enemy.y - bowman.y) <= 60;
       if (atKeep || atBowman) {
@@ -251,15 +263,15 @@ export class EnemyAI {
       return;
     }
 
-    // No swing at a bowman who is in the air; once he lands in reach, the enemy swings again.
-    const overlapsBowman = Math.abs(enemy.x - bowman.x) <= meleeReach;
+    // No swing at a bowman who is in the air; once he lands in reach, the enemy swings again (from an attack post only).
     const bowmanAirborne = bowman.y < groundAt(bowman.x) - 20;
-    if (!bowmanAirborne && overlapsBowman && Math.abs(enemy.y - bowman.y) <= 45) {
+    if (!bowmanAirborne && atPost && Math.abs(enemy.y - bowman.y) <= 45) {
       if (enemy.canAttack()) {
-        // Damage lands with the club: to dodge, the bowman has to get beyond this enemy's strike reach
-        // (or into the keep) before it lands; jumping on the spot doesn't help.
+        enemy.faceTowards(bowman.x);
+        // Damage lands with the club, ahead of the enemy: to dodge, the bowman has to get out of its reach, or
+        // past or under it, before it lands (MeleeCrowd.lands); jumping on the spot doesn't help.
         enemy.playAttackAnimation(() => {
-          const stillInReach = Math.abs(enemy.x - bowman.x) <= enemy.strikeReach && Math.abs(enemy.y - bowman.y) <= 45 * enemy.size;
+          const stillInReach = this.crowd.lands(enemy, bowman.x) && Math.abs(enemy.y - bowman.y) <= 45 * enemy.size;
           if (stillInReach && !bowman.isInTower && !bowman.isDead) {
             this.events.bowmanDamaged(bowman, rollDamage(enemyDamage(enemy.kind, 'melee', 'bowman')) * this.world.enemyEdge.damage, { cause: 'melee', fromX: enemy.x });
             this.world.effects.bloodBurst({ x: bowman.x, y: bowman.y - 20 });
@@ -287,23 +299,26 @@ export class EnemyAI {
       enemy.clearHitTint();
       return;
     }
-    enemy.update(deltaMs, { x: ally.x, y: groundAt(ally.x) }, meleeReach);
+    const detonates = enemyArchetype(enemy.kind).detonates;
+    const atPost = detonates ? false : this.crowd.approach(enemy, ally, ally.x, deltaMs);
+    if (detonates) {
+      enemy.update(deltaMs, { x: ally.x, y: groundAt(ally.x) }, meleeReach);
+    }
     enemy.updateAnimation(deltaMs, enemy.isMoving());
     this.drawDebugHitboxes(enemy);
     if (enemy.isDown || enemy.afflictions.isFrozen || enemy.afflictions.inVortex) {
       return;
     }
-    const inReach = Math.abs(enemy.x - ally.x) <= meleeReach + 2;
-    if (enemyArchetype(enemy.kind).detonates) {
-      if (inReach) {
+    if (detonates) {
+      if (Math.abs(enemy.x - ally.x) <= meleeReach + 2) {
         this.actions.detonate(enemy);
       }
       return;
     }
-    if (inReach && enemy.canAttack()) {
+    if (atPost && enemy.canAttack()) {
       enemy.faceTowards(ally.x);
       enemy.playAttackAnimation(() => {
-        if (ally.isAlive() && Math.abs(enemy.x - ally.x) <= enemy.strikeReach) {
+        if (ally.isAlive() && this.crowd.lands(enemy, ally.x)) {
           meleeBlow(ally, rollDamage(enemyDamage(enemy.kind, 'melee', 'bowman')) * this.world.enemyEdge.damage, enemy.x, this.world.effects);
         }
       });
@@ -340,14 +355,14 @@ export class EnemyAI {
     if (melee?.ally) {
       const ally = melee.ally;
       enemy.playAttackAnimation(() => {
-        if (ally.isAlive() && Math.abs(enemy.x - ally.x) <= enemy.strikeReach) {
+        if (ally.isAlive() && this.crowd.lands(enemy, ally.x)) {
           meleeBlow(ally, damage, enemy.x, this.world.effects);
         }
       });
     } else if (melee?.bowman) {
       const bowman = melee.bowman;
       enemy.playAttackAnimation(() => {
-        if (!bowman.isInTower && !bowman.isDead && Math.abs(enemy.x - bowman.x) <= enemy.strikeReach && Math.abs(enemy.y - bowman.y) <= 45 * enemy.size) {
+        if (!bowman.isInTower && !bowman.isDead && this.crowd.lands(enemy, bowman.x) && Math.abs(enemy.y - bowman.y) <= 45 * enemy.size) {
           this.events.bowmanDamaged(bowman, damage, { cause: 'melee', fromX: enemy.x });
           this.world.effects.bloodBurst({ x: bowman.x, y: bowman.y - 20 });
         }
