@@ -227,6 +227,12 @@ export const FIRE_DRAGON_BREATH_INTERVAL_MS = 6500;
  * damage for BURN_DURATION_MS (by difficulty) after the flames last touched him; staying in the fire keeps relighting it.
  */
 export const BURN_DURATION_MS = { easy: 4000, medium: 6000, hard: 8000 } as const;
+/**
+ * The fire dragon's flames on enemies on the ground: they burn while the stream touches them and DRAGON_SCORCH_MS after
+ * (ENEMY_BURN_DPS); this fire doesn't spread, and a troll's regeneration stops only while it burns. Kinds that don't
+ * burn (kamikazes, dragons) are spared.
+ */
+export const DRAGON_SCORCH_MS = 500;
 export const BURN_DAMAGE_PER_S = 3;
 /** Dragon drawn at this scale (its art is ~300 px long with the tail). */
 export const DRAGON_SCALE = 0.42;

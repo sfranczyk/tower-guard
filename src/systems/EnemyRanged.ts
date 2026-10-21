@@ -2,6 +2,7 @@ import {
   BANNERS,
   DRAGON_FLIGHT,
   DRAGON_RANGE,
+  DRAGON_SCORCH_MS,
   DRAGON_TURBULENCE_SPREAD,
   ENEMY_ARROW_POWER,
   ENEMY_ATTACK,
@@ -134,6 +135,10 @@ export class EnemyRanged {
           this.events.bowmanIgnited(candidate);
         }
       });
+    // Enemies on the ground in its way catch fire too, briefly (DRAGON_SCORCH_MS).
+    this.world.enemies
+      .filter((foe): foe is Enemy => !enemyArchetype(foe.kind).flies && foe.isAlive() && foe.getHitBoxes().some(({ bounds }) => flamesTouch(flames, bounds)))
+      .forEach((enemy) => enemy.afflictions.scorch(DRAGON_SCORCH_MS));
   }
 
   /** The launch angle from `release` at `aimPoint`, re-solved every ARCHER_AIM_REFRESH_MS (the solver is costly). */

@@ -1,7 +1,7 @@
 import { Graphics } from 'pixi.js';
 import { CHILL_TINT, FROZEN_TINT, LEVITATE_TINT, drawAirVortex, drawArcaneAura, drawFrostGlints, drawIceBlock } from '../rendering/afflictionArt';
 import { drawBurning } from '../rendering/burning';
-import { NO_AFFLICTIONS, chill, fireSpreads, ignite, tickAfflictions, timeScale, type Afflictions } from '../systems/afflictions';
+import { NO_AFFLICTIONS, chill, fireSpreads, ignite, scorch, tickAfflictions, timeScale, type Afflictions } from '../systems/afflictions';
 import { DRAGON_TURBULENCE_MS } from '../config';
 import { turbulenceStrength } from '../systems/vortex';
 import type { UnitType, Vec2 } from '../types';
@@ -114,6 +114,11 @@ export class AfflictionLayer {
   /** Whether its fire may still spread to others (see systems/afflictions.ts). */
   public get fireSpreads(): boolean {
     return fireSpreads(this.state);
+  }
+
+  /** Touched by a fire dragon's stream (systems/afflictions `scorch`). */
+  public scorch(ms: number): void {
+    this.state = scorch(this.state, this.type, ms);
   }
 
   /** Set alight (`gen` > 0: caught from another fire, see systems/afflictions.ts); returns true if it just caught fire. */

@@ -54,4 +54,13 @@ describe('regenStep', () => {
     expect(frozen.state).toEqual(half);
     expect(regenStep(half, 200, calm, params).heal).toBe(3);
   });
+
+  it('stops only while a fire no longer than minFireMs burns (a dragon\'s scorch)', () => {
+    const scorchParams = { ...params, minFireMs: 500 };
+    const lit = regenStep(REGEN_START, 16, { burnMs: 500, paused: false }, scorchParams);
+    expect(lit.heal).toBe(0);
+    const out = regenStep(lit.state, 16, calm, scorchParams);
+    expect(out.state.lockMs).toBe(0);
+    expect(regenStep(out.state, 600, calm, scorchParams).heal).toBeGreaterThan(0);
+  });
 });

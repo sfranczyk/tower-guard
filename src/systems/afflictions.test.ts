@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { FIRE_SPREAD, FROST_CHILL_MS, FROST_FREEZE_BRUTE_MS, FROST_FREEZE_HITS, FROST_FREEZE_MS, FROST_SLOW } from '../config';
-import { NO_AFFLICTIONS, chill, fireSpreads, ignite, tickAfflictions, timeScale } from './afflictions';
+import { NO_AFFLICTIONS, chill, fireSpreads, ignite, scorch, tickAfflictions, timeScale } from './afflictions';
 
 describe('afflictions', () => {
   it('chills, then freezes on the FROST_FREEZE_HITS-th hit while chilled', () => {
@@ -61,5 +61,16 @@ describe('afflictions', () => {
     expect(ignite(out, 'raider').burnMs).toBeGreaterThan(0);
     const later = tickAfflictions(out, FIRE_SPREAD.fireproofMs);
     expect(ignite(later, 'raider', undefined, 1).burnMs).toBeGreaterThan(0);
+  });
+
+  it('scorches briefly in a dragon\'s stream: no spreading, no longer fire cut short, kamikazes spared', () => {
+    const scorched = scorch(NO_AFFLICTIONS, 'raider', 500);
+    expect(scorched.burnMs).toBe(500);
+    expect(fireSpreads(scorched)).toBe(false);
+    expect(tickAfflictions(scorched, 600).burnMs).toBe(0);
+    const burning = ignite(NO_AFFLICTIONS, 'raider');
+    expect(scorch(burning, 'raider', 500)).toEqual(burning);
+    expect(scorch(NO_AFFLICTIONS, 'kamikaze', 500).burnMs).toBe(0);
+    expect(scorch(NO_AFFLICTIONS, 'goblinKamikaze', 500).burnMs).toBe(0);
   });
 });

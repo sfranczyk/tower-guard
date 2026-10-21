@@ -2,6 +2,7 @@ import type { Graphics } from 'pixi.js';
 import {
   BANNERS,
   BOWMAN_Y,
+  DRAGON_SCORCH_MS,
   EXPLOSION_RADIUS,
   GROUND_Y,
   PRIEST_ESCAPE_BEYOND,
@@ -376,7 +377,7 @@ export class EnemyAI {
   /** A troll's wounds close unless it burns (systems/regeneration.ts); each step reaches the guest as a heal event. */
   private regenerate(enemy: Enemy, deltaMs: number): void {
     const { afflictions } = enemy;
-    const step = regenStep(this.regen.get(enemy) ?? REGEN_START, deltaMs, { burnMs: afflictions.burnMs, paused: afflictions.isFrozen }, REGEN);
+    const step = regenStep(this.regen.get(enemy) ?? REGEN_START, deltaMs, { burnMs: afflictions.burnMs, paused: afflictions.isFrozen }, { ...REGEN, minFireMs: DRAGON_SCORCH_MS });
     this.regen.set(enemy, step.state);
     if (step.heal > 0 && enemy.missingHealth > 0) {
       enemy.heal(step.heal);
