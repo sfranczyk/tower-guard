@@ -26,12 +26,20 @@ dialog's "Main menu" leaves the room.
   `RecordingInput` (guest: passes through and records presses).
 - **Host** (`net/HostSync.ts`): ids for enemies and arrows, `netHooks` on Enemy/DragonEnemy (hits, swings), Arrow
   (stuck, gone, douse: a fire arrow the rain put out), Bowman (knockdown, fire) and `EffectsSystem.onEffect`; sounds, deaths, cheers and per-player status
-  lines as events; a `frame` (snapshot + events, `net/protocol.ts`) every 50 ms; `start` / `end` / `lobby` messages
-  around levels. Each guest's `input` drives their own player (`from`).
+  lines as events; every 50 ms the events since the last time (`events`, reliable) and the world (`state`, lossy, numbered,
+  host time `ht`, packed by `net/snapCodec.ts`); `start` / `end` / `lobby` messages
+  around levels. Each guest's `input` drives their own player (`from`; held controls by newest `n`, let go after
+  400 ms of silence).
+- **Links** (`net/Transport.ts`): PeerJS's reliable channel (raw strings, JSON-encoded there) plus a pre-negotiated
+  lossy one (`sendState`: unordered, no retransmits, dropped while 16 KB are still queued) for `state` and held
+  `input`, so a lost packet never holds up the next frame. `ping` / `pong` each second both ways; `?debug` shows ping,
+  jitter, delay, loss and KB/s in a corner (`scenes/BattleNetReadout.ts`, `DomUi.setNetReadout`).
 - **Guest** (`net/GuestSync.ts`): no WaveDirector, AI or CombatSystem; applies events in order with the same objects
-  (same takeDamage, so the same reactions), shows snapshots 100 ms in the past, interpolated (`applyNetState`,
+  (same takeDamage, so the same reactions), shows snapshots in the past by host time (`net/playbackClock.ts`: 70–250 ms,
+  growing with the measured jitter), interpolated (`applyNetState`,
   `applyRemote`), flies arrows locally (same ballistics, sticks into the ground itself), predicts its own bowman and
-  corrects him when the host disagrees, and sends its controls every 33 ms (shots are loosed by the host).
+  corrects him when the host disagrees, and sends its controls every 33 ms: held ones lossy, with one-off actions
+  (shots, jump, exit, burst, arrow pick) reliably (shots are loosed by the host).
 - **Gameplay**: enemies go for the nearest bowman out in the open, else the keep (`systems/targeting.ts`, pure);
   `CombatWorld.bowmen`, damage events name the bowman. Health is per player (`RunState.bowmanHealths`), a fallen bowman
   stays down for the run (`Bowman.die({}, true)`), the level is lost when all have fallen or the keep falls. Player 2

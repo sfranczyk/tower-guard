@@ -205,6 +205,24 @@ export class DomUi {
     this.statusElement.textContent = text;
   }
 
+  private netReadout?: HTMLElement;
+
+  /** Co-op with ?debug: the link's ping, jitter and traffic in a corner (undefined hides it). */
+  public setNetReadout(text: string | undefined): void {
+    if (text === undefined) {
+      this.netReadout?.remove();
+      this.netReadout = undefined;
+      return;
+    }
+    if (!this.netReadout) {
+      this.netReadout = document.createElement('div');
+      this.netReadout.style.cssText = 'position:fixed;left:6px;top:6px;z-index:50;padding:3px 6px;border-radius:4px;'
+        + 'background:rgba(0,0,0,.55);color:#fff;font:11px/1.35 ui-monospace,monospace;white-space:pre;pointer-events:none';
+      document.body.append(this.netReadout);
+    }
+    this.netReadout.textContent = text;
+  }
+
   public updateHud(values: HudValues): void {
     this.hud.update(values);
   }

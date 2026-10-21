@@ -50,6 +50,8 @@ const takeRoomMessages = (link: RoomLink, take: (message: NetMessage, from: numb
   return {
     send: (message) => link.send(message),
     sendTo: (player, message) => link.sendTo(player, message),
+    sendState: (message) => link.sendState(message),
+    traffic: (player) => link.traffic(player),
     onMessage: (next) => {
       handler = next;
       const queued = queue;
