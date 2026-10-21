@@ -8,7 +8,7 @@ import { tunable } from '../core/tuning';
  * one bigger by WAVES.sizeStep, up to WAVES.maxSize.
  */
 export const WAVES = tunable('WAVES', 'Waves', {
-  spawnIntervalMs: 1100,
+  spawnIntervalMs: 1200,
   startDelayMs: 3000,
   releaseAlive: 1,
   minGapMs: 2500,
@@ -168,8 +168,8 @@ export const DIFFICULTY_SCALE = tunable('DIFFICULTY_SCALE', 'Difficulty', {
   mediumSpread: 0.75,
   hardSpread: 0.55,
   groupSize: 5,
-  groupSpawnIntervalMs: 300,
-  groupGapMs: 1500,
+  groupSpawnIntervalMs: 900,
+  groupGapMs: 1800,
   // Share of the bowman's full health healed after a cleared level (easy: back to full).
   easyLevelHeal: 1,
   mediumLevelHeal: 0.5,

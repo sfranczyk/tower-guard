@@ -126,3 +126,16 @@ describe('survival waves', () => {
     expect(alive).toBe(maxAliveFor(1));
   });
 });
+
+describe('survival spawning', () => {
+  it('never sends two units out in the same frame, even when a wave is released after an empty field', () => {
+    const director = new SurvivalDirector(['raider'], 600_000, { levelIndex: 0, difficulty: 'medium', pacing: wavePacing('medium'), random: () => 0.5 });
+    // The first wave is released after SURVIVAL.startDelayMs with nothing on the field: its first two must not spawn together.
+    const frames: number[] = [];
+    for (let t = 0; t < SURVIVAL.startDelayMs + 3000; t += 100) {
+      frames.push(director.update(100, 0).length);
+    }
+    expect(Math.max(...frames)).toBeLessThanOrEqual(1);
+    expect(frames.reduce((sum, n) => sum + n, 0)).toBeGreaterThan(1);
+  });
+});

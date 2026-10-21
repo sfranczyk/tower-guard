@@ -178,7 +178,8 @@ export class SurvivalDirector {
       this.spawnedInGroup = (this.spawnedInGroup + 1) % groupSize;
       this.spawnTimerMs += this.spawnedInGroup === 0 ? groupGapMs : spawnIntervalMs;
     }
-    this.spawnTimerMs = Math.max(this.spawnTimerMs, -spawnIntervalMs);
+    // Never banked: a released group starts with one unit, the next one a full interval later.
+    this.spawnTimerMs = Math.max(this.spawnTimerMs, 0);
     return spawned;
   }
 }
