@@ -89,7 +89,7 @@ export const DRAGON_BUFFET = { x: 14, y: 20, tilt: 0.16 } as const;
  * frozen, it waits.
  */
 export const REGEN = tunable('REGEN', 'Troll regeneration', {
-  perSecond: 6,
+  perSecond: 5,
   tickMs: 500,
   afterFireMs: 12000,
 });
@@ -123,6 +123,24 @@ export const ENEMY_ATTACK = tunable('ENEMY_ATTACK', 'Enemy attacks', {
   archerCooldownMs: 1700,
   archerSpread: 0.1,
 });
+/**
+ * Crowding (systems/crowding.ts): around a target, `slotsPerSide` attack posts per side `slotSpacing` px apart from the
+ * attackers' reach, `perSlot` to a post; the rest queue `queueGap` px behind them, `queueSpacing` px apart, and don't
+ * strike. Two units closer than `visibleShare` of the narrower body's width hide one another; hidden for `hiddenMs`
+ * (longer than passing takes) they ease apart at up to `spreadSpeed` px/s until both show. A blow lands only
+ * ahead of the attacker, from `minReachShare` of its strike reach to the full reach.
+ */
+export const CROWD = tunable('CROWD', 'Crowding', {
+  slotsPerSide: 3,
+  perSlot: 2,
+  slotSpacing: 8,
+  queueGap: 10,
+  queueSpacing: 6,
+  visibleShare: 0.3,
+  hiddenMs: 1000,
+  spreadSpeed: 40,
+  minReachShare: 0.25,
+}, { meta: { minReachShare: { max: 1 }, visibleShare: { max: 1 }, hiddenMs: { max: 5000, step: 50 }, slotsPerSide: { min: 1, max: 8, step: 1 }, perSlot: { min: 1, max: 4, step: 1 } } });
 /** Draw power (0..1) of enemy shots (their damage per shooter is in data/enemies.ts, ENEMY_DAMAGE). */
 export const ENEMY_ARROW_POWER = 0.75;
 /**
@@ -227,6 +245,12 @@ export const FIRE_DRAGON_BREATH_INTERVAL_MS = 6500;
  * damage for BURN_DURATION_MS (by difficulty) after the flames last touched him; staying in the fire keeps relighting it.
  */
 export const BURN_DURATION_MS = { easy: 4000, medium: 6000, hard: 8000 } as const;
+/**
+ * The fire dragon's flames on enemies on the ground: they burn while the stream touches them and DRAGON_SCORCH_MS after
+ * (ENEMY_BURN_DPS); this fire doesn't spread, and a troll's regeneration stops only while it burns. Kinds that don't
+ * burn (kamikazes, dragons) are spared.
+ */
+export const DRAGON_SCORCH_MS = 500;
 export const BURN_DAMAGE_PER_S = 3;
 /** Dragon drawn at this scale (its art is ~300 px long with the tail). */
 export const DRAGON_SCALE = 0.42;

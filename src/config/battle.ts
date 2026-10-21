@@ -1,7 +1,5 @@
 import { tunable } from '../core/tuning';
 /** The run: keep health, waves, survival, allies, banners, medic, difficulty. */
-/** The enemy keep's health in every sandbox run (destroying it wins immediately). */
-export const ENEMY_KEEP_HEALTH = 650;
 /**
  * A run is a row of levels (each its own map and enemies); a level's enemies come in waves
  * (systems/waveDirector.ts): the first after WAVES.startDelayMs, the enemies of a wave WAVES.spawnIntervalMs
@@ -10,7 +8,7 @@ export const ENEMY_KEEP_HEALTH = 650;
  * one bigger by WAVES.sizeStep, up to WAVES.maxSize.
  */
 export const WAVES = tunable('WAVES', 'Waves', {
-  spawnIntervalMs: 1100,
+  spawnIntervalMs: 1200,
   startDelayMs: 3000,
   releaseAlive: 1,
   minGapMs: 2500,
@@ -21,51 +19,71 @@ export const WAVES = tunable('WAVES', 'Waves', {
 });
 
 /**
- * Survival mode (systems/survivalWaves.ts): the first wave after `startDelayMs`, the second `waveEveryMs` after it,
- * each next gap `waveGapStepMs` longer up to `maxWaveEveryMs`; or `clearedDelayMs` after the field is cleared if that
- * comes sooner. The n-th wave (from 0) has `firstSize + growth × n`
- * enemies until the difficulty's `*PeakWave` (1-based), the same as that one after it, × `levelGrowth` per level after
- * the first and × the difficulty's `*Scale`, each wave ± `sizeJitter`. On levels longer than `finaleMinMs` the last
- * wave (× `finaleScale`) comes `finaleAtMs` before the end, the ones in the gap before it × `preFinaleScale`;
- * nothing after it. On shorter levels no new wave in the last `quietEndMs`. Each wave has a lead kind (`leadShare` of
- * it; a kind that just arrived leads first, never the same twice running). Never more than `maxAlive` standing (the
- * rest wait). The night cycle (systems/nightCycle.ts): dawn starts at `dawnAt` of the time, the moon has set by
- * `moonSetAt`; on eclipse maps the moon crosses the sun at an even pace from the level's start to its end, covering it
- * all for `eclipseTotal` of the time halfway (which sets how much bigger than the sun it is); the diamond ring flashes
- * for `eclipseDiamond` of the time before and after the total eclipse.
+ * Survival mode (systems/survivalWaves.ts, systems/survivalRoles.ts): the first wave after `startDelayMs`; each next one
+ * `gapBaseMs` plus `gapPerBudgetMs` per point of that wave's budget (a big wave gives a longer wait), between `gapMinMs` and
+ * `gapMaxMs`; or `clearedDelayMs` after the field is cleared, if that comes sooner. Waves are sized by a threat budget (each kind's `threat` in data/enemyKinds, a
+ * raider 1): wave n (from 0) has the difficulty's `*FirstBudget + *BudgetGrowth × n`, at most `*MaxBudget`,
+ * × `levelGrowth` per level after the first, × (1 +
+ * `coopBudgetPerPlayer` per extra bowman), each wave ± `sizeJitter`. On levels longer than `finaleMinMs` the last big
+ * wave (× `finaleScale`) comes `finaleAtMs` before the end, the one just before it × `preFinaleScale`. No new wave in
+ * the last `quietEndMs`. Each wave has a lead kind (`leadShare` of the budget; a kind that just arrived leads first,
+ * never the same twice running). Bosses (`boss` in data/enemyKinds) come only as a lead, from wave `bossMinWave`
+ * (1-based), never two boss waves running: `*BossMin`..`*BossMax` of them on top of the budget, with escorts of their
+ * group worth `bossEscortShare` of it (a second escort lead with `secondLeadChance`); the next gap counts each boss as
+ * its threat. Never more than `*MaxAlive` standing (easy, medium; hard 0 = no limit; + `coopAlivePerPlayer` per extra bowman; the rest wait). The night
+ * cycle (systems/nightCycle.ts): dawn starts at `dawnAt` of the time, the moon has set by `moonSetAt`; on eclipse maps
+ * the moon crosses the sun at an even pace from the level's start to its end, covering it all for `eclipseTotal` of the
+ * time halfway (which sets how much bigger than the sun it is); the diamond ring flashes for `eclipseDiamond` of the
+ * time before and after the total eclipse.
  */
 export const SURVIVAL = tunable('SURVIVAL', 'Survival', {
   startDelayMs: 3000,
-  waveEveryMs: 25000,
-  waveGapStepMs: 10000,
-  maxWaveEveryMs: 45000,
+  gapBaseMs: 30000,
+  gapPerBudgetMs: 1250,
+  gapMinMs: 40000,
+  gapMaxMs: 60000,
   clearedDelayMs: 5000,
-  firstSize: 3,
-  growth: 1.5,
-  easyPeakWave: 3,
-  mediumPeakWave: 4,
-  hardPeakWave: 5,
+  easyFirstBudget: 3,
+  easyBudgetGrowth: 1.5,
+  easyMaxBudget: 9,
+  mediumFirstBudget: 4,
+  mediumBudgetGrowth: 2,
+  mediumMaxBudget: 16,
+  hardFirstBudget: 5,
+  hardBudgetGrowth: 2.5,
+  hardMaxBudget: 24,
   sizeJitter: 0.2,
-  levelGrowth: 1.25,
-  easyScale: 0.8,
-  mediumScale: 1,
-  hardScale: 1.3,
+  levelGrowth: 1.15,
+  coopBudgetPerPlayer: 0.6,
+  bossMinWave: 3,
+  easyBossMin: 1,
+  easyBossMax: 1,
+  mediumBossMin: 1,
+  mediumBossMax: 2,
+  hardBossMin: 1,
+  hardBossMax: 3,
+  bossEscortShare: 0.5,
+  secondLeadChance: 0.5,
   finaleMinMs: 240000,
   finaleAtMs: 120000,
   finaleScale: 1.5,
   preFinaleScale: 0.8,
   leadShare: 0.55,
-  maxAlive: 24,
+  easyMaxAlive: 18,
+  mediumMaxAlive: 36,
+  hardMaxAlive: 0,
+  coopAlivePerPlayer: 6,
   quietEndMs: 8000,
   dawnAt: 0.72,
   moonSetAt: 0.86,
   eclipseTotal: 0.06,
   eclipseDiamond: 0.02,
-});
+}, { meta: { secondLeadChance: { max: 1 }, bossEscortShare: { max: 1 }, leadShare: { max: 1 } } });
 
 /**
  * The player's soldiers (scenes/BattleAllies.ts, systems/AllyAI.ts): how many of each may stand on the field at once
- * (`*Limit`; a fallen one frees his place), the pause after each summons (`*CooldownMs`), where they come in
+ * (`*Limit`, reserve and field together; a fallen one frees his place), how long training the next for the reserve takes
+ * (`*TrainMs`, systems/allyRoster.ts), where they come in
  * (`spawnX`, beyond the left edge), the posts of the orders (`holdX` for "Hold the line", `retreatX` in front of the
  * keep for "Fall back") and how far from his post a soldier holding the line steps out to fight (`engageRange`).
  */
@@ -73,9 +91,9 @@ export const ALLIES = tunable('ALLIES', 'Allies', {
   squireLimit: 5,
   allyKnightLimit: 3,
   medicLimit: 2,
-  squireCooldownMs: 1000,
-  allyKnightCooldownMs: 4000,
-  medicCooldownMs: 2000,
+  squireTrainMs: 10000,
+  allyKnightTrainMs: 20000,
+  medicTrainMs: 25000,
   spawnX: -30,
   holdX: 420,
   retreatX: 230,
@@ -144,7 +162,7 @@ export const MEDIC = tunable('MEDIC', 'Medic', {
  * harder every enemy hit lands on the bowmen and the keep than on easy; `*Spread`: enemy archers' aim error (dragon
  * riders' too) as a share of easy's ENEMY_ATTACK.archerSpread. On medium and hard a
  * wave comes in groups of `groupSize` (same kinds together), `groupSpawnIntervalMs` apart inside a group and
- * `groupGapMs` between groups; easy sends them one by one, WAVES.spawnIntervalMs apart. `*ChainFalloff`: in a chain of
+ * `groupGapMs` between groups; easy sends them one by one, WAVES.spawnIntervalMs apart. `*EnemyKeep`: the enemy keep's health as a share of ours. `*ChainFalloff`: in a chain of
  * kamikaze bombs each link is this much less likely to go off than the one before (a dud is only knocked down, unhurt;
  * the bomb a bowman's arrow, fire, lightning or contact sets off always counts as the first link; easy: always).
  */
@@ -154,12 +172,16 @@ export const DIFFICULTY_SCALE = tunable('DIFFICULTY_SCALE', 'Difficulty', {
   mediumSpread: 0.75,
   hardSpread: 0.55,
   groupSize: 5,
-  groupSpawnIntervalMs: 300,
-  groupGapMs: 1500,
+  groupSpawnIntervalMs: 900,
+  groupGapMs: 1800,
   // Share of the bowman's full health healed after a cleared level (easy: back to full).
   easyLevelHeal: 1,
   mediumLevelHeal: 0.5,
   hardLevelHeal: 0.1,
   mediumChainFalloff: 0.1,
   hardChainFalloff: 0.2,
+  // The enemy keep's health as a share of the player's (sandbox keepHealth): weaker walls on easy, stronger on hard.
+  easyEnemyKeep: 0.8,
+  mediumEnemyKeep: 1,
+  hardEnemyKeep: 1.1,
 }, { meta: { mediumChainFalloff: { max: 1 }, hardChainFalloff: { max: 1 } } });

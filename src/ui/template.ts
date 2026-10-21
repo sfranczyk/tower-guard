@@ -103,11 +103,11 @@ export const weaponSlots = (loadout: readonly (ArrowType | null)[]): string => l
 export const ALLY_KEYS: Readonly<Record<AllyType, string>> = { squire: 'Z', allyKnight: 'X', medic: 'C' };
 export const ORDER_KEY = 'V';
 
-/** The soldiers' slots (icon, key, "standing / allowed" under it, a shade for the pause) and the order button. */
+/** The soldiers' slots (icon, key, "ready · standing / allowed" under it, a shade for the next one's training) and the order button. */
 export const allySlots = (allies: ReadonlyArray<{ type: AllyType; label: string }>): string => allies.map(({ type, label }) =>
   `<div class="weapon"><button class="weapon-slot" data-ally="${type}" title="Summon a ${label.toLowerCase()} (${ALLY_KEYS[type]})" aria-label="Summon a ${label.toLowerCase()}">`
   + `<span class="weapon-key">${ALLY_KEYS[type]}</span>${ICON_ALLIES[type]}<span class="slot-shade"><i class="slot-wait" data-ally-wait="${type}"></i></span></button>`
-  + `<span class="weapon-ammo" data-ally-count="${type}">0/0</span></div>`).join('')
+  + `<span class="weapon-ammo" data-ally-count="${type}" title="Ready · standing / allowed">0 · 0/0</span></div>`).join('')
   + `<div class="weapon order-slot"><button class="weapon-slot" data-ally-order title="Orders (${ORDER_KEY})" aria-label="Orders">`
   + `<span class="weapon-key">${ORDER_KEY}</span><span data-order-icon>${ICON_ORDERS.hold}</span></button>`
   + `<span class="weapon-ammo" data-order-label>Hold</span></div>`;

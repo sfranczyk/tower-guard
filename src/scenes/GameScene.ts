@@ -1,6 +1,5 @@
 import { Container, Graphics } from 'pixi.js';
 import {
-  ENEMY_KEEP_HEALTH,
   GROUND_Y,
   MIN_SHOT_POWER,
   PLAYER_TOWER_X,
@@ -13,7 +12,7 @@ import { spatialMix } from '../audio/spatial';
 import { Scene, isMultiplayer, type GameContext } from '../core/Scene';
 import { viewWidth } from '../core/viewport';
 import { BATTLEGROUNDS, aimColorsOf, type Battleground } from '../data/battlegrounds';
-import { enemyEdge, wavePacing } from '../data/difficulty';
+import { enemyEdge, enemyKeepHealth, wavePacing } from '../data/difficulty';
 import { bannersInPlay, friendlyFireOn, runBattleground, runLevelCount, survivalLevel, type SurvivalLevel } from '../data/sandbox';
 import { enterBattle, loadoutOf } from '../net/coopLink';
 import type { GuestSync } from '../net/GuestSync';
@@ -122,7 +121,7 @@ export class GameScene extends Scene {
     const { difficulty } = sandbox;
     const survival = this.survivalSetup;
     this.foes = new BattleEnemies(survival
-      ? { survival: { kinds: survival.kinds, durationMs: survival.minutes * 60_000, levelIndex: run.levelIndex, difficulty } }
+      ? { survival: { kinds: survival.kinds, durationMs: survival.minutes * 60_000, levelIndex: run.levelIndex, difficulty, players: this.ctx.session.playerCount } }
       : { counts: sandbox.levels[run.levelIndex].enemies }, {
       world: this.world,
       list: this.enemies,
@@ -183,7 +182,7 @@ export class GameScene extends Scene {
     const towers = this.ctx.session.playerCount;
     this.playerTower = new Tower(PLAYER_TOWER_X, GROUND_Y, { hillColor, enemy: false, towers }, sandbox.keepHealth, run.keepHealth);
     // Survival: the enemy has no keep (they come from beyond the field).
-    this.enemyTower = new Tower(enemyKeepX(), GROUND_Y, { hillColor, enemy: true, absent: !!this.survivalSetup }, ENEMY_KEEP_HEALTH, run.enemyKeepHealth);
+    this.enemyTower = new Tower(enemyKeepX(), GROUND_Y, { hillColor, enemy: true, absent: !!this.survivalSetup }, enemyKeepHealth(sandbox.difficulty, sandbox.keepHealth), run.enemyKeepHealth);
     if (this.survivalSetup) {
       this.survival = new BattleSurvival(this.survivalSetup, this.background);
       this.relief = new BattleRelief(this.world);

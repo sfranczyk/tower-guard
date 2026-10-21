@@ -2,6 +2,7 @@ import type { Graphics } from 'pixi.js';
 import {
   ARROWS,
   ENEMY_TOWER_DAMAGE,
+  KEEP_BLAST_FACTOR,
   FIRE_ARROW_DAMAGE,
   FIRE_DRAGON_BLAST_POWER,
   FRIENDLY_FIRE_GRACE_MS,
@@ -241,7 +242,7 @@ export class ArrowHits {
       return;
     }
     // Chips fly off where it lands.
-    this.world.enemyTower.takeDamage(ENEMY_TOWER_DAMAGE * (explosive ? 1.25 : 1), impactPoint);
+    this.world.enemyTower.takeDamage(ENEMY_TOWER_DAMAGE * (explosive ? KEEP_BLAST_FACTOR : 1), impactPoint);
     if (explosive) {
       this.actions.explode(impactPoint, activeEnemies);
       arrow.deactivate();

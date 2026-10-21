@@ -1,4 +1,5 @@
 import type { Application, Container, Texture } from 'pixi.js';
+import { enemyKeepHealth } from '../data/difficulty';
 import type { Loadout } from '../data/loadout';
 import type { SandboxSettings } from '../data/sandbox';
 import type { ProjectileType } from '../types';
@@ -42,12 +43,12 @@ export interface RunState {
   enemyKeepHealth: number;
 }
 
-/** A fresh run: level 1, every bowman and both keeps at full health. */
-export const newRun = (sandbox: SandboxSettings, playerCount: number, enemyKeepHealth: number): RunState => ({
+/** A fresh run: level 1, every bowman and both keeps at full health (the enemy's by the difficulty, `enemyKeepHealth`). */
+export const newRun = (sandbox: SandboxSettings, playerCount: number): RunState => ({
   levelIndex: 0,
   bowmanHealths: Array.from({ length: playerCount }, () => sandbox.bowmanHealth),
   keepHealth: sandbox.keepHealth,
-  enemyKeepHealth,
+  enemyKeepHealth: enemyKeepHealth(sandbox.difficulty, sandbox.keepHealth),
 });
 
 /** Whether the session is played by more than one bowman (online co-op, or the local `?coop` test). */

@@ -18,7 +18,7 @@ export interface BattleAlliesDeps {
 
 /**
  * The player's soldiers in a level (each level starts with none): summoned from beyond the left edge, up to each kind's
- * limit standing and one per kind's pause (systems/allyRoster.ts), and the order they all follow (systems/allyOrders.ts).
+ * limit and from a reserve trained one at a time (systems/allyRoster.ts), and the order they all follow (systems/allyOrders.ts).
  * What they do each frame is systems/AllyAI.ts.
  */
 export class BattleAllies {
@@ -31,18 +31,18 @@ export class BattleAllies {
     return this.deps.list;
   }
 
-  /** The pauses run with the game. */
+  /** Training runs with the game. */
   public update(deltaMs: number): void {
-    this.roster.tick(deltaMs);
+    this.roster.tick(deltaMs, (type) => this.alive(type));
   }
 
   public alive(type: AllyType): number {
     return this.list.filter((ally) => ally.kind === type && ally.isAlive()).length;
   }
 
-  /** A soldier of `type` comes in from beyond the left edge, if there's room for him and his kind's pause is over. */
+  /** A soldier of `type` comes in from beyond the left edge, if one is ready in the reserve. */
   public summon(type: AllyType): Enemy | undefined {
-    if (!this.roster.canSummon(type, this.alive(type))) {
+    if (!this.roster.canSummon(type)) {
       return undefined;
     }
     this.roster.summoned(type);

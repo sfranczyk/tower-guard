@@ -7,6 +7,10 @@
 CombatSystem keeps what reaches beyond one target (explode, detonate, shatter, lightning, burns); what sets a kamikaze's bomb off and the chain fuses: `kamikazeBomb.ts`. Shared shapes in
 `combatGeometry.ts` (`Foe`, `bowmanBox`, `foeHitBoxes`). Emits `sound(id, at)` events (audio/CLAUDE.md). It forgets what
 stuck or gone arrows hit. Targeting: nearest bowman out in the open, else the keep (`targeting.ts`).
+Crowding (`crowding.ts` pure, tested; `MeleeCrowd.ts`; tuning `CROWD`): melee enemies take attack posts per target and
+side (`meleePosts`: 3 posts 8 px apart, 2 to a post; the rest queue and don't strike), step back when too close for
+their weapon; a blow lands only ahead within reach (`weaponReaches`, allies too); `EnemyAI.spread` after the frame eases
+apart units hidden behind one another for `hiddenMs` (`spreadApart`; passing is free, the faster goes ahead).
 Kamikaze awareness (`blastAwareness.ts`, pure, tested; tuning `KAMIKAZE_AWARENESS`): `EnemyAI.beginFrame` builds
 `blastZones` (each kamikaze's blast at what it runs at, chained through every bomb within reach); a melee soldier
 notices or misses each kamikaze once within `noticeRange` (`missChance`: race `blastAwareness`, zombies 0, low health,
@@ -21,7 +25,8 @@ patient (`bandaging.ts`, pure, tested: `pickPatient`, `bandageHeal`; tuning `MED
 Bowmen via `bowmanHealth` / `bowmanHealed` events. Enemies:
 `nearestMeleeTarget` (`targeting.ts`) stops melee enemies at a soldier (`EnemyAI.fightAlly`), archers on foot aim at
 them, hostile arrows (`ArrowHits.hostileHitAlly`), kamikaze blasts and lightning hurt them; players' arrows only with
-friendly fire (`arrowTargets`). Limits and pauses: `allyRoster.ts` (pure, tested), tuning `ALLIES`.
+friendly fire (`arrowTargets`). Reserve: `allyRoster.ts` (pure, tested; one trained at a time per kind, `*TrainMs`, while
+reserve + field < `*Limit`; summon what is ready), tuning `ALLIES`.
 
 ## Banners (`banners.ts`, pure, tested; tuning `BANNERS`)
 The run's Banners option (`SandboxSettings.banners`, solo only): `Banners<Enemy>` (`CombatWorld.banners`) holds each
@@ -42,11 +47,14 @@ enemy counts. `data/difficulty.ts` `enemyEdge` (`CombatWorld.enemyEdge`; easy 1,
 every enemy hit on bowmen and keep × `damage` (melee, arrows, kamikaze, dragon burn), archer aim error × `aimSpread`; `wavePacing`: medium/hard send a wave in
 groups of `DIFFICULTY_SCALE.groupSize` (kinds together, `groupByKind`), `groupSpawnIntervalMs` apart, `groupGapMs` between.
 
-## Survival (`survivalWaves.ts`, `nightCycle.ts`, pure, tested; tuning `SURVIVAL`)
-`SurvivalDirector` (BattleEnemies in survival): waves `survivalWaveGap` apart (25, 35, then 45 s: `waveEveryMs`, `waveGapStepMs`, `maxWaveEveryMs`; or `clearedDelayMs` after the field is
-cleared), `survivalWaveSize` growing up to the difficulty's `*PeakWave` then flat ± `sizeJitter`, × level and difficulty;
-kinds by `arrival` (`kindsArrived`) around a lead kind (`pickLead`, never a healer or shaman; `drawWave` `leadShare`); levels over `finaleMinMs`
-end with a finale (× `finaleScale`) `finaleAtMs` before the end, after it waves only when the field is cleared; none in the last `quietEndMs`; at most `maxAlive` standing. `nightSky(progress)`: moon, stars, dawn/day weights, shade, `sunRise`. Time up: `Enemy`/`DragonEnemy.flee`,
+## Survival (`survivalWaves.ts`, `survivalRoles.ts`, `nightCycle.ts`, pure, tested; tuning `SURVIVAL`)
+`SurvivalDirector` (BattleEnemies in survival): each wave a threat budget (`survivalBudget`: the difficulty's `*FirstBudget` +
+`*BudgetGrowth` per wave up to `*MaxBudget`, × level, co-op players, ± `sizeJitter`) filled by kinds' `threat`
+(`drawByBudget`), the next one `survivalWaveGap` of what it cost later (40–60 s, or `clearedDelayMs` = 5 s after the field is cleared).
+Roles (`enemyRole`): supporters never lead; bosses (`boss` in data/enemyKinds: troll, fire dragon) only as a lead from
+`bossMinWave`, never two boss waves running, `bossCount` of them on top with escorts of their group (`drawBossWave`).
+Kinds by `arrival` (`kindsArrived`) around a lead (`pickLead`); levels over `finaleMinMs` end with a finale (× `finaleScale`)
+`finaleAtMs` before the end; none in the last `quietEndMs`; at most `maxAliveFor(difficulty, players)` standing. `nightSky(progress)`: moon, stars, dawn/day weights, shade, `sunRise`. Time up: `Enemy`/`DragonEnemy.flee`,
 `EnemyAI.runOff` (off the right edge, `escape`).
 
 ## Arrow flight (`ballistics.ts`)
@@ -104,6 +112,8 @@ hit the bowman (not dead) or a soldier, or the keep while he hides, never enemie
 ## Burning bowman (`burning.ts`)
 `flamesTouch` (fire dragon puff cores vs the bowman box; not in the keep) → `Bowman.ignite`: `BURN_DAMAGE_PER_S` for
 `BURN_DURATION_MS` (easy 4 s, medium 6 s, hard 8 s; `relight(difficulty)`, `BowmanConfig.burnMs`) after the last touch.
+Enemies on the ground in the stream (their hit boxes, `EnemyRanged.updateFireDragon`) burn too, `DRAGON_SCORCH_MS` after
+the last touch (`scorch` in afflictions.ts: doesn't spread; non-burning kinds spared; trolls' regen `minFireMs`).
 
 ## Lightning (storm weather)
 `lightning.ts` pure (bolt shapes, schedule, range), `WeatherSystem.ts` draws: sky flashes, ground strikes crackling for

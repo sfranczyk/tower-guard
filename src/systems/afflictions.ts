@@ -63,6 +63,18 @@ export const ignite = (state: Readonly<Afflictions>, type: UnitType, duration = 
   };
 };
 
+/**
+ * Touched by a fire dragon's stream: burns for at least `ms` (fire thaws), as a fire that doesn't spread; a kind that
+ * doesn't burn is spared, a longer fire already burning stays as it is.
+ */
+export const scorch = (state: Readonly<Afflictions>, type: UnitType, ms: number): Afflictions => {
+  if (enemyTraits(type).burnFactor <= 0) {
+    return { ...state };
+  }
+  const thawed = { ...state, chillMs: 0, chillHits: 0, frozenMs: 0 };
+  return state.burnMs >= ms ? thawed : { ...thawed, burnMs: ms, fireGen: FIRE_SPREAD.maxGen, fireproofMs: 0 };
+};
+
 /** Whether the fire burning on it may still spread to others. */
 export const fireSpreads = (state: Readonly<Afflictions>): boolean => state.burnMs > 0 && state.fireGen < FIRE_SPREAD.maxGen;
 

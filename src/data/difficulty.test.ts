@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { DIFFICULTY_SCALE } from '../config';
 import { WAVES } from '../config';
-import { enemyEdge, healAfterLevel, isDifficultyLevel, wavePacing } from './difficulty';
+import { enemyEdge, enemyKeepHealth, healAfterLevel, isDifficultyLevel, wavePacing } from './difficulty';
 
 describe('difficulty', () => {
   it('easy leaves the enemies as tuned, harder levels hit harder and aim better', () => {
@@ -31,5 +31,11 @@ describe('difficulty', () => {
     expect(healAfterLevel('medium', 70, 100)).toBe(100);
     expect(healAfterLevel('hard', 10, 100)).toBeCloseTo(20);
     expect(healAfterLevel('easy', 0, 100)).toBe(0);
+  });
+
+  it('gives the enemy keep a share of ours: weaker on easy, stronger on hard', () => {
+    expect(enemyKeepHealth('easy', 3300)).toBe(2640);
+    expect(enemyKeepHealth('medium', 3300)).toBe(3300);
+    expect(enemyKeepHealth('hard', 3300)).toBe(3630);
   });
 });

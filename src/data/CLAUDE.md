@@ -15,12 +15,14 @@ All pure and tested. Tuning numbers live in `config/`, sandbox defaults in `sand
   creatures = undead; `enemyGroup`, `enemyTypesOf`): the setup's enemy picker is split by it, story levels build on it.
   Now: raider, hunter, kamikaze, the three knights, priest = human; runner, goblin kamikaze, shaman = goblin; brute, troll = ogre; zombie = undead; both
   dragons = dragon. An entry may have `armor` (`enemyArmor`): the share of an arrow's body hit that gets through.
-- **Toughness and damage** (`enemies.ts`): health per type against a 20-damage arrow (headshot
-  ×`ARROWS.headshotMultiplier` = 1.25): raider 35, runner 22, hunter 24 (one headshot), brute 110, dragon 170.
+- **Toughness and damage** (`enemies.ts`): health per type against a 10–20 arrow (headshot: upper half
+  ×`ARROWS.headshotMultiplier` = 1.5): raider 29 (2 hits), runner 18, hunter 22 (one headshot), goblin bomber 1 (any hit),
+  brute 90, dragons 100 / 135.
   `ENEMY_DAMAGE` gives each type a random range (`rollDamage`) for club swings and, for shooters, their arrows
-  (`Arrow.shooter` tells CombatSystem whose arrow hit). The keep (2000 by default) takes the same
-  × `KEEP_DAMAGE_MULTIPLIER` per attack (1, except hunter arrows 0.5, brute 2, kamikaze 8, goblin kamikaze 4); read ranges with
-  `enemyDamage(type, attack, target)`. `mountedDamage` shares a hit between rider and horse (see objects/CLAUDE.md).
+  (`Arrow.shooter` tells CombatSystem whose arrow hit). The keep (3300 by default) takes the same
+  × the kind's `keepDamage` per attack (1, except hunter arrows 0.5, heavies 2, mounted knight 1.5, kamikaze 3, goblin bomber 2);
+  read ranges with `enemyDamage(type, attack, target)`. The enemy keep's health is ours × the difficulty's share
+  (`enemyKeepHealth`: 0.8 / 1 / 1.1); arrows deal it `ENEMY_TOWER_DAMAGE`, explosive bolts × `KEEP_BLAST_FACTOR`. `mountedDamage` shares a hit between rider and horse (see objects/CLAUDE.md).
   Splash gib chance: `splashGibChance` / `blowsApart`, `SPLASH_GIB_CHANCE`.
 - **Enemy looks** (`ENEMY_LOOKS` in `enemies.ts`): size, club swing and gait per type. The walk/run phase advances with
   the distance covered (`Enemy.stridePhase`, `WALK_STRIDE_PER_RADIAN`, `MARCH_STRIDE_PER_RADIAN` /

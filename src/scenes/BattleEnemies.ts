@@ -21,7 +21,7 @@ const enemySpawnX = (): number => worldWidth() + 60;
 /** What a level sends: set counts (battle) or as many as survivalWaves decides of some kinds for a while (survival). */
 export type LevelEnemies =
   | { counts: LevelEnemyCounts }
-  | { survival: { kinds: readonly EnemyType[]; durationMs: number; levelIndex: number; difficulty: DifficultyLevel } };
+  | { survival: { kinds: readonly EnemyType[]; durationMs: number; levelIndex: number; difficulty: DifficultyLevel; players: number } };
 
 export interface BattleEnemiesDeps {
   world: Container;
@@ -57,8 +57,8 @@ export class BattleEnemies {
     if ('counts' in level) {
       this.director = new WaveDirector(level.counts, deps.wavePacing);
     } else {
-      const { kinds, durationMs, levelIndex, difficulty } = level.survival;
-      this.director = new SurvivalDirector(kinds, durationMs, { levelIndex, difficulty, pacing: deps.wavePacing });
+      const { kinds, durationMs, levelIndex, difficulty, players } = level.survival;
+      this.director = new SurvivalDirector(kinds, durationMs, { levelIndex, difficulty, players, pacing: deps.wavePacing });
     }
   }
 

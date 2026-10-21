@@ -8,7 +8,7 @@ import { GameScene } from '../scenes/GameScene';
 import { MenuScene } from '../scenes/MenuScene';
 import { SandboxScene } from '../scenes/SandboxScene';
 import { SoundLabScene } from '../scenes/SoundLabScene';
-import { DEFAULT_ARROW_TRAILS, ENEMY_KEEP_HEALTH, MAX_ARROW_TRAILS } from '../config';
+import { DEFAULT_ARROW_TRAILS, MAX_ARROW_TRAILS } from '../config';
 import { loadSandbox } from './sandboxStorage';
 import { newRun, type GameContext, type GameTextures, type Scene, type SceneName } from './Scene';
 import { COOP_PARAM, DESIGN_LAB_PARAM, LAB_PARAM, SOUND_LAB_PARAM, TUNE_PARAM, getDevUrlParam, setUrlParam } from './urlState';
@@ -35,7 +35,7 @@ export class SceneManager {
       sound,
       session: {
         sandbox,
-        run: newRun(sandbox, playerCount, ENEMY_KEEP_HEALTH),
+        run: newRun(sandbox, playerCount),
         playerCount,
         showTrajectory: false,
         showCursorCircle: false,
