@@ -54,7 +54,7 @@ describe('enemy toughness and damage', () => {
     expect(arrowsToKill('hunter', bestBody)).toBe(2);
     expect(arrowsToKill('raider', averageBody)).toBe(2);
     expect(arrowsToKill('raider', worstHead)).toBe(2);
-    expect(arrowsToKill('tank', averageBody)).toBe(6);
+    expect(arrowsToKill('tank', averageBody)).toBe(10);
     expect(arrowsToKill('dragon', averageBody)).toBe(7);
   });
 

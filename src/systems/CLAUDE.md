@@ -54,7 +54,7 @@ per wave up to the difficulty's `*PeakWave`, × level, difficulty, co-op players
 Roles (`enemyRole`): supporters never lead; bosses (`boss` in data/enemyKinds: troll, dragons) only as a lead from
 `bossMinWave`, never two boss waves running, `bossCount` of them on top with escorts of their group (`drawBossWave`).
 Kinds by `arrival` (`kindsArrived`) around a lead (`pickLead`); levels over `finaleMinMs` end with a finale (× `finaleScale`)
-`finaleAtMs` before the end; none in the last `quietEndMs`; at most `maxAliveFor(players)` standing. `nightSky(progress)`: moon, stars, dawn/day weights, shade, `sunRise`. Time up: `Enemy`/`DragonEnemy.flee`,
+`finaleAtMs` before the end; none in the last `quietEndMs`; at most `maxAliveFor(difficulty, players)` standing. `nightSky(progress)`: moon, stars, dawn/day weights, shade, `sunRise`. Time up: `Enemy`/`DragonEnemy.flee`,
 `EnemyAI.runOff` (off the right edge, `escape`).
 
 ## Arrow flight (`ballistics.ts`)

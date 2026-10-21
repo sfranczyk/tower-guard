@@ -26,12 +26,15 @@ export const survivalBudget = (index: number, levelIndex: number, difficulty: Di
   return budget * coopFactor(players) * factor;
 };
 
-/** The wait after a wave that cost `budget`: SURVIVAL.gapMs, or gapPerBudgetMs per point when longer, up to maxGapMs. */
+/** The wait after a wave that cost `budget`: gapTopMs less gapPerBudgetMs per point (bigger waves come sooner), within gapMinMs..gapMaxMs. */
 export const survivalWaveGap = (budget: number): number =>
-  Math.min(SURVIVAL.maxGapMs, Math.max(SURVIVAL.gapMs, SURVIVAL.gapPerBudgetMs * budget));
+  Math.min(SURVIVAL.gapMaxMs, Math.max(SURVIVAL.gapMinMs, SURVIVAL.gapTopMs - SURVIVAL.gapPerBudgetMs * budget));
 
-/** Most enemies standing at once: SURVIVAL.maxAlive, more in co-op. */
-export const maxAliveFor = (players: number): number => SURVIVAL.maxAlive + SURVIVAL.coopAlivePerPlayer * Math.max(0, players - 1);
+/** Most enemies standing at once at `difficulty`: its `*MaxAlive` (0 = no limit), more in co-op. */
+export const maxAliveFor = (difficulty: DifficultyLevel, players: number): number => {
+  const cap = SURVIVAL[`${difficulty}MaxAlive`];
+  return cap > 0 ? cap + SURVIVAL.coopAlivePerPlayer * Math.max(0, players - 1) : Infinity;
+};
 
 /** The kinds that may come `share` (0..1) of the way through the level: arrived ones, else the earliest. */
 export const kindsArrived = (kinds: readonly EnemyType[], share: number): EnemyType[] => {
@@ -131,7 +134,7 @@ export class SurvivalDirector {
       this.releaseWave(SURVIVAL.finaleScale);
     } else if (!this.quiet && (this.waveTimerMs <= 0 || cleared)) {
       // The wave whose wait would run past the finale is the smaller one before it.
-      const preFinale = this.finaleAtMs !== undefined && !this.finaleSent && this.elapsedMs >= this.finaleAtMs - SURVIVAL.gapMs;
+      const preFinale = this.finaleAtMs !== undefined && !this.finaleSent && this.elapsedMs >= this.finaleAtMs - SURVIVAL.gapMaxMs;
       this.releaseWave(preFinale ? SURVIVAL.preFinaleScale : 1);
     }
     return this.spawn(deltaMs, alive);
@@ -172,7 +175,7 @@ export class SurvivalDirector {
     const spawned: EnemyType[] = [];
     this.spawnTimerMs -= deltaMs;
     const { groupSize, spawnIntervalMs, groupGapMs } = this.options.pacing;
-    const maxAlive = maxAliveFor(this.players);
+    const maxAlive = maxAliveFor(this.options.difficulty, this.players);
     while (this.spawnTimerMs <= 0 && this.queue.length > 0 && alive + spawned.length < maxAlive) {
       spawned.push(this.queue.shift()!);
       this.spawnedInGroup = (this.spawnedInGroup + 1) % groupSize;

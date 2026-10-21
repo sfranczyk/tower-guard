@@ -242,13 +242,13 @@ export const ENEMY_KINDS: Readonly<Record<UnitType, EnemyKind>> = {
   // Ogres stand half again as tall: their long club is hard to step away from.
   tank: {
     label: 'Ogre brute', archetype: 'heavy', race: 'ogre', magical: false, arrival: 0.3, threat: 2.5,
-    stats: { health: 90, speed: 18 }, damage: { melee: [14, 22] }, keepDamage: { melee: 2 }, build: { size: 1.5, strikeReach: 85 },
+    stats: { health: 150, speed: 18 }, damage: { melee: [14, 22] }, keepDamage: { melee: 2 }, build: { size: 1.5, strikeReach: 85 },
   },
   // A troll: taller and slower than the brute, with long arms and a stone club. Its wounds close (REGEN): set it alight
   // to stop that, then finish it while it burns.
   troll: {
     label: 'Troll', archetype: 'heavy', race: 'ogre', magical: false, arrival: 0.4, threat: 5, boss: { escorts: 'nonHumans' }, regenerates: true,
-    stats: { health: 100, speed: 15 }, damage: { melee: [16, 24] }, keepDamage: { melee: 2 }, build: { size: 1.6, strikeReach: 90 },
+    stats: { health: 130, speed: 15 }, damage: { melee: [16, 24] }, keepDamage: { melee: 2 }, build: { size: 1.6, strikeReach: 90 },
     traits: { burnFactor: TROLL_BURN_FACTOR },
   },
   // Fragile, keeps its distance and shoots.
@@ -265,7 +265,7 @@ export const ENEMY_KINDS: Readonly<Record<UnitType, EnemyKind>> = {
   // Flies in lower and closer to breathe fire. No hits of its own: its fire sets the bowman alight (BURN_* in config.ts).
   fireDragon: {
     label: 'Fire dragon', archetype: 'fireBreather', race: 'dragon', magical: true, arrival: 0.4, threat: 5, boss: { escorts: 'humans' },
-    stats: { health: 135, speed: ENEMY_SPEED * 1.2 }, damage: { melee: [0, 0] }, build: { size: 1, strikeReach: 0 },
+    stats: { health: 150, speed: ENEMY_SPEED * 1.2 }, damage: { melee: [0, 0] }, build: { size: 1, strikeReach: 0 },
     traits: { burnFactor: 0 },
   },
   // Sprints at the bowman with a bomb and blows up on contact.

@@ -20,8 +20,8 @@ export const WAVES = tunable('WAVES', 'Waves', {
 
 /**
  * Survival mode (systems/survivalWaves.ts, systems/survivalRoles.ts): the first wave after `startDelayMs`; each next one
- * `gapMs` after the last, or `gapPerBudgetMs` per point of that wave's budget when longer, at most `maxGapMs`; or `clearedDelayMs`
- * after the field is cleared, if that comes sooner. Waves are sized by a threat budget (each kind's `threat` in data/enemyKinds, a
+ * `gapTopMs` less `gapPerBudgetMs` per point of that wave's budget (a big wave gives a short wait), between `gapMinMs` and
+ * `gapMaxMs`; or `clearedDelayMs` after the field is cleared, if that comes sooner. Waves are sized by a threat budget (each kind's `threat` in data/enemyKinds, a
  * raider 1): wave n (from 0) has `firstBudget + budgetGrowth × n` until the difficulty's `*PeakWave` (1-based), the
  * same as that one after it, × `levelGrowth` per level after the first, × the difficulty's `*Scale`, × (1 +
  * `coopBudgetPerPlayer` per extra bowman), each wave ± `sizeJitter`. On levels longer than `finaleMinMs` the last big
@@ -30,7 +30,7 @@ export const WAVES = tunable('WAVES', 'Waves', {
  * never the same twice running). Bosses (`boss` in data/enemyKinds) come only as a lead, from wave `bossMinWave`
  * (1-based), never two boss waves running: `*BossMin`..`*BossMax` of them on top of the budget, with escorts of their
  * group worth `bossEscortShare` of it (a second escort lead with `secondLeadChance`); the next gap counts each boss as
- * its threat. Never more than `maxAlive` (+ `coopAlivePerPlayer` per extra bowman) standing (the rest wait). The night
+ * its threat. Never more than `*MaxAlive` standing (easy, medium; hard 0 = no limit; + `coopAlivePerPlayer` per extra bowman; the rest wait). The night
  * cycle (systems/nightCycle.ts): dawn starts at `dawnAt` of the time, the moon has set by `moonSetAt`; on eclipse maps
  * the moon crosses the sun at an even pace from the level's start to its end, covering it all for `eclipseTotal` of the
  * time halfway (which sets how much bigger than the sun it is); the diamond ring flashes for `eclipseDiamond` of the
@@ -38,9 +38,10 @@ export const WAVES = tunable('WAVES', 'Waves', {
  */
 export const SURVIVAL = tunable('SURVIVAL', 'Survival', {
   startDelayMs: 3000,
-  gapMs: 40000,
+  gapTopMs: 60000,
   gapPerBudgetMs: 5000,
-  maxGapMs: 60000,
+  gapMinMs: 20000,
+  gapMaxMs: 50000,
   clearedDelayMs: 5000,
   firstBudget: 3,
   budgetGrowth: 1,
@@ -67,7 +68,9 @@ export const SURVIVAL = tunable('SURVIVAL', 'Survival', {
   finaleScale: 1.5,
   preFinaleScale: 0.8,
   leadShare: 0.55,
-  maxAlive: 18,
+  easyMaxAlive: 18,
+  mediumMaxAlive: 36,
+  hardMaxAlive: 0,
   coopAlivePerPlayer: 6,
   quietEndMs: 8000,
   dawnAt: 0.72,

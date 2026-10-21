@@ -18,7 +18,8 @@ describe('survival waves', () => {
     expect(survivalBudget(2, 3, 'medium')).toBeGreaterThan(survivalBudget(2, 0, 'medium'));
     expect(survivalBudget(2, 0, 'hard')).toBeGreaterThan(survivalBudget(2, 0, 'easy'));
     expect(survivalBudget(2, 0, 'medium', 1, 2)).toBeCloseTo(survivalBudget(2, 0, 'medium') * (1 + SURVIVAL.coopBudgetPerPlayer));
-    expect(maxAliveFor(3)).toBe(SURVIVAL.maxAlive + 2 * SURVIVAL.coopAlivePerPlayer);
+    expect(maxAliveFor('medium', 3)).toBe(SURVIVAL.mediumMaxAlive + 2 * SURVIVAL.coopAlivePerPlayer);
+    expect(maxAliveFor('hard', 3)).toBe(Infinity);
   });
 
   it('stop growing after the difficulty\'s peak wave', () => {
@@ -42,10 +43,10 @@ describe('survival waves', () => {
     expect(pickLead(['troll'], undefined, new Set(), () => 0, false)).toBe('troll');
   });
 
-  it('wait SURVIVAL.gapMs after a wave, longer after a costly one, up to SURVIVAL.maxGapMs', () => {
-    expect(survivalWaveGap(3)).toBe(SURVIVAL.gapMs);
-    expect(survivalWaveGap(10)).toBe(Math.max(SURVIVAL.gapMs, 10 * SURVIVAL.gapPerBudgetMs));
-    expect(survivalWaveGap(100)).toBe(SURVIVAL.maxGapMs);
+  it('wait 20-50 s after a wave: shorter after a costly one', () => {
+    expect(survivalWaveGap(0)).toBe(SURVIVAL.gapMaxMs);
+    expect(survivalWaveGap(5)).toBeLessThan(survivalWaveGap(3));
+    expect(survivalWaveGap(100)).toBe(SURVIVAL.gapMinMs);
   });
 
   it('bring the next wave SURVIVAL.clearedDelayMs after the field is cleared', () => {
@@ -58,7 +59,7 @@ describe('survival waves', () => {
   it('wait for the timer while enemies stand', () => {
     const director = new SurvivalDirector(['raider'], 600_000, { levelIndex: 0, difficulty: 'easy', pacing: wavePacing('easy'), random: () => 0.5 });
     run(director, SURVIVAL.startDelayMs + 5_000, () => 1);
-    expect(run(director, SURVIVAL.gapMs - 7_000, () => 1)).toBe(0);
+    expect(run(director, survivalWaveGap(2) - 7_000, () => 1)).toBe(0);
     expect(run(director, 4_000, () => 1)).toBeGreaterThan(0);
   });
 
@@ -89,7 +90,7 @@ describe('survival waves', () => {
     const finale = run(director, 30_000, busy);
     expect(finale).toBeGreaterThan(0);
     // After it the waves come on their timer again.
-    expect(run(director, SURVIVAL.maxGapMs, busy)).toBeGreaterThan(0);
+    expect(run(director, SURVIVAL.gapMaxMs, busy)).toBeGreaterThan(0);
   });
 
   it('send nothing new in the last SURVIVAL.quietEndMs', () => {
@@ -111,19 +112,19 @@ describe('survival waves', () => {
     const director = new SurvivalDirector(['raider'], 60_000, { levelIndex: 0, difficulty: 'easy', pacing: wavePacing('easy'), random: () => 0.5 });
     expect(run(director, SURVIVAL.startDelayMs - 100)).toBe(0);
     const spawned = run(director, 60_000);
-    expect(spawned).toBeGreaterThan(SURVIVAL.firstBudget); // two waves, at the start and SURVIVAL.gapMs later
+    expect(spawned).toBeGreaterThan(SURVIVAL.firstBudget); // two waves, at the start and a gap later
     expect(director.finished).toBe(true);
     expect(director.remainingMs).toBe(0);
     expect(director.update(100, 0)).toEqual([]);
   });
 
-  it('never fills the field past SURVIVAL.maxAlive', () => {
-    const director = new SurvivalDirector(['raider'], 600_000, { levelIndex: 4, difficulty: 'hard', pacing: wavePacing('hard') });
+  it('never fills the field past the difficulty\'s maxAlive', () => {
+    const director = new SurvivalDirector(['raider'], 600_000, { levelIndex: 4, difficulty: 'medium', pacing: wavePacing('medium') });
     let alive = 0;
     for (let time = 0; time < 300_000; time += 100) {
       alive += director.update(100, alive).length;
     }
-    expect(alive).toBe(maxAliveFor(1));
+    expect(alive).toBe(maxAliveFor('medium', 1));
   });
 });
 
