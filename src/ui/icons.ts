@@ -10,6 +10,27 @@ export const ICON_BOWMAN = `<svg class="icon" viewBox="0 0 28 28" aria-hidden="t
   <path d="M8.5 10a5.5 5.5 0 0 1 11 0z" fill="#4a5568"/>
   <path d="M21 4c4 5 4 13 0 18" fill="none" stroke="#8a6238" stroke-width="2" stroke-linecap="round"/></svg>`;
 
+/** Difficulty (battle setup rules): a skull. */
+export const ICON_DIFFICULTY = `<svg class="icon" viewBox="0 0 28 28" aria-hidden="true">
+  <path d="M14 3a9 9 0 0 0-9 9c0 3 1.5 5.2 3.5 6.5V22a1.5 1.5 0 0 0 1.5 1.5h8a1.5 1.5 0 0 0 1.5-1.5v-3.5c2-1.3 3.5-3.5 3.5-6.5a9 9 0 0 0-9-9z" fill="#e8e0cc"/>
+  <path d="M14 3a9 9 0 0 1 9 9c0 3-1.5 5.2-3.5 6.5V22a1.5 1.5 0 0 1-1.5 1.5h-4z" fill="#cfc6b0"/>
+  <circle cx="10.4" cy="12.4" r="2.4" fill="#2c3a38"/><circle cx="17.6" cy="12.4" r="2.4" fill="#2c3a38"/><path d="M14 15.4l-1.4 2.6h2.8z" fill="#2c3a38"/>
+  <path d="M12 20.4v3M16 20.4v3" stroke="#a89e86" stroke-width="1.2"/></svg>`;
+
+/** Friendly fire (battle setup rules): an arrow stuck in your own (blue) shield. */
+export const ICON_FRIENDLY_FIRE = `<svg class="icon" viewBox="0 0 28 28" aria-hidden="true">
+  <path d="M12 6l8 2.8V15c0 5.5-3.7 9-8 11.8-4.3-2.8-8-6.3-8-11.8V8.8z" fill="#34489f"/><path d="M12 6l8 2.8V15c0 5.5-3.7 9-8 11.8z" fill="#273777"/>
+  <path d="M12 10v12M7.5 14.5h9" stroke="#d8b54a" stroke-width="2.2" stroke-linecap="round"/>
+  <path d="M13 15 24.5 3.5" stroke="#5a3c23" stroke-width="1.8" stroke-linecap="round"/>
+  <path d="M24.5 3.5l1.2-2.4.9 3.3-3.3-.9zM22.6 5.4l1.2-2.4.9 3.3-3.3-.9z" fill="#c9d3dc"/></svg>`;
+
+/** Support (battle setup rules): a helmeted knight behind a blue shield. */
+export const ICON_SUPPORT = `<svg class="icon" viewBox="0 0 28 28" aria-hidden="true">
+  <path d="M3 25c0-6 3-10 8-10s8 4 8 10z" fill="#3a4250"/><rect x="6" y="3.5" width="10" height="10.5" rx="3" fill="#8c96a0"/>
+  <rect x="11" y="3.5" width="5" height="10.5" rx="2.5" fill="#6c7a88"/><path d="M8.5 8.4h6" stroke="#2b3038" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M20 11.5l6 2.2v4.8c0 4.2-2.8 7-6 9-3.2-2-6-4.8-6-9v-4.8z" fill="#34489f"/><path d="M20 11.5l6 2.2v4.8c0 4.2-2.8 7-6 9z" fill="#273777"/>
+  <path d="M20 15v9M16.8 18.5h6.4" stroke="#d8b54a" stroke-width="1.8" stroke-linecap="round"/></svg>`;
+
 /** Remove (a level in the battle setup): a bin with a lid. */
 export const ICON_TRASH = `<svg class="icon" viewBox="0 0 28 28" aria-hidden="true">
   <path d="M8 10h12l-1.2 13.2a2 2 0 0 1-2 1.8h-5.6a2 2 0 0 1-2-1.8z" fill="currentColor"/>
