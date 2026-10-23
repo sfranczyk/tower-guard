@@ -20,7 +20,7 @@
   `RUN_MODE_DESCRIPTIONS`); Back/Esc returns there (`DomUi.sandboxBack`). Then three pages (Rules, Levels, Quiver; opens on Rules), no mode switch. Levels:
   level tabs (map thumbnail, enemy count, add; "Remove level N" right of the editor head asks first, `removeDialog` over the card, Esc cancels; battle 1–5, survival 1–3), the selected level's battleground (map cards,
   `mapThumbnail.ts`) and enemies (a card per type with − / +); survival levels: time stepper and kind toggles
-  (`survivalEditor.ts`). Rules (`rulesPage`, `.option-row`, one per row): bowman/keep health, difficulty, Friendly fire
+  (`survivalEditor.ts`). Rules (`rulesPage`, `.option-row`, one per row, each with an `ICON_*` from `icons.ts`): bowman/keep health, difficulty, Friendly fire
   (`friendlyFireOn`: `friendlyFire` solo, on by default; `coopFriendlyFire` with more bowmen, off; `isMultiplayer`), Banners
   (battle only), Support (`SandboxSettings.support`, `supportAllowed`: soldiers only in battle with it on; shown off and
   disabled in survival). Quiver (`quiverPage.ts`): fill the three slots (click a slot then an arrow, or drag:

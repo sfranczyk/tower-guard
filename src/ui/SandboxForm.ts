@@ -24,7 +24,7 @@ import {
   withFriendlyFire,
 } from '../data/sandbox';
 import type { EnemyType } from '../types';
-import { ICON_BOWMAN, ICON_ENEMIES, ICON_KEEP, ICON_TRASH } from './icons';
+import { ICON_BANNERS, ICON_BOWMAN, ICON_DIFFICULTY, ICON_ENEMIES, ICON_FRIENDLY_FIRE, ICON_KEEP, ICON_SUPPORT, ICON_TRASH } from './icons';
 import { mapThumbnail } from './mapThumbnail';
 import { panelTop, renderPanel } from './panelLayout';
 import { editQuiverIn } from './quiverEditing';
@@ -180,19 +180,19 @@ export class SandboxForm {
       </div>`;
     const onOff = (on: boolean): string => (on ? 'On' : 'Off');
     // Only a number field's row is a <label>: a label round the chips would press the first one on any click in the row.
-    const row = (label: string, hint: string, control: string, icon = ''): string => {
+    const row = (label: string, hint: string, control: string, icon: string): string => {
       const tag = control.startsWith('<input') ? 'label' : 'div';
       return `<${tag} class="option-row">${icon}<span><strong>${label}</strong><small>${hint}</small></span>${control}</${tag}>`;
     };
     return `<div class="rules-list">
       ${row('Bowman health', 'Each bowman starts the run with this; it carries over between levels', numberInput('data-bowman-health', settings.bowmanHealth, HEALTH_LIMITS.bowman), ICON_BOWMAN)}
       ${row('Keep health', 'Your keep falls and the run is lost when this runs out', numberInput('data-keep-health', settings.keepHealth, HEALTH_LIMITS.keep), ICON_KEEP)}
-      ${row('Difficulty', 'How hard enemies hit and how well their archers aim', choice('Difficulty', 'data-difficulty', DIFFICULTY_LEVELS, settings.difficulty, (level) => DIFFICULTY_LABELS[level]))}
+      ${row('Difficulty', 'How hard enemies hit and how well their archers aim', choice('Difficulty', 'data-difficulty', DIFFICULTY_LEVELS, settings.difficulty, (level) => DIFFICULTY_LABELS[level]), ICON_DIFFICULTY)}
       ${row('Friendly fire', 'Your arrows and what they do (blasts, fire, frost, vortices, pins) hit your own side too',
-    choice('Friendly fire', 'data-friendly-fire', [false, true], friendlyFireOn(settings, this.multiplayer), onOff))}
-      ${survival ? '' : row('Banners', "Bring the enemy's banner to your keep to win a level; lose yours and the level is lost (solo only)", choice('Banners', 'data-banners', [false, true], settings.banners, onOff))}
+    choice('Friendly fire', 'data-friendly-fire', [false, true], friendlyFireOn(settings, this.multiplayer), onOff), ICON_FRIENDLY_FIRE)}
+      ${survival ? '' : row('Banners', "Bring the enemy's banner to your keep to win a level; lose yours and the level is lost (solo only)", choice('Banners', 'data-banners', [false, true], settings.banners, onOff), ICON_BANNERS.player)}
       ${row('Support', survival ? 'Survival: you hold the night alone' : 'Summon squires, knights and medics to fight beside you (solo only)',
-    choice('Support', 'data-support', [false, true], supportAllowed(settings), onOff, survival))}
+    choice('Support', 'data-support', [false, true], supportAllowed(settings), onOff, survival), ICON_SUPPORT)}
     </div>`;
   }
 
