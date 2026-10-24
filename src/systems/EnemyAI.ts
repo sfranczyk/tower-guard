@@ -52,13 +52,16 @@ export interface EnemyAIWorld {
   readonly enemyEdge: EnemyEdge;
   /** Banners (systems/banners.ts): carriers walk home fighting only what reaches them; a soldier carrying ours is the target. */
   readonly banners?: Banners<Enemy>;
+  /** MOBA lanes: the blue dragons (the archers and dragons shoot them, and the soldiers, like the bowmen). */
+  readonly allyFliers?: readonly DragonEnemy[];
+  readonly lanes?: boolean;
 }
 
 export interface EnemyAIEvents {
   bowmanDamaged(bowman: Bowman, amount: number, hit: BowmanHit): void;
   bowmanIgnited(bowman: Bowman): void;
   /** A hostile arrow loosed by `shooter` (its damage depends on who shot it). */
-  enemyShot(from: Vec2, angle: number, speed: number, shooter: EnemyType): void;
+  enemyShot(from: Vec2, angle: number, speed: number, shooter: EnemyType, power?: number): void;
 }
 
 /**
@@ -257,7 +260,7 @@ export class EnemyAI {
         // The keep takes the hit when the club lands, with a chip of stone flying off the wall.
         enemy.playAttackAnimation(() => {
           // Chips fly off the wall where the club lands.
-          playerTower.takeDamage(rollDamage(enemyDamage(enemy.kind, 'melee', 'keep')) * this.world.enemyEdge.damage, { x: playerTower.x + TOWER_HALF_WIDTH - 4, y: enemy.y - 30 * enemy.scale.y });
+          playerTower.takeDamage(rollDamage(enemyDamage(enemy.kind, 'melee', 'keep')) * enemy.power * this.world.enemyEdge.damage, { x: playerTower.x + TOWER_HALF_WIDTH - 4, y: enemy.y - 30 * enemy.scale.y });
         });
       }
       return;
@@ -273,7 +276,7 @@ export class EnemyAI {
         enemy.playAttackAnimation(() => {
           const stillInReach = this.crowd.lands(enemy, bowman.x) && Math.abs(enemy.y - bowman.y) <= 45 * enemy.size;
           if (stillInReach && !bowman.isInTower && !bowman.isDead) {
-            this.events.bowmanDamaged(bowman, rollDamage(enemyDamage(enemy.kind, 'melee', 'bowman')) * this.world.enemyEdge.damage, { cause: 'melee', fromX: enemy.x });
+            this.events.bowmanDamaged(bowman, rollDamage(enemyDamage(enemy.kind, 'melee', 'bowman')) * enemy.power * this.world.enemyEdge.damage, { cause: 'melee', fromX: enemy.x });
             this.world.effects.bloodBurst({ x: bowman.x, y: bowman.y - 20 });
           }
         });
@@ -319,7 +322,7 @@ export class EnemyAI {
       enemy.faceTowards(ally.x);
       enemy.playAttackAnimation(() => {
         if (ally.isAlive() && this.crowd.lands(enemy, ally.x)) {
-          meleeBlow(ally, rollDamage(enemyDamage(enemy.kind, 'melee', 'bowman')) * this.world.enemyEdge.damage, enemy.x, this.world.effects);
+          meleeBlow(ally, rollDamage(enemyDamage(enemy.kind, 'melee', 'bowman')) * enemy.power * this.world.enemyEdge.damage, enemy.x, this.world.effects);
         }
       });
     }
@@ -351,7 +354,7 @@ export class EnemyAI {
       return;
     }
     enemy.faceTowards(foe.x);
-    const damage = rollDamage(enemyDamage(enemy.kind, 'melee', 'bowman')) * this.world.enemyEdge.damage;
+    const damage = rollDamage(enemyDamage(enemy.kind, 'melee', 'bowman')) * enemy.power * this.world.enemyEdge.damage;
     if (melee?.ally) {
       const ally = melee.ally;
       enemy.playAttackAnimation(() => {

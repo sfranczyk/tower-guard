@@ -50,9 +50,9 @@ const fakeBowman = (x: number) => {
 const setup = (x: number) => {
   const bowman = fakeBowman(x);
   const input = new ManualInput();
-  const player = { index: 0, bowman: bowman as unknown as Bowman, input, local: true, health: 100, projectile: 'normal', cooldowns: new ArrowCooldowns() } as Player;
+  const player = { index: 0, bowman: bowman as unknown as Bowman, input, local: true, health: 100, projectile: 'normal', cooldowns: new ArrowCooldowns(), team: 'blue', slot: 0 } as Player;
   const tower = { x: PLAYER_TOWER_X, hideSpot: () => ({ x: PLAYER_TOWER_X, y: BOWMAN_Y - 150 }) } as unknown as Tower;
-  const control = new PlayerControl(tower, { enteredTower: () => {}, leftTower: () => {} });
+  const control = new PlayerControl(() => tower, { enteredTower: () => {}, leftTower: () => {} });
   const frame = () => control.update(player, 16);
   return { bowman, input, frame, player };
 };

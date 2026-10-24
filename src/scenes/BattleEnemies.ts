@@ -6,13 +6,14 @@ import { getEnemyStats } from '../data/enemies';
 import { ENEMY_KINDS, isFlyingType } from '../data/enemyKinds';
 import { levelEnemyTotal, type LevelEnemyCounts } from '../data/sandbox';
 import type { HostSync } from '../net/HostSync';
-import type { SpawnPlace } from '../net/protocol';
+import type { MinionSpawn, SpawnPlace } from '../net/protocol';
 import DragonEnemy from '../objects/dragon/DragonEnemy';
 import Enemy, { type HitInfo, type RiderOff } from '../objects/enemy/Enemy';
 import type { Foe } from '../systems/CombatSystem';
 import { SurvivalDirector } from '../systems/survivalWaves';
 import { WaveDirector } from '../systems/waveDirector';
 import type { EnemyType } from '../types';
+import { minionPower } from '../data/upgrades';
 import { worldWidth } from '../systems/battlefield';
 
 /** Enemies come in from beyond the right edge of the battlefield (out of view), past the enemy keep. */
@@ -21,6 +22,8 @@ const enemySpawnX = (): number => worldWidth() + 60;
 /** What a level sends: set counts (battle) or as many as survivalWaves decides of some kinds for a while (survival). */
 export type LevelEnemies =
   | { counts: LevelEnemyCounts }
+  /** MOBA: the red lane's minions, sent by scenes/BattleLanes.ts (`spawn`) for as long as the match lasts. */
+  | { lanes: true }
   | { survival: { kinds: readonly EnemyType[]; durationMs: number; levelIndex: number; difficulty: DifficultyLevel; players: number } };
 
 export interface BattleEnemiesDeps {
@@ -44,19 +47,19 @@ export class BattleEnemies {
   public visible = true;
   private spawned = 0;
   private director?: WaveDirector | SurvivalDirector;
-  /** Survival: the total grows with every enemy that comes, and more are due until the time is up. */
+  /** Survival and MOBA lanes: the total grows with every enemy that comes, and more are due until the level ends. */
   private readonly survival: boolean;
   private stopped = false;
 
   public constructor(level: LevelEnemies, private readonly deps: BattleEnemiesDeps) {
-    this.survival = 'survival' in level;
+    this.survival = !('counts' in level);
     this.total = 'counts' in level ? levelEnemyTotal(level.counts) : 0;
-    if (deps.guest) {
+    if (deps.guest || 'lanes' in level) {
       return;
     }
     if ('counts' in level) {
       this.director = new WaveDirector(level.counts, deps.wavePacing);
-    } else {
+    } else if ('survival' in level) {
       const { kinds, durationMs, levelIndex, difficulty, players } = level.survival;
       this.director = new SurvivalDirector(kinds, durationMs, { levelIndex, difficulty, players, pacing: deps.wavePacing });
     }
@@ -115,12 +118,17 @@ export class BattleEnemies {
     });
   }
 
-  /** A new enemy walking (or flying) in, or (`place`) a mounted knight's rider thrown off where his horse stood. */
-  public spawn(type: EnemyType, place?: SpawnPlace): Foe {
+  /**
+   * A new enemy walking (or flying) in, or (`place`) a mounted knight's rider thrown off where his horse stood.
+   * `minion`: a MOBA lane minion (its level: × health and damage, minionPower).
+   */
+  public spawn(type: EnemyType, place?: SpawnPlace, minion?: MinionSpawn): Foe {
+    const power = minion ? minionPower(minion.lv) : 1;
     const stats = getEnemyStats(type, 1);
     const enemy = isFlyingType(type)
-      ? new DragonEnemy(enemySpawnX(), stats.health, stats.speed, type)
-      : new Enemy(place?.x ?? enemySpawnX(), stats.health, stats.speed, 'bowman', type);
+      ? new DragonEnemy(enemySpawnX(), stats.health * power, stats.speed, type)
+      : new Enemy(place?.x ?? enemySpawnX(), stats.health * power, stats.speed, 'bowman', type);
+    enemy.power = power;
     enemy.visible = this.visible;
     this.list.push(enemy);
     this.spawned += 1;
@@ -128,7 +136,7 @@ export class BattleEnemies {
       this.total += 1;
     }
     this.deps.world.addChild(enemy);
-    this.deps.hostSync()?.trackEnemy(enemy, type, place);
+    this.deps.hostSync()?.trackEnemy(enemy, type, place, minion);
     // Called before the hit lands, so its health is what the hit takes from.
     enemy.onDamaged = (amount: number, hit?: HitInfo) => this.deps.onDamaged?.(enemy, shownDamage(amount, enemy.currentHealth), hit);
     if (enemy instanceof Enemy) {

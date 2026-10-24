@@ -1,14 +1,17 @@
 import type { Graphics } from 'pixi.js';
-import { ALLIES, CROWD, MEDIC, PLAYER_TOWER_X, PRIEST_POST_SLACK, SHOW_HITBOX_DEBUG } from '../config';
+import { ALLIES, CROWD, MEDIC, MOBA_LANES, PLAYER_TOWER_X, PRIEST_POST_SLACK, SHOW_HITBOX_DEBUG } from '../config';
 import { enemyDamage, rollDamage } from '../data/enemies';
 import { enemyArchetype, enemyArmor, enemyTraits } from '../data/enemyKinds';
 import type Bowman from '../objects/bowman/Bowman';
+import type { BowmanHit } from './bowmanDeath';
 import DragonEnemy from '../objects/dragon/DragonEnemy';
 import type Enemy from '../objects/enemy/Enemy';
+import type Tower from '../objects/Tower';
 import type { Vec2 } from '../types';
 import { escortPost, orderPost, pickFoe, type AllyOrder } from './allyOrders';
 import { bannerHomeX, type Banners } from './banners';
-import { foeHitBoxes, type Foe } from './combatGeometry';
+import { AllyRanged, type AllyRangedEvents } from './AllyRanged';
+import { TOWER_HALF_WIDTH, foeHitBoxes, type Foe } from './combatGeometry';
 import { weaponReaches } from './crowding';
 import type { EffectsSystem } from './EffectsSystem';
 import { bandageHeal, pickPatient } from './bandaging';
@@ -46,9 +49,18 @@ export interface AllyAIWorld {
   allyOrder(): AllyOrder;
   /** Banners (systems/banners.ts): on Advance they take the enemy's, bring it home under escort and go for ours. */
   readonly banners?: Banners<Enemy>;
+  readonly enemyTower: Tower;
+  wind(): number;
+  /** MOBA lanes: the blue dragons (systems/AllyRanged.ts flies them). */
+  readonly allyFliers?: readonly DragonEnemy[];
+  /** MOBA: the red team's bowmen (the soldiers fight them, the archers shoot them). */
+  readonly foeBowmen?: readonly Bowman[];
+  /** MOBA lanes: they march on the enemy keep and bring it down (fighters strike it, archers shoot it). */
+  readonly lanes?: boolean;
 }
 
-export interface AllyAIEvents {
+export interface AllyAIEvents extends AllyRangedEvents {
+  bowmanDamaged(bowman: Bowman, amount: number, hit: BowmanHit): void;
   /** `bowman`'s health and his full health (the medic bandages him too). */
   bowmanHealth(bowman: Bowman): { health: number; max: number };
   bowmanHealed(bowman: Bowman, amount: number): void;
@@ -87,8 +99,11 @@ const CROSS_EVERY_MS = 900;
 export class AllyAI {
   /** Each medic's patient and clocks. */
   private readonly medics = new WeakMap<Enemy, MedicState>();
+  private readonly ranged: AllyRanged;
 
-  public constructor(private readonly world: AllyAIWorld, private readonly events: AllyAIEvents) {}
+  public constructor(private readonly world: AllyAIWorld, private readonly events: AllyAIEvents) {
+    this.ranged = new AllyRanged(world, events);
+  }
 
   public update(ally: Enemy, deltaMs: number): void {
     if (ally.isCelebrating) {
@@ -97,11 +112,22 @@ export class AllyAI {
     }
     if (enemyArchetype(ally.kind).bandages) {
       this.updateMedic(ally, deltaMs);
+    } else if (enemyArchetype(ally.kind).shoots) {
+      this.ranged.updateArcher(ally, deltaMs, this.world.enemyTower.x - MOBA_LANES.archerKeepRange + 40);
     } else {
       this.updateFighter(ally, deltaMs);
     }
     this.drawDebugHitboxes(ally);
     ally.clearHitTint();
+  }
+
+  /** MOBA: a blue dragon's frame (AllyRanged); a fallen one finishes its fall. */
+  public updateFlier(dragon: DragonEnemy, deltaMs: number): void {
+    if (dragon.isAlive()) {
+      this.ranged.updateDragon(dragon, deltaMs);
+    } else {
+      dragon.updateAnimation(deltaMs);
+    }
   }
 
   /** The enemies a soldier can reach on foot: alive and on the ground. */
@@ -131,8 +157,13 @@ export class AllyAI {
       post = escortPost(bearer.x, rank);
     } else if (banners && order === 'advance' && banners.place('enemy').at === 'home') {
       post = bannerHomeX('enemy') - rank * ALLIES.spacing;
+    } else if (this.world.lanes) {
+      // MOBA: all the way to the enemy keep's wall.
+      order = 'advance';
+      post = this.world.enemyTower.x - MOBA_LANES.keepReach;
     }
-    const foes = this.groundFoes();
+    // MOBA: the red bowmen out in the open are foes too.
+    const foes: Array<Enemy | Bowman> = [...this.groundFoes(), ...(this.world.foeBowmen ?? []).filter((bowman) => !bowman.isDead && !bowman.isInTower)];
     const pick = pickFoe(ally.x, post, order, foes.map((foe) => foe.x), IN_REACH);
     // An enemy carrying our banner off comes first.
     const foe = banners?.thief('player') ?? (pick === undefined ? undefined : foes[pick]);
@@ -151,6 +182,10 @@ export class AllyAI {
       // At his post: faces the enemy's side.
       ally.faceTowards(ally.x + 1);
     }
+    if (!foe && this.world.lanes) {
+      this.strikeKeep(ally);
+      return;
+    }
     if (!foe || ally.isDown || ally.afflictions.isFrozen || ally.afflictions.inVortex) {
       return;
     }
@@ -158,9 +193,32 @@ export class AllyAI {
       ally.faceTowards(foe.x);
       // The blow lands with the sword, ahead of him: an enemy that got beyond its reach (or past him) meanwhile is missed.
       ally.playAttackAnimation(() => {
-        if (foe.isAlive() && weaponReaches(ally.x, ally.figure.facing, foe.x, ally.strikeReach)) {
-          meleeBlow(foe, rollDamage(enemyDamage(ally.kind, 'melee', 'bowman')), ally.x, this.world.effects);
+        if (!weaponReaches(ally.x, ally.figure.facing, foe.x, ally.strikeReach)) {
+          return;
         }
+        const damage = rollDamage(enemyDamage(ally.kind, 'melee', 'bowman')) * ally.power;
+        if (!('kind' in foe)) {
+          if (!foe.isDead && !foe.isInTower) {
+            this.world.effects.bloodBurst({ x: foe.x, y: foe.y - 30 });
+            this.events.bowmanDamaged(foe, damage, { cause: 'melee', fromX: ally.x });
+          }
+        } else if (foe.isAlive()) {
+          meleeBlow(foe, damage, ally.x, this.world.effects);
+        }
+      });
+    }
+  }
+
+  /** MOBA: at the enemy keep's wall with nobody to fight, he hacks at it (as the enemies do at ours, EnemyAI). */
+  private strikeKeep(ally: Enemy): void {
+    const tower = this.world.enemyTower;
+    if (tower.isDestroyed() || ally.isDown || ally.afflictions.isFrozen || ally.afflictions.inVortex) {
+      return;
+    }
+    if (ally.x >= tower.x - MOBA_LANES.keepReach - IN_REACH && ally.canAttack()) {
+      ally.faceTowards(tower.x);
+      ally.playAttackAnimation(() => {
+        tower.takeDamage(rollDamage(enemyDamage(ally.kind, 'melee', 'keep')) * ally.power, { x: tower.x - TOWER_HALF_WIDTH + 4, y: ally.y - 30 * ally.scale.y });
       });
     }
   }
@@ -188,7 +246,7 @@ export class AllyAI {
     ally.faceTowards(foe.x);
     ally.playAttackAnimation(() => {
       if (foe.isAlive() && weaponReaches(ally.x, ally.figure.facing, foe.x, ally.strikeReach)) {
-        meleeBlow(foe, rollDamage(enemyDamage(ally.kind, 'melee', 'bowman')), ally.x, this.world.effects);
+        meleeBlow(foe, rollDamage(enemyDamage(ally.kind, 'melee', 'bowman')) * ally.power, ally.x, this.world.effects);
       }
     });
   }

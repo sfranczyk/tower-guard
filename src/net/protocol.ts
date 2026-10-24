@@ -6,7 +6,9 @@ import type { AimInput } from '../managers/InputManager';
 import type { HitInfo, RiderOff, ThrowNet } from '../objects/enemy/Enemy';
 import type { FallKind } from '../rendering/stickmanFall';
 import type { AttackStyle } from '../rendering/attackSwing';
-import type { EnemyType, ProjectileType } from '../types';
+import type { ProjectileType, UnitType } from '../types';
+import type { Team } from '../data/moba';
+import type { UpgradeLevels } from '../data/upgrades';
 import type { AfflictionNet } from '../objects/AfflictionLayer';
 import type { BowmanNet } from '../objects/bowman/Bowman';
 import type { EffectKind } from '../systems/EffectsSystem';
@@ -143,7 +145,7 @@ export interface SpawnPlace extends RiderOff {
 /** Things that happen once, in order. */
 export type GameEvent =
   /** A new enemy; `place` when it doesn't walk in (a mounted knight's rider, thrown off where his horse stood). */
-  | { e: 'spawn'; id: number; type: EnemyType; place?: SpawnPlace }
+  | { e: 'spawn'; id: number; type: UnitType; place?: SpawnPlace; m?: MinionSpawn }
   /** A vortex pulled a mounted knight's rider out of the saddle: his horse bolts (the rider comes as a `spawn`). */
   | { e: 'unseat'; id: number }
   /** An enemy takes damage (the guest runs the same takeDamage, so the same reaction plays). */
@@ -155,7 +157,7 @@ export type GameEvent =
   | { e: 'heal'; id: number; amount: number }
   /** The enemies won: all of them cheer. */
   | { e: 'cheer' }
-  | { e: 'arrow'; id: number; owner: number; type: ProjectileType; x: number; y: number; angle: number; speed: number; hostile: boolean; shooter?: EnemyType }
+  | { e: 'arrow'; id: number; owner: number; type: ProjectileType; x: number; y: number; angle: number; speed: number; hostile: boolean; shooter?: UnitType }
   /** An arrow stuck into an enemy (at a world point) or the ground. */
   | { e: 'stick'; id: number; enemy?: number; x: number; y: number }
   | { e: 'gone'; id: number }
@@ -170,7 +172,29 @@ export type GameEvent =
   /** A status line message for one player. */
   | { e: 'status'; player: number; text: string }
   /** The wind changed mid-level (systems/windShift.ts). */
-  | { e: 'wind'; wind: number };
+  | { e: 'wind'; wind: number }
+  /** MOBA: the purses, vaults and upgrade levels changed (sent whole: they are small). */
+  | ({ e: 'moba' } & MobaNet)
+  /** MOBA: a last hit paid `player` (or cost him) `delta` gold, shown at (x, y) to him. */
+  | { e: 'gold'; player: number; x: number; y: number; delta: number }
+  /** MOBA: a fallen player is back at his keep. */
+  | { e: 'revive'; player: number; x: number };
+
+/** MOBA: a lane minion's side and level (its health, damage and stars). */
+export interface MinionSpawn {
+  team: Team;
+  lv: number;
+}
+
+/** MOBA's economy as the guests see it. */
+export interface MobaNet {
+  gold: number[];
+  vault: Record<Team, number>;
+  /** Each player's upgrade levels, by player index. */
+  lv: UpgradeLevels[];
+  /** Each team's. */
+  tlv: Record<Team, UpgradeLevels>;
+}
 
 /** What the guest's end screen shows (the host decides what comes next). */
 export interface EndInfo {
@@ -178,6 +202,8 @@ export interface EndInfo {
   outcome: 'win' | 'loss';
   copy: string;
   stats: Array<{ label: string; value: string }>;
+  /** MOBA: the team that won (each guest's screen says it from its own team's side). */
+  winner?: Team;
 }
 
 export type NetMessage =
@@ -187,11 +213,15 @@ export type NetMessage =
    * Host → each guest, on joining and on every change in the room: the guest's player index (`you`), who is in
    * (`present`, by player index, the host first) and everyone's quiver (null until picked).
    */
-  | { t: 'roster'; you: number; present: boolean[]; loadouts: Array<Loadout | null> }
+  | { t: 'roster'; you: number; present: boolean[]; loadouts: Array<Loadout | null>; teams?: Array<Team | null> }
+  /** Guest → host, MOBA lobby: the team this player wants (handled by net/coopLink). */
+  | { t: 'team'; team: Team }
+  /** Guest → host, MOBA: buy the next level of upgrade `buy`, or move vault gold (`deposit`: in, else out). */
+  | { t: 'shop'; buy?: string; deposit?: boolean }
   /** Host → a guest who knocked on a full room (then the link closes). */
   | { t: 'full' }
   /** Host → guest: a level starts with this setup (the guest builds the same battlefield). */
-  | { t: 'start'; sandbox: SandboxSettings; run: RunState; wind: number }
+  | { t: 'start'; sandbox: SandboxSettings; run: RunState; wind: number; moba?: boolean; teams?: Team[] }
   /** Host → guest, reliable: what happened since the last `events`. */
   | { t: 'events'; events: GameEvent[] }
   /** Host → guest, lossy: the world (`n` counts up, `ht` is the host's performance.now()). */

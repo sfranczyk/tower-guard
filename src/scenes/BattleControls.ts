@@ -39,6 +39,8 @@ export interface BattleControlsDeps {
   /** O hid or showed the enemies (the debug hitboxes are redrawn). */
   foesToggled: () => void;
   onKeyDown: (handler: (event: KeyboardEvent) => void) => void;
+  /** MOBA: the shop, which I opens by the keep instead of the settings drawer (Esc closes it). */
+  shop?: { readonly open: boolean; toggle(): void; close(): void };
   onExit: (dispose: () => void) => void;
 }
 
@@ -178,7 +180,8 @@ export class BattleControls {
     ui.handlers.viewBattlefield = (viewing) => this.viewBattlefield(viewing);
     ui.handlers.selectProjectile = (type) => this.localInput?.queueProjectile(type);
     // The player's soldiers: with support on (battle mode only), not yet in online co-op (the guest doesn't see them yet).
-    const commandsSoldiers = !ctx.session.net && supportAllowed(ctx.session.sandbox);
+    // MOBA: the soldiers are lane minions nobody commands.
+    const commandsSoldiers = !ctx.session.net && !ctx.session.moba && supportAllowed(ctx.session.sandbox);
     ui.setAllies(commandsSoldiers ? ALLY_TYPES.map((type) => ({ type, label: ENEMY_KINDS[type].label })) : []);
     if (commandsSoldiers) {
       ui.handlers.summonAlly = (type) => this.summonAlly(type);
@@ -220,7 +223,9 @@ export class BattleControls {
     this.deps.onKeyDown((event) => {
       const ended = this.deps.ended();
       if (event.code === 'Escape') {
-        if (this.optionsVisible) {
+        if (this.deps.shop?.open) {
+          this.deps.shop.close();
+        } else if (this.optionsVisible) {
           this.setOptionsVisible(false);
         } else if (this.viewing) {
           ui.dialogs.setEndViewing(false);
@@ -230,7 +235,11 @@ export class BattleControls {
         return;
       }
       if (event.code === 'KeyI') {
-        this.toggleOptions();
+        if (this.deps.shop && !this.paused && !ended) {
+          this.deps.shop.toggle();
+        } else {
+          this.toggleOptions();
+        }
       }
       if (this.paused) {
         return;

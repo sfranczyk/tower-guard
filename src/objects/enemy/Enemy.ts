@@ -9,12 +9,12 @@ import type { BodyColors } from '../../rendering/bodyColors';
 import { enemyGibColors } from '../../rendering/enemyBody';
 import { fromBodyAnchor, spriteToWorld, toBodyAnchor, type BodyAnchor } from '../../systems/bodyAnchor';
 import { ENEMY_LOOKS, type EnemyLook } from '../../data/enemies';
-import { enemyArchetype, isAllyType } from '../../data/enemyKinds';
+import { enemyArchetype, fightsForPlayer } from '../../data/enemyKinds';
 import { BANDAGE_KNEEL_MS } from '../../rendering/bandaging';
 import { mountHealth } from '../../data/enemyTuning';
 import { groundAt } from '../../systems/terrain';
 import { boundsAround } from '../../utils/math';
-import type { HitBox } from './enemyTypes';
+import { killerOf, type HitBox } from './enemyTypes';
 import type { Bounds, UnitType, Vec2 } from '../../types';
 import { AfflictionLayer } from '../AfflictionLayer';
 import { EnemyActions } from './enemyActions';
@@ -94,6 +94,12 @@ export default class Enemy extends Container {
    * Host: a mounted knight's rider leaves the saddle at `x` (his horse killed by `hit`, or he by it, or a vortex pulled
    * him out); the scene puts him on the ground as its `unhorsed` kind (dead if `off.health` is 0) and returns him.
    */
+  /** MOBA: the last hit took it down; `by` the player it counts for (none: a minion's or nobody's: no gold). */
+  public onKilled?: (by: number | undefined) => void;
+  /** The player who hit it last (a burn, fall or shatter after his arrow counts as his). */
+  public lastHitBy?: number;
+  /** MOBA: × on its health (given at spawn) and on the damage it deals (minion upgrades, data/upgrades.ts). */
+  public power = 1;
   public onUnhorsed?: (x: number, hit: HitInfo, off: RiderOff) => Enemy | undefined;
 
   public constructor(
@@ -113,7 +119,7 @@ export default class Enemy extends Container {
     this.figure.drawPlaceholder();
     this.afflictions = new AfflictionLayer(kind);
     this.addChild(this.buffAura.art, this.figure.body, this.afflictions.art);
-    this.bars = new EnemyBars(this.look.size, this.rider !== undefined, enemyArchetype(kind).heals, isAllyType(kind));
+    this.bars = new EnemyBars(this.look.size, this.rider !== undefined, enemyArchetype(kind).heals, fightsForPlayer(kind));
     this.addChild(this.bars.health);
     if (enemyArchetype(kind).heals) {
       this.mana = new ManaPool();
@@ -211,6 +217,7 @@ export default class Enemy extends Container {
    */
   public takeDamage(amount: number, hit: HitInfo = { cause: 'arrow', fromX: this.x - 1 }, asSent = false): number {
     if (this.isAlive()) {
+      this.lastHitBy = hit.by ?? this.lastHitBy;
       // Stone skin (a shaman's spell) takes the edge off every hit.
       amount *= asSent ? 1 : this.buff.damageFactor;
       this.netHooks?.damaged(amount, hit);
@@ -220,6 +227,9 @@ export default class Enemy extends Container {
         this.bandaging = false;
       }
       applyDamage(this, amount, hit);
+      if (!this.isAlive()) {
+        this.onKilled?.(killerOf(hit, this.lastHitBy));
+      }
     }
     return this.vitals.health;
   }

@@ -9,6 +9,7 @@ import { CoopPanel, type CoopView } from './CoopPanel';
 import { SandboxForm } from './SandboxForm';
 import { type PartnerQuiver } from './quiverPage';
 import { TuningPanel } from './TuningPanel';
+import { ShopPanel } from './ShopPanel';
 import type { UiHandlers } from './uiHandlers';
 import { BattleDialogs } from './BattleDialogs';
 import { SettingsDrawer } from './SettingsDrawer';
@@ -40,6 +41,8 @@ export type { CoopView } from './CoopPanel';
 
 export type { HudValues } from './Hud';
 
+export type { ShopView } from './ShopPanel';
+
 /** The soldiers' slots in the HUD now: standing / allowed of each kind, the share of its pause left, the order. */
 export interface AllyHudView {
   slots: ReadonlyArray<{ type: AllyType; ready: number; alive: number; limit: number; cooldown: number }>;
@@ -66,6 +69,8 @@ export class DomUi {
   public readonly handlers: UiHandlers = {};
   public readonly settings: SettingsDrawer;
   public readonly dialogs: BattleDialogs;
+  /** MOBA's shop over the canvas (scenes/BattleShop.ts). */
+  public readonly shop: ShopPanel;
 
   private readonly host: HTMLElement;
   private readonly canvas: HTMLCanvasElement;
@@ -101,6 +106,8 @@ export class DomUi {
     overlay.id = 'ui-root';
     stage.append(canvas, overlay);
     stage.append(this.tuningPanel.element);
+    this.shop = new ShopPanel(this.handlers);
+    stage.append(this.shop.element);
     host.append(this.hudTop, stage, this.hudBottom);
 
     this.menuScreen = this.query('[data-menu]');
@@ -124,6 +131,7 @@ export class DomUi {
       setup: () => this.handlers.coopSetup?.(),
       leave: () => this.handlers.coopLeave?.(),
       loadoutChange: (loadout) => this.handlers.coopLoadout?.(loadout),
+      teamChange: (team) => this.handlers.coopTeam?.(team),
     });
     this.soundLabScreen = this.query('[data-sound-lab]');
     this.soundLabPanel = new SoundLabPanel(this.query('[data-sound-lab-panel]'), {

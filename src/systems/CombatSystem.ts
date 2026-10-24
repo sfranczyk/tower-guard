@@ -7,7 +7,7 @@ import {
   SHOW_HITBOX_DEBUG,
 } from '../config';
 import type { SoundId } from '../audio/SoundManager';
-import type Arrow from '../objects/Arrow';
+import { MINION_ARROW_OWNER, type default as Arrow } from '../objects/Arrow';
 import type { EnemyEdge } from '../data/difficulty';
 import type { Weather } from '../data/battlegrounds';
 import { enemyDamage, explosionDamage, rollDamage } from '../data/enemies';
@@ -19,6 +19,7 @@ import DragonEnemy from '../objects/dragon/DragonEnemy';
 import type Enemy from '../objects/enemy/Enemy';
 import type Tower from '../objects/Tower';
 import type { EnemyType, UnitType, Vec2 } from '../types';
+import type { Team } from '../data/moba';
 import { struckBy } from './lightning';
 import { groundAt } from './terrain';
 import type { ArrowMishapKind } from './weatherArrows';
@@ -75,6 +76,12 @@ export interface CombatWorld {
   readonly enemyEdge: EnemyEdge;
   /** The run's Banners option (systems/banners.ts; scenes/BattleBanners.ts steps it): who carries what. */
   readonly banners?: Banners<Enemy>;
+  /** MOBA lanes (scenes/BattleLanes.ts): the soldiers are lane minions marching on the enemy keep. */
+  readonly lanes?: boolean;
+  /** MOBA lanes: the blue dragons (the fallen stay as corpses). */
+  readonly allyFliers?: readonly DragonEnemy[];
+  /** MOBA: each bowman's team; red bowmen are the blue side's foes (the red minions leave them be). */
+  readonly teamOf?: (bowman: Bowman) => Team;
 }
 
 export interface CombatEvents {
@@ -86,7 +93,9 @@ export interface CombatEvents {
   /** A sound-worthy impact at a world position (the scene plays it). */
   sound(id: SoundId, at: Vec2): void;
   /** A hostile arrow loosed by `shooter` (its damage depends on who shot it). */
-  enemyShot(from: Vec2, angle: number, speed: number, shooter: EnemyType): void;
+  enemyShot(from: Vec2, angle: number, speed: number, shooter: EnemyType, power?: number): void;
+  /** A MOBA blue archer's arrow (Arrow.MINION_ARROW_OWNER): it hits the enemies and their keep. */
+  allyShot(from: Vec2, angle: number, speed: number, shooter: UnitType, power?: number): void;
   /** `bowman`'s health and his full health (the medic bandages him). */
   bowmanHealth(bowman: Bowman): { health: number; max: number };
   bowmanHealed(bowman: Bowman, amount: number): void;
@@ -124,15 +133,25 @@ export class CombatSystem {
       breakIce: (bowman) => this.breakIce(bowman),
     });
     this.magic = magic;
-    this.ai = new EnemyAI(world, events, { detonate: (kamikaze) => this.detonate(kamikaze) });
-    this.allyAI = new AllyAI(world, events);
-    this.hits = new ArrowHits(world, events, magic, {
-      explode: (point, activeEnemies, directHit, power, dragon) => this.explode(point, activeEnemies, directHit, power, dragon),
+    // MOBA: the red side (enemies, their arrows) goes for the blue bowmen only, the blue side for the red ones.
+    const { teamOf } = world;
+    const blueSide = teamOf ? { ...world, bowmen: world.bowmen.filter((bowman) => teamOf(bowman) === 'blue'), allBowmen: world.bowmen } : world;
+    const foeBowmen = teamOf ? world.bowmen.filter((bowman) => teamOf(bowman) === 'red') : [];
+    this.ai = new EnemyAI(blueSide, events, { detonate: (kamikaze) => this.detonate(kamikaze) });
+    this.allyAI = new AllyAI({ ...world, foeBowmen }, events);
+    this.hits = new ArrowHits(blueSide, events, magic, {
+      explode: (point, activeEnemies, directHit, power, dragon, by) => this.explode(point, activeEnemies, directHit, power, dragon, true, undefined, by),
       detonate: (kamikaze) => this.detonate(kamikaze),
       lightFuse: (kamikaze, chain) => this.lightFuse(kamikaze, chain === undefined ? this.newChain() : { chain, link: 0 }),
       shatter: (enemy, fromX) => this.shatter(enemy, fromX),
       breakIce: (bowman) => this.breakIce(bowman),
     });
+  }
+
+  /** MOBA: the red bowmen out in the open (blue archers' arrows hit them). */
+  private redBowmenOut(): Bowman[] {
+    const { teamOf } = this.world;
+    return teamOf ? this.world.bowmen.filter((bowman) => teamOf(bowman) === 'red' && !bowman.isInTower && !bowman.isDead) : [];
   }
 
   /** With friendly fire on, the bowmen the players' arrows and their effects can hit (out in the open, alive). */
@@ -148,6 +167,7 @@ export class CombatSystem {
     this.ai.beginFrame();
     activeEnemies.forEach((enemy) => this.ai.update(enemy, deltaMs));
     livingAllies.forEach((ally) => this.allyAI.update(ally, deltaMs));
+    this.world.allyFliers?.forEach((dragon) => this.allyAI.updateFlier(dragon, deltaMs));
     this.ai.spread(deltaMs);
     this.world.allies.filter((ally) => !ally.isAlive()).forEach((ally) => ally.updateAnimation(deltaMs, false));
     // Burning: steady damage until the burn runs out (each bowman counts it down in his animation); a dragon's fire, so the difficulty's.
@@ -166,7 +186,8 @@ export class CombatSystem {
     }
     const friendly = this.friendlyTargets();
     // Friendly fire: the players' arrows and their effects hit the soldiers like the enemies.
-    const arrowTargets: readonly Foe[] = this.world.friendlyFire() ? [...activeEnemies, ...livingAllies] : activeEnemies;
+    const livingFliers = (this.world.allyFliers ?? []).filter((dragon) => dragon.isAlive());
+    const arrowTargets: readonly Foe[] = this.world.friendlyFire() ? [...activeEnemies, ...livingAllies, ...livingFliers] : activeEnemies;
     this.magic.update(deltaMs, arrowTargets, friendly);
     // Dead enemies finish (then hold) their death animation.
     this.world.enemies.filter((enemy) => !enemy.isAlive()).forEach((enemy) => enemy.updateAnimation(deltaMs, false));
@@ -180,7 +201,7 @@ export class CombatSystem {
         const point = { x: arrow.x, y: arrow.y };
         const kind = arrow.mishap!.kind;
         if (kind === 'blast') {
-          this.explode(point, arrowTargets);
+          this.explode(point, arrowTargets, undefined, 1, false, true, undefined, arrow.owner >= 0 ? arrow.owner : undefined);
           arrow.deactivate();
         } else {
           this.world.effects.fizzle(point);
@@ -191,7 +212,21 @@ export class CombatSystem {
       });
     arrows
       .filter((arrow) => arrow.isActive && !arrow.isStuck)
-      .forEach((arrow) => (arrow.hostile ? this.hits.resolveHostile(arrow) : this.hits.resolve(arrow, arrowTargets, friendly)));
+      .forEach((arrow) => {
+        if (arrow.hostile) {
+          this.hits.resolveHostile(arrow);
+        } else if (arrow.owner === MINION_ARROW_OWNER) {
+          // A blue archer's arrow spares his own side.
+          this.hits.resolve(arrow, activeEnemies, this.redBowmenOut());
+        } else if (this.world.teamOf) {
+          // MOBA (friendly fire on): a player's arrow hits anyone, and the other team's keep.
+          const owner = this.world.bowmen[arrow.owner];
+          const red = owner !== undefined && this.world.teamOf(owner) === 'red';
+          this.hits.resolve(arrow, arrowTargets, friendly, red ? this.world.playerTower : this.world.enemyTower);
+        } else {
+          this.hits.resolve(arrow, arrowTargets, friendly);
+        }
+      });
     // Stuck or gone, an arrow hits nothing more: what it already hit can go.
     arrows.filter((arrow) => !arrow.isActive || arrow.isStuck).forEach((arrow) => this.hits.forget(arrow));
     arrows
@@ -199,7 +234,7 @@ export class CombatSystem {
       .forEach((arrow) => {
         const point = { x: arrow.x, y: groundAt(arrow.x) - 3 };
         if (arrow.type === 'explosive') {
-          this.explode(point, arrowTargets);
+          this.explode(point, arrowTargets, undefined, 1, false, true, undefined, arrow.hostile || arrow.owner < 0 ? undefined : arrow.owner);
           arrow.deactivate();
         } else if (arrow.type === 'vortex') {
           // The rune stone becomes the vortex.
@@ -307,7 +342,7 @@ export class CombatSystem {
    */
   private explode(
     point: Vec2, activeEnemies: readonly Foe[], directHit?: Foe | Bowman, power = 1, dragon = false, hurtsBowmen = true,
-    bomb?: ChainStep,
+    bomb?: ChainStep, by?: number,
   ): number {
     const step = bomb ?? { chain: this.newChain().chain, link: 1 };
     if (dragon) {
@@ -347,7 +382,7 @@ export class CombatSystem {
           }
           return;
         }
-        candidate.takeDamage(damage, { cause: 'explosion', fromX: point.x, point, blastDistance });
+        candidate.takeDamage(damage, { cause: 'explosion', fromX: point.x, point, blastDistance, by });
         if (kamikaze && !kamikaze.isAlive()) {
           this.lightFuse(kamikaze, step);
         }
@@ -366,7 +401,7 @@ export class CombatSystem {
           this.breakIce(bowman);
         }
         const blastDistance = distance / radius;
-        this.events.bowmanDamaged(bowman, explosionDamage(blastDistance) * power, { cause: 'blast', fromX: point.x });
+        this.events.bowmanDamaged(bowman, explosionDamage(blastDistance) * power, { cause: 'blast', fromX: point.x, by });
         this.world.effects.bloodBurst({ x: bowman.x, y: bowman.y - BOWMAN_CHEST });
         bowman.knockBack(point.x, 1 - blastDistance);
       });

@@ -5,7 +5,7 @@ import { drawDragonRider } from '../dragonArt';
 import { FIRE_BREATH_MS, breathControl, drawFireStream } from '../dragonFire';
 import { MARCH_STRIDE_PER_RADIAN } from '../stickman';
 import { archerBody, bandageBody, castBody } from './bodyPoses';
-import { banditArcherLook, goblinBomberLook, goblinLook, raiderLook, sapperLook } from './enemySkins';
+import { banditArcherLook, blueArcherLook, goblinBomberLook, goblinLook, raiderLook, sapperLook } from './enemySkins';
 import { shamanLook } from './shamanSkin';
 import { dragonArcherLook, dragonKnightLook, drawDragonWithRider, ogreLook, trollLook, zombieLook } from './heavySkins';
 import { ENEMY_DESIGNS } from './ideas';
@@ -370,6 +370,19 @@ const ALLIES: DesignEntry[] = [
       falling('Death', medicLook, 'death'),
       cheering(medicLook, 'cheerWave', true),
       blownApart('medic'),
+    ],
+  },
+  {
+    id: 'blueArcher',
+    name: 'Blue archer',
+    tagline: 'MOBA: the blue lane\'s archer',
+    description: 'The hunter in the bowman\'s blue: a blue hood and shoulder cape, the same scarf, vest and quiver. Marches with the blue lane in MOBA mode (?moba) and shoots the red side\'s minions and keep.',
+    views: [
+      shooting(fixed(blueArcherLook())),
+      posed('Walk', fixed(blueArcherLook()), (t) => archerBody(0, 0, 0, (t * ARCHER_SPEED) / WALK_CYCLE_PX), ARCHER_SPEED),
+      falling('Headshot', fixed(blueArcherLook()), 'deathStiff'),
+      cheering(fixed(blueArcherLook()), 'cheerWave', true),
+      blownApart('blueArcher'),
     ],
   },
 ];

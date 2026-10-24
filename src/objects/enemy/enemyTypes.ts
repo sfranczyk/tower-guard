@@ -34,7 +34,13 @@ export interface HitInfo {
   blastDistance?: number;
   /** A mounted knight: whether the arrow hit the rider or the horse (mountedDamage; none = by the cause). */
   part?: MountPart;
+  /** MOBA: the player (index) whose arrow or blast it was (the last hit's gold, systems/mobaEconomy.ts). */
+  by?: number;
 }
+
+/** Whose kill the last hit is: the hit's player, or (a burn, fall or shatter, no hand behind it) whoever hit it last. */
+export const killerOf = (hit: HitInfo, lastHitBy: number | undefined): number | undefined =>
+  hit.by ?? (hit.cause === 'burn' || hit.cause === 'fall' || hit.cause === 'shatter' ? lastHitBy : undefined);
 
 /**
  * How a mounted knight's rider leaves the saddle (the host puts him on the ground as an enemy of his own): with the health

@@ -113,7 +113,7 @@ export const allySlots = (allies: ReadonlyArray<{ type: AllyType; label: string 
   + `<span class="weapon-ammo" data-order-label>Hold</span></div>`;
 
 export const HUD_TOP_TEMPLATE = `
-  <div class="hud-chip">${ICON_LEVEL}<div><div class="chip-label">Level <span data-level-number>1 / 1</span></div><div class="survival-clock" data-survival-clock hidden></div><div class="pips" data-enemy-pips></div><div class="meter" hidden><i data-level-bar></i></div><div class="chip-value" data-enemy-count>0 of 0 defeated</div><div class="chip-value banner-line" data-banners hidden></div></div></div>
+  <div class="hud-chip">${ICON_LEVEL}<div><div class="chip-label">Level <span data-level-number>1 / 1</span></div><div class="survival-clock" data-survival-clock hidden></div><div class="pips" data-enemy-pips></div><div class="meter" hidden><i data-level-bar></i></div><div class="chip-value" data-enemy-count>0 of 0 defeated</div><div class="chip-value moba-purse" data-moba-purse hidden></div><div class="chip-value banner-line" data-banners hidden></div></div></div>
   <div class="weapons" data-projectiles></div>
   <div class="weapons allies" data-allies hidden></div>
 `;

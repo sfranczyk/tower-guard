@@ -6,7 +6,7 @@ import { shownDamage } from '../rendering/damagePopup';
 import Enemy, { type HitInfo } from '../objects/enemy/Enemy';
 import { nextOrder, type AllyOrder } from '../systems/allyOrders';
 import { AllyRoster, type AllySlotState } from '../systems/allyRoster';
-import type { AllyType } from '../types';
+import type { AllyType, UnitType } from '../types';
 
 export interface BattleAlliesDeps {
   world: Container;
@@ -46,8 +46,14 @@ export class BattleAllies {
       return undefined;
     }
     this.roster.summoned(type);
+    return this.deploy(type);
+  }
+
+  /** A soldier (or a MOBA lane minion, `power` × health and damage) of `type` comes in from beyond the left edge; summoning checks the reserve first. */
+  public deploy(type: UnitType, power = 1): Enemy {
     const stats = getEnemyStats(type, 1);
-    const ally = new Enemy(ALLIES.spawnX, stats.health, stats.speed, 'bowman', type);
+    const ally = new Enemy(ALLIES.spawnX, stats.health * power, stats.speed, 'bowman', type);
+    ally.power = power;
     // Called before the hit lands, so its health is what the hit takes from.
     ally.onDamaged = (amount, hit) => this.deps.onDamaged?.(ally, shownDamage(amount, ally.currentHealth), hit);
     this.list.push(ally);

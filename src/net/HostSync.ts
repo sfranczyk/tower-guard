@@ -6,8 +6,8 @@ import type Tower from '../objects/Tower';
 import type { Player } from '../scenes/PlayerControl';
 import type { EffectsSystem } from '../systems/EffectsSystem';
 import type { Foe } from '../systems/CombatSystem';
-import type { EnemyType, ProjectileType, Vec2 } from '../types';
-import { fromNetAim, type EndInfo, type GameEvent, type InputMessage, type Snapshot, type SpawnPlace } from './protocol';
+import type { ProjectileType, UnitType, Vec2 } from '../types';
+import { fromNetAim, type EndInfo, type GameEvent, type InputMessage, type MinionSpawn, type NetMessage, type Snapshot, type SpawnPlace } from './protocol';
 import { encodeSnapshot } from './snapCodec';
 import type { RoomLink } from './Transport';
 
@@ -22,6 +22,8 @@ export const PING_MS = 1000;
 export interface HostWorld {
   readonly players: readonly Player[];
   readonly enemies: readonly Foe[];
+  /** MOBA: the blue minions (soldiers and dragons), sent like the enemies. */
+  readonly allies?: () => readonly Foe[];
   readonly playerTower: Tower;
   readonly enemyTower: Tower;
   /** Survival: the time left on the level's clock. */
@@ -36,7 +38,7 @@ export interface ArrowLaunch {
   angle: number;
   speed: number;
   hostile: boolean;
-  shooter?: EnemyType;
+  shooter?: UnitType;
 }
 
 const round = (value: number): number => Math.round(value * 10) / 10;
@@ -60,6 +62,8 @@ export class HostSync {
   private readonly rtt: number[] = [];
   /** A guest pressed Esc (the host decides and answers with `sendPause`). */
   public onPauseRequest?: (paused: boolean, from: number) => void;
+  /** MOBA: a guest buys in the shop or moves vault gold (the host decides). */
+  public onShop?: (message: Extract<NetMessage, { t: 'shop' }>, from: number) => void;
 
   public constructor(
     private readonly transport: RoomLink,
@@ -79,6 +83,8 @@ export class HostSync {
         this.rtt[from] = this.rtt[from] === undefined ? sample : this.rtt[from] + (sample - this.rtt[from]) * 0.3;
       } else if (message.t === 'pause') {
         this.onPauseRequest?.(message.paused, from);
+      } else if (message.t === 'shop' && guest) {
+        this.onShop?.(message, from);
       }
     });
   }
@@ -125,12 +131,12 @@ export class HostSync {
     });
   }
 
-  /** A new enemy: the guest spawns it too, and replays its hits and swings. */
-  public trackEnemy(enemy: Foe, type: EnemyType, place?: SpawnPlace): void {
+  /** A new enemy (MOBA: or a lane minion of either side, `minion`): the guest spawns it too, and replays its hits and swings. */
+  public trackEnemy(enemy: Foe, type: UnitType, place?: SpawnPlace, minion?: MinionSpawn): void {
     const id = this.nextEnemyId;
     this.nextEnemyId += 1;
     this.enemyIds.set(enemy, id);
-    this.push({ e: 'spawn', id, type, place });
+    this.push({ e: 'spawn', id, type, place, m: minion });
     if (enemy instanceof DragonEnemy) {
       enemy.netHooks = { damaged: (amount, hit) => this.push({ e: 'hit', id, amount, hit: hit ?? { cause: 'arrow', fromX: enemy.x } }) };
     } else {
@@ -216,7 +222,7 @@ export class HostSync {
 
   private snapshot(): Snapshot {
     const { players, enemies, playerTower, enemyTower } = this.world;
-    const living = enemies.filter((enemy) => enemy.isAlive() && this.enemyIds.has(enemy));
+    const living = [...enemies, ...(this.world.allies?.() ?? [])].filter((enemy) => enemy.isAlive() && this.enemyIds.has(enemy));
     return {
       bowmen: players.map(({ bowman, health }) => {
         const aim = bowman.getAim();

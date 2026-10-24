@@ -24,6 +24,9 @@ export const LAB_PARAM = 'lab';
 /** Query parameter that starts battles with two bowmen (?coop), until the online lobby exists. */
 export const COOP_PARAM = 'coop';
 
+/** Query parameter that plays battles as MOBA lanes (?moba, scenes/BattleLanes.ts), until the mode has its own menu entry. */
+export const MOBA_PARAM = 'moba';
+
 /** Query parameter that opens the sound test panel (?sounds). */
 export const SOUND_LAB_PARAM = 'sounds';
 

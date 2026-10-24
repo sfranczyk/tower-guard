@@ -11,7 +11,7 @@ import { SoundLabScene } from '../scenes/SoundLabScene';
 import { DEFAULT_ARROW_TRAILS, MAX_ARROW_TRAILS } from '../config';
 import { loadSandbox } from './sandboxStorage';
 import { newRun, type GameContext, type GameTextures, type Scene, type SceneName } from './Scene';
-import { COOP_PARAM, DESIGN_LAB_PARAM, LAB_PARAM, SOUND_LAB_PARAM, TUNE_PARAM, getDevUrlParam, setUrlParam } from './urlState';
+import { COOP_PARAM, DESIGN_LAB_PARAM, LAB_PARAM, MOBA_PARAM, SOUND_LAB_PARAM, TUNE_PARAM, getDevUrlParam, setUrlParam } from './urlState';
 
 /** Owns the active scene, switches between scenes and forwards ticker updates. */
 export class SceneManager {
@@ -37,6 +37,7 @@ export class SceneManager {
         sandbox,
         run: newRun(sandbox, playerCount),
         playerCount,
+        moba: getDevUrlParam(MOBA_PARAM) !== null,
         showTrajectory: false,
         showCursorCircle: false,
         showDamageNumbers: true,
@@ -91,6 +92,10 @@ export class SceneManager {
       this.goTo('animationLab');
     } else if (getDevUrlParam(DESIGN_LAB_PARAM) !== null) {
       this.goTo('designLab');
+    } else if (this.ctx.session.moba) {
+      // Straight into a MOBA battle on the setup's first map (dev: the mode has no menu entry yet); with ?net, the
+      // co-op lobby (teams picked there).
+      this.goTo(getDevUrlParam('net') !== null ? 'coop' : 'game');
     } else {
       this.goTo(getDevUrlParam(SOUND_LAB_PARAM) !== null ? 'soundLab' : 'menu');
     }

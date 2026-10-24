@@ -9,13 +9,19 @@ import type { ArrowType } from '../data/loadout';
 export class ArrowCooldowns {
   /** Types short of shots: how many are spent and how long until the next one is back. */
   private readonly spent = new Map<ArrowType, { count: number; ms: number }>();
+  /** × on a type's reload (MOBA: a bought quick draw). */
+  public pace: Partial<Record<ArrowType, number>> = {};
+
+  private reloadMs(type: ArrowType): number {
+    return ARROW_COOLDOWN[type] * 1000 * (this.pace[type] ?? 1);
+  }
 
   public tick(deltaMs: number): void {
     this.spent.forEach((entry, type) => {
       entry.ms -= deltaMs;
       while (entry.ms <= 0 && entry.count > 0) {
         entry.count -= 1;
-        entry.ms += ARROW_COOLDOWN[type] * 1000;
+        entry.ms += this.reloadMs(type);
       }
       if (entry.count <= 0) {
         this.spent.delete(type);
@@ -39,7 +45,7 @@ export class ArrowCooldowns {
 
   /** Spends a shot (a shot let through on slack spends the one coming back). */
   public spend(type: ArrowType): void {
-    const total = ARROW_COOLDOWN[type] * 1000;
+    const total = this.reloadMs(type);
     if (total <= 0) {
       return;
     }
@@ -57,6 +63,6 @@ export class ArrowCooldowns {
   /** Share of the wait for the next shot still to go (1 just after it was spent, 0 when all are back). */
   public remaining(type: ArrowType): number {
     const entry = this.spent.get(type);
-    return entry ? Math.min(1, entry.ms / (ARROW_COOLDOWN[type] * 1000)) : 0;
+    return entry ? Math.min(1, entry.ms / this.reloadMs(type)) : 0;
   }
 }

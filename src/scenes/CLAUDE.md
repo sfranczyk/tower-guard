@@ -46,3 +46,7 @@ everything under `ctx.root` on each switch. Scenes never touch the DOM: they cal
   `rendering/designs/catalog.ts`; grid scrolls with the wheel.
 - **SoundLabScene** + `ui/SoundLabPanel.ts`: every effect and variant, the theme with a jump to its loop seam.
 - **CoopScene**: the lobby (net/CLAUDE.md).
+- **MOBA** (`?moba`, dev only; online `?moba&net=local`): `MobaMode.ts` gathers it for GameScene: `BattleLanes` (both keeps'
+  minions on one clock, at their team's level: `spawn`), `BattleMoba` (gold for last hits, vaults, respawn, regen; host
+  or alone) with `MobaUpgrades` (levels bought, their effects), `BattleShop` (I by your keep, `ui/ShopPanel.ts`).
+  Red players use `enemyTower`; the end is `BattleOutcome.endMatch` / `showMobaEnd` (`mobaEndInfo`, per team).

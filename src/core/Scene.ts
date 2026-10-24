@@ -1,6 +1,7 @@
 import type { Application, Container, Texture } from 'pixi.js';
 import { enemyKeepHealth } from '../data/difficulty';
 import type { Loadout } from '../data/loadout';
+import type { Team } from '../data/moba';
 import type { SandboxSettings } from '../data/sandbox';
 import type { ProjectileType } from '../types';
 import type { SoundManager } from '../audio/SoundManager';
@@ -27,6 +28,8 @@ export interface NetLink {
    * page, a guest in the lobby); the host passes them all round in the roster; undefined until picked.
    */
   loadouts: Array<Loadout | undefined>;
+  /** MOBA: each player's team, by player index, picked in the lobby (a newcomer joins the smaller one). */
+  teams: Array<Team | undefined>;
 }
 
 export interface GameTextures {
@@ -64,6 +67,12 @@ export interface GameSession {
   playerCount: number;
   /** Set while playing co-op online. */
   net?: NetLink;
+  /** MOBA mode (`?moba`, dev only for now): battles are two keeps sending lane minions at each other (scenes/BattleLanes.ts). */
+  moba?: boolean;
+  /** MOBA: each player's team, by player index (the lobby's pick; none: alternating, data/moba `mobaTeamOf`). */
+  teams?: Team[];
+  /** MOBA: each player's quiver, the normal arrow and the ones bought (it replaces the battle setup's). */
+  mobaLoadouts?: Loadout[];
   /** Shown once in the co-op lobby (e.g. "The host left"). */
   coopNotice?: string;
   /** Draw the predicted arrow path while aiming (settings drawer, off by default). */

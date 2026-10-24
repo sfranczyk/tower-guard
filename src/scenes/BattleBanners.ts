@@ -1,6 +1,6 @@
 import { Graphics, Point, type Container } from 'pixi.js';
 import { BANNERS } from '../config';
-import { ENEMY_KINDS, isAllyType } from '../data/enemyKinds';
+import { ENEMY_KINDS, fightsForPlayer } from '../data/enemyKinds';
 import type Enemy from '../objects/enemy/Enemy';
 import { BANNER_POLE, bannerColors, drawBanner } from '../rendering/banner';
 import { BANNER_GRIP } from '../rendering/designs/bodyPoses';
@@ -56,7 +56,7 @@ export class BattleBanners {
 
   public constructor(private readonly deps: BattleBannersDeps) {
     this.field = new Banners<Enemy>({
-      team: (unit) => (isAllyType(unit.kind) ? 'player' : 'enemy'),
+      team: (unit) => (fightsForPlayer(unit.kind) ? 'player' : 'enemy'),
       canCarry: (unit) => unit.isAlive() && !unit.isDown && !unit.isCelebrating && canCarryBanner(ENEMY_KINDS[unit.kind].archetype),
       alive: (unit) => unit.isAlive(),
       dropX: (unit) => (unit.banner.state === 'planted' ? unit.banner.plantX : unit.x),

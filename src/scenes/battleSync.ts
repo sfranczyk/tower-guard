@@ -3,11 +3,12 @@ import type { GameContext } from '../core/Scene';
 import type { RecordingInput } from '../input/PlayerInput';
 import { GuestSync } from '../net/GuestSync';
 import { HostSync } from '../net/HostSync';
-import type { EndInfo, NetMessage, SpawnPlace } from '../net/protocol';
+import type { EndInfo, MinionSpawn, NetMessage, SpawnPlace } from '../net/protocol';
+import type { MobaMode } from './MobaMode';
 import type Tower from '../objects/Tower';
 import type { Foe } from '../systems/CombatSystem';
 import type { EffectsSystem } from '../systems/EffectsSystem';
-import type { EnemyType, Vec2 } from '../types';
+import type { UnitType, Vec2 } from '../types';
 import type { BattleArrows } from './BattleArrows';
 import type { BattlePlayers } from './BattlePlayers';
 
@@ -21,7 +22,9 @@ export interface BattleSyncSetup {
   effects: EffectsSystem;
   playerTower: Tower;
   enemyTower: Tower;
-  spawnEnemy(type: EnemyType, place?: SpawnPlace): Foe;
+  spawnEnemy(type: UnitType, place?: SpawnPlace, minion?: MinionSpawn): Foe;
+  /** MOBA: the blue minions (sent and animated like the enemies), the economy's events, the guests' purchases. */
+  moba?: MobaMode;
   playSound(id: SoundId, at: Vec2): void;
   /** Guest: the host decided what comes after the level. */
   showGuestEnd(info: EndInfo): void;
@@ -46,10 +49,13 @@ export const startBattleSync = (setup: BattleSyncSetup): { hostSync?: HostSync; 
     return {};
   }
   if (role === 'host') {
-    const hostSync = new HostSync(net.transport, { players: players.list, enemies, playerTower, enemyTower, clock: setup.survivalClock });
+    const { moba } = setup;
+    const hostSync = new HostSync(net.transport, {
+      players: players.list, enemies, playerTower, enemyTower, clock: setup.survivalClock, allies: moba && (() => moba.allies),
+    });
     hostSync.watch(setup.effects);
     const { sandbox, run } = ctx.session;
-    net.transport.send({ t: 'start', sandbox, run, wind: setup.wind });
+    net.transport.send({ t: 'start', sandbox, run, wind: setup.wind, moba: ctx.session.moba, teams: ctx.session.moba ? [...players.list.map((player) => player.team)] : undefined });
     return { hostSync };
   }
   const guestSync = new GuestSync(net.transport, {
@@ -61,6 +67,8 @@ export const startBattleSync = (setup: BattleSyncSetup): { hostSync?: HostSync; 
     playerTower,
     enemyTower,
     spawnEnemy: setup.spawnEnemy,
+    allies: setup.moba && (() => setup.moba!.allies),
+    moba: setup.moba && ((event) => setup.moba!.applyNet(event)),
     launchArrow: (launch) => setup.shots.launchReplica(launch),
     douseArrow: (arrow) => setup.shots.douse(arrow),
     playSound: setup.playSound,
@@ -80,6 +88,8 @@ const restartAsGuest = (ctx: GameContext, message: Extract<NetMessage, { t: 'sta
   const { session } = ctx;
   session.sandbox = message.sandbox;
   session.run = message.run;
+  session.moba = message.moba;
+  session.teams = message.teams;
   if (session.net) {
     session.net.wind = message.wind;
   }

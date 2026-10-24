@@ -141,6 +141,8 @@ export const banditArcherLook = (hood = 0x9a3a32, hoodDark = 0x6e2621): Humanoid
   };
 };
 
+/** MOBA: the blue lane's archer, the hunter in the bowman's blue. */
+export const blueArcherLook = (): HumanoidLook => banditArcherLook(0x2f5d9a, 0x1f3f6e);
 
 /** A stick of dynamite held in the fist, square to the forearm; `lit` adds a burning fuse. */
 const dynamiteInHand = (timeMs: number, lit: boolean) => (g: Graphics, elbow: Vec2, hand: Vec2): void => {

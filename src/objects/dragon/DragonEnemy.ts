@@ -11,9 +11,9 @@ import { groundReach, strafeAltitude, streamLength } from '../../systems/dragonS
 import { groundAt } from '../../systems/terrain';
 import { enemyArchetype } from '../../data/enemyKinds';
 import type { Bounds, Vec2 } from '../../types';
-import { drawHealthBar } from '../../rendering/healthBar';
+import { drawHealthBar, drawLevelStars } from '../../rendering/healthBar';
 import { boundsAround } from '../../utils/math';
-import type { HitBox, HitInfo } from '../enemy/enemyTypes';
+import { killerOf, type HitBox, type HitInfo } from '../enemy/enemyTypes';
 import { AfflictionLayer, type AfflictionNet } from '../AfflictionLayer';
 import { DragonBow } from './DragonBow';
 import { DragonBreath } from './DragonBreath';
@@ -51,6 +51,14 @@ export default class DragonEnemy extends Container {
   public readonly kind: DragonKind;
   /** Every hit taken (host and co-op guest alike): the battle shows its damage number. */
   public onDamaged?: (amount: number, hit?: HitInfo) => void;
+  /** MOBA: as Enemy.onKilled. */
+  public onKilled?: (by: number | undefined) => void;
+  public lastHitBy?: number;
+  /** MOBA: as Enemy.power. */
+  public power = 1;
+  /** MOBA: its team's colour for the health bar (green-to-red otherwise). */
+  public barColor?: number;
+  private stars = 0;
   /** Co-op host: hears about every hit, to replay it on the guest's screen. */
   public netHooks?: { damaged(amount: number, hit?: HitInfo): void };
   public readonly isArcher = false;
@@ -66,6 +74,7 @@ export default class DragonEnemy extends Container {
   /** The fire stream, in front of the dragon and untinted by hits. */
   private readonly fireArt = new Graphics();
   private readonly healthBar = new Graphics();
+  private readonly starArt = new Graphics();
   /** Fire and frost (the dragon archer burns; neither dragon can be frozen, only chilled). */
   public readonly afflictions: AfflictionLayer;
   private readonly look: DragonLook;
@@ -88,10 +97,11 @@ export default class DragonEnemy extends Container {
   /** Hovers and flights between them, side and turn, gusts and jolts, wing beat (DragonMotion). */
   private readonly motion: DragonMotion;
 
-  public constructor(x: number, health: number, speed: number, kind: DragonKind = 'dragon') {
+  /** `look`: another hide for its kind (MOBA: the blue lane's dragon, BLUE_DRAGON_LOOK). */
+  public constructor(x: number, health: number, speed: number, kind: DragonKind = 'dragon', look: DragonLook = DRAGON_KINDS[kind]) {
     super();
     this.kind = kind;
-    this.look = DRAGON_KINDS[kind];
+    this.look = look;
     this.maxHealth = Math.max(1, health);
     this.health = this.maxHealth;
     this.speed = speed;
@@ -101,6 +111,7 @@ export default class DragonEnemy extends Container {
     this.position.set(x, cruiseAltitude(this.timeMs, this.look.altitude));
     this.zIndex = 1;
     this.afflictions = new AfflictionLayer(kind);
+    this.healthBar.addChild(this.starArt);
     this.addChild(this.art, this.riderArt, this.afflictions.art, this.fireArt, this.healthBar);
     this.pose = this.redraw();
     this.drawHealthBar();
@@ -108,6 +119,13 @@ export default class DragonEnemy extends Container {
 
   public isAlive(): boolean {
     return this.health > 0 && !this.escaped;
+  }
+
+  /** MOBA: a blue dragon comes in from the left, facing right (it turns as usual from then on). */
+  public faceRight(): void {
+    this.motion.side = -1;
+    this.motion.facing = 1;
+    this.applyFacing();
   }
 
   /** Survival's end: it gives up, turns round and flies off (EnemyAI calls `flyOff` each frame). */
@@ -158,7 +176,11 @@ export default class DragonEnemy extends Container {
     }
     this.netHooks?.damaged(amount, hit);
     this.onDamaged?.(amount, hit);
+    this.lastHitBy = hit?.by ?? this.lastHitBy;
     this.health = Math.max(0, this.health - Math.max(0, amount));
+    if (this.health === 0 && hit) {
+      this.onKilled?.(killerOf(hit, this.lastHitBy));
+    }
     this.drawHealthBar();
     if (this.health === 0) {
       const startY = GIB_GROUND_Y - (groundAt(this.x) - this.y) / DRAGON_SCALE;
@@ -448,9 +470,19 @@ export default class DragonEnemy extends Container {
     return drawDragonWithRider(this.art, this.motion.wingMs, 'archer', DRAGON_ARCHER_LOOK, palette, { aim, tension: this.bow.tension }, undefined, this.motion.glide);
   }
 
+  /** MOBA: its level as stars under the health bar (level − 1). */
+  public setStars(count: number): void {
+    this.stars = count;
+    this.drawHealthBar();
+  }
+
   private drawHealthBar(): void {
     const { width, height, y } = HEALTH_BAR;
     this.healthBar.position.set(0, y);
-    drawHealthBar(this.healthBar, this.health / this.maxHealth, width, height);
+    const ratio = this.health / this.maxHealth;
+    drawHealthBar(this.healthBar, ratio, width, height, this.barColor !== undefined && ratio > 0.3 ? this.barColor : undefined);
+    if (this.stars > 0) {
+      drawLevelStars(this.starArt, this.stars, height / 2 + 6);
+    }
   }
 }

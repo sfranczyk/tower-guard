@@ -7,14 +7,14 @@ import type { GameTextures } from '../core/Scene';
 import type { AimInput } from '../managers/InputManager';
 import type { GuestSync } from '../net/GuestSync';
 import type { ArrowLaunch, HostSync } from '../net/HostSync';
-import Arrow from '../objects/Arrow';
+import Arrow, { MINION_ARROW_OWNER } from '../objects/Arrow';
 import { ArrowShards } from '../objects/ArrowShards';
 import type { EffectsSystem } from '../systems/EffectsSystem';
 import { isMagicArrow } from '../systems/ArrowMagic';
 import { simulateTrajectory } from '../systems/ballistics';
 import { rollArrowMishap } from '../systems/weatherArrows';
 import { groundAt } from '../systems/terrain';
-import type { EnemyType, ProjectileType, Vec2 } from '../types';
+import type { EnemyType, ProjectileType, UnitType, Vec2 } from '../types';
 import type { Player } from './PlayerControl';
 import { worldWidth } from '../systems/battlefield';
 
@@ -29,6 +29,8 @@ export interface BattleArrowsDeps {
   readonly battleground: Battleground;
   /** The level's wind now (px/s² on a normal arrow; an arrow keeps the wind it was loosed in). */
   wind(): number;
+  /** MOBA: × on the damage of `owner`'s arrows of `type` (the shop's normal-arrow levels). */
+  arrowPower?(owner: number, type: ProjectileType): number | undefined;
   /** How many of the latest shots keep their trail (settings drawer). */
   arrowTrails(): number;
   effects(): EffectsSystem;
@@ -71,7 +73,10 @@ export class BattleArrows {
   /** Guest: an arrow the host launched (its sound comes as its own event). */
   public launchReplica(launch: ArrowLaunch): Arrow {
     if (launch.hostile) {
-      return this.fireEnemy(launch.from, launch.angle, launch.speed, launch.shooter ?? 'hunter', true);
+      return this.fireEnemy(launch.from, launch.angle, launch.speed, (launch.shooter ?? 'hunter') as EnemyType, true);
+    }
+    if (launch.owner === MINION_ARROW_OWNER) {
+      return this.fireMinion(launch.from, launch.angle, launch.speed, launch.shooter ?? 'blueArcher', 1, true);
     }
     if (launch.type !== 'fragment') {
       this.list.filter((arrow) => arrow.owner === launch.owner).forEach((arrow) => arrow.ageTrail(this.deps.arrowTrails()));
@@ -98,6 +103,7 @@ export class BattleArrows {
       arrow.scale.set(FRAGMENT_SCALE);
     }
     arrow.owner = owner;
+    arrow.power = this.deps.arrowPower?.(owner, type);
     arrow.wind = this.deps.wind();
     arrow.fire(angle, speed, type);
     // The weather may get it in flight (the host decides; a guest's copy hears of it).
@@ -150,7 +156,7 @@ export class BattleArrows {
   }
 
   /** An enemy archer's arrow: reddish, hurts the bowman (or the keep while he hides); `silent` for a co-op guest's copy. */
-  public fireEnemy(from: Vec2, angle: number, speed: number, shooter: EnemyType, silent = false): Arrow {
+  public fireEnemy(from: Vec2, angle: number, speed: number, shooter: EnemyType, silent = false, power = 1): Arrow {
     const trail = new Graphics();
     trail.zIndex = 1;
     this.deps.world.addChild(trail);
@@ -161,9 +167,31 @@ export class BattleArrows {
     // Enemy arrows fly clean: no trail to keep, so a gone one can be dropped at once.
     arrow.hideTrail();
     arrow.shooter = shooter;
+    arrow.power = power;
     this.list.push(arrow);
     this.deps.world.addChild(arrow);
     this.deps.hostSync()?.trackArrow(arrow, { owner: -1, type: 'normal', from, angle, speed, hostile: true, shooter });
+    if (!silent) {
+      this.deps.playSound('bowShot', from);
+    }
+    return arrow;
+  }
+
+  /** A MOBA blue archer's arrow (`MINION_ARROW_OWNER`): flies clean like an enemy's, hits only the enemies and their keep. */
+  public fireMinion(from: Vec2, angle: number, speed: number, shooter: UnitType, power = 1, silent = false): Arrow {
+    const trail = new Graphics();
+    trail.zIndex = 1;
+    this.deps.world.addChild(trail);
+    const arrow = new Arrow(from.x, from.y, this.deps.textures.arrows.normal, trail);
+    arrow.owner = MINION_ARROW_OWNER;
+    arrow.wind = this.deps.wind();
+    arrow.fire(angle, speed, 'normal');
+    arrow.hideTrail();
+    arrow.shooter = shooter;
+    arrow.power = power;
+    this.list.push(arrow);
+    this.deps.world.addChild(arrow);
+    this.deps.hostSync()?.trackArrow(arrow, { owner: MINION_ARROW_OWNER, type: 'normal', from, angle, speed, hostile: false, shooter });
     if (!silent) {
       this.deps.playSound('bowShot', from);
     }

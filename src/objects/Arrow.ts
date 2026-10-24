@@ -5,7 +5,7 @@ import { flightParams } from '../data/projectiles';
 import type { ArrowMishap } from '../systems/weatherArrows';
 import { advanceProjectile, type FlightParams } from '../systems/ballistics';
 import type { BodyAnchor } from '../systems/bodyAnchor';
-import type { EnemyType, ProjectileType, Vec2 } from '../types';
+import type { ProjectileType, UnitType, Vec2 } from '../types';
 import { worldWidth } from '../systems/battlefield';
 
 /** Something an arrow can be pinned to that moves and changes pose (an enemy). */
@@ -15,6 +15,9 @@ export interface AnchorTarget {
   /** Where the blast was, once it has been blown apart (or shattered): the arrows in it break. */
   readonly blownApartAt?: Vec2;
 }
+
+/** `Arrow.owner` of an arrow a blue lane archer loosed (MOBA): it hits only the enemies and their keep, for its `shooter`'s damage. */
+export const MINION_ARROW_OWNER = -1;
 
 export default class Arrow extends Sprite {
   private stuck = false;
@@ -34,9 +37,11 @@ export default class Arrow extends Sprite {
   private hitCount = 0;
   /** Shot by an enemy archer: hurts the bowman/keep, ignores enemies. */
   private hostileShot = false;
-  /** Who loosed a hostile arrow (its damage depends on it, see ENEMY_DAMAGE). */
-  public shooter?: EnemyType;
-  /** Which player loosed a player arrow (co-op: their trails and shrapnel bursts are their own). */
+  /** Who loosed a hostile or a minion's arrow (its damage depends on it, see ENEMY_DAMAGE). */
+  public shooter?: UnitType;
+  /** MOBA: × on its damage (a minion's upgrades, a player's normal-arrow levels). */
+  public power?: number;
+  /** Which player loosed a player arrow (co-op: their trails and shrapnel bursts are their own); MINION_ARROW_OWNER: a MOBA blue archer's. */
   public owner = 0;
   /** Co-op host: told when the arrow sticks (into a target or the ground) or is gone, for the guest. */
   public netHooks?: { stuck(target: AnchorTarget | undefined, point: Vec2): void; gone(): void; doused(): void };
