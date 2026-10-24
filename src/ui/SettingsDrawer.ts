@@ -1,9 +1,10 @@
 import type { AudioSettings } from '../audio/audioSettings';
+import type { KeepSide } from '../core/keepSide';
 import type { UiHandlers } from './uiHandlers';
 import { queryIn } from './domQuery';
 
 /**
- * The settings drawer's options in three groups: sound (music and effects), HUD (hit visibility, banner markers) and
+ * The settings drawer's options in three groups: sound (music and effects), HUD (hit visibility, banner markers), view (which side your keep is on) and
  * aim helpers (arrow trails, trajectory preview, aim cursor helper). Changes go to `handlers.*Change`, the scenes set
  * the shown values (`set*Option`); banner markers show only in a battle with banners (`showBannerMarkersOption`).
  */
@@ -14,6 +15,7 @@ export class SettingsDrawer {
   private readonly bannerMarkersInput: HTMLInputElement;
   private readonly bannerMarkersRow: HTMLElement;
   private readonly trailButtons: HTMLButtonElement[];
+  private readonly keepSideButtons: HTMLButtonElement[];
   private readonly soundInput: HTMLInputElement;
   private readonly volumeInput: HTMLInputElement;
   private readonly musicInput: HTMLInputElement;
@@ -26,6 +28,7 @@ export class SettingsDrawer {
     this.bannerMarkersInput = queryIn<HTMLInputElement>(root, '[data-banner-markers]');
     this.bannerMarkersRow = queryIn<HTMLElement>(root, '[data-banner-markers-row]');
     this.trailButtons = Array.from(root.querySelectorAll<HTMLButtonElement>('[data-trail-count]'));
+    this.keepSideButtons = Array.from(root.querySelectorAll<HTMLButtonElement>('[data-keep-side]'));
     this.soundInput = queryIn<HTMLInputElement>(root, '[data-sound]');
     this.volumeInput = queryIn<HTMLInputElement>(root, '[data-volume]');
     this.musicInput = queryIn<HTMLInputElement>(root, '[data-music]');
@@ -40,6 +43,10 @@ export class SettingsDrawer {
       // Drop focus so Space (shrapnel burst) doesn't press it again.
       button.blur();
     }));
+    this.keepSideButtons.forEach((button) => button.addEventListener('click', () => {
+      handlers.keepSideChange?.(button.dataset.keepSide === 'right' ? 'right' : 'left');
+      button.blur();
+    }));
     const audioChange = (changes: Partial<AudioSettings>): void => handlers.audioChange?.(changes);
     this.soundInput.addEventListener('change', () => audioChange({ effectsEnabled: this.soundInput.checked }));
     this.volumeInput.addEventListener('input', () => audioChange({ effectsVolume: Number(this.volumeInput.value) / 100 }));
@@ -49,6 +56,14 @@ export class SettingsDrawer {
 
   public setTrajectoryOption(showTrajectory: boolean): void {
     this.trajectoryInput.checked = showTrajectory;
+  }
+
+  public setKeepSideOption(side: KeepSide): void {
+    this.keepSideButtons.forEach((button) => {
+      const active = button.dataset.keepSide === side;
+      button.classList.toggle('active', active);
+      button.setAttribute('aria-checked', `${active}`);
+    });
   }
 
   public setCursorCircleOption(showCursorCircle: boolean): void {

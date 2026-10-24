@@ -98,7 +98,7 @@ export class MobaMode implements ShopBackend {
       }
       const reason = message.buy ? this.match.buy(player, message.buy) : undefined;
       if (message.deposit !== undefined) {
-        this.match.moveVault(player, message.deposit);
+        this.match.moveVault(player, message.deposit, message.step ?? 0);
       }
       if (reason) {
         this.team?.status(player, reason);
@@ -180,6 +180,11 @@ export class MobaMode implements ShopBackend {
     return Math.round(this.deps.ctx.session.sandbox.bowmanHealth * playerStats(levels).maxHealth);
   }
 
+  /** `player` is healing now (the HUD's regeneration icon; a co-op guest: as the host last sent). */
+  public regenerating(player: Player): boolean {
+    return this.match ? this.match.regenerating(player) : this.synced?.rg.includes(player.index) ?? false;
+  }
+
   /** The HUD's purse line for this browser's player. */
   public purse(player: Player): { team: Team; gold: number; vault: number } {
     if (this.match) {
@@ -214,11 +219,11 @@ export class MobaMode implements ShopBackend {
     return undefined;
   }
 
-  public moveVault(player: Player, deposit: boolean): void {
+  public moveVault(player: Player, deposit: boolean, step: number): void {
     if (this.match) {
-      this.match.moveVault(player, deposit);
+      this.match.moveVault(player, deposit, step);
     } else {
-      this.deps.guestSync()?.sendShop({ t: 'shop', deposit });
+      this.deps.guestSync()?.sendShop({ t: 'shop', deposit, step });
     }
   }
 
@@ -233,6 +238,7 @@ export class MobaMode implements ShopBackend {
       vault: { ...match.economy.vault },
       lv: match.upgrades.playerLevels.map((levels) => ({ ...levels })),
       tlv: { blue: { ...match.upgrades.teamLevels.blue }, red: { ...match.upgrades.teamLevels.red } },
+      rg: this.team?.list.filter((player) => match.regenerating(player)).map((player) => player.index) ?? [],
     };
   }
 

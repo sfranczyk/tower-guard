@@ -1,7 +1,7 @@
 import type { Team } from '../data/moba';
 import type { ShopButton, ShopSection } from '../data/shopView';
 import type { ShopTab } from '../data/upgrades';
-import { MOBA_PLAYERS } from '../config';
+import { MOBA_VAULT_STEPS } from '../config';
 import type { UiHandlers } from './uiHandlers';
 import type { ArrowType } from '../data/loadout';
 import { ICON_ALLIES, ICON_ENEMIES, ICON_UPGRADES, ICON_WEAPONS } from './icons';
@@ -9,6 +9,8 @@ import { ICON_ALLIES, ICON_ENEMIES, ICON_UPGRADES, ICON_WEAPONS } from './icons'
 /** What the MOBA shop shows now (scenes/BattleShop.ts builds it). */
 export interface ShopView {
   team: Team;
+  /** The player's keep shows on the left of the screen (settings drawer: his side, mirrored or not). */
+  keepOnLeft: boolean;
   gold: number;
   vault: number;
   skills: ShopSection[];
@@ -38,9 +40,9 @@ const upgradeIcon = (id: string): string => {
 
 const buttonHtml = (button: ShopButton): string => {
   const price = button.state === 'owned' ? '✓' : `${button.price} g`;
-  // Only the next level can be clicked; the tooltip says why one can't.
+  // Only the next level can be clicked; the details line says why one can't.
   const disabled = button.state === 'buyable' ? '' : ' disabled';
-  return `<button class="shop-button ${button.state}" data-shop-buy="${escapeHtml(button.id)}" data-shop-tip="${escapeHtml(button.tooltip)}" title="${escapeHtml(button.tooltip)}"${disabled}>`
+  return `<button class="shop-button ${button.state}" data-shop-buy="${escapeHtml(button.id)}" data-shop-tip="${escapeHtml(button.tooltip)}"${disabled}>`
     + `${upgradeIcon(button.id)}<span class="shop-label">${escapeHtml(button.label)}</span><span class="shop-price">${price}</span>`
     + '</button>';
 };
@@ -51,7 +53,7 @@ const sectionHtml = (section: ShopSection): string => `<h3>${escapeHtml(section.
 /**
  * MOBA's shop (press I by your own keep): a panel over the canvas's left side that doesn't pause or block the battle,
  * with the Skills tab (arrows, passives; paid from the purse) and the Castle tab (the team vault, minion upgrades).
- * Each upgrade's levels are buttons joined by arrows, the price on the button, the details in its tooltip.
+ * Each upgrade's levels are buttons joined by arrows, the price on the button, the details in the line under the panel (no tooltips).
  */
 export class ShopPanel {
   public readonly element: HTMLElement;
@@ -90,7 +92,7 @@ export class ShopPanel {
       } else if (target.dataset.shopBuy) {
         this.handlers.shopBuy?.(target.dataset.shopBuy);
       } else if (target.dataset.shopVault) {
-        this.handlers.shopVault?.(target.dataset.shopVault === 'in');
+        this.handlers.shopVault?.(target.dataset.shopVault === 'in', Number(target.dataset.shopStep));
       } else {
         this.handlers.shopClose?.();
       }
@@ -111,7 +113,7 @@ export class ShopPanel {
     }
     this.element.hidden = false;
     // Over the side away from the player's keep, so he stays in sight.
-    this.element.classList.toggle('right', view.team === 'blue');
+    this.element.classList.toggle('right', view.keepOnLeft);
     this.render();
   }
 
@@ -124,11 +126,12 @@ export class ShopPanel {
     if (!view) {
       return;
     }
-    const step = MOBA_PLAYERS.vaultStep;
     const tabs = TABS.map(({ tab, label }) => `<button class="chip-button${tab === this.tab ? ' active' : ''}" data-shop-tab="${tab}">${label}</button>`).join('');
-    const vault = `<div class="shop-vault"><span>Team vault <b>${view.vault} g</b></span>`
-      + `<button class="secondary-button" data-shop-vault="in"${view.gold < step ? ' disabled' : ''}>Deposit ${step}</button>`
-      + `<button class="secondary-button" data-shop-vault="out"${view.vault < step ? ' disabled' : ''}>Withdraw ${step}</button></div>`;
+    const steps = (way: 'in' | 'out', has: number): string => MOBA_VAULT_STEPS
+      .map((step) => `<button class="secondary-button" data-shop-vault="${way}" data-shop-step="${step}"${has < step ? ' disabled' : ''}>${step}</button>`).join('');
+    const vault = `<div class="shop-vault"><span class="shop-vault-total">Team vault <b>${view.vault} g</b></span>`
+      + `<div class="shop-vault-row"><span>Deposit</span>${steps('in', view.gold)}</div>`
+      + `<div class="shop-vault-row"><span>Withdraw</span>${steps('out', view.vault)}</div></div>`;
     const sections = (this.tab === 'skills' ? view.skills : view.castle).map(sectionHtml).join('');
     const html = `<div class="shop-header shop-${view.team}"><h2>Shop</h2><span class="shop-gold">${view.gold} gold</span>`
       + `<button class="round-button" data-shop-close aria-label="Close the shop" title="Close (I)">×</button></div>`

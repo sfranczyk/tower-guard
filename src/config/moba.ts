@@ -33,14 +33,21 @@ export const MOBA_PLAYERS = tunable('MOBA_PLAYERS', 'MOBA players', {
   troopGold: 5,
   archerGold: 8,
   dragonGold: 25,
-  playerGold: 200,
+  playerGold: 100,
   teamKillPenalty: 200,
   respawnMs: 30000,
-  regenDelayMs: 10000,
+  regenDelayMs: 5000,
   regenAmount: 5,
-  regenEveryMs: 10000,
+  regenEveryMs: 4000,
   /** How close (px) to his keep's centre a player must be for the shop (I). */
   shopRange: 160,
-  /** Gold one click moves to or from the team vault. */
-  vaultStep: 10,
 });
+
+/** MOBA keeps: their health, and how far in from each end of the field they stand (a battle's: KEEP_INSET). */
+export const MOBA_KEEPS = tunable('MOBA_KEEPS', 'MOBA keeps', {
+  health: 2400,
+  inset: 210,
+});
+
+/** The shop's vault buttons: the gold one click moves to or from the team vault. */
+export const MOBA_VAULT_STEPS: readonly number[] = [10, 50, 100];

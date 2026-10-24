@@ -194,6 +194,8 @@ export interface MobaNet {
   lv: UpgradeLevels[];
   /** Each team's. */
   tlv: Record<Team, UpgradeLevels>;
+  /** The players healing now (their HUD shows the regeneration icon). */
+  rg: number[];
 }
 
 /** What the guest's end screen shows (the host decides what comes next). */
@@ -216,8 +218,8 @@ export type NetMessage =
   | { t: 'roster'; you: number; present: boolean[]; loadouts: Array<Loadout | null>; teams?: Array<Team | null> }
   /** Guest → host, MOBA lobby: the team this player wants (handled by net/coopLink). */
   | { t: 'team'; team: Team }
-  /** Guest → host, MOBA: buy the next level of upgrade `buy`, or move vault gold (`deposit`: in, else out). */
-  | { t: 'shop'; buy?: string; deposit?: boolean }
+  /** Guest → host, MOBA: buy the next level of upgrade `buy`, or move `step` vault gold (`deposit`: in, else out). */
+  | { t: 'shop'; buy?: string; deposit?: boolean; step?: number }
   /** Host → a guest who knocked on a full room (then the link closes). */
   | { t: 'full' }
   /** Host → guest: a level starts with this setup (the guest builds the same battlefield). */

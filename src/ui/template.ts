@@ -1,6 +1,6 @@
 import { ARROW_INFO, type ArrowType } from '../data/loadout';
 import type { AllyType } from '../types';
-import { ICON_ALLIES, ICON_LEVEL, ICON_ORDERS, ICON_WEAPONS } from './icons';
+import { ICON_ALLIES, ICON_BOWMAN, ICON_KEEP, ICON_LEVEL, ICON_ORDERS, ICON_UPGRADES, ICON_WEAPONS } from './icons';
 
 /**
  * Static DOM markup. Elements are looked up by their data-* attributes in DomUi.
@@ -15,7 +15,7 @@ export const OVERLAY_TEMPLATE = `
           <div class="menu-card">
             <button class="primary-button" data-start>Start game <span class="key-hint">Space</span></button>
             <button class="secondary-button" data-open-coop>Co-op online</button>
-            <button class="secondary-button" data-open-moba>Online team battle</button>
+            <button class="secondary-button" data-open-moba>Team battle online</button>
             <button class="secondary-button" data-menu-settings>Settings</button>
             <button class="dev-toggle" data-dev-toggle aria-expanded="false">Dev tools ▾</button>
             <div class="dev-tools" data-dev-tools hidden>
@@ -57,6 +57,10 @@ export const OVERLAY_TEMPLATE = `
         <h3 class="drawer-group">HUD</h3>
         <label class="field toggle-field" title="How much each arrow hit takes off, over the enemy's head"><span>Hit visibility</span><input data-damage-numbers type="checkbox" checked></label>
         <label class="field toggle-field" data-banner-markers-row hidden title="Where both banners are, in the HUD, and a marker at the edge for one carried out of view"><span>Banner markers</span><input data-banner-markers type="checkbox" checked></label>
+        <h3 class="drawer-group">View</h3>
+        <div class="field toggle-field" title="Which side of the screen your keep is on; the other side mirrors the whole battle"><span>Your keep</span><div class="segmented" role="radiogroup" aria-label="Your keep">
+          <button class="chip-button" data-keep-side="left" role="radio">Left</button><button class="chip-button" data-keep-side="right" role="radio">Right</button>
+        </div></div>
         <h3 class="drawer-group">Aim helpers</h3>
         <div class="field toggle-field"><span>Arrow trails</span><div class="segmented" data-arrow-trails role="radiogroup" aria-label="Arrow trails">
           <button class="chip-button" data-trail-count="0" role="radio">0</button><button class="chip-button" data-trail-count="1" role="radio">1</button><button class="chip-button" data-trail-count="2" role="radio">2</button><button class="chip-button" data-trail-count="3" role="radio">3</button>
@@ -114,7 +118,8 @@ export const allySlots = (allies: ReadonlyArray<{ type: AllyType; label: string 
   + `<span class="weapon-ammo" data-order-label>Hold</span></div>`;
 
 export const HUD_TOP_TEMPLATE = `
-  <div class="hud-chip">${ICON_LEVEL}<div><div class="chip-label">Level <span data-level-number>1 / 1</span></div><div class="survival-clock" data-survival-clock hidden></div><div class="pips" data-enemy-pips></div><div class="meter" hidden><i data-level-bar></i></div><div class="chip-value" data-enemy-count>0 of 0 defeated</div><div class="chip-value moba-purse" data-moba-purse hidden></div><div class="chip-value banner-line" data-banners hidden></div></div></div>
+  <div class="hud-left"><div class="hud-chip">${ICON_LEVEL}<div><div class="chip-label">Level <span data-level-number>1 / 1</span></div><div class="survival-clock" data-survival-clock hidden></div><div class="pips" data-enemy-pips></div><div class="meter" hidden><i data-level-bar></i></div><div class="chip-value" data-enemy-count>0 of 0 defeated</div><div class="chip-value moba-purse" data-moba-purse hidden></div><div class="chip-value banner-line" data-banners hidden></div></div></div>
+  <div class="hud-chip health-chip" data-health-chip hidden><div class="health-line" title="Your keep's health">${ICON_KEEP}<span data-keep-health>0</span></div><div class="health-line" title="Your bowman's health">${ICON_BOWMAN}<span data-bowman-health>0</span><span class="regen-icon" data-regen-icon hidden title="Regenerating">${ICON_UPGRADES.regen}</span></div></div></div>
   <div class="weapons" data-projectiles></div>
   <div class="weapons allies" data-allies hidden></div>
 `;

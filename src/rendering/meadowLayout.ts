@@ -1,5 +1,6 @@
-import { MEADOW, PLAYER_TOWER_X } from '../config';
+import { MEADOW } from '../config';
 import { createRandom } from '../utils/math';
+import { playerKeepX } from '../systems/battlefield';
 
 /**
  * Where the Green Meadow's trees, rocks, flowers, fence and haystack stand (pure, seeded: the same map always looks
@@ -117,7 +118,7 @@ export const layoutMeadow = (left: number, right: number, seed: number): MeadowL
     trees,
     rocks,
     flowers,
-    fence: { from: PLAYER_TOWER_X + 150, to: PLAYER_TOWER_X + 235 },
-    haystack: PLAYER_TOWER_X + 330,
+    fence: { from: playerKeepX() + 150, to: playerKeepX() + 235 },
+    haystack: playerKeepX() + 330,
   };
 };

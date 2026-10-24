@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { MOBA_PLAYERS } from '../config';
-import { MobaEconomy, freshRecovery, noteHit, regenStep } from './mobaEconomy';
+import { MobaEconomy, freshRecovery, isRegenerating, noteHit, regenStep } from './mobaEconomy';
 
 describe('MobaEconomy', () => {
   const teams = ['blue', 'red', 'blue'] as const;
@@ -67,5 +67,15 @@ describe('regenStep', () => {
       healed += regenStep(recovery, 100, 5);
     }
     expect(healed).toBe(0);
+  });
+
+  it('regenerates only when hurt, standing and out of combat long enough', () => {
+    const recovery = freshRecovery();
+    expect(isRegenerating(recovery, 50, 100)).toBe(false);
+    recovery.quietMs = MOBA_PLAYERS.regenDelayMs;
+    expect(isRegenerating(recovery, 50, 100)).toBe(true);
+    expect(isRegenerating(recovery, 100, 100)).toBe(false);
+    recovery.respawnMs = 1000;
+    expect(isRegenerating(recovery, 50, 100)).toBe(false);
   });
 });

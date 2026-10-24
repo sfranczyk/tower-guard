@@ -1,5 +1,5 @@
 import type { Graphics } from 'pixi.js';
-import { ALLIES, CROWD, MEDIC, MOBA_LANES, PLAYER_TOWER_X, PRIEST_POST_SLACK, SHOW_HITBOX_DEBUG } from '../config';
+import { ALLIES, CROWD, MEDIC, MOBA_LANES, PRIEST_POST_SLACK, SHOW_HITBOX_DEBUG } from '../config';
 import { enemyDamage, rollDamage } from '../data/enemies';
 import { enemyArchetype, enemyArmor, enemyTraits } from '../data/enemyKinds';
 import type Bowman from '../objects/bowman/Bowman';
@@ -17,6 +17,7 @@ import type { EffectsSystem } from './EffectsSystem';
 import { bandageHeal, pickPatient } from './bandaging';
 import { priestPost } from './healing';
 import { groundAt } from './terrain';
+import { playerKeepX } from './battlefield';
 
 /** How close a soldier comes to the enemy he fights (as EnemyAI's MELEE_REACH), and how close counts as "in reach". */
 const ALLY_MELEE_REACH = 25;
@@ -142,7 +143,7 @@ export class AllyAI {
 
   private updateFighter(ally: Enemy, deltaMs: number): void {
     const { banners } = this.world;
-    const goal = banners?.carriedBy(ally) ? PLAYER_TOWER_X : banners?.fetchX(ally);
+    const goal = banners?.carriedBy(ally) ? playerKeepX() : banners?.fetchX(ally);
     if (goal !== undefined) {
       this.walkOnGuard(ally, goal, deltaMs);
       return;

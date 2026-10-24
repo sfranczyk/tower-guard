@@ -12,6 +12,7 @@ import { DEFAULT_ARROW_TRAILS, MAX_ARROW_TRAILS } from '../config';
 import { loadSandbox } from './sandboxStorage';
 import { newRun, type GameContext, type GameTextures, type Scene, type SceneName } from './Scene';
 import { COOP_PARAM, DESIGN_LAB_PARAM, LAB_PARAM, MOBA_PARAM, SOUND_LAB_PARAM, TUNE_PARAM, getDevUrlParam, setUrlParam } from './urlState';
+import { loadKeepSide, saveKeepSide } from './keepSide';
 
 /** Owns the active scene, switches between scenes and forwards ticker updates. */
 export class SceneManager {
@@ -38,7 +39,8 @@ export class SceneManager {
         run: newRun(sandbox, playerCount),
         playerCount,
         moba: getDevUrlParam(MOBA_PARAM) !== null,
-        showTrajectory: false,
+        showTrajectory: true,
+        keepSide: loadKeepSide(),
         showCursorCircle: false,
         showDamageNumbers: true,
         bannerMarkers: true,
@@ -68,6 +70,11 @@ export class SceneManager {
     ui.handlers.trajectoryChange = (enabled) => {
       this.ctx.session.showTrajectory = enabled;
     };
+    ui.handlers.keepSideChange = (side) => {
+      this.ctx.session.keepSide = side;
+      saveKeepSide(side);
+      ui.settings.setKeepSideOption(side);
+    };
     ui.handlers.cursorCircleChange = (enabled) => {
       this.ctx.session.showCursorCircle = enabled;
     };
@@ -83,6 +90,7 @@ export class SceneManager {
     };
     ui.handlers.audioChange = (changes) => sound.updateSettings(changes);
     ui.settings.setTrajectoryOption(this.ctx.session.showTrajectory);
+    ui.settings.setKeepSideOption(this.ctx.session.keepSide);
     ui.settings.setCursorCircleOption(this.ctx.session.showCursorCircle);
     ui.settings.setDamageNumbersOption(this.ctx.session.showDamageNumbers);
     ui.settings.setBannerMarkersOption(this.ctx.session.bannerMarkers);

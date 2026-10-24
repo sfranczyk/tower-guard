@@ -1,6 +1,6 @@
-import { BANNERS, PLAYER_TOWER_X } from '../config';
+import { BANNERS } from '../config';
 import type { EnemyArchetype } from '../data/enemyKinds';
-import { enemyKeepX } from './battlefield';
+import { enemyKeepX, playerKeepX } from './battlefield';
 
 /**
  * The run's Banners option (pure, tested): each keep has a banner. A carrier of the other team who reaches it takes
@@ -23,11 +23,11 @@ export const canCarryBanner = (archetype: EnemyArchetype): boolean => CARRIER_AR
 
 /** Where `side`'s banner stands at home: in front of its keep. */
 export const bannerHomeX = (side: BannerSide): number =>
-  side === 'player' ? PLAYER_TOWER_X + BANNERS.standOffset : enemyKeepX() - BANNERS.standOffset;
+  side === 'player' ? playerKeepX() + BANNERS.standOffset : enemyKeepX() - BANNERS.standOffset;
 
 /** A carrier of `team` at `x` has reached his own keep. */
 export const reachedKeep = (team: BannerSide, x: number): boolean =>
-  team === 'player' ? x <= PLAYER_TOWER_X + BANNERS.deliverReach : x >= enemyKeepX() - BANNERS.deliverReach;
+  team === 'player' ? x <= playerKeepX() + BANNERS.deliverReach : x >= enemyKeepX() - BANNERS.deliverReach;
 
 /** Who walks with his team's bearer to guard him: fighters and archers, not bombers, zombies, casters or dragons. */
 const ESCORT_ARCHETYPES: readonly EnemyArchetype[] = ['fighter', 'runner', 'heavy', 'cavalry', 'archer'];

@@ -1,11 +1,11 @@
-import { MOBA_PLAYERS } from '../config';
+import { MOBA_PLAYERS, MOBA_VAULT_STEPS } from '../config';
 import type { GameContext } from '../core/Scene';
 import type { MinionRole, Team } from '../data/moba';
 import type { ShopFunds } from '../data/shopView';
 import type { DamageNumbers } from '../objects/DamageNumbers';
 import type { BowmanHit } from '../systems/bowmanDeath';
 import type { Foe } from '../systems/combatGeometry';
-import { MobaEconomy, freshRecovery, noteHit, regenStep, type Recovery, type Victim } from '../systems/mobaEconomy';
+import { MobaEconomy, freshRecovery, isRegenerating, noteHit, regenStep, type Recovery, type Victim } from '../systems/mobaEconomy';
 import type { BattlePlayers } from './BattlePlayers';
 import { MobaUpgrades } from './MobaUpgrades';
 import { playerStartX, type Player } from './PlayerControl';
@@ -95,6 +95,11 @@ export class BattleMoba {
     });
   }
 
+  /** `player` is healing now (out of combat and hurt). */
+  public regenerating(player: Player): boolean {
+    return !player.bowman.isDead && isRegenerating(this.recovery[player.index], player.health, this.maxHealth(player));
+  }
+
   /** The seconds until `player` is back (undefined while he stands). */
   public respawnIn(player: Player): number | undefined {
     const ms = this.recovery[player.index].respawnMs;
@@ -114,9 +119,12 @@ export class BattleMoba {
     return this.upgrades.buy(player, id);
   }
 
-  /** `player` puts MOBA_PLAYERS.vaultStep of his gold in his team's vault, or takes it out. */
-  public moveVault(player: Player, deposit: boolean): void {
-    this.economy.moveVault(player.index, deposit);
+  /** `player` puts `step` of his gold in his team's vault, or takes it out (only the shop's MOBA_VAULT_STEPS). */
+  public moveVault(player: Player, deposit: boolean, step: number): void {
+    if (!MOBA_VAULT_STEPS.includes(step)) {
+      return;
+    }
+    this.economy.moveVault(player.index, deposit, step);
     this.deps.changed?.(player);
   }
 

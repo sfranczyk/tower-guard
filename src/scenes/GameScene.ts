@@ -2,8 +2,8 @@ import { Container, Graphics } from 'pixi.js';
 import {
   GROUND_Y,
   MIN_SHOT_POWER,
+  MOBA_KEEPS,
   MOBA_WORLD_WIDTH,
-  PLAYER_TOWER_X,
   SHOW_HITBOX_DEBUG,
   SURVIVAL_WORLD_WIDTH,
   WORLD_WIDTH,
@@ -11,6 +11,7 @@ import {
 import type { SoundId } from '../audio/SoundManager';
 import { spatialMix } from '../audio/spatial';
 import { Scene, isMultiplayer, type GameContext } from '../core/Scene';
+import { isMirrored, mirrorX } from '../core/keepSide';
 import { viewWidth } from '../core/viewport';
 import { BATTLEGROUNDS, aimColorsOf, type Battleground } from '../data/battlegrounds';
 import { enemyEdge, enemyKeepHealth, wavePacing } from '../data/difficulty';
@@ -44,13 +45,14 @@ import { CombatSystem, type Foe } from '../systems/CombatSystem';
 import { EffectsSystem } from '../systems/EffectsSystem';
 import { DamageNumbers } from '../objects/DamageNumbers';
 import { BattleWeather } from './BattleWeather';
+import { BattleLeftovers } from './BattleLeftovers';
 import { battleCombatEvents } from './battleCombatEvents';
 import { firstArrow, type Loadout } from '../data/loadout';
 import type Enemy from '../objects/enemy/Enemy';
 import DragonEnemy from '../objects/dragon/DragonEnemy';
 import { ALLY_ORDER_LABELS } from '../systems/allyOrders';
 import type { EnemyType, Vec2 } from '../types';
-import { enemyKeepX, useBattlefield, worldWidth } from '../systems/battlefield';
+import { enemyKeepX, playerKeepX, useBattlefield, worldWidth } from '../systems/battlefield';
 
 /**
  * One level of a sandbox run: the bowman defends the left keep on the level's battleground. Clearing
@@ -78,6 +80,10 @@ export class GameScene extends Scene {
   private banners?: BattleBanners;
   /** Every arrow of the level. */
   private readonly shots: BattleArrows;
+  /** Over the world: the weather that flies across the view (mirrored with it). */
+  private screenLayer!: Container;
+  /** Corpses and stuck arrows cleared away after a while (config LEFTOVERS). */
+  private readonly leftovers: BattleLeftovers;
   private readonly debugGraphics = new Graphics();
   private readonly aimOverlay = new AimOverlay();
   private background!: Background;
@@ -108,6 +114,8 @@ export class GameScene extends Scene {
   private readonly camera = new BattleCamera();
   /** Where the local player's drawn shot would land (x), while aiming. */
   private aimLandingX?: number;
+  /** Each player's health as of the last frame (for the hit numbers over the bowmen). */
+  private readonly shownHealth: number[] = [];
 
   public constructor(ctx: GameContext) {
     super(ctx);
@@ -115,7 +123,11 @@ export class GameScene extends Scene {
     // MOBA is fought on a battle map, whatever the setup's mode.
     this.survivalSetup = ctx.session.moba ? undefined : survivalLevel(sandbox, run.levelIndex);
     // Before anything is laid out on it: a survival level's field is shorter, a MOBA one longer (host and guest build the same).
-    useBattlefield(ctx.session.moba ? MOBA_WORLD_WIDTH : this.survivalSetup ? SURVIVAL_WORLD_WIDTH : WORLD_WIDTH);
+    if (ctx.session.moba) {
+      useBattlefield(MOBA_WORLD_WIDTH, MOBA_KEEPS.inset);
+    } else {
+      useBattlefield(this.survivalSetup ? SURVIVAL_WORLD_WIDTH : WORLD_WIDTH);
+    }
     // No view wider than the field: a big window letterboxes instead of showing ground nobody can play on.
     ctx.ui.limitViewWidth(worldWidth());
     // MOBA is always fought on the Green Meadow.
@@ -166,6 +178,14 @@ export class GameScene extends Scene {
       guestSync: () => this.guestSync,
       arrowPower: (owner, type) => this.moba?.arrowPower(owner, type),
     });
+    this.leftovers = new BattleLeftovers({
+      pools: () => [
+        { list: this.enemies, cleared: () => this.foes.corpseCleared() },
+        { list: this.soldiers.list },
+        ...(this.moba ? [{ list: this.moba.allyFliers }] : []),
+      ],
+      arrows: () => this.shots.list,
+    });
   }
 
   /** MOBA: the match's gold, upgrades and respawns (host or alone). */
@@ -180,6 +200,11 @@ export class GameScene extends Scene {
   /** This browser's player. */
   private get localPlayer(): Player {
     return this.team.local;
+  }
+
+  /** This browser's player's keep (MOBA red: the right one). */
+  private get localKeep(): Tower {
+    return this.localPlayer.team === 'red' ? this.enemyTower : this.playerTower;
   }
 
   /** This browser's player's quiver. */
@@ -198,7 +223,7 @@ export class GameScene extends Scene {
     this.ctx.root.addChild(this.world);
     this.background = new Background(this.world, this.battleground);
     this.effects = new EffectsSystem(this.world);
-    this.damageNumbers = new DamageNumbers(this.world, () => this.ctx.session.showDamageNumbers);
+    this.damageNumbers = new DamageNumbers(this.world, () => this.ctx.session.showDamageNumbers, () => this.mirrored);
     this.aimOverlay.setColors(aimColorsOf(this.battleground));
 
     const { sandbox, run } = this.ctx.session;
@@ -206,10 +231,12 @@ export class GameScene extends Scene {
     // Co-op: the keep gets a second, lower tower for the second bowman.
     // MOBA: each keep a tower per player of its team.
     const towers = this.teams.filter((team) => team === 'blue').length;
-    this.playerTower = new Tower(PLAYER_TOWER_X, GROUND_Y, { hillColor, enemy: false, towers }, sandbox.keepHealth, run.keepHealth);
+    // MOBA: both keeps start whole, at MOBA_KEEPS.health.
+    const playerKeep = this.moba ? { max: MOBA_KEEPS.health, now: MOBA_KEEPS.health } : { max: sandbox.keepHealth, now: run.keepHealth };
+    this.playerTower = new Tower(playerKeepX(), GROUND_Y, { hillColor, enemy: false, towers }, playerKeep.max, playerKeep.now);
     // Survival: the enemy has no keep (they come from beyond the field).
     // MOBA: both keeps are alike.
-    const enemyKeep = this.moba ? { max: sandbox.keepHealth, now: sandbox.keepHealth } : { max: enemyKeepHealth(sandbox.difficulty, sandbox.keepHealth), now: run.enemyKeepHealth };
+    const enemyKeep = this.moba ? playerKeep : { max: enemyKeepHealth(sandbox.difficulty, sandbox.keepHealth), now: run.enemyKeepHealth };
     this.enemyTower = new Tower(enemyKeepX(), GROUND_Y, { hillColor, enemy: true, absent: !!this.survivalSetup, towers: this.teams.filter((team) => team === 'red').length || 1 }, enemyKeep.max, enemyKeep.now);
     if (this.survivalSetup) {
       this.survival = new BattleSurvival(this.survivalSetup, this.background);
@@ -307,6 +334,7 @@ export class GameScene extends Scene {
       soldiers: this.soldiers,
       foes: this.foes,
       cameraX: () => this.camera.x,
+      mirrored: () => this.mirrored,
       hostSync: () => this.hostSync,
       guestSync: () => this.guestSync,
       ended: () => this.outcome.ended,
@@ -355,12 +383,15 @@ export class GameScene extends Scene {
         delete (window as unknown as { __towerGuard?: unknown }).__towerGuard;
       });
     }
-    this.weather = new BattleWeather(this.battleground, this.world, this.ctx.root, this.background, this.wind, {
+    // Rain, snow and sand fly over the view in their own layer, mirrored with the world.
+    this.screenLayer = new Container();
+    this.ctx.root.addChild(this.screenLayer);
+    this.weather = new BattleWeather(this.battleground, this.world, this.screenLayer, this.background, this.wind, {
       // After the level is decided lightning still flashes but no longer hurts anyone.
       // A co-op guest's own bolts are only for show (the host's strikes arrive as effects).
       groundStrike: (point) => (this.outcome.ended || this.role === 'guest' ? this.effects.lightningStrike(point) : this.combat.lightningStrike(point)),
       thunder: (at, close) => {
-        const mix = spatialMix(at.x, this.camera.x, viewWidth());
+        const mix = spatialMix(this.heardX(at.x), this.camera.x, viewWidth());
         this.ctx.sound.play('thunder', { ...mix, gain: mix.gain * (close ? 1 : 0.45) });
       },
     });
@@ -401,6 +432,7 @@ export class GameScene extends Scene {
     this.effects.update(deltaMs);
     this.damageNumbers.update(deltaMs);
     this.shots.update(deltaMs);
+    this.leftovers.update(deltaMs);
     if (this.guestSync) {
       this.guestSync.update(deltaMs);
     } else {
@@ -434,8 +466,27 @@ export class GameScene extends Scene {
   }
 
   /** Panned and faded by where it happens relative to the camera (co-op host: the guest hears it too). */
+  /** The battle view is mirrored for this player (settings drawer: his keep on the other side of the screen). */
+  private get mirrored(): boolean {
+    return isMirrored(this.ctx.session.keepSide, this.localPlayer.team === 'red');
+  }
+
+  /** Where a sound at world `x` is heard from: mirrored with the view, so it comes from where it shows. */
+  private heardX(x: number): number {
+    return this.mirrored ? this.camera.x + mirrorX(x - this.camera.x, viewWidth()) : x;
+  }
+
+  /** Puts the world under the camera (`position`: the world's offset), mirrored when the player wants his keep on the other side. */
+  private placeWorld(position: Vec2): void {
+    const mirrored = this.mirrored;
+    this.world.scale.x = mirrored ? -1 : 1;
+    this.world.position.set(mirrored ? mirrorX(position.x, viewWidth()) : position.x, position.y);
+    this.screenLayer.scale.x = mirrored ? -1 : 1;
+    this.screenLayer.x = mirrored ? viewWidth() : 0;
+  }
+
   private playSound(id: SoundId, at: Vec2): void {
-    this.ctx.sound.play(id, spatialMix(at.x, this.camera.x, viewWidth()));
+    this.ctx.sound.play(id, spatialMix(this.heardX(at.x), this.camera.x, viewWidth()));
     this.hostSync?.sound(id, at);
   }
 
@@ -456,6 +507,7 @@ export class GameScene extends Scene {
   }
 
   private updateHud(): void {
+    this.showPlayerHits();
     this.players.forEach((player) => player.bowman.setHealthRatio(player.health / (this.moba?.maxHealth(player) ?? this.ctx.session.sandbox.bowmanHealth)));
     this.ctx.ui.updateAllies({ slots: this.soldiers.slots(), order: this.soldiers.order, orderLabel: ALLY_ORDER_LABELS[this.soldiers.order] });
     this.ctx.ui.updateHud({
@@ -465,10 +517,26 @@ export class GameScene extends Scene {
       levelCount: runLevelCount(this.ctx.session.sandbox),
       clockMs: this.survival?.remainingMs,
       moba: this.moba?.purse(this.localPlayer),
+      health: {
+        keep: { now: this.localKeep.getHealth(), max: this.localKeep.maxHealth },
+        bowman: { now: this.localPlayer.health, max: this.moba?.maxHealth(this.localPlayer) ?? this.ctx.session.sandbox.bowmanHealth },
+        regenerating: this.moba?.regenerating(this.localPlayer),
+      },
     });
     this.ctx.ui.updateBanners(this.banners && this.ctx.session.bannerMarkers
       ? { player: this.banners.state('player'), enemy: this.banners.state('enemy') }
       : undefined);
+  }
+
+  /** Blue numbers over the bowmen who lost health since the last frame (host and guest alike: from the health they see). */
+  private showPlayerHits(): void {
+    this.players.forEach((player) => {
+      const before = this.shownHealth[player.index];
+      if (before !== undefined && player.health < before) {
+        this.damageNumbers.showPlayerHit(player.bowman, before - player.health);
+      }
+      this.shownHealth[player.index] = player.health;
+    });
   }
 
   /** The camera follows the local bowman and slides towards where he's aiming (BattleCamera); after a lost level the keys may move it freely. */
@@ -476,7 +544,7 @@ export class GameScene extends Scene {
     const pan = this.controls?.panInput;
     if (pan) {
       const position = this.camera.pan(deltaMs, pan.getMovementDirection(), pan.isSprintDown(), this.effects.cameraShake);
-      this.world.position.set(position.x, position.y);
+      this.placeWorld(position);
       return;
     }
     const { bowman, input } = this.localPlayer;
@@ -487,6 +555,6 @@ export class GameScene extends Scene {
       aimDirectionX: aim?.direction.x,
       aimLandingX: aim ? this.aimLandingX : undefined,
     }, this.effects.cameraShake);
-    this.world.position.set(position.x, position.y);
+    this.placeWorld(position);
   }
 }

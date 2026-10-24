@@ -10,7 +10,16 @@ export interface HudValues {
   clockMs?: number;
   /** MOBA: the local player's team, gold and his team's vault (the chip shows them instead of the level's progress). */
   moba?: { team: 'blue' | 'red'; gold: number; vault: number };
+  /** The local player's keep and bowman, as numbers beside the Level chip. */
+  health?: { keep: HealthValue; bowman: HealthValue; regenerating?: boolean };
 }
+
+export interface HealthValue {
+  now: number;
+  max: number;
+}
+
+const healthText = ({ now, max }: HealthValue): string => `${Math.ceil(Math.max(0, now))} / ${Math.round(max)}`;
 
 /** Up to this many enemies the level shows one pip each; bigger levels get a progress bar. */
 const MAX_PIPS = 14;
@@ -23,6 +32,10 @@ export class Hud {
   private readonly enemyCount: HTMLElement;
   private readonly clock: HTMLElement;
   private readonly purse: HTMLElement;
+  private readonly healthChip: HTMLElement;
+  private readonly keepHealth: HTMLElement;
+  private readonly bowmanHealth: HTMLElement;
+  private readonly regenIcon: HTMLElement;
   private pipCount = -1;
 
   public constructor(root: HTMLElement) {
@@ -39,9 +52,14 @@ export class Hud {
     this.enemyCount = query('[data-enemy-count]');
     this.clock = query('[data-survival-clock]');
     this.purse = query('[data-moba-purse]');
+    this.healthChip = query('[data-health-chip]');
+    this.keepHealth = query('[data-keep-health]');
+    this.bowmanHealth = query('[data-bowman-health]');
+    this.regenIcon = query('[data-regen-icon]');
   }
 
   public update(values: HudValues): void {
+    this.updateHealth(values.health);
     this.level.textContent = `${values.level} / ${values.levelCount}`;
     const { moba } = values;
     this.purse.hidden = !moba;
@@ -80,6 +98,22 @@ export class Hud {
     } else {
       this.levelBar.style.width = `${(values.defeatedEnemies / Math.max(1, values.totalEnemies)) * 100}%`;
     }
+  }
+
+  private updateHealth(health: HudValues['health']): void {
+    this.healthChip.hidden = !health;
+    if (!health) {
+      return;
+    }
+    const keep = healthText(health.keep);
+    const bowman = healthText(health.bowman);
+    if (this.keepHealth.textContent !== keep) {
+      this.keepHealth.textContent = keep;
+    }
+    if (this.bowmanHealth.textContent !== bowman) {
+      this.bowmanHealth.textContent = bowman;
+    }
+    this.regenIcon.hidden = !health.regenerating;
   }
 
 }

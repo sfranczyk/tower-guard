@@ -7,6 +7,7 @@ import type { ProjectileType } from '../types';
 import type { SoundManager } from '../audio/SoundManager';
 import type { DomUi } from '../ui/DomUi';
 import type { RoomLink } from '../net/Transport';
+import type { KeepSide } from './keepSide';
 
 export type SceneName = 'menu' | 'coop' | 'sandbox' | 'animationLab' | 'soundLab' | 'designLab' | 'game';
 
@@ -75,8 +76,10 @@ export interface GameSession {
   mobaLoadouts?: Loadout[];
   /** Shown once in the co-op lobby (e.g. "The host left"). */
   coopNotice?: string;
-  /** Draw the predicted arrow path while aiming (settings drawer, off by default). */
+  /** Draw the predicted arrow path while aiming (settings drawer, on by default). */
   showTrajectory: boolean;
+  /** Where this player's keep shows on screen (settings drawer; `right` mirrors the battle, core/keepSide.ts). */
+  keepSide: KeepSide;
   /** Draw the aim circles at the drag start too, not just at the bow (settings drawer, on by default). */
   showCursorCircle: boolean;
   /** Hit visibility: damage numbers over an enemy's head on an arrow hit (settings drawer, on by default). */

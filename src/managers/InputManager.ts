@@ -1,6 +1,7 @@
 import { EventEmitter } from 'eventemitter3';
 import type { Vec2 } from '../types';
 import { clamp } from '../utils/math';
+import { mirrorX } from '../core/keepSide';
 
 export interface AimInput {
   direction: Vec2;
@@ -31,6 +32,8 @@ export interface InputManagerConfig {
   eventTarget: HTMLElement;
   /** The view size in game px (its width changes with the window, see core/viewport.ts). */
   screenSize: () => Vec2;
+  /** The view is mirrored (core/keepSide.ts): pointer x and the walking keys are turned around to match. */
+  mirrored?: () => boolean;
 }
 
 const normalize = (vector: Vec2): Vec2 => {
@@ -53,6 +56,7 @@ export class InputManager extends EventEmitter {
   private readonly worldPointFromScreen: (point: Vec2) => Vec2;
   private readonly eventTarget: HTMLElement;
   private readonly screenSize: () => Vec2;
+  private readonly mirrored: () => boolean;
   private readonly keyState = new Set<string>();
   private dragStart: Vec2 | undefined;
   /** Where the drag started on screen: the pull is measured on screen, so a moving camera doesn't change the aim. */
@@ -128,6 +132,7 @@ export class InputManager extends EventEmitter {
     this.worldPointFromScreen = config.worldPointFromScreen;
     this.eventTarget = config.eventTarget;
     this.screenSize = config.screenSize;
+    this.mirrored = config.mirrored ?? (() => false);
     this.leftKey = config.leftKey ?? 'ArrowLeft';
     this.rightKey = config.rightKey ?? 'ArrowRight';
     this.upKey = config.upKey ?? 'KeyW';
@@ -152,7 +157,9 @@ export class InputManager extends EventEmitter {
   public getMovementDirection(): number {
     const left = this.isDown(this.leftKey) || this.isDown('KeyA');
     const right = this.isDown(this.rightKey) || this.isDown('KeyD');
-    return Number(right) - Number(left);
+    const direction = Number(right) - Number(left);
+    // Mirrored: the key towards the right of the screen walks towards the left of the world.
+    return this.mirrored() && direction !== 0 ? -direction : direction;
   }
 
   /** True once per press of the exit key (S). */
@@ -217,7 +224,8 @@ export class InputManager extends EventEmitter {
     const size = this.screenSize();
     const x = ((event.clientX - rect.left) / rect.width) * size.x;
     const y = ((event.clientY - rect.top) / rect.height) * size.y;
-    return { x, y };
+    // Mirrored: points as they would be in the unmirrored view, so drags and world points come out the right way.
+    return { x: this.mirrored() ? mirrorX(x, size.x) : x, y };
   }
 
   private handlePointerMove(event: PointerEvent): void {
