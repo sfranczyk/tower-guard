@@ -91,7 +91,7 @@ export interface CombatEvents {
   bowmanIgnited(bowman: Bowman): void;
   headshot(): void;
   /** A sound-worthy impact at a world position (the scene plays it). */
-  sound(id: SoundId, at: Vec2): void;
+  sound(id: SoundId, at: Vec2, heardBy?: number): void;
   /** A hostile arrow loosed by `shooter` (its damage depends on who shot it). */
   enemyShot(from: Vec2, angle: number, speed: number, shooter: EnemyType, power?: number): void;
   /** A MOBA blue archer's arrow (Arrow.MINION_ARROW_OWNER): it hits the enemies and their keep. */

@@ -17,7 +17,7 @@ export const battleCombatEvents = ({ ctx, team, shots, playSound, bowmanHit }: {
   ctx: GameContext;
   team: BattlePlayers;
   shots: BattleArrows;
-  playSound: (id: SoundId, at: Vec2) => void;
+  playSound: (id: SoundId, at: Vec2, heardBy?: number) => void;
   /** MOBA: a player was hit (healing waits, whose kill it would be). */
   bowmanHit?: (player: Player, hit: BowmanHit) => void;
 }): CombatEvents => ({
@@ -31,7 +31,7 @@ export const battleCombatEvents = ({ ctx, team, shots, playSound, bowmanHit }: {
   bowmanIgnited: (bowman) => team.status(team.of(bowman), 'You are on fire! Get out of the flames'),
   enemyShot: (from, angle, speed, shooter, power) => shots.fireEnemy(from, angle, speed, shooter, false, power),
   allyShot: (from, angle, speed, shooter, power) => shots.fireMinion(from, angle, speed, shooter, power),
-  sound: (id, at) => playSound(id, at),
+  sound: (id, at, heardBy) => playSound(id, at, heardBy),
   bowmanHealth: (bowman) => ({ health: team.of(bowman).health, max: ctx.session.sandbox.bowmanHealth }),
   bowmanHealed: (bowman, amount) => {
     const player = team.of(bowman);

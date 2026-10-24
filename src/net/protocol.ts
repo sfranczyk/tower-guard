@@ -164,7 +164,8 @@ export type GameEvent =
   /** A fire arrow put out in flight by the rain (systems/weatherArrows.ts): it flies on as a plain one. */
   | { e: 'douse'; id: number }
   | { e: 'fx'; kind: EffectKind; x: number; y: number; scale?: number }
-  | { e: 'sound'; id: SoundId; x: number; y: number }
+  /** `by`: only that player hears `id` (an ally curse), the others `soundFor`'s stand-in. */
+  | { e: 'sound'; id: SoundId; x: number; y: number; by?: number }
   | { e: 'knock'; player: number; fromX: number; strength: number }
   | { e: 'ignite'; player: number; gen?: number }
   /** A bowman falls: in this fall (stickmanFall), hit from `fromX`. */

@@ -87,7 +87,8 @@ export interface ArrowHitsWorld {
 export interface ArrowHitsEvents {
   bowmanDamaged(bowman: Bowman, amount: number, hit: BowmanHit): void;
   headshot(): void;
-  sound(id: SoundId, at: Vec2): void;
+  /** `heardBy`: only that player hears it (the others hear `soundFor`'s stand-in). */
+  sound(id: SoundId, at: Vec2, heardBy?: number): void;
 }
 
 /** The blasts and ice CombatSystem handles (they reach beyond the one arrow). */
@@ -441,9 +442,13 @@ export class ArrowHits {
       enemy.lame(HORSE_LEG.lameMs);
     }
     // Every arrow hit makes the enemy cry out (kills and headshots too); an explosive kill is just the blast. MOBA: one of
-    // his own team's soldiers curses the player instead (ALLY_CURSE_CHANCES).
+    // his own team's soldiers curses the player instead (ALLY_CURSE_CHANCES), heard by that player alone.
     if (!explosive || enemy.isAlive()) {
-      this.events.sound(this.isOwnSoldier(arrow, enemy) ? 'allyCurse' : 'groan', impactPoint);
+      if (this.isOwnSoldier(arrow, enemy)) {
+        this.events.sound('allyCurse', impactPoint, playerOf(arrow));
+      } else {
+        this.events.sound('groan', impactPoint);
+      }
     }
     hitEnemies.add(enemy);
     arrow.registerImpact();
