@@ -2,6 +2,7 @@ import { Container, Graphics } from 'pixi.js';
 import {
   GROUND_Y,
   MIN_SHOT_POWER,
+  MOBA_WORLD_WIDTH,
   PLAYER_TOWER_X,
   SHOW_HITBOX_DEBUG,
   SURVIVAL_WORLD_WIDTH,
@@ -113,11 +114,12 @@ export class GameScene extends Scene {
     const { sandbox, run } = ctx.session;
     // MOBA is fought on a battle map, whatever the setup's mode.
     this.survivalSetup = ctx.session.moba ? undefined : survivalLevel(sandbox, run.levelIndex);
-    // Before anything is laid out on it: a survival level's field is shorter (host and guest build the same).
-    useBattlefield(this.survivalSetup ? SURVIVAL_WORLD_WIDTH : WORLD_WIDTH);
+    // Before anything is laid out on it: a survival level's field is shorter, a MOBA one longer (host and guest build the same).
+    useBattlefield(ctx.session.moba ? MOBA_WORLD_WIDTH : this.survivalSetup ? SURVIVAL_WORLD_WIDTH : WORLD_WIDTH);
     // No view wider than the field: a big window letterboxes instead of showing ground nobody can play on.
     ctx.ui.limitViewWidth(worldWidth());
-    this.battleground = BATTLEGROUNDS[runBattleground(sandbox, run.levelIndex)];
+    // MOBA is always fought on the Green Meadow.
+    this.battleground = BATTLEGROUNDS[ctx.session.moba ? 'greenMeadow' : runBattleground(sandbox, run.levelIndex)];
     this.role = ctx.session.net?.role ?? 'solo';
     // MOBA online: the teams picked in the lobby (the host's; a guest gets them with `start`).
     const lobbyTeams = ctx.session.net?.role === 'host' ? ctx.session.net.teams : ctx.session.teams;
@@ -314,6 +316,7 @@ export class GameScene extends Scene {
       foesToggled: () => this.debugGraphics.clear(),
       onKeyDown: (handler) => this.listenWindow('keydown', handler),
       shop: this.moba?.shop,
+      moba: this.moba !== undefined,
       onExit: (dispose) => this.onExit(dispose),
     });
     const controls = this.controls;
@@ -370,7 +373,7 @@ export class GameScene extends Scene {
   /** The world keeps running after the level ends; the end screen just overlays it. */
   public update(deltaMs: number): void {
     this.controls?.releaseLeftGuests();
-    if (this.controls?.paused) {
+    if (this.controls?.frozen) {
       return;
     }
     this.foes.update(deltaMs);

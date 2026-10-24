@@ -50,3 +50,5 @@ everything under `ctx.root` on each switch. Scenes never touch the DOM: they cal
   minions on one clock, at their team's level: `spawn`), `BattleMoba` (gold for last hits, vaults, respawn, regen; host
   or alone) with `MobaUpgrades` (levels bought, their effects), `BattleShop` (I by your keep, `ui/ShopPanel.ts`).
   Red players use `enemyTower`; the end is `BattleOutcome.endMatch` / `showMobaEnd` (`mobaEndInfo`, per team).
+  Field `MOBA_WORLD_WIDTH` (2800), always Green Meadow; Esc only opens this player's menu, the battle runs on
+  (`BattleControls.frozen`), and the quiver is what was bought (no editing in the keep).

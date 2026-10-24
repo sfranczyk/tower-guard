@@ -15,7 +15,7 @@ export const OVERLAY_TEMPLATE = `
           <div class="menu-card">
             <button class="primary-button" data-start>Start game <span class="key-hint">Space</span></button>
             <button class="secondary-button" data-open-coop>Co-op online</button>
-            <button class="secondary-button" data-open-moba>MOBA · team battle</button>
+            <button class="secondary-button" data-open-moba>Online team battle</button>
             <button class="secondary-button" data-menu-settings>Settings</button>
             <button class="dev-toggle" data-dev-toggle aria-expanded="false">Dev tools ▾</button>
             <div class="dev-tools" data-dev-tools hidden>
@@ -33,7 +33,7 @@ export const OVERLAY_TEMPLATE = `
       </section>
       <section class="screen end-screen" data-pause hidden>
         <div class="end-card">
-          <h2>Paused</h2>
+          <h2 data-pause-title>Paused</h2>
           <p data-pause-copy>The battle waits for you.</p>
           <div class="pause-body">
           <div class="pause-quiver" data-pause-quiver></div>

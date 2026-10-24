@@ -28,6 +28,8 @@ export const MAX_RENDER_RESOLUTION = 4;
 export const WORLD_WIDTH = 2400;
 /** A survival level's field: there is no enemy keep, only the spot one would stand on (`enemyKeepX()`). */
 export const SURVIVAL_WORLD_WIDTH = 2100;
+/** A MOBA match's field (`?moba`): longer lanes between the two keeps. */
+export const MOBA_WORLD_WIDTH = 2800;
 /**
  * Width of the backdrop behind menus, labs and the lobby (centred in the view), and of one stretch of the hills
  * drawing, which repeats (mirrored every other time) across the battlefield.
