@@ -48,4 +48,12 @@ describe('ArrowCooldowns', () => {
     cooldowns.tick(ARROW_COOLDOWN.explosive * 500);
     expect(cooldowns.ready('explosive')).toBe(true);
   });
+
+  it('holds fewer charges where a limit is set (MOBA)', () => {
+    const cooldowns = new ArrowCooldowns();
+    cooldowns.limits = { vortex: 1 };
+    expect(cooldowns.max('vortex')).toBe(1);
+    cooldowns.spend('vortex');
+    expect(cooldowns.charges('vortex')).toBe(0);
+  });
 });
