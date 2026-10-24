@@ -117,12 +117,16 @@ export class BattleEnemies {
     });
   }
 
-  /** A new enemy walking (or flying) in, or (`place`) a mounted knight's rider thrown off where his horse stood. */
-  public spawn(type: EnemyType, place?: SpawnPlace): Foe {
+  /**
+   * A new enemy walking (or flying) in, or (`place`) a mounted knight's rider thrown off where his horse stood.
+   * `power`: MOBA minion upgrades, × its health and damage.
+   */
+  public spawn(type: EnemyType, place?: SpawnPlace, power = 1): Foe {
     const stats = getEnemyStats(type, 1);
     const enemy = isFlyingType(type)
-      ? new DragonEnemy(enemySpawnX(), stats.health, stats.speed, type)
-      : new Enemy(place?.x ?? enemySpawnX(), stats.health, stats.speed, 'bowman', type);
+      ? new DragonEnemy(enemySpawnX(), stats.health * power, stats.speed, type)
+      : new Enemy(place?.x ?? enemySpawnX(), stats.health * power, stats.speed, 'bowman', type);
+    enemy.power = power;
     enemy.visible = this.visible;
     this.list.push(enemy);
     this.spawned += 1;

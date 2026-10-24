@@ -40,4 +40,12 @@ describe('ArrowCooldowns', () => {
     expect(cooldowns.ready('fire')).toBe(false);
     expect(cooldowns.ready('fire', 250)).toBe(true);
   });
+
+  it('reloads faster with a quick draw', () => {
+    const cooldowns = new ArrowCooldowns();
+    cooldowns.pace = { explosive: 0.5 };
+    cooldowns.spend('explosive');
+    cooldowns.tick(ARROW_COOLDOWN.explosive * 500);
+    expect(cooldowns.ready('explosive')).toBe(true);
+  });
 });

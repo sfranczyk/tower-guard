@@ -11,7 +11,7 @@ import { groundReach, strafeAltitude, streamLength } from '../../systems/dragonS
 import { groundAt } from '../../systems/terrain';
 import { enemyArchetype } from '../../data/enemyKinds';
 import type { Bounds, Vec2 } from '../../types';
-import { drawHealthBar } from '../../rendering/healthBar';
+import { drawHealthBar, drawLevelStars } from '../../rendering/healthBar';
 import { boundsAround } from '../../utils/math';
 import { killerOf, type HitBox, type HitInfo } from '../enemy/enemyTypes';
 import { AfflictionLayer, type AfflictionNet } from '../AfflictionLayer';
@@ -54,6 +54,11 @@ export default class DragonEnemy extends Container {
   /** MOBA: as Enemy.onKilled. */
   public onKilled?: (by: number | undefined) => void;
   public lastHitBy?: number;
+  /** MOBA: as Enemy.power. */
+  public power = 1;
+  /** MOBA: its team's colour for the health bar (green-to-red otherwise). */
+  public barColor?: number;
+  private stars = 0;
   /** Co-op host: hears about every hit, to replay it on the guest's screen. */
   public netHooks?: { damaged(amount: number, hit?: HitInfo): void };
   public readonly isArcher = false;
@@ -69,6 +74,7 @@ export default class DragonEnemy extends Container {
   /** The fire stream, in front of the dragon and untinted by hits. */
   private readonly fireArt = new Graphics();
   private readonly healthBar = new Graphics();
+  private readonly starArt = new Graphics();
   /** Fire and frost (the dragon archer burns; neither dragon can be frozen, only chilled). */
   public readonly afflictions: AfflictionLayer;
   private readonly look: DragonLook;
@@ -105,6 +111,7 @@ export default class DragonEnemy extends Container {
     this.position.set(x, cruiseAltitude(this.timeMs, this.look.altitude));
     this.zIndex = 1;
     this.afflictions = new AfflictionLayer(kind);
+    this.healthBar.addChild(this.starArt);
     this.addChild(this.art, this.riderArt, this.afflictions.art, this.fireArt, this.healthBar);
     this.pose = this.redraw();
     this.drawHealthBar();
@@ -463,9 +470,19 @@ export default class DragonEnemy extends Container {
     return drawDragonWithRider(this.art, this.motion.wingMs, 'archer', DRAGON_ARCHER_LOOK, palette, { aim, tension: this.bow.tension }, undefined, this.motion.glide);
   }
 
+  /** MOBA: its level as stars under the health bar (level − 1). */
+  public setStars(count: number): void {
+    this.stars = count;
+    this.drawHealthBar();
+  }
+
   private drawHealthBar(): void {
     const { width, height, y } = HEALTH_BAR;
     this.healthBar.position.set(0, y);
-    drawHealthBar(this.healthBar, this.health / this.maxHealth, width, height);
+    const ratio = this.health / this.maxHealth;
+    drawHealthBar(this.healthBar, ratio, width, height, this.barColor !== undefined && ratio > 0.3 ? this.barColor : undefined);
+    if (this.stars > 0) {
+      drawLevelStars(this.starArt, this.stars, height / 2 + 6);
+    }
   }
 }

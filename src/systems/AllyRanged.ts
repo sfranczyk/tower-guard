@@ -25,7 +25,7 @@ export interface AllyRangedWorld {
 
 export interface AllyRangedEvents {
   /** An arrow loosed by one of the player's side's archers (a MOBA minion): it hits the enemies and their keep. */
-  allyShot(from: Vec2, angle: number, speed: number, shooter: UnitType): void;
+  allyShot(from: Vec2, angle: number, speed: number, shooter: UnitType, power?: number): void;
 }
 
 /** Something the blue side shoots: a red minion or a red bowman. */
@@ -58,7 +58,7 @@ export class AllyRanged {
       const angle = this.aimAngle(archer, release, aimPoint, speed, deltaMs);
       if (archer.aimBow(angle, deltaMs)) {
         const spread = (Math.random() * 2 - 1) * ENEMY_ATTACK.archerSpread;
-        this.events.allyShot(archer.getBowReleasePoint(), angle + spread, speed * (0.97 + Math.random() * 0.06), archer.kind);
+        this.events.allyShot(archer.getBowReleasePoint(), angle + spread, speed * (0.97 + Math.random() * 0.06), archer.kind, archer.power);
       }
     }
     archer.updateAnimation(deltaMs, archer.isMoving());
@@ -85,7 +85,7 @@ export class AllyRanged {
       const moving = dragon.flightSpeed;
       if (dragon.aim(angle, deltaMs, 1 + (DRAGON_FLIGHT.movingShotPace - 1) * moving)) {
         const spread = (Math.random() * 2 - 1) * ENEMY_ATTACK.archerSpread * (1 + (DRAGON_FLIGHT.movingSpread - 1) * moving);
-        this.events.allyShot(dragon.getBowReleasePoint(), angle + spread, speed * (0.97 + Math.random() * 0.06), dragon.kind);
+        this.events.allyShot(dragon.getBowReleasePoint(), angle + spread, speed * (0.97 + Math.random() * 0.06), dragon.kind, dragon.power);
       }
     }
     dragon.updateAnimation(deltaMs);

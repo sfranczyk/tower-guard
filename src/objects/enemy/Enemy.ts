@@ -98,6 +98,8 @@ export default class Enemy extends Container {
   public onKilled?: (by: number | undefined) => void;
   /** The player who hit it last (a burn, fall or shatter after his arrow counts as his). */
   public lastHitBy?: number;
+  /** MOBA: × on its health (given at spawn) and on the damage it deals (minion upgrades, data/upgrades.ts). */
+  public power = 1;
   public onUnhorsed?: (x: number, hit: HitInfo, off: RiderOff) => Enemy | undefined;
 
   public constructor(

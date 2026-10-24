@@ -210,7 +210,7 @@ export const isPresent = (session: GameSession, index: number): boolean => !sess
 
 /** The quiver player `index` fights with: their own in co-op, else the battle setup's. */
 export const loadoutOf = (session: GameSession, index: number): Loadout =>
-  session.net?.loadouts[index] ?? session.sandbox.loadout;
+  session.mobaLoadouts?.[index] ?? session.net?.loadouts[index] ?? session.sandbox.loadout;
 
 /** Leaves co-op on purpose: closes the links (the others are told) and goes back to playing alone. */
 export const leaveCoop = (ctx: GameContext): void => {

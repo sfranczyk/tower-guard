@@ -47,6 +47,35 @@
         .tuning-panel.collapsed { bottom: auto; width: auto; padding: 0; background: none; box-shadow: none; }
         .tuning-panel.collapsed > :not(.tuning-tab), .tuning-panel:not(.collapsed) > .tuning-tab { display: none; }
         .tuning-tab { padding: 8px 12px; border-radius: 12px; background: var(--panel); color: var(--ink); font-family: var(--display); font-weight: 600; font-size: 15px; box-shadow: 0 4px 0 var(--panel-edge), 0 8px 14px rgba(0, 0, 0, .2); }
+        /* MOBA shop (press I by your keep, ui/ShopPanel.ts): a panel over the canvas's left side; the battle goes on. */
+        .shop-panel { position: absolute; top: 8px; left: 8px; bottom: 8px; z-index: 15; width: 410px; max-width: calc(100% - 16px); display: flex; flex-direction: column; gap: 8px; padding: 12px; border-radius: 16px; background: var(--panel); color: var(--ink); line-height: 1.3; font-size: 13px; box-shadow: 0 5px 0 var(--panel-edge), 0 18px 40px rgba(0, 0, 0, .3); }
+        .shop-panel[hidden] { display: none; }
+        .shop-panel.right { left: auto; right: 8px; }
+        .shop-content { display: flex; flex-direction: column; gap: 8px; min-height: 0; flex: 1; }
+        .shop-detail { margin: 0; min-height: 34px; padding: 6px 8px; border-radius: 10px; background: #2c3a38; color: #fff; font-size: 12px; }
+        .shop-header { display: flex; align-items: center; gap: 10px; padding-left: 8px; border-left: 5px solid #5fb4ff; }
+        .shop-header.shop-red { border-left-color: #e0524a; }
+        .shop-header h2 { margin: 0; font-family: var(--display); font-size: 20px; }
+        .shop-gold { margin-left: auto; font-weight: 700; color: #b8860b; font-size: 15px; }
+        .shop-tabs { display: flex; gap: 6px; }
+        .shop-vault { display: flex; align-items: center; gap: 6px; padding: 8px; border-radius: 12px; background: var(--panel-sunk); }
+        .shop-vault span { margin-right: auto; }
+        .shop-vault b { color: #b8860b; }
+        .shop-vault .secondary-button { padding: 5px 9px; font-size: 12px; }
+        .shop-body { overflow-y: auto; min-height: 0; padding-right: 2px; }
+        .shop-body h3 { margin: 8px 0 6px; font-family: var(--display); font-size: 15px; color: var(--ink-soft); }
+        .shop-chain { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin-bottom: 6px; }
+        .shop-arrow { color: var(--ink-soft); font-weight: 700; }
+        .shop-button { display: flex; flex-direction: column; align-items: center; min-width: 70px; padding: 5px 8px; border: 0; border-radius: 10px; background: var(--panel-sunk); color: var(--ink); font: inherit; font-size: 12px; box-shadow: 0 3px 0 var(--panel-edge); cursor: pointer; }
+        .shop-button.buyable { background: var(--gold); box-shadow: 0 3px 0 var(--gold-edge); color: var(--gold-ink); }
+        .shop-button.buyable:hover { filter: brightness(1.05); }
+        .shop-button.buyable:active { transform: translateY(2px); }
+        .shop-button.owned { background: var(--good); color: #fff; box-shadow: 0 3px 0 #3f7d52; cursor: default; }
+        .shop-button.poor, .shop-button.locked { cursor: not-allowed; }
+        .shop-button.locked { opacity: .55; }
+        .shop-button.poor .shop-price { color: var(--bad); }
+        .shop-label { font-weight: 600; white-space: nowrap; }
+        .shop-price { font-size: 11px; font-weight: 700; }
         .tuning-header { display: flex; align-items: center; justify-content: space-between; }
         .tuning-header h2 { font-family: var(--display); font-weight: 600; font-size: 20px; }
         .tuning-header .round-button { width: 32px; height: 32px; font-size: 20px; background: var(--panel-sunk); box-shadow: 0 3px 0 var(--panel-edge); }

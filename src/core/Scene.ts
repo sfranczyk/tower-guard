@@ -69,6 +69,8 @@ export interface GameSession {
   moba?: boolean;
   /** MOBA: each player's team, by player index (the lobby's pick; none: alternating, data/moba `mobaTeamOf`). */
   teams?: Team[];
+  /** MOBA: each player's quiver, the normal arrow and the ones bought (it replaces the battle setup's). */
+  mobaLoadouts?: Loadout[];
   /** Shown once in the co-op lobby (e.g. "The host left"). */
   coopNotice?: string;
   /** Draw the predicted arrow path while aiming (settings drawer, off by default). */

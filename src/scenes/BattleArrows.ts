@@ -29,6 +29,8 @@ export interface BattleArrowsDeps {
   readonly battleground: Battleground;
   /** The level's wind now (px/s² on a normal arrow; an arrow keeps the wind it was loosed in). */
   wind(): number;
+  /** MOBA: × on the damage of `owner`'s arrows of `type` (the shop's normal-arrow levels). */
+  arrowPower?(owner: number, type: ProjectileType): number | undefined;
   /** How many of the latest shots keep their trail (settings drawer). */
   arrowTrails(): number;
   effects(): EffectsSystem;
@@ -98,6 +100,7 @@ export class BattleArrows {
       arrow.scale.set(FRAGMENT_SCALE);
     }
     arrow.owner = owner;
+    arrow.power = this.deps.arrowPower?.(owner, type);
     arrow.wind = this.deps.wind();
     arrow.fire(angle, speed, type);
     // The weather may get it in flight (the host decides; a guest's copy hears of it).
@@ -150,7 +153,7 @@ export class BattleArrows {
   }
 
   /** An enemy archer's arrow: reddish, hurts the bowman (or the keep while he hides); `silent` for a co-op guest's copy. */
-  public fireEnemy(from: Vec2, angle: number, speed: number, shooter: EnemyType, silent = false): Arrow {
+  public fireEnemy(from: Vec2, angle: number, speed: number, shooter: EnemyType, silent = false, power = 1): Arrow {
     const trail = new Graphics();
     trail.zIndex = 1;
     this.deps.world.addChild(trail);
@@ -161,6 +164,7 @@ export class BattleArrows {
     // Enemy arrows fly clean: no trail to keep, so a gone one can be dropped at once.
     arrow.hideTrail();
     arrow.shooter = shooter;
+    arrow.power = power;
     this.list.push(arrow);
     this.deps.world.addChild(arrow);
     this.deps.hostSync()?.trackArrow(arrow, { owner: -1, type: 'normal', from, angle, speed, hostile: true, shooter });
@@ -171,7 +175,7 @@ export class BattleArrows {
   }
 
   /** A MOBA blue archer's arrow (`MINION_ARROW_OWNER`): flies clean like an enemy's, hits only the enemies and their keep. */
-  public fireMinion(from: Vec2, angle: number, speed: number, shooter: UnitType): Arrow {
+  public fireMinion(from: Vec2, angle: number, speed: number, shooter: UnitType, power = 1): Arrow {
     const trail = new Graphics();
     trail.zIndex = 1;
     this.deps.world.addChild(trail);
@@ -181,6 +185,7 @@ export class BattleArrows {
     arrow.fire(angle, speed, 'normal');
     arrow.hideTrail();
     arrow.shooter = shooter;
+    arrow.power = power;
     this.list.push(arrow);
     this.deps.world.addChild(arrow);
     this.deps.playSound('bowShot', from);

@@ -29,8 +29,8 @@ export const battleCombatEvents = ({ ctx, team, shots, playSound, bowmanHit }: {
   },
   headshot: () => ctx.ui.setStatus(`Headshot! ×${ARROWS.headshotMultiplier} damage`),
   bowmanIgnited: (bowman) => team.status(team.of(bowman), 'You are on fire! Get out of the flames'),
-  enemyShot: (from, angle, speed, shooter) => shots.fireEnemy(from, angle, speed, shooter),
-  allyShot: (from, angle, speed, shooter) => shots.fireMinion(from, angle, speed, shooter),
+  enemyShot: (from, angle, speed, shooter, power) => shots.fireEnemy(from, angle, speed, shooter, false, power),
+  allyShot: (from, angle, speed, shooter, power) => shots.fireMinion(from, angle, speed, shooter, power),
   sound: (id, at) => playSound(id, at),
   bowmanHealth: (bowman) => ({ health: team.of(bowman).health, max: ctx.session.sandbox.bowmanHealth }),
   bowmanHealed: (bowman, amount) => {

@@ -23,7 +23,7 @@ import type Bowman from '../objects/bowman/Bowman';
 import DragonEnemy from '../objects/dragon/DragonEnemy';
 import type Enemy from '../objects/enemy/Enemy';
 import type Tower from '../objects/Tower';
-import type { ProjectileType, UnitType, Vec2 } from '../types';
+import type { ProjectileType, Vec2 } from '../types';
 import type { ArrowMagic } from './ArrowMagic';
 import { isMagicArrow } from './ArrowMagic';
 import type { BowmanHit } from './bowmanDeath';
@@ -56,7 +56,8 @@ interface BowmanArrowHit {
 }
 
 /** Damage of a hostile arrow by who shot it (archer arrows if unknown). */
-const arrowDamage = (shooter: UnitType | undefined, target: DamageTarget) => enemyDamage(shooter ?? 'hunter', 'arrow', target);
+/** An enemy's or minion's arrow: its shooter's damage, × the shooter's power (MOBA upgrades). */
+const arrowDamage = (arrow: Arrow, target: DamageTarget): number => rollDamage(enemyDamage(arrow.shooter ?? 'hunter', 'arrow', target)) * (arrow.power ?? 1);
 
 /** The player who loosed `arrow` (none: an enemy's or a minion's). */
 const playerOf = (arrow: Arrow): number | undefined => (arrow.hostile || arrow.owner < 0 ? undefined : arrow.owner);
@@ -147,7 +148,7 @@ export class ArrowHits {
       const towerHit = playerTower.hitTime(start, travel);
       if (towerHit !== undefined) {
         const impact = pointAlong(start, travel, towerHit);
-        playerTower.takeDamage(rollDamage(arrowDamage(arrow.shooter, 'keep')) * this.world.enemyEdge.damage, impact);
+        playerTower.takeDamage(arrowDamage(arrow, 'keep') * this.world.enemyEdge.damage, impact);
         arrow.stickToWall(impact, WALL_SINK);
       }
       return;
@@ -160,7 +161,7 @@ export class ArrowHits {
       .sort((first, second) => first.time - second.time)[0];
     if (hit) {
       // He falls as if shot from where the arrow came from.
-      this.events.bowmanDamaged(hit.bowman, rollDamage(arrowDamage(arrow.shooter, 'bowman')) * this.world.enemyEdge.damage, { cause: 'arrow', fromX: start.x });
+      this.events.bowmanDamaged(hit.bowman, arrowDamage(arrow, 'bowman') * this.world.enemyEdge.damage, { cause: 'arrow', fromX: start.x });
       const point = pointAlong(start, travel, hit.time);
       effects.bloodBurst(point);
       this.events.sound('arrowFlesh', point);
@@ -171,7 +172,7 @@ export class ArrowHits {
   /** An enemy's arrow in one of the player's soldiers: his plate turns a body hit (sparks), else blood; it falls away. */
   private hostileHitAlly(arrow: Arrow, ally: Foe, headshot: boolean, point: Vec2, fromX: number): void {
     const armor = headshot ? 1 : enemyArmor(ally.kind);
-    const damage = rollDamage(arrowDamage(arrow.shooter, 'bowman')) * this.world.enemyEdge.damage * armor * (headshot ? ARROWS.headshotMultiplier : 1);
+    const damage = arrowDamage(arrow, 'bowman') * this.world.enemyEdge.damage * armor * (headshot ? ARROWS.headshotMultiplier : 1);
     if (armor < 1) {
       this.world.effects.impact(point);
     } else {
@@ -251,7 +252,7 @@ export class ArrowHits {
     }
     // Chips fly off where it lands (a minion's arrow barely scratches it, as the enemy archers' do ours).
     const minion = arrow.owner === MINION_ARROW_OWNER && arrow.shooter;
-    tower.takeDamage(minion ? rollDamage(enemyDamage(minion, 'arrow', 'keep')) : ENEMY_TOWER_DAMAGE * (explosive ? KEEP_BLAST_FACTOR : 1), impactPoint);
+    tower.takeDamage(minion ? arrowDamage(arrow, 'keep') : ENEMY_TOWER_DAMAGE * (explosive ? KEEP_BLAST_FACTOR : 1) * (arrow.power ?? 1), impactPoint);
     if (explosive) {
       this.actions.explode(impactPoint, activeEnemies, undefined, undefined, undefined, playerOf(arrow));
       arrow.deactivate();
@@ -265,7 +266,7 @@ export class ArrowHits {
   /** What a player arrow's hit deals (an enemy, or a bowman with friendly fire). */
   private static arrowHitDamage(arrow: Arrow, headshot: boolean): number {
     if (arrow.owner === MINION_ARROW_OWNER && arrow.shooter) {
-      return rollDamage(enemyDamage(arrow.shooter, 'arrow', 'bowman')) * (headshot ? ARROWS.headshotMultiplier : 1);
+      return arrowDamage(arrow, 'bowman') * (headshot ? ARROWS.headshotMultiplier : 1);
     }
     if (arrow.type === 'explosive') {
       return explosionDamage(0);
@@ -277,7 +278,7 @@ export class ArrowHits {
     const factor = arrow.type === 'piercing'
       ? Math.pow(ARROWS.piercingMultiplier, arrow.impacts)
       : arrow.type === 'fragment' ? SHRAPNEL_FRAGMENT_DAMAGE : MAGIC_HIT_DAMAGE[arrow.type] ?? 1;
-    return rollArrowDamage(headshot) * factor;
+    return rollArrowDamage(headshot) * factor * (arrow.power ?? 1);
   }
 
   /**

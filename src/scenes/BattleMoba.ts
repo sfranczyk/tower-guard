@@ -1,11 +1,13 @@
 import { MOBA_PLAYERS } from '../config';
 import type { GameContext } from '../core/Scene';
 import type { MinionRole, Team } from '../data/moba';
+import type { ShopFunds } from '../data/shopView';
 import type { DamageNumbers } from '../objects/DamageNumbers';
 import type { BowmanHit } from '../systems/bowmanDeath';
 import type { Foe } from '../systems/combatGeometry';
 import { MobaEconomy, freshRecovery, noteHit, regenStep, type Recovery, type Victim } from '../systems/mobaEconomy';
 import type { BattlePlayers } from './BattlePlayers';
+import { MobaUpgrades } from './MobaUpgrades';
 import { playerStartX, type Player } from './PlayerControl';
 
 export interface BattleMobaDeps {
@@ -13,6 +15,8 @@ export interface BattleMobaDeps {
   team: BattlePlayers;
   teams: readonly Team[];
   popups(): DamageNumbers;
+  /** `player` bought something or moved vault gold: his HUD, quiver and shop redraw. */
+  changed?(player: Player): void;
 }
 
 /**
@@ -22,19 +26,21 @@ export interface BattleMobaDeps {
  */
 export class BattleMoba {
   public readonly economy: MobaEconomy;
+  public readonly upgrades: MobaUpgrades;
   private readonly recovery: Recovery[];
   /** Per player: the player who hit him last, and how (a burn after a fire arrow counts as the archer's kill). */
   private readonly lastHits: Array<BowmanHit | undefined>;
 
   public constructor(private readonly deps: BattleMobaDeps) {
     this.economy = new MobaEconomy(deps.teams);
+    this.upgrades = new MobaUpgrades({ ctx: deps.ctx, team: deps.team, economy: this.economy, changed: (player) => deps.changed?.(player) });
     this.recovery = deps.teams.map(freshRecovery);
     this.lastHits = deps.teams.map(() => undefined);
   }
 
   /** Full health of `player` (the shop's Max HP raises it). */
-  public maxHealth(_player: Player): number {
-    return this.deps.ctx.session.sandbox.bowmanHealth;
+  public maxHealth(player: Player): number {
+    return this.upgrades.maxHealth(player);
   }
 
   /** A lane minion of `team` just came: its last hit pays the player who lands it. */
@@ -80,7 +86,7 @@ export class BattleMoba {
         return;
       }
       if (!player.bowman.isDead) {
-        player.health = Math.min(this.maxHealth(player), player.health + regenStep(recovery, deltaMs));
+        player.health = Math.min(this.maxHealth(player), player.health + regenStep(recovery, deltaMs, MOBA_PLAYERS.regenAmount + this.upgrades.regenBonus(player)));
       }
     });
   }
@@ -89,6 +95,25 @@ export class BattleMoba {
   public respawnIn(player: Player): number | undefined {
     const ms = this.recovery[player.index].respawnMs;
     return ms === undefined ? undefined : Math.ceil(ms / 1000);
+  }
+
+  /** What `player` has for the shop: his levels and purse, his team's levels and vault. */
+  public shopFunds(player: Player): ShopFunds {
+    return {
+      player: { levels: this.upgrades.playerLevels[player.index], gold: this.economy.gold[player.index] },
+      team: { levels: this.upgrades.teamLevels[player.team], gold: this.economy.vault[player.team] },
+    };
+  }
+
+  /** `player` buys the next level of upgrade `id`: why not, or undefined when bought. */
+  public buy(player: Player, id: string): string | undefined {
+    return this.upgrades.buy(player, id);
+  }
+
+  /** `player` puts MOBA_PLAYERS.vaultStep of his gold in his team's vault, or takes it out. */
+  public moveVault(player: Player, deposit: boolean): void {
+    this.economy.moveVault(player.index, deposit);
+    this.deps.changed?.(player);
   }
 
   /** The HUD's purse line for this browser's player. */

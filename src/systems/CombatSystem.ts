@@ -93,9 +93,9 @@ export interface CombatEvents {
   /** A sound-worthy impact at a world position (the scene plays it). */
   sound(id: SoundId, at: Vec2): void;
   /** A hostile arrow loosed by `shooter` (its damage depends on who shot it). */
-  enemyShot(from: Vec2, angle: number, speed: number, shooter: EnemyType): void;
+  enemyShot(from: Vec2, angle: number, speed: number, shooter: EnemyType, power?: number): void;
   /** A MOBA blue archer's arrow (Arrow.MINION_ARROW_OWNER): it hits the enemies and their keep. */
-  allyShot(from: Vec2, angle: number, speed: number, shooter: UnitType): void;
+  allyShot(from: Vec2, angle: number, speed: number, shooter: UnitType, power?: number): void;
   /** `bowman`'s health and his full health (the medic bandages him). */
   bowmanHealth(bowman: Bowman): { health: number; max: number };
   bowmanHealed(bowman: Bowman, amount: number): void;

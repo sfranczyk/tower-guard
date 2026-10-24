@@ -1,5 +1,5 @@
 import { Graphics } from 'pixi.js';
-import { drawHealthBar } from '../../rendering/healthBar';
+import { drawHealthBar, drawLevelStars } from '../../rendering/healthBar';
 
 /** Health bar size and placement in container space (the container is drawn at 2/3 scale): just under the feet. */
 const HEALTH_BAR = { width: 30, height: 4, belowFeet: 15 };
@@ -16,6 +16,10 @@ export class EnemyBars {
   public readonly health = new Graphics();
   private readonly horse?: Graphics;
   private readonly mana?: Graphics;
+  /** MOBA: the minion's level (stars under the bars). */
+  private readonly stars = new Graphics();
+  /** MOBA: its team's colour instead of green-to-red (red minions), as the soldiers' blue. */
+  public teamColor?: number;
 
   public constructor(size: number, horse: boolean, mana: boolean, private readonly ally = false) {
     if (horse) {
@@ -27,16 +31,23 @@ export class EnemyBars {
       this.mana = new Graphics();
       this.health.addChild(this.mana);
     }
+    this.health.addChild(this.stars);
     // The health bar keeps its normal size on big enemies.
     this.health.scale.set(1 / size);
   }
 
   /** Dark track, fill from green (full) through yellow to red (low; a soldier's blue until low); the horse's in its own colour. */
   public draw(ratio: number, horseRatio?: number): void {
-    drawHealthBar(this.health, ratio, HEALTH_BAR.width, HEALTH_BAR.height, this.ally && ratio > ALLY_BAR.lowBelow ? ALLY_BAR.color : undefined);
+    const fixed = this.teamColor ?? (this.ally ? ALLY_BAR.color : undefined);
+    drawHealthBar(this.health, ratio, HEALTH_BAR.width, HEALTH_BAR.height, fixed !== undefined && ratio > ALLY_BAR.lowBelow ? fixed : undefined);
     if (this.horse && horseRatio !== undefined) {
       drawHealthBar(this.horse, horseRatio, HEALTH_BAR.width, HORSE_BAR.height, HORSE_BAR.color);
     }
+  }
+
+  /** MOBA: `count` stars under the bars (a minion's level − 1). */
+  public setStars(count: number): void {
+    drawLevelStars(this.stars, count, HEALTH_BAR.height / 2 + 6 + (this.horse || this.mana ? 5 : 0));
   }
 
   /** The priest's mana under the health bar; greyed while drained (it can't cast until it refills). */

@@ -196,7 +196,7 @@ export class AllyAI {
         if (!weaponReaches(ally.x, ally.figure.facing, foe.x, ally.strikeReach)) {
           return;
         }
-        const damage = rollDamage(enemyDamage(ally.kind, 'melee', 'bowman'));
+        const damage = rollDamage(enemyDamage(ally.kind, 'melee', 'bowman')) * ally.power;
         if (!('kind' in foe)) {
           if (!foe.isDead && !foe.isInTower) {
             this.world.effects.bloodBurst({ x: foe.x, y: foe.y - 30 });
@@ -218,7 +218,7 @@ export class AllyAI {
     if (ally.x >= tower.x - MOBA_LANES.keepReach - IN_REACH && ally.canAttack()) {
       ally.faceTowards(tower.x);
       ally.playAttackAnimation(() => {
-        tower.takeDamage(rollDamage(enemyDamage(ally.kind, 'melee', 'keep')), { x: tower.x - TOWER_HALF_WIDTH + 4, y: ally.y - 30 * ally.scale.y });
+        tower.takeDamage(rollDamage(enemyDamage(ally.kind, 'melee', 'keep')) * ally.power, { x: tower.x - TOWER_HALF_WIDTH + 4, y: ally.y - 30 * ally.scale.y });
       });
     }
   }
@@ -246,7 +246,7 @@ export class AllyAI {
     ally.faceTowards(foe.x);
     ally.playAttackAnimation(() => {
       if (foe.isAlive() && weaponReaches(ally.x, ally.figure.facing, foe.x, ally.strikeReach)) {
-        meleeBlow(foe, rollDamage(enemyDamage(ally.kind, 'melee', 'bowman')), ally.x, this.world.effects);
+        meleeBlow(foe, rollDamage(enemyDamage(ally.kind, 'melee', 'bowman')) * ally.power, ally.x, this.world.effects);
       }
     });
   }

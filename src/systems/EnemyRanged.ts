@@ -64,7 +64,7 @@ export class EnemyRanged {
       const angle = this.aimAngle(enemy, enemy.getBowReleasePoint(), aimPoint, speed, deltaMs);
       if (enemy.aimBow(angle, deltaMs)) {
         const spread = (Math.random() * 2 - 1) * ENEMY_ATTACK.archerSpread * this.world.enemyEdge.aimSpread;
-        this.events.enemyShot(enemy.getBowReleasePoint(), (angle) + spread, speed * (0.97 + Math.random() * 0.06), enemy.kind as EnemyType);
+        this.events.enemyShot(enemy.getBowReleasePoint(), (angle) + spread, speed * (0.97 + Math.random() * 0.06), enemy.kind as EnemyType, enemy.power);
       }
     }
     enemy.updateAnimation(deltaMs, enemy.isMoving());
@@ -100,7 +100,7 @@ export class EnemyRanged {
         const turbulence = dragon.afflictions.isTurbulent ? DRAGON_TURBULENCE_SPREAD : 1;
         const flight = 1 + (DRAGON_FLIGHT.movingSpread - 1) * moving;
         const spread = (Math.random() * 2 - 1) * ENEMY_ATTACK.archerSpread * this.world.enemyEdge.aimSpread * turbulence * flight;
-        this.events.enemyShot(dragon.getBowReleasePoint(), (angle) + spread, speed * (0.97 + Math.random() * 0.06), 'dragon');
+        this.events.enemyShot(dragon.getBowReleasePoint(), (angle) + spread, speed * (0.97 + Math.random() * 0.06), 'dragon', dragon.power);
       }
     }
     dragon.updateAnimation(deltaMs);

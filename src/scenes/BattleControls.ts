@@ -39,6 +39,8 @@ export interface BattleControlsDeps {
   /** O hid or showed the enemies (the debug hitboxes are redrawn). */
   foesToggled: () => void;
   onKeyDown: (handler: (event: KeyboardEvent) => void) => void;
+  /** MOBA: the shop, which I opens by the keep instead of the settings drawer (Esc closes it). */
+  shop?: { readonly open: boolean; toggle(): void; close(): void };
   onExit: (dispose: () => void) => void;
 }
 
@@ -221,7 +223,9 @@ export class BattleControls {
     this.deps.onKeyDown((event) => {
       const ended = this.deps.ended();
       if (event.code === 'Escape') {
-        if (this.optionsVisible) {
+        if (this.deps.shop?.open) {
+          this.deps.shop.close();
+        } else if (this.optionsVisible) {
           this.setOptionsVisible(false);
         } else if (this.viewing) {
           ui.dialogs.setEndViewing(false);
@@ -231,7 +235,11 @@ export class BattleControls {
         return;
       }
       if (event.code === 'KeyI') {
-        this.toggleOptions();
+        if (this.deps.shop && !this.paused && !ended) {
+          this.deps.shop.toggle();
+        } else {
+          this.toggleOptions();
+        }
       }
       if (this.paused) {
         return;
