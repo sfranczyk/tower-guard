@@ -168,8 +168,8 @@ export class HostSync {
     };
   }
 
-  public sound(id: SoundId, at: Vec2): void {
-    this.push({ e: 'sound', id, x: round(at.x), y: round(at.y) });
+  public sound(id: SoundId, at: Vec2, heardBy?: number): void {
+    this.push({ e: 'sound', id, x: round(at.x), y: round(at.y), ...(heardBy === undefined ? {} : { by: heardBy }) });
   }
 
   public update(deltaMs: number): void {

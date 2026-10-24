@@ -10,6 +10,7 @@ import {
 } from '../config';
 import type { SoundId } from '../audio/SoundManager';
 import { spatialMix } from '../audio/spatial';
+import { soundFor } from '../audio/soundCatalog';
 import { Scene, isMultiplayer, type GameContext } from '../core/Scene';
 import { isMirrored, mirrorX } from '../core/keepSide';
 import { viewWidth } from '../core/viewport';
@@ -485,9 +486,10 @@ export class GameScene extends Scene {
     this.screenLayer.x = mirrored ? viewWidth() : 0;
   }
 
-  private playSound(id: SoundId, at: Vec2): void {
-    this.ctx.sound.play(id, spatialMix(this.heardX(at.x), this.camera.x, viewWidth()));
-    this.hostSync?.sound(id, at);
+  /** `heardBy`: a sound for that player alone (the others get `soundFor`'s stand-in, here and on the guests). */
+  private playSound(id: SoundId, at: Vec2, heardBy?: number): void {
+    this.ctx.sound.play(soundFor(id, heardBy, this.localIndex), spatialMix(this.heardX(at.x), this.camera.x, viewWidth()));
+    this.hostSync?.sound(id, at, heardBy);
   }
 
   /**

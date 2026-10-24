@@ -1,4 +1,5 @@
 import type { SoundId } from '../audio/SoundManager';
+import { soundFor } from '../audio/soundCatalog';
 import type { RecordingInput } from '../input/PlayerInput';
 import type { AimInput } from '../managers/InputManager';
 import type Arrow from '../objects/Arrow';
@@ -264,7 +265,7 @@ export class GuestSync {
         break;
       }
       case 'sound':
-        this.world.playSound(event.id, { x: event.x, y: event.y });
+        this.world.playSound(soundFor(event.id, event.by, this.world.localIndex), { x: event.x, y: event.y });
         break;
       case 'knock':
         players[event.player]?.bowman.knockBack(event.fromX, event.strength);

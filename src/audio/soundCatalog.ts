@@ -51,3 +51,10 @@ export const MUSIC_INFO = {
   description: 'Plays everywhere. The intro plays once, then the track loops; the seam is crossfaded inside the file.',
   source: 'resonant-drone.mp3 (Suno)',
 } as const;
+
+/**
+ * What player `localIndex` hears of a sound meant for `heardBy` alone (an ally curse is for the shooter's ears; the
+ * others hear the plain groan). Without `heardBy` everyone hears `id`.
+ */
+export const soundFor = (id: SoundId, heardBy: number | undefined, localIndex: number): SoundId =>
+  heardBy === undefined || heardBy === localIndex ? id : 'groan';

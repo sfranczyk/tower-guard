@@ -50,7 +50,7 @@ dialog's "Main menu" leaves the room.
   bowman `die` event carries the fall; exit-keep press (`PlayerInput.isExitPressed`); mid-level wind shift `wind` event; survival clock `Snapshot.clock` (fleeing enemies follow from positions).
 - **MOBA**: the lobby's teams (`NetLink.teams`, roster `teams`, guest `{ t: 'team' }`, `pickTeam`; six a room); `start`
   carries `moba` / `teams`; lane minions of both sides are `spawn` events with `m` (team, level; `HostWorld.allies`),
-  minion arrows `owner` -1; economy `moba` event (`MobaNet`), `gold` popups, `revive`; guest purchases `{ t: 'shop' }`.
+  minion arrows `owner` -1; an ally curse is a `sound` event with `by` (only the shooter hears it, `soundFor`); economy `moba` event (`MobaNet`), `gold` popups, `revive`; guest purchases `{ t: 'shop' }`.
 - **Local on each side**: the survival relief force (BattleRelief, show only; the guest's comes when the host's clock runs out).
 - **Not yet**: the player's soldiers (BattleAllies: the HUD slots and keys are off with `ctx.session.net`), a local preview of the guest's own arrows (they appear after a round trip), the guest's lightning bolts
   are its own (only the host's strikes hurt; their sparks arrive as effects), no reconnecting, and a hidden browser tab
