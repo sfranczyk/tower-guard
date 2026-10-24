@@ -41,7 +41,7 @@ export const SOUND_INFO: Readonly<Record<SoundId, SoundInfo>> = {
   },
   allyCurse: {
     title: 'Ally curse',
-    description: 'A soldier cursing when his own side hits him (planned for MOBA; not played in game yet). Nine takes, each with its own chance (ALLY_CURSE_CHANCES, ?tune).',
+    description: 'A soldier cursing when his own side hits him (planned for MOBA; not played in game yet). Seven takes (the last a long rant, on purpose), each with its own chance (ALLY_CURSE_CHANCES, ?tune).',
     source: 'Allay hit.m4a',
   },
 };

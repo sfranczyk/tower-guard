@@ -5,8 +5,6 @@ import allyCurse4 from '../assets/sounds/ally-curse-4.mp3';
 import allyCurse5 from '../assets/sounds/ally-curse-5.mp3';
 import allyCurse6 from '../assets/sounds/ally-curse-6.mp3';
 import allyCurse7 from '../assets/sounds/ally-curse-7.mp3';
-import allyCurse8 from '../assets/sounds/ally-curse-8.mp3';
-import allyCurse9 from '../assets/sounds/ally-curse-9.mp3';
 import arrowFleshSound from '../assets/sounds/arrow-flesh.mp3';
 import bowShotSound from '../assets/sounds/bow-shot.mp3';
 import explosionSound from '../assets/sounds/explosion.mp3';
@@ -39,7 +37,7 @@ const SOURCES: Record<SoundId, readonly string[]> = {
   explosion: [explosionSound],
   thunder: [thunderSound],
   shrapnelBurst: [bowShotSound],
-  allyCurse: [allyCurse1, allyCurse2, allyCurse3, allyCurse4, allyCurse5, allyCurse6, allyCurse7, allyCurse8, allyCurse9],
+  allyCurse: [allyCurse1, allyCurse2, allyCurse3, allyCurse4, allyCurse5, allyCurse6, allyCurse7],
 };
 
 /** Relative chance of each variant, read at play time (tunable); sounds not listed pick uniformly. */

@@ -16,8 +16,6 @@ export const ALLY_CURSE_CHANCES = tunable('ALLY_CURSE_CHANCES', 'Ally curses (ch
   take5: 1,
   take6: 1,
   take7: 1,
-  take8: 1,
-  take9: 1,
 });
 /** Base playback rate per sound (thunder is the explosion recording slowed down). */
 export const SOUND_RATES: Partial<Record<keyof typeof SOUND_VOLUMES, number>> = { thunder: 0.5, shrapnelBurst: 1.7 };
