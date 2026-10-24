@@ -15,6 +15,7 @@ export const OVERLAY_TEMPLATE = `
           <div class="menu-card">
             <button class="primary-button" data-start>Start game <span class="key-hint">Space</span></button>
             <button class="secondary-button" data-open-coop>Co-op online</button>
+            <button class="secondary-button" data-open-moba>MOBA · team battle</button>
             <button class="secondary-button" data-menu-settings>Settings</button>
             <button class="dev-toggle" data-dev-toggle aria-expanded="false">Dev tools ▾</button>
             <div class="dev-tools" data-dev-tools hidden>
@@ -39,7 +40,7 @@ export const OVERLAY_TEMPLATE = `
           <div class="pause-actions">
             <button class="primary-button" data-pause-resume>Resume <span class="key-hint">Esc</span></button>
             <button class="secondary-button" data-pause-restart title="Full health for the bowmen, the level's enemies anew; the keep stays as it is">Restart level</button>
-            <button class="secondary-button" data-pause-settings>Settings <span class="key-hint">I</span></button>
+            <button class="secondary-button" data-pause-settings>Settings</button>
             <button class="secondary-button" data-pause-menu>Main menu</button>
           </div>
           </div>

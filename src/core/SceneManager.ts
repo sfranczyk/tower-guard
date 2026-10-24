@@ -49,7 +49,14 @@ export class SceneManager {
 
     ui.handlers.start = () => this.goTo('sandbox');
     ui.handlers.labMenu = () => this.goTo('menu');
-    ui.handlers.openCoop = () => this.goTo('coop');
+    ui.handlers.openCoop = () => {
+      this.ctx.session.moba = false;
+      this.goTo('coop');
+    };
+    ui.handlers.openMoba = () => {
+      this.ctx.session.moba = true;
+      this.goTo('coop');
+    };
     ui.handlers.openAnimationLab = () => this.goTo('animationLab');
     ui.handlers.openSoundLab = () => this.goTo('soundLab');
     ui.handlers.openDesignLab = () => this.goTo('designLab');

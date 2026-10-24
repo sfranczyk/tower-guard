@@ -234,12 +234,9 @@ export class BattleControls {
         }
         return;
       }
-      if (event.code === 'KeyI') {
-        if (this.deps.shop && !this.paused && !ended) {
-          this.deps.shop.toggle();
-        } else {
-          this.toggleOptions();
-        }
+      // I: MOBA's shop (the settings drawer is the gear button's).
+      if (event.code === 'KeyI' && this.deps.shop && !this.paused && !ended) {
+        this.deps.shop.toggle();
       }
       if (this.paused) {
         return;

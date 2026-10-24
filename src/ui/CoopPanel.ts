@@ -7,7 +7,7 @@ import { partnerQuiver, quiverPage, type PartnerQuiver } from './quiverPage';
 /** What the co-op lobby shows. */
 export type CoopView =
   /** Host a game or join one by code (with the last error, if any). */
-  | { kind: 'choose'; error?: string }
+  | { kind: 'choose'; error?: string; moba?: boolean }
   /** Hosting: the code to pass on, and the guests who are in (up to three) with the quivers they picked. */
   | { kind: 'hosting'; code?: string; guests: PartnerQuiver[]; teams?: LobbyTeams }
   | { kind: 'joining'; code: string }
@@ -44,6 +44,8 @@ export interface CoopPanelCallbacks {
   loadoutChange(loadout: Loadout): void;
   /** MOBA: this player switches team. */
   teamChange(team: Team): void;
+  /** MOBA: a practice match alone. */
+  practice(): void;
 }
 
 const escapeHtml = (text: string): string => text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -75,6 +77,8 @@ export class CoopPanel {
         this.join();
       } else if (target.closest('[data-coop-setup]')) {
         callbacks.setup();
+      } else if (target.closest('[data-moba-practice]')) {
+        callbacks.practice();
       } else if (target.closest('[data-coop-leave]')) {
         callbacks.leave();
       } else if (target.closest<HTMLElement>('[data-coop-team]')) {
@@ -99,12 +103,15 @@ export class CoopPanel {
     switch (view.kind) {
       case 'choose':
         body = `
-          <p class="coop-copy">Defend the keep together, two to four of you: one hosts, the others join with the room code.</p>
+          <p class="coop-copy">${view.moba
+            ? 'Blue against red, up to three a side: minions march down the lane, gold buys upgrades by your keep (press I), the first keep to fall loses. One hosts, the others join with the room code.'
+            : 'Defend the keep together, two to four of you: one hosts, the others join with the room code.'}</p>
           <button class="primary-button" data-coop-host>Host a game</button>
           <div class="coop-join">
             <input data-coop-code maxlength="7" placeholder="Room code" autocomplete="off" spellcheck="false">
             <button class="secondary-button" data-coop-join>Join</button>
           </div>
+          ${view.moba ? '<button class="secondary-button" data-moba-practice>Practice alone</button>' : ''}
           ${view.error ? `<p class="coop-error">${escapeHtml(view.error)}</p>` : ''}`;
         break;
       case 'hosting':
@@ -136,7 +143,8 @@ export class CoopPanel {
     // The guest's quiver needs the room of a full card.
     this.root.classList.toggle('coop-wide', view.kind === 'joined' && !view.teams);
     const back = `<button class="secondary-button small-button" data-coop-leave>← ${leave}</button>`;
-    renderPanel(this.root, `${panelTop(back, 'Co-op', actions)}<div class="panel-body coop-body">${body}</div>`);
+    const moba = view.kind === 'choose' ? view.moba : view.kind !== 'joining' && view.teams !== undefined;
+    renderPanel(this.root, `${panelTop(back, moba ? 'MOBA' : 'Co-op', actions)}<div class="panel-body coop-body">${body}</div>`);
     this.root.querySelector<HTMLInputElement>('[data-coop-code]')?.focus();
   }
 

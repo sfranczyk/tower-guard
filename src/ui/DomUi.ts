@@ -132,6 +132,7 @@ export class DomUi {
       leave: () => this.handlers.coopLeave?.(),
       loadoutChange: (loadout) => this.handlers.coopLoadout?.(loadout),
       teamChange: (team) => this.handlers.coopTeam?.(team),
+      practice: () => this.handlers.mobaPractice?.(),
     });
     this.soundLabScreen = this.query('[data-sound-lab]');
     this.soundLabPanel = new SoundLabPanel(this.query('[data-sound-lab-panel]'), {
@@ -147,6 +148,7 @@ export class DomUi {
 
     this.onClick('[data-start]', () => this.handlers.start?.());
     this.onClick('[data-open-coop]', () => this.handlers.openCoop?.());
+    this.onClick('[data-open-moba]', () => this.handlers.openMoba?.());
     this.onClick('[data-menu-settings]', () => this.handlers.toggleOptions?.());
     this.onClick('[data-dev-toggle]', () => this.toggleDevTools());
     this.onClick('[data-open-test]', () => this.handlers.openAnimationLab?.());

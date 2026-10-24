@@ -214,3 +214,19 @@ const bannerIcon = (cloth: string): string => `<svg class="icon banner-icon" vie
   <rect x="7" y="4" width="2.5" height="21" rx="1" fill="#8a6238"/><circle cx="8.2" cy="4" r="2" fill="#e2b44c"/>
   <path d="M9.5 6h13l-3.5 4.5 3.5 4.5h-13z" fill="${cloth}"/><path d="M14 8l2 2.5-2 2.5-2-2.5z" fill="#e2b44c"/></svg>`;
 export const ICON_BANNERS = { player: bannerIcon('#34489f'), enemy: bannerIcon('#9a2c37') } as const;
+
+/** MOBA shop upgrades without an arrow or a unit to show (ui/ShopPanel.ts). */
+const badge = (body: string): string => `<svg class="icon" viewBox="0 0 28 28" aria-hidden="true" stroke-linecap="round" stroke-linejoin="round">${body}</svg>`;
+const HEART = 'M14 23.5C7 18.6 3.5 15 3.5 10.6A5 5 0 0 1 14 8.2a5 5 0 0 1 10.5 2.4C24.5 15 21 18.6 14 23.5z';
+export const ICON_UPGRADES = {
+  /** Regeneration: a heart with a green plus. */
+  regen: badge(`<path d="${HEART}" fill="#d8614f"/><circle cx="21" cy="20" r="5.2" fill="#5aa36f"/><path d="M21 17.4v5.2M18.4 20h5.2" stroke="#fff" stroke-width="1.8"/>`),
+  /** Max health: a big heart with a highlight. */
+  maxHp: badge(`<path d="${HEART}" fill="#d8614f"/><path d="M8 10.5a3 3 0 0 1 3-3" fill="none" stroke="#f6b3a6" stroke-width="1.8"/>`),
+  /** Speed: a running boot with speed lines. */
+  speed: badge(`<path d="M2.5 11h6M1.5 15h6M3 19h5" stroke="#66756f" stroke-width="1.8"/>
+  <path d="M12 5h6l-1 9 7 3.5c1.6.8 1.8 4.5 0 4.5H10.5z" fill="#8a5a32"/><path d="M10.5 22H25" stroke="#4a3018" stroke-width="2.2"/>`),
+  /** Quick draw: a stopwatch with a lightning bolt. */
+  quick: badge(`<circle cx="14" cy="15.5" r="9" fill="#f6f1e4" stroke="#2c3a38" stroke-width="2"/><path d="M12 4h4M14 4v2.5" stroke="#2c3a38" stroke-width="2"/>
+  <path d="M15.5 9 10.5 16.5h4L12.5 22l5.5-8h-4z" fill="#f1c45a" stroke="#c4932f" stroke-width=".8"/>`),
+} as const;
