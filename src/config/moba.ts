@@ -29,7 +29,7 @@ export const MOBA_LANES = tunable('MOBA_LANES', 'MOBA lanes', {
  * is back at his keep after `respawnMs`; `regenDelayMs` without a hit, then `regenAmount` health every `regenEveryMs`.
  */
 export const MOBA_PLAYERS = tunable('MOBA_PLAYERS', 'MOBA players', {
-  startGold: 100,
+  startGold: 0,
   troopGold: 5,
   archerGold: 8,
   dragonGold: 25,

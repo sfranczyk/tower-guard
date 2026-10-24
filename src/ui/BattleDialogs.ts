@@ -12,6 +12,8 @@ export interface PauseView {
   canRestart: boolean;
   /** The local bowman is in the keep: his quiver, editable in the dialog. */
   quiver?: Loadout;
+  /** MOBA: the battle goes on behind the dialog (nothing is paused), and there is no quiver to edit. */
+  running?: boolean;
 }
 
 export interface EndScreenOptions {
@@ -34,12 +36,15 @@ export class BattleDialogs {
   private readonly endButton: HTMLButtonElement;
   private onEndButton?: () => void;
   private readonly pauseScreen: HTMLElement;
+  private readonly pauseTitle: HTMLElement;
   private readonly pauseCopy: HTMLElement;
   private readonly pauseCard: HTMLElement;
   private readonly pauseQuiverRoot: HTMLElement;
   private readonly pauseRestart: HTMLElement;
   /** The quiver being edited in the pause dialog (undefined while none is shown). */
   private pauseQuiver?: QuiverEdit;
+  /** MOBA: no quiver to edit (every arrow bought is in it). */
+  private pauseRunning = false;
 
   public constructor(root: ParentNode, private readonly handlers: UiHandlers) {
     this.endScreen = queryIn(root, '[data-end]');
@@ -48,6 +53,7 @@ export class BattleDialogs {
     this.endStats = queryIn(root, '[data-end-stats]');
     this.endButton = queryIn<HTMLButtonElement>(root, '[data-end-button]');
     this.pauseScreen = queryIn(root, '[data-pause]');
+    this.pauseTitle = queryIn(root, '[data-pause-title]');
     this.pauseCopy = queryIn(root, '[data-pause-copy]');
     this.pauseCard = queryIn(root, '[data-pause] .end-card');
     this.pauseQuiverRoot = queryIn(root, '[data-pause-quiver]');
@@ -107,7 +113,9 @@ export class BattleDialogs {
   public showPause(pause: PauseView | undefined): void {
     this.pauseScreen.hidden = !pause;
     if (pause) {
-      this.pauseCopy.textContent = pause.byPartner ? 'Another player paused the battle.' : pause.coop ? 'Paused for all players.' : 'The battle waits for you.';
+      this.pauseRunning = pause.running === true;
+      this.pauseTitle.textContent = pause.running ? 'Menu' : 'Paused';
+      this.pauseCopy.textContent = pause.running ? 'The battle goes on while this is open.' : pause.byPartner ? 'Another player paused the battle.' : pause.coop ? 'Paused for all players.' : 'The battle waits for you.';
       this.pauseRestart.hidden = !pause.canRestart;
       this.pauseQuiver = pause.quiver ? { loadout: [...pause.quiver], slot: 0 } : undefined;
       this.renderPauseQuiver();
@@ -119,6 +127,6 @@ export class BattleDialogs {
     this.pauseCard.classList.toggle('pause-wide', this.pauseQuiver !== undefined);
     this.pauseQuiverRoot.innerHTML = this.pauseQuiver
       ? compactQuiver(this.pauseQuiver.loadout, this.pauseQuiver.slot)
-      : '<p class="pause-quiver-hint">Hide in the keep to change your quiver.</p>';
+      : this.pauseRunning ? '' : '<p class="pause-quiver-hint">Hide in the keep to change your quiver.</p>';
   }
 }

@@ -41,6 +41,8 @@ export interface BattleControlsDeps {
   onKeyDown: (handler: (event: KeyboardEvent) => void) => void;
   /** MOBA: the shop, which I opens by the keep instead of the settings drawer (Esc closes it). */
   shop?: { readonly open: boolean; toggle(): void; close(): void };
+  /** MOBA: Esc opens a menu over the running battle (nothing pauses), and the quiver is always what was bought. */
+  moba: boolean;
   onExit: (dispose: () => void) => void;
 }
 
@@ -50,7 +52,7 @@ export interface BattleControlsDeps {
  * quiver in the keep, and summoning and ordering the soldiers.
  */
 export class BattleControls {
-  /** Esc pauses the battle; the world stands still until Esc again. */
+  /** Esc pauses the battle (MOBA: opens the menu only); the world stands still until Esc again. */
   public paused = false;
   /** Guest: this player's Esc asked the host to pause (so the dialog doesn't say another player did). */
   public pauseAsked = false;
@@ -65,6 +67,11 @@ export class BattleControls {
     this.bind();
   }
 
+  /** The world stands still (paused, and not MOBA, where the battle goes on behind the menu). */
+  public get frozen(): boolean {
+    return this.paused && !this.deps.moba;
+  }
+
   /** This browser's player's quiver. */
   private get loadout(): Loadout {
     return loadoutOf(this.deps.ctx.session, this.deps.localIndex);
@@ -73,6 +80,11 @@ export class BattleControls {
   /** Esc: pauses or resumes (a co-op guest asks the host, which pauses both screens). */
   public togglePause(): void {
     const paused = !this.paused;
+    // MOBA: only this browser's menu, the others play on.
+    if (this.deps.moba) {
+      this.setPaused(paused, false);
+      return;
+    }
     const guestSync = this.deps.guestSync();
     if (guestSync) {
       this.pauseAsked = paused;
@@ -97,7 +109,8 @@ export class BattleControls {
       byPartner,
       coop: this.deps.role !== 'solo',
       canRestart: this.deps.role !== 'guest',
-      quiver: this.deps.team.local.bowman.isInTower ? this.loadout : undefined,
+      quiver: this.deps.team.local.bowman.isInTower && !this.deps.moba ? this.loadout : undefined,
+      running: this.deps.moba,
     } : undefined);
   }
 
@@ -198,7 +211,7 @@ export class BattleControls {
       }
     };
     ui.handlers.pauseLoadout = (loadout) => {
-      if (this.paused && team.local.bowman.isInTower) {
+      if (this.paused && team.local.bowman.isInTower && !this.deps.moba) {
         this.changeLoadout(loadout);
       }
     };

@@ -64,9 +64,10 @@
         .shop-vault .secondary-button { padding: 5px 9px; font-size: 12px; }
         .shop-body { overflow-y: auto; min-height: 0; padding-right: 2px; }
         .shop-body h3 { margin: 8px 0 6px; font-family: var(--display); font-size: 15px; color: var(--ink-soft); }
-        .shop-chain { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin-bottom: 6px; }
-        .shop-arrow { color: var(--ink-soft); font-weight: 700; }
-        .shop-button { display: flex; flex-direction: column; align-items: center; min-width: 70px; padding: 5px 8px; border: 0; border-radius: 10px; background: var(--panel-sunk); color: var(--ink); font: inherit; font-size: 12px; box-shadow: 0 3px 0 var(--panel-edge); cursor: pointer; }
+        /* One column per level (3 at most), the same in every row, so the levels line up under each other. */
+        .shop-chain { display: grid; grid-template-columns: minmax(0, 1fr) 14px minmax(0, 1fr) 14px minmax(0, 1fr); align-items: stretch; gap: 4px; margin-bottom: 8px; }
+        .shop-arrow { align-self: center; text-align: center; color: var(--ink-soft); font-weight: 700; }
+        .shop-button { display: flex; flex-direction: column; align-items: center; justify-content: center; min-width: 0; padding: 5px 8px; border: 0; border-radius: 10px; background: var(--panel-sunk); color: var(--ink); font: inherit; font-size: 12px; box-shadow: 0 3px 0 var(--panel-edge); cursor: pointer; }
         .shop-button.buyable { background: var(--gold); box-shadow: 0 3px 0 var(--gold-edge); color: var(--gold-ink); }
         .shop-button.buyable:hover { filter: brightness(1.05); }
         .shop-button.buyable:active { transform: translateY(2px); }
@@ -74,7 +75,7 @@
         .shop-button.poor, .shop-button.locked { cursor: not-allowed; }
         .shop-button.locked { opacity: .55; }
         .shop-button.poor .shop-price { color: var(--bad); }
-        .shop-label { font-weight: 600; white-space: nowrap; }
+        .shop-label { max-width: 100%; overflow: hidden; text-overflow: ellipsis; font-weight: 600; white-space: nowrap; }
         .shop-button .icon { width: 26px; height: 26px; margin-bottom: 2px; }
         .shop-button .weapon-art { width: 32px; height: 32px; margin: -3px 0 -1px; }
         .shop-button.owned .icon, .shop-button.owned .weapon-art { filter: drop-shadow(0 0 1.5px #fff); }
