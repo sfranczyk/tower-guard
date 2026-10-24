@@ -17,7 +17,7 @@
   scale 1 and zoom with it (`--ui-scale`, set in `fitCanvas`, `UI_SCALE` limits); the sandbox's buttons stay pinned
   at the bottom of its card.
 - **Sandbox form** (`SandboxForm.ts`): opens on the mode picker (`step 'mode'`: two big cards, Battle / Survival, map +
-  `RUN_MODE_DESCRIPTIONS`); Back/Esc returns there (`DomUi.sandboxBack`). Then three pages (Rules, Levels, Quiver; opens on Rules), no mode switch. Levels:
+  `RUN_MODE_DESCRIPTIONS`); Back/Esc returns there (`DomUi.sandboxBack`). Then three pages (Rules, Levels, Quiver; opens on Rules), no mode switch; the top-bar button steps through them (`NEXT_PAGE`: "Level setup", "Quiver setup") and reads "Start battle" only on Quiver, whose `.quiver-note` says arrows can be changed by pausing in the keep. Levels:
   level tabs (map thumbnail, enemy count, add; "Remove level N" right of the editor head asks first, `removeDialog` over the card, Esc cancels; battle 1–5, survival 1–3), the selected level's battleground (map cards,
   `mapThumbnail.ts`) and enemies (a card per type with − / +); survival levels: time stepper and kind toggles
   (`survivalEditor.ts`). Rules (`rulesPage`, `.option-row`, one per row, each with an `ICON_*` from `icons.ts`): bowman/keep health, difficulty, Friendly fire
