@@ -6,16 +6,17 @@ export const SOUND_DEFAULT_VOLUME = 0.7;
 export const SOUND_VOLUMES = { bowShot: 0.7, arrowFlesh: 0.8, groan: 0.75, explosion: 1, thunder: 1, shrapnelBurst: 0.6, allyCurse: 0.8 } as const;
 /**
  * The curses a soldier shouts when his own side's arrow hits him (`allyCurse`, cut from human/Allay hit.m4a): the
- * relative chance of each take (0 = never; equal = uniform). Tunable in `?tune`.
+ * relative chance of each take (0 = never; they sum to 100, so each is a percentage; take 7 is the long rant). Tunable in
+ * `?tune`.
  */
 export const ALLY_CURSE_CHANCES = tunable('ALLY_CURSE_CHANCES', 'Ally curses (chance of each take)', {
-  take1: 1,
-  take2: 1,
-  take3: 1,
-  take4: 1,
-  take5: 1,
-  take6: 1,
-  take7: 1,
+  take1: 16,
+  take2: 16,
+  take3: 16,
+  take4: 16,
+  take5: 16,
+  take6: 16,
+  take7: 4,
 });
 /** Base playback rate per sound (thunder is the explosion recording slowed down). */
 export const SOUND_RATES: Partial<Record<keyof typeof SOUND_VOLUMES, number>> = { thunder: 0.5, shrapnelBurst: 1.7 };

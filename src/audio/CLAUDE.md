@@ -5,8 +5,8 @@
   by screen position, quieter off screen). An arrow sinking into a body plays `arrowFlesh` (`Pghrt.m4a`; not into ice,
   not explosive). Enemies groan on every arrow hit (8 variants), except an explosive kill (just the blast); falls are
   silent. Thunder is the old "Bum" recording (`thunder.mp3`) slowed down (`SOUND_RATES`); `explosion.mp3` is
-  synthesized with ffmpeg (thump, brown-noise blast, crackle, rumble). `allyCurse` (7 takes from `Allay hit.m4a`, not
-  played in game yet; meant for MOBA friendly hits) picks its take by `ALLY_CURSE_CHANCES` (`config/audio.ts`, `?tune`)
+  synthesized with ffmpeg (thump, brown-noise blast, crackle, rumble). `allyCurse` (7 takes from `Allay hit.m4a`, played
+  instead of the groan when a MOBA player's arrow hits a soldier of his own team, `ArrowHits.isOwnSoldier`) picks its take by `ALLY_CURSE_CHANCES` (`config/audio.ts`, `?tune`)
   through `variantPick.ts`; other sounds pick uniformly.
 - **New sound**: add the mp3, its id in `SOURCES` (an array of variants), its volume in `config/audio.ts` (`SOUND_VOLUMES`)
   and its description in `soundCatalog.ts` (shown in the sound test panel). When trimming, don't denoise quiet takes or

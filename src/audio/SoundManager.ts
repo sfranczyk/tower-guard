@@ -27,8 +27,8 @@ import { pickVariant, variantShares } from './variantPick';
 export type SoundId = keyof typeof SOUND_VOLUMES;
 
 /**
- * Every sound has one or more variants; a play picks one at random (never the same twice in a row), by the weights in
- * `variantWeights` where a sound has them.
+ * Every sound has one or more variants; a play picks one at random, never the same twice in a row, except for sounds
+ * with chances in `VARIANT_CHANCES`, which follow them exactly (repeats included).
  */
 const SOURCES: Record<SoundId, readonly string[]> = {
   bowShot: [bowShotSound],
@@ -41,8 +41,11 @@ const SOURCES: Record<SoundId, readonly string[]> = {
 };
 
 /** Relative chance of each variant, read at play time (tunable); sounds not listed pick uniformly. */
+const VARIANT_CHANCES: Partial<Record<SoundId, Readonly<Record<string, number>>>> = { allyCurse: ALLY_CURSE_CHANCES };
+
 const variantWeights = (id: SoundId, count: number): number[] => {
-  const weights = id === 'allyCurse' ? Object.values(ALLY_CURSE_CHANCES) : [];
+  const chances = VARIANT_CHANCES[id];
+  const weights = chances ? Object.values(chances) : [];
   return Array.from({ length: count }, (_, index) => weights[index] ?? 1);
 };
 
@@ -126,7 +129,7 @@ export class SoundManager {
     return (this.buffers.get(id) ?? []).map((buffer) => buffer.duration);
   }
 
-  /** Each variant's chance of being picked (0..1, the no-repeat rule aside). */
+  /** Each variant's chance of being picked (0..1; for uniform sounds the no-repeat rule aside). */
   public variantChances(id: SoundId): number[] {
     return variantShares(variantWeights(id, this.buffers.get(id)?.length ?? 0));
   }
@@ -162,7 +165,8 @@ export class SoundManager {
 
   private pickVariant(id: SoundId): AudioBuffer | undefined {
     const variants = this.buffers.get(id) ?? [];
-    const index = pickVariant(variantWeights(id, variants.length), this.lastVariant.get(id), Math.random());
+    const last = VARIANT_CHANCES[id] ? undefined : this.lastVariant.get(id);
+    const index = pickVariant(variantWeights(id, variants.length), last, Math.random());
     this.lastVariant.set(id, index);
     return variants[index];
   }
