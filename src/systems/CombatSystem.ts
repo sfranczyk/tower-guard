@@ -77,6 +77,8 @@ export interface CombatWorld {
   readonly banners?: Banners<Enemy>;
   /** MOBA lanes (scenes/BattleLanes.ts): the soldiers are lane minions marching on the enemy keep. */
   readonly lanes?: boolean;
+  /** MOBA lanes: the blue dragons (the fallen stay as corpses). */
+  readonly allyFliers?: readonly DragonEnemy[];
 }
 
 export interface CombatEvents {
@@ -152,6 +154,7 @@ export class CombatSystem {
     this.ai.beginFrame();
     activeEnemies.forEach((enemy) => this.ai.update(enemy, deltaMs));
     livingAllies.forEach((ally) => this.allyAI.update(ally, deltaMs));
+    this.world.allyFliers?.forEach((dragon) => this.allyAI.updateFlier(dragon, deltaMs));
     this.ai.spread(deltaMs);
     this.world.allies.filter((ally) => !ally.isAlive()).forEach((ally) => ally.updateAnimation(deltaMs, false));
     // Burning: steady damage until the burn runs out (each bowman counts it down in his animation); a dragon's fire, so the difficulty's.
@@ -170,7 +173,8 @@ export class CombatSystem {
     }
     const friendly = this.friendlyTargets();
     // Friendly fire: the players' arrows and their effects hit the soldiers like the enemies.
-    const arrowTargets: readonly Foe[] = this.world.friendlyFire() ? [...activeEnemies, ...livingAllies] : activeEnemies;
+    const livingFliers = (this.world.allyFliers ?? []).filter((dragon) => dragon.isAlive());
+    const arrowTargets: readonly Foe[] = this.world.friendlyFire() ? [...activeEnemies, ...livingAllies, ...livingFliers] : activeEnemies;
     this.magic.update(deltaMs, arrowTargets, friendly);
     // Dead enemies finish (then hold) their death animation.
     this.world.enemies.filter((enemy) => !enemy.isAlive()).forEach((enemy) => enemy.updateAnimation(deltaMs, false));

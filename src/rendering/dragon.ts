@@ -32,7 +32,7 @@ export interface DragonPalette {
   mouth: number;
 }
 
-/** Red (the fire dragon) and dark brown, nearly black (the dragon archer). */
+/** Red (the fire dragon), dark brown, nearly black (the dragon archer) and blue (MOBA: the blue lane's dragon archer). */
 export const DRAGON_PALETTES = {
   red: {
     body: 0xb5473a,
@@ -55,6 +55,17 @@ export const DRAGON_PALETTES = {
     horn: 0xd8ccb2,
     eye: 0xff9a3c,
     mouth: 0x5a1a12,
+  },
+  blue: {
+    body: 0x2f5d9a,
+    bodyDark: 0x1f3f6e,
+    belly: 0xb9cde6,
+    wingNear: 0x2a5288,
+    wingFar: 0x1a3558,
+    bone: 0x0f2038,
+    horn: 0xeadfc6,
+    eye: 0xffd35a,
+    mouth: 0x3a1210,
   },
 } as const satisfies Record<string, DragonPalette>;
 

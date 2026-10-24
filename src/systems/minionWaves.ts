@@ -3,6 +3,8 @@ export interface MinionGroup<R extends string> {
   readonly role: R;
   readonly count: number;
   readonly everyMs: number;
+  /** When its first group comes (default: the clock's first). */
+  readonly firstMs?: number;
 }
 
 /**
@@ -25,10 +27,10 @@ export class MinionWaves<R extends string> {
   public update(deltaMs: number): R[] {
     this.elapsedMs += deltaMs;
     const out: R[] = [];
-    this.groups().forEach(({ role, count, everyMs }) => {
+    this.groups().forEach(({ role, count, everyMs, firstMs }) => {
       let clock = this.clocks.get(role);
       if (!clock) {
-        clock = { dueMs: this.firstMs(), queued: 0, nextOutMs: 0 };
+        clock = { dueMs: firstMs ?? this.firstMs(), queued: 0, nextOutMs: 0 };
         this.clocks.set(role, clock);
       }
       while (this.elapsedMs >= clock.dueMs) {

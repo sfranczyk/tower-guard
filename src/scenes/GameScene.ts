@@ -67,8 +67,9 @@ export class GameScene extends Scene {
   /** The player's soldiers (also `soldiers.list`; for the ?debug console: `scene.allies[0]`). */
   private readonly allies: Enemy[] = [];
   private readonly soldiers: BattleAllies;
-  /** MOBA (`?moba`): both keeps' lane minions (scenes/BattleLanes.ts). */
+  /** MOBA (`?moba`): both keeps' lane minions (scenes/BattleLanes.ts) and the blue dragons among them. */
   private readonly lanes?: BattleLanes;
+  private readonly allyFliers: DragonEnemy[] = [];
   /** The run's Banners option (solo only; scenes/BattleBanners.ts). */
   private banners?: BattleBanners;
   /** Every arrow of the level. */
@@ -140,7 +141,13 @@ export class GameScene extends Scene {
       onDamaged: (ally, amount, hit) => this.damageNumbers.show(ally, amount, hit),
     });
     if (ctx.session.moba) {
-      this.lanes = new BattleLanes(this.soldiers, this.foes);
+      this.lanes = new BattleLanes({
+        world: this.world,
+        soldiers: this.soldiers,
+        foes: this.foes,
+        fliers: this.allyFliers,
+        onDamaged: (dragon, amount, hit) => this.damageNumbers.show(dragon, amount, hit),
+      });
     }
     this.shots = new BattleArrows({
       world: this.world,
@@ -248,6 +255,7 @@ export class GameScene extends Scene {
         enemyEdge: enemyEdge(this.lanes ? 'easy' : this.ctx.session.sandbox.difficulty),
         banners: this.banners?.field,
         lanes: this.lanes !== undefined,
+        allyFliers: this.allyFliers,
       },
       battleCombatEvents({ ctx: this.ctx, team: this.team, shots: this.shots, playSound: (id, at) => this.playSound(id, at) }),
     );

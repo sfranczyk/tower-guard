@@ -87,7 +87,7 @@ export class EnemyRanged {
     // In front of it (it faces either way) and in range; it doesn't shoot while turning round.
     const ahead = (aimPoint.x - release.x) * dragon.facingX;
     const inRange = !dragon.isTurning && ahead > 0 && ahead <= DRAGON_RANGE;
-    if (!inRange || this.world.bowmen.every((candidate) => candidate.isDead)) {
+    if (!inRange || (!this.world.lanes && this.world.bowmen.every((candidate) => candidate.isDead))) {
       dragon.relax(deltaMs);
       this.archerAim.delete(dragon);
     } else {
@@ -155,9 +155,12 @@ export class EnemyRanged {
 
   /** The chest of the nearest bowman out in the open (archers on foot: or soldier), else the keep's wall. */
   private aimPointFrom(fromX: number, soldiersToo = false): Vec2 {
-    const target = nearestMeleeTarget(this.world.bowmen, soldiersToo ? this.world.allies : [], fromX);
+    // MOBA: whatever of the blue side is nearest, dragons too.
+    const { lanes, allies, allyFliers = [] } = this.world;
+    const soldiers: readonly Foe[] = lanes ? [...allies, ...allyFliers] : soldiersToo ? allies : [];
+    const target = nearestMeleeTarget(this.world.bowmen, soldiers, fromX);
     if (target?.ally) {
-      return { x: target.ally.x, y: target.ally.y - 25 * target.ally.size };
+      return { x: target.ally.x, y: target.ally.y - (target.ally.isFlying ? 0 : 25 * target.ally.size) };
     }
     return target?.bowman
       ? { x: target.bowman.x, y: target.bowman.y - BOWMAN_CHEST }

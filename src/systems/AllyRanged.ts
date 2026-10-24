@@ -1,6 +1,7 @@
-import { ENEMY_ARROW_POWER, ENEMY_ATTACK, GROUND_Y, MOBA_LANES } from '../config';
+import { DRAGON_FLIGHT, DRAGON_RANGE, ENEMY_ARROW_POWER, ENEMY_ATTACK, GROUND_Y, MOBA_LANES } from '../config';
 import { bowSpeed } from '../data/projectiles';
 import Arrow from '../objects/Arrow';
+import type DragonEnemy from '../objects/dragon/DragonEnemy';
 import type Enemy from '../objects/enemy/Enemy';
 import type Tower from '../objects/Tower';
 import type { UnitType, Vec2 } from '../types';
@@ -33,7 +34,7 @@ const aimPointOf = (foe: Foe): Vec2 => (foe.isFlying ? { x: foe.x, y: foe.y } : 
  * with the real ballistics and wind, a little spread, like the enemy archers (EnemyRanged).
  */
 export class AllyRanged {
-  private readonly aims = new Map<Enemy, { angle: number; ageMs: number }>();
+  private readonly aims = new Map<Foe, { angle: number; ageMs: number }>();
 
   public constructor(private readonly world: AllyRangedWorld, private readonly events: AllyRangedEvents) {}
 
@@ -55,6 +56,34 @@ export class AllyRanged {
     archer.updateAnimation(deltaMs, archer.isMoving());
   }
 
+  /**
+   * MOBA blue dragon: flies to its hover point by the nearest enemy (else over the red keep) and, while it is ahead and
+   * in range, the rider shoots it as the red dragon archers do (EnemyRanged.updateDragon).
+   */
+  public updateDragon(dragon: DragonEnemy, deltaMs: number): void {
+    const foe = this.world.enemies
+      .filter((candidate) => candidate.isAlive())
+      .reduce<Foe | undefined>((best, candidate) => (!best || Math.abs(candidate.x - dragon.x) < Math.abs(best.x - dragon.x) ? candidate : best), undefined);
+    const tower = this.world.enemyTower;
+    const aimPoint = foe ? aimPointOf(foe) : { x: tower.x, y: GROUND_Y - 90 };
+    dragon.update(deltaMs, aimPoint.x);
+    const release = dragon.getBowReleasePoint();
+    const ahead = (aimPoint.x - release.x) * dragon.facingX;
+    if (dragon.isTurning || ahead <= 0 || ahead > DRAGON_RANGE || (!foe && tower.isDestroyed())) {
+      dragon.relax(deltaMs);
+      this.aims.delete(dragon);
+    } else {
+      const speed = bowSpeed(ENEMY_ARROW_POWER);
+      const angle = this.aimAngle(dragon, release, aimPoint, speed, deltaMs);
+      const moving = dragon.flightSpeed;
+      if (dragon.aim(angle, deltaMs, 1 + (DRAGON_FLIGHT.movingShotPace - 1) * moving)) {
+        const spread = (Math.random() * 2 - 1) * ENEMY_ATTACK.archerSpread * (1 + (DRAGON_FLIGHT.movingSpread - 1) * moving);
+        this.events.allyShot(dragon.getBowReleasePoint(), angle + spread, speed * (0.97 + Math.random() * 0.06), dragon.kind);
+      }
+    }
+    dragon.updateAnimation(deltaMs);
+  }
+
   /** The nearest living enemy in range (not far behind him), else the enemy keep's wall in range, else none. */
   private target(archer: Enemy): Vec2 | undefined {
     const foe = this.world.enemies
@@ -71,7 +100,7 @@ export class AllyRanged {
     return undefined;
   }
 
-  private aimAngle(archer: Enemy, release: Vec2, aimPoint: Vec2, speed: number, deltaMs: number): number {
+  private aimAngle(archer: Foe, release: Vec2, aimPoint: Vec2, speed: number, deltaMs: number): number {
     const cached = this.aims.get(archer);
     if (cached && cached.ageMs < AIM_REFRESH_MS) {
       cached.ageMs += deltaMs;

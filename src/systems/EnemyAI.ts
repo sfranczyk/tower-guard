@@ -52,6 +52,9 @@ export interface EnemyAIWorld {
   readonly enemyEdge: EnemyEdge;
   /** Banners (systems/banners.ts): carriers walk home fighting only what reaches them; a soldier carrying ours is the target. */
   readonly banners?: Banners<Enemy>;
+  /** MOBA lanes: the blue dragons (the archers and dragons shoot them, and the soldiers, like the bowmen). */
+  readonly allyFliers?: readonly DragonEnemy[];
+  readonly lanes?: boolean;
 }
 
 export interface EnemyAIEvents {

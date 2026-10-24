@@ -30,6 +30,11 @@ describe('MinionWaves', () => {
     expect(out.filter(({ role }) => role === 'archer').map(({ atMs }) => atMs)).toEqual([1000, 4000, 7000]);
   });
 
+  it('starts a group at its own first time when it has one', () => {
+    const out = run(waves([{ role: 'archer', count: 1, everyMs: 3000, firstMs: 2500 }]), 6000);
+    expect(out.map(({ atMs }) => atMs)).toEqual([2500, 5500]);
+  });
+
   it('catches up after one long frame', () => {
     const clock = waves([{ role: 'troop', count: 2, everyMs: 30000 }]);
     expect(clock.update(1500)).toEqual(['troop', 'troop']);

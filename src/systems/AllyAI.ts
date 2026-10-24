@@ -50,6 +50,8 @@ export interface AllyAIWorld {
   readonly banners?: Banners<Enemy>;
   readonly enemyTower: Tower;
   wind(): number;
+  /** MOBA lanes: the blue dragons (systems/AllyRanged.ts flies them). */
+  readonly allyFliers?: readonly DragonEnemy[];
   /** MOBA lanes: they march on the enemy keep and bring it down (fighters strike it, archers shoot it). */
   readonly lanes?: boolean;
 }
@@ -113,6 +115,15 @@ export class AllyAI {
     }
     this.drawDebugHitboxes(ally);
     ally.clearHitTint();
+  }
+
+  /** MOBA: a blue dragon's frame (AllyRanged); a fallen one finishes its fall. */
+  public updateFlier(dragon: DragonEnemy, deltaMs: number): void {
+    if (dragon.isAlive()) {
+      this.ranged.updateDragon(dragon, deltaMs);
+    } else {
+      dragon.updateAnimation(deltaMs);
+    }
   }
 
   /** The enemies a soldier can reach on foot: alive and on the ground. */

@@ -88,10 +88,11 @@ export default class DragonEnemy extends Container {
   /** Hovers and flights between them, side and turn, gusts and jolts, wing beat (DragonMotion). */
   private readonly motion: DragonMotion;
 
-  public constructor(x: number, health: number, speed: number, kind: DragonKind = 'dragon') {
+  /** `look`: another hide for its kind (MOBA: the blue lane's dragon, BLUE_DRAGON_LOOK). */
+  public constructor(x: number, health: number, speed: number, kind: DragonKind = 'dragon', look: DragonLook = DRAGON_KINDS[kind]) {
     super();
     this.kind = kind;
-    this.look = DRAGON_KINDS[kind];
+    this.look = look;
     this.maxHealth = Math.max(1, health);
     this.health = this.maxHealth;
     this.speed = speed;
@@ -108,6 +109,13 @@ export default class DragonEnemy extends Container {
 
   public isAlive(): boolean {
     return this.health > 0 && !this.escaped;
+  }
+
+  /** MOBA: a blue dragon comes in from the left, facing right (it turns as usual from then on). */
+  public faceRight(): void {
+    this.motion.side = -1;
+    this.motion.facing = 1;
+    this.applyFacing();
   }
 
   /** Survival's end: it gives up, turns round and flies off (EnemyAI calls `flyOff` each frame). */

@@ -65,6 +65,8 @@ export interface ArrowHitsWorld {
   readonly enemyTower: Tower;
   /** The player's soldiers: enemy arrows hit them (players' arrows only with friendly fire, as `resolve`'s targets). */
   readonly allies: readonly Enemy[];
+  /** MOBA lanes: the blue dragons (enemy arrows hit them like the soldiers). */
+  readonly allyFliers?: readonly DragonEnemy[];
   readonly arrows: readonly Arrow[];
   readonly effects: EffectsSystem;
   readonly debug: Graphics;
@@ -120,7 +122,7 @@ export class ArrowHits {
     const travel = { x: end.x - start.x, y: end.y - start.y };
     const { bowmen, playerTower, effects } = this.world;
     const exposed = bowmen.filter((bowman) => !bowman.isInTower && !bowman.isDead);
-    const allyHit = this.world.allies
+    const allyHit = [...this.world.allies, ...(this.world.allyFliers ?? [])]
       .filter((ally) => ally.isAlive())
       .map((ally) => ArrowHits.hitTest(start, travel, ally))
       .filter((candidate): candidate is EnemyHit => candidate !== undefined)
@@ -129,7 +131,7 @@ export class ArrowHits {
       .map((bowman) => ArrowHits.bowmanHitTest(start, travel, bowman)?.time)
       .filter((time): time is number => time !== undefined)
       .sort((first, second) => first - second)[0];
-    if (allyHit && !(allyHit.enemy instanceof DragonEnemy) && (bowmanTime === undefined || allyHit.time < bowmanTime)) {
+    if (allyHit && (bowmanTime === undefined || allyHit.time < bowmanTime)) {
       this.hostileHitAlly(arrow, allyHit.enemy, allyHit.headshot, pointAlong(start, travel, allyHit.time), start.x);
       return;
     }
@@ -161,7 +163,7 @@ export class ArrowHits {
   }
 
   /** An enemy's arrow in one of the player's soldiers: his plate turns a body hit (sparks), else blood; it falls away. */
-  private hostileHitAlly(arrow: Arrow, ally: Enemy, headshot: boolean, point: Vec2, fromX: number): void {
+  private hostileHitAlly(arrow: Arrow, ally: Foe, headshot: boolean, point: Vec2, fromX: number): void {
     const armor = headshot ? 1 : enemyArmor(ally.kind);
     const damage = rollDamage(arrowDamage(arrow.shooter, 'bowman')) * this.world.enemyEdge.damage * armor * (headshot ? ARROWS.headshotMultiplier : 1);
     if (armor < 1) {

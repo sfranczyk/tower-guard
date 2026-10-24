@@ -28,6 +28,9 @@ export const DRAGON_KINDS: Readonly<Record<DragonKind, DragonLook>> = {
   fireDragon: { palette: DRAGON_PALETTES.red, rider: 'unarmed', altitude: FIRE_DRAGON_ALTITUDE, hoverOffset: FIRE_DRAGON_HOVER_OFFSET, hovers: FIRE_DRAGON_HOVER, waits: FIRE_DRAGON_WAIT },
 };
 
+/** MOBA: the blue lane's dragon archer, the dragon archer in the bowman's blue. */
+export const BLUE_DRAGON_LOOK: DragonLook = { ...DRAGON_KINDS.dragon, palette: DRAGON_PALETTES.blue };
+
 /** The riders' looks (rendering/designs): the dragon archer's hooded bandit; the fire dragon's knight is animated. */
 export const DRAGON_ARCHER_LOOK = dragonArcherLook();
 
