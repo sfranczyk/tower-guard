@@ -3,7 +3,8 @@ import { tunable } from '../core/tuning';
 /**
  * MOBA mode (`?moba`, scenes/BattleLanes.ts): both keeps send lane minions in groups from their own edge of the map,
  * each kind on its own clock (systems/minionWaves.ts): `troopCount` basic troops every `troopEveryMs`, `archerCount`
- * archers every `archerEveryMs`, `dragonCount` dragon archers every `dragonEveryMs` (from `dragonFirstMs`), the first groups `firstGroupMs` after the start, the minions of a group
+ * archers every `archerEveryMs`, `dragonCount` dragon archers every `dragonEveryMs` (from `dragonFirstMs`), `kamikazeCount`
+ * kamikazes every `kamikazeEveryMs` (from `kamikazeFirstMs`), the first groups `firstGroupMs` after the start, the minions of a group
  * `groupSpacingMs` apart. Blue minions fight on the player's side (systems/AllyAI.ts), red ones are the enemies.
  */
 export const MOBA_LANES = tunable('MOBA_LANES', 'MOBA lanes', {
@@ -15,6 +16,13 @@ export const MOBA_LANES = tunable('MOBA_LANES', 'MOBA lanes', {
   dragonEveryMs: 120000,
   /** The first dragons come this long after the start (the other groups at `firstGroupMs`). */
   dragonFirstMs: 120000,
+  kamikazeCount: 1,
+  kamikazeEveryMs: 150000,
+  kamikazeFirstMs: 150000,
+  /** A lane kamikaze's health: it runs past everyone at the enemy keep (Enemy.siege). */
+  kamikazeHealth: 90,
+  /** × on the damage its bomb does to a keep (a kamikaze's own keep damage: data/enemyKinds.ts). */
+  kamikazeKeepDamage: 3,
   firstGroupMs: 4000,
   groupSpacingMs: 700,
   /** Blue fighters strike the red keep from this close to its centre (as the enemies do ours, EnemyAI). */
@@ -25,14 +33,14 @@ export const MOBA_LANES = tunable('MOBA_LANES', 'MOBA lanes', {
 
 /**
  * MOBA players (scenes/BattleMoba.ts, systems/mobaEconomy.ts): gold for the last hit on an enemy minion or player
- * (`*Gold`), the killer of a teammate pays `teamKillPenalty` (as much as he has); `regenDelayMs` without a hit, then `regenAmount` health every `regenEveryMs`.
+ * (`*Gold`; killing your own costs half of it, a room rule); `regenDelayMs` without a hit, then `regenAmount` health every `regenEveryMs`.
  */
 export const MOBA_PLAYERS = tunable('MOBA_PLAYERS', 'MOBA players', {
   troopGold: 5,
   archerGold: 8,
   dragonGold: 25,
+  kamikazeGold: 30,
   playerGold: 100,
-  teamKillPenalty: 200,
   regenDelayMs: 5000,
   regenAmount: 5,
   regenEveryMs: 4000,

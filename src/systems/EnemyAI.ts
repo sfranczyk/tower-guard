@@ -108,7 +108,7 @@ export class EnemyAI {
       if (kamikaze.isPinned || kamikaze.isCelebrating) {
         return [here];
       }
-      const target = nearestMeleeTarget(this.world.bowmen, this.world.allies, kamikaze.x);
+      const target = kamikaze.siege ? undefined : nearestMeleeTarget(this.world.bowmen, this.world.allies, kamikaze.x);
       const victim = target?.bowman ?? target?.ally;
       const blastX = victim ? victim.x + Math.sign(kamikaze.x - victim.x) * MELEE_REACH : this.world.playerTower.x + TOWER_ATTACK_REACH;
       return [here, { owner: kamikaze, x: blastX, radius, fused: true }];
@@ -157,6 +157,10 @@ export class EnemyAI {
     if (enemy instanceof DragonEnemy) {
       this.ranged.updateDragon(enemy, deltaMs);
       this.drawDebugHitboxes(enemy);
+      return;
+    }
+    if (enemy.siege) {
+      this.siegeRun(enemy, deltaMs);
       return;
     }
     if (enemy.isArcher) {
@@ -283,6 +287,20 @@ export class EnemyAI {
       }
     }
 
+    enemy.clearHitTint();
+  }
+
+  /** MOBA lane kamikaze (Enemy.siege): runs past bowmen and soldiers to our keep and blows up at its wall. */
+  private siegeRun(enemy: Enemy, deltaMs: number): void {
+    const { playerTower } = this.world;
+    enemy.target = 'tower';
+    enemy.update(deltaMs, { x: playerTower.x, y: groundAt(playerTower.x) }, TOWER_ATTACK_REACH);
+    enemy.updateAnimation(deltaMs, enemy.isMoving());
+    this.drawDebugHitboxes(enemy);
+    const stopped = enemy.isDown || enemy.afflictions.isFrozen || enemy.afflictions.inVortex;
+    if (!stopped && enemy.x <= playerTower.x + TOWER_ATTACK_REACH) {
+      this.actions.detonate(enemy);
+    }
     enemy.clearHitTint();
   }
 

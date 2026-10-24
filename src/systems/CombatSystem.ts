@@ -2,8 +2,10 @@ import type { Graphics } from 'pixi.js';
 import {
   BOWMAN_KNOCKBACK,
   EXPLOSION_RADIUS,
+  FIRE_DRAGON_BLAST_POWER,
   LIGHTNING_DAMAGE,
   LIGHTNING_RADIUS,
+  MOBA_LANES,
   SHOW_HITBOX_DEBUG,
 } from '../config';
 import type { SoundId } from '../audio/SoundManager';
@@ -119,6 +121,8 @@ export class CombatSystem {
   /** Each chain's id; a dud kamikaze rolls once per chain, so it remembers the chain it fizzled in. */
   private nextChain = 0;
   private readonly duds = new WeakMap<Enemy, number>();
+  /** MOBA siege kamikazes whose bomb went off (each goes off once, however it died). */
+  private readonly blown = new WeakSet<Enemy>();
 
   public constructor(
     private readonly world: CombatWorld,
@@ -138,11 +142,12 @@ export class CombatSystem {
     const blueSide = teamOf ? { ...world, bowmen: world.bowmen.filter((bowman) => teamOf(bowman) === 'blue'), allBowmen: world.bowmen } : world;
     const foeBowmen = teamOf ? world.bowmen.filter((bowman) => teamOf(bowman) === 'red') : [];
     this.ai = new EnemyAI(blueSide, events, { detonate: (kamikaze) => this.detonate(kamikaze) });
-    this.allyAI = new AllyAI({ ...world, foeBowmen }, events);
+    this.allyAI = new AllyAI({ ...world, foeBowmen }, events, { detonate: (kamikaze) => this.detonate(kamikaze) });
     this.hits = new ArrowHits(blueSide, events, magic, {
       explode: (point, activeEnemies, directHit, power, dragon, by) => this.explode(point, activeEnemies, directHit, power, dragon, true, undefined, by),
       detonate: (kamikaze) => this.detonate(kamikaze),
       lightFuse: (kamikaze, chain) => this.lightFuse(kamikaze, chain === undefined ? this.newChain() : { chain, link: 0 }),
+      siegeBlast: (kamikaze) => this.siegeBlast(kamikaze, true),
       shatter: (enemy, fromX) => this.shatter(enemy, fromX),
       breakIce: (bowman) => this.breakIce(bowman),
     });
@@ -162,6 +167,10 @@ export class CombatSystem {
   /** With `enemiesActive` false (debug: enemies hidden) enemies freeze and arrows pass through them. */
   public update(deltaMs: number, enemiesActive = true): void {
     this.fuses.tick(deltaMs).forEach((bomb) => this.blowUp(bomb));
+    // A siege kamikaze always goes off when it dies (arrows, swords, burns, ice: anything that didn't set it off already).
+    [...this.world.enemies, ...this.world.allies]
+      .filter((unit): unit is Enemy => !(unit instanceof DragonEnemy) && unit.siege && !unit.isAlive() && !this.blown.has(unit))
+      .forEach((kamikaze) => this.siegeBlast(kamikaze, false));
     const activeEnemies = enemiesActive ? this.world.enemies.filter((enemy) => enemy.isAlive()) : [];
     const livingAllies = this.world.allies.filter((ally) => ally.isAlive());
     this.ai.beginFrame();
@@ -258,7 +267,7 @@ export class CombatSystem {
     // A kamikaze's bomb may go off (KAMIKAZE_BOMB.lightningChance); else it dies silently like the rest.
     struckBy(point.x, LIGHTNING_RADIUS, [...enemies, ...this.world.allies].filter((enemy) => enemy.isAlive() && !enemy.isFlying))
       .forEach((enemy) => {
-        if (!(enemy instanceof DragonEnemy) && enemyArchetype(enemy.kind).detonates && bombGoesOff('lightning', enemy.afflictions.isFrozen)) {
+        if (!(enemy instanceof DragonEnemy) && enemyArchetype(enemy.kind).detonates && !enemy.siege && bombGoesOff('lightning', enemy.afflictions.isFrozen)) {
           this.detonate(enemy);
         } else {
           enemy.takeDamage(LIGHTNING_DAMAGE, { cause: 'lightning', fromX: point.x });
@@ -286,8 +295,22 @@ export class CombatSystem {
   /** A kamikaze sets its bomb off now (reaching its target, a fatal fall, fire or lightning): it bursts apart in the blast. */
   private detonate(kamikaze: Enemy): void {
     const bomb = CombatSystem.bombOf(kamikaze, this.newChain());
+    this.blown.add(kamikaze);
     kamikaze.takeDamage(Number.MAX_SAFE_INTEGER, { cause: 'blast', fromX: bomb.point.x, point: bomb.point });
     this.blowUp(bomb, kamikaze);
+  }
+
+  /**
+   * A MOBA siege kamikaze died before reaching the keep: its bomb goes off where it fell, a fire dragon's blast
+   * (FIRE_DRAGON_BLAST_POWER) when an explosive arrow killed it.
+   */
+  private siegeBlast(kamikaze: Enemy, explosive: boolean): void {
+    if (this.blown.has(kamikaze)) {
+      return;
+    }
+    this.blown.add(kamikaze);
+    const bomb = CombatSystem.bombOf(kamikaze, this.newChain());
+    this.blowUp(explosive ? { ...bomb, power: FIRE_DRAGON_BLAST_POWER } : bomb, kamikaze, explosive);
   }
 
   /** A kamikaze just killed by a blast (not frozen): its bomb (`step` of a chain) goes off where it died, KAMIKAZE_BOMB.chainDelayMs later. */
@@ -306,10 +329,10 @@ export class CombatSystem {
    * lights its own fuse), and the bowmen (unless in the keep) and the keep take its damage if they're close, less the
    * further they are (blastFalloff); bowmen are thrown back.
    */
-  private blowUp({ point, kind, power, chain, link }: Bomb, self?: Enemy): void {
-    const { bowmen, playerTower, effects } = this.world;
+  private blowUp({ point, kind, power, chain, link }: Bomb, self?: Enemy, dragon = false): void {
+    const { bowmen, playerTower, enemyTower, effects } = this.world;
     // The bowmen take the kamikaze's own blast below, not the arrows' splash; the kamikazes it catches are the chain's next link.
-    this.explode(point, [...this.world.enemies, ...this.world.allies].filter((enemy) => enemy.isAlive()), self, power, false, false, { chain, link: link + 1 });
+    this.explode(point, [...this.world.enemies, ...this.world.allies].filter((enemy) => enemy.isAlive()), self, power, dragon, false, { chain, link: link + 1 });
     const reach = EXPLOSION_RADIUS * KAMIKAZE_REACH * power;
     bowmen.filter((bowman) => !bowman.isInTower && !bowman.isDead).forEach((bowman) => {
       const bowmanDistance = Math.hypot(bowman.x - point.x, bowman.y - BOWMAN_CHEST - point.y);
@@ -323,10 +346,14 @@ export class CombatSystem {
       const { minStrength } = BOWMAN_KNOCKBACK;
       bowman.knockBack(point.x, minStrength + (1 - minStrength) * (1 - bowmanDistance / reach));
     });
-    const keepDistance = point.x - (playerTower.x + TOWER_HALF_WIDTH);
+    // A MOBA siege kamikaze's bomb hits only the keep it runs at (a blue one the red keep), MOBA_LANES.kamikazeKeepDamage times.
+    const blue = self?.siege === true && this.world.allies.includes(self);
+    const keep = blue ? enemyTower : playerTower;
+    const keepDistance = blue ? enemyTower.x - TOWER_HALF_WIDTH - point.x : point.x - (playerTower.x + TOWER_HALF_WIDTH);
     if (keepDistance <= reach) {
-      const damage = rollDamage(enemyDamage(kind, 'melee', 'keep')) * power * this.world.enemyEdge.damage * blastFalloff(keepDistance, reach);
-      playerTower.takeDamage(damage, { x: playerTower.x + TOWER_HALF_WIDTH - 4, y: point.y });
+      const edge = blue ? 1 : this.world.enemyEdge.damage;
+      const damage = rollDamage(enemyDamage(kind, 'melee', 'keep')) * power * edge * blastFalloff(keepDistance, reach) * (self?.siege ? MOBA_LANES.kamikazeKeepDamage : 1);
+      keep.takeDamage(damage, { x: keep.x + (blue ? -1 : 1) * (TOWER_HALF_WIDTH - 4), y: point.y });
     }
   }
 
@@ -369,6 +396,11 @@ export class CombatSystem {
         }
         // Survivors are knocked down away from the blast and get back up; the rest die thrown back.
         const blastDistance = Math.hypot(dx, dy) / radius;
+        // A MOBA siege kamikaze is blast-proof: knocked down, unhurt.
+        if (!(candidate instanceof DragonEnemy) && candidate.siege) {
+          candidate.takeDamage(0, { cause: 'explosion', fromX: point.x, point, blastDistance });
+          return;
+        }
         const damage = explosionDamage(blastDistance) * power;
         const kamikaze = !(candidate instanceof DragonEnemy) && enemyArchetype(candidate.kind).detonates ? candidate : undefined;
         // A chain's blast that doesn't kill a kamikaze leaves it unhurt (only knocked down): a survivor keeps full health.

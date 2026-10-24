@@ -99,6 +99,8 @@ export interface ArrowHitsActions {
   breakIce(bowman: Bowman): void;
   /** A kamikaze's bomb goes off now (CombatSystem.detonate). */
   detonate(kamikaze: Enemy): void;
+  /** A MOBA siege kamikaze killed by an explosive arrow: it goes off as a fire dragon does (CombatSystem.siegeBlast). */
+  siegeBlast(kamikaze: Enemy): void;
   /** A kamikaze just killed by a blast: its bomb goes off a moment later (the first link of `chain`, else of a new one). */
   lightFuse(kamikaze: Enemy, chain?: number): void;
 }
@@ -383,7 +385,8 @@ export class ArrowHits {
     }
     const frozen = !(enemy instanceof DragonEnemy) && enemy.afflictions.isFrozen;
     const bomber = !(enemy instanceof DragonEnemy) && enemyArchetype(enemy.kind).detonates ? enemy : undefined;
-    if (arrow.type === 'fire' && bomber && bombGoesOff('fire', frozen)) {
+    // A MOBA siege kamikaze is fireproof: a fire arrow is just an arrow to it.
+    if (arrow.type === 'fire' && bomber && !bomber.siege && bombGoesOff('fire', frozen)) {
       // A fire arrow may set a kamikaze's bomb off (KAMIKAZE_BOMB.fireChance); if not, it's just the hit (it doesn't burn).
       effects.fireBurst(impactPoint);
       this.actions.detonate(bomber);
@@ -462,7 +465,9 @@ export class ArrowHits {
     } else if (explosive) {
       // A kamikaze it kills (not frozen: that one shatters) lights its bomb's fuse, the first link of the blast's chain.
       const chain = this.actions.explode(impactPoint, activeEnemies, enemy, undefined, undefined, playerOf(arrow));
-      if (bomber && !frozen && !bomber.isAlive()) {
+      if (bomber?.siege && !bomber.isAlive()) {
+        this.actions.siegeBlast(bomber);
+      } else if (bomber && !frozen && !bomber.isAlive()) {
         this.actions.lightFuse(bomber, chain);
       }
       arrow.deactivate();

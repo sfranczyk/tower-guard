@@ -49,7 +49,7 @@ const percent = (share: number): string => `${Math.round(share * 100)}%`;
 
 const BOUGHT_ARROWS = ARROW_TYPES.filter((type) => type !== 'normal');
 
-const MINION_NAMES: Readonly<Record<MinionRole, string>> = { troop: 'Troops', archer: 'Archers', dragon: 'Dragons' };
+const MINION_NAMES: Readonly<Record<MinionRole, string>> = { troop: 'Troops', archer: 'Archers', dragon: 'Dragons', kamikaze: 'Kamikazes' };
 
 export const UPGRADES: readonly UpgradeDef[] = [
   {
