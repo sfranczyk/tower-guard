@@ -1,7 +1,24 @@
+import { tunable } from '../core/tuning';
+
 /** Sound effects and music. */
 /** Sound effects: default effects volume (0..1) and the base volume of each sound. */
 export const SOUND_DEFAULT_VOLUME = 0.7;
-export const SOUND_VOLUMES = { bowShot: 0.7, arrowFlesh: 0.8, groan: 0.75, explosion: 1, thunder: 1, shrapnelBurst: 0.6 } as const;
+export const SOUND_VOLUMES = { bowShot: 0.7, arrowFlesh: 0.8, groan: 0.75, explosion: 1, thunder: 1, shrapnelBurst: 0.6, allyCurse: 0.8 } as const;
+/**
+ * The curses a soldier shouts when his own side's arrow hits him (`allyCurse`, cut from human/Allay hit.m4a): the
+ * relative chance of each take (0 = never; equal = uniform). Tunable in `?tune`.
+ */
+export const ALLY_CURSE_CHANCES = tunable('ALLY_CURSE_CHANCES', 'Ally curses (chance of each take)', {
+  take1: 1,
+  take2: 1,
+  take3: 1,
+  take4: 1,
+  take5: 1,
+  take6: 1,
+  take7: 1,
+  take8: 1,
+  take9: 1,
+});
 /** Base playback rate per sound (thunder is the explosion recording slowed down). */
 export const SOUND_RATES: Partial<Record<keyof typeof SOUND_VOLUMES, number>> = { thunder: 0.5, shrapnelBurst: 1.7 };
 /** Theme music volume (0..1), loop range in the file (see MusicPlayer) and fade time when toggled. */

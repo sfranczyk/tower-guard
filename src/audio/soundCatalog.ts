@@ -39,6 +39,11 @@ export const SOUND_INFO: Readonly<Record<SoundId, SoundInfo>> = {
     description: 'Lightning on storm battlegrounds: loud for ground strikes, a distant rumble for sky flashes.',
     source: 'Bum.m4a (thunder.mp3), played at half speed',
   },
+  allyCurse: {
+    title: 'Ally curse',
+    description: 'A soldier cursing when his own side hits him (planned for MOBA; not played in game yet). Nine takes, each with its own chance (ALLY_CURSE_CHANCES, ?tune).',
+    source: 'Allay hit.m4a',
+  },
 };
 
 export const MUSIC_INFO = {

@@ -9,6 +9,8 @@ export interface SoundLabRow {
   source: string;
   /** Duration of each variant (seconds). */
   durations: number[];
+  /** Chance of each variant being picked (0..1). */
+  chances: number[];
 }
 
 export interface SoundLabMusic {
@@ -32,6 +34,7 @@ export interface SoundLabCallbacks {
 }
 
 const seconds = (value: number): string => `${value.toFixed(2)} s`;
+const percent = (value: number): string => `${Math.round(value * 100)}%`;
 const clock = (value: number): string => `${Math.floor(value / 60)}:${String(Math.floor(value % 60)).padStart(2, '0')}`;
 const escapeHtml = (text: string): string => text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
@@ -69,17 +72,19 @@ export class SoundLabPanel {
     const effectRows = rows.map((row) => {
       const variants = row.durations.length > 1
         ? row.durations.map((duration, index) =>
-          `<button class="chip-button" data-sound-play="${row.id}" data-sound-variant="${index}" title="${seconds(duration)}">${index + 1}</button>`).join('')
+          `<button class="chip-button" data-sound-play="${row.id}" data-sound-variant="${index}" title="${seconds(duration)} · ${percent(row.chances[index] ?? 0)} chance">${index + 1}</button>`).join('')
         : '';
       const length = row.durations.length > 1
         ? `${row.durations.length} takes, ${seconds(Math.min(...row.durations))}–${seconds(Math.max(...row.durations))}`
         : row.durations.length === 1 ? seconds(row.durations[0]) : 'not loaded';
+      const weighted = new Set(row.chances.map((chance) => chance.toFixed(4))).size > 1;
+      const chances = weighted ? ` · chances ${row.chances.map((chance, index) => `${index + 1}: ${percent(chance)}`).join(', ')}` : '';
       return `
         <div class="sound-row">
           <div class="sound-info">
             <strong>${escapeHtml(row.title)}</strong>
             <span>${escapeHtml(row.description)}</span>
-            <small>${escapeHtml(row.source)} · ${length}</small>
+            <small>${escapeHtml(row.source)} · ${length}${chances}</small>
           </div>
           <div class="sound-actions">
             <button class="secondary-button" data-sound-play="${row.id}">▶ ${row.durations.length > 1 ? 'Random' : 'Play'}</button>

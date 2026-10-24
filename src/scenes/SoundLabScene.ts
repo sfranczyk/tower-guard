@@ -27,7 +27,7 @@ export class SoundLabScene extends Scene {
     this.ctx.root.addChild(background);
     this.background = background;
 
-    const rows = (Object.keys(SOUND_INFO) as SoundId[]).map((id) => ({ id, ...SOUND_INFO[id], durations: sound.variantDurations(id) }));
+    const rows = (Object.keys(SOUND_INFO) as SoundId[]).map((id) => ({ id, ...SOUND_INFO[id], durations: sound.variantDurations(id), chances: sound.variantChances(id) }));
     ui.renderSoundLab(rows, MUSIC_INFO, sound.settings);
 
     ui.handlers.soundLabPlay = (id, variant) => sound.preview(id, variant);
