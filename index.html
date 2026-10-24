@@ -338,6 +338,15 @@
         .coop-card { width: min(420px, calc(100% - 28px)); text-align: center; }
         .coop-card .panel-title { text-align: left; }
         .coop-card.coop-wide { width: min(760px, calc(100% - 28px)); }
+        /* MOBA lobby (ui/CoopPanel.ts): the two teams side by side. */
+        .coop-teams { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; text-align: left; }
+        .coop-team { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; padding: 10px 12px; border-radius: 12px; background: var(--panel-sunk); border-top: 5px solid #5fb4ff; }
+        .coop-team-red { border-top-color: #e0524a; }
+        .coop-team h3 { margin: 0 0 2px; font-family: var(--display); font-size: 15px; }
+        .coop-team p { margin: 0; font-size: 14px; }
+        .coop-team p.you { font-weight: 700; }
+        .coop-team p.empty { color: var(--ink-soft); }
+        .coop-team .chip-button { margin-top: 4px; }
         .coop-card .quiver-editor { text-align: left; }
         .coop-body { display: flex; flex-direction: column; align-items: stretch; gap: 12px; }
         .coop-copy, .coop-status { margin: 0; font-size: 15px; line-height: 1.4; }

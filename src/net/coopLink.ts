@@ -1,6 +1,7 @@
 import type { GameContext, GameSession, NetLink } from '../core/Scene';
 import { getDevUrlParam } from '../core/urlState';
 import { normalizeLoadout, type Loadout } from '../data/loadout';
+import { MAX_TEAM_SIZE, autoTeam, canJoinTeam, type Team } from '../data/moba';
 import type { NetMessage } from './protocol';
 import { RoomHub, guestLink } from './RoomHub';
 import { hasGaps, seatCount } from './seats';
@@ -9,8 +10,9 @@ import type { HostedRoom, RoomLink, Transport, TransportMode } from './Transport
 /** `?net=local` links tabs of this browser (no internet needed) instead of PeerJS. */
 export const transportMode = (): TransportMode => (getDevUrlParam('net') === 'local' ? 'local' : 'peer');
 
-/** A co-op room holds the host and up to three guests. */
+/** A co-op room holds the host and up to three guests (MOBA: five, three a team). */
 export const MAX_PLAYERS = 4;
+export const MAX_MOBA_PLAYERS = 2 * MAX_TEAM_SIZE;
 
 /** Each player's bowman (rendering/bowmanBody.ts BOWMAN_LOOKS), for the lobby's labels. */
 const LOOK_NAMES = ['Ranger', 'Keep warden', 'Steppe archer', 'Huntsman'];
@@ -71,18 +73,21 @@ export const hostCoop = (ctx: GameContext, room: HostedRoom, ownLoadout: Loadout
   const { session } = ctx;
   const net: NetLink = {
     role: 'host', code: room.code, transport: undefined as unknown as RoomLink, wind: 0, loadouts: [ownLoadout], localIndex: 0, present: [true], inBattle: false,
+    teams: [session.moba ? 'blue' : undefined],
   };
   session.net = net;
   session.playerCount = 1;
-  const hub = new RoomHub(room, MAX_PLAYERS);
+  const hub = new RoomHub(room, session.moba ? MAX_MOBA_PLAYERS : MAX_PLAYERS);
   const announce = (): void => {
     net.present = hub.present();
     net.loadouts.length = net.present.length;
+    net.teams.length = net.present.length;
     session.playerCount = seatCount(net.present);
     const loadouts = net.present.map((_, seat) => net.loadouts[seat] ?? null);
+    const teams = session.moba ? net.present.map((_, seat) => net.teams[seat] ?? null) : undefined;
     net.present.forEach((taken, seat) => {
       if (taken && seat > 0) {
-        hub.sendTo(seat, { t: 'roster', you: seat, present: net.present, loadouts });
+        hub.sendTo(seat, { t: 'roster', you: seat, present: net.present, loadouts, teams });
       }
     });
     onRoomChange?.();
@@ -90,6 +95,13 @@ export const hostCoop = (ctx: GameContext, room: HostedRoom, ownLoadout: Loadout
   announcers.set(net, announce);
   hubs.set(net, hub);
   net.transport = takeRoomMessages(hub, (message, from) => {
+    if (message.t === 'team') {
+      if (canJoinTeam(net.teams, from, message.team)) {
+        net.teams[from] = message.team;
+      }
+      announce();
+      return true;
+    }
     if (message.t !== 'loadout') {
       return false;
     }
@@ -99,6 +111,9 @@ export const hostCoop = (ctx: GameContext, room: HostedRoom, ownLoadout: Loadout
   });
   hub.onJoin = (seat) => {
     net.loadouts[seat] = undefined;
+    // A newcomer goes to the smaller team (his seat's old team not counted).
+    net.teams[seat] = undefined;
+    net.teams[seat] = session.moba ? autoTeam(net.teams) : undefined;
     announce();
   };
   hub.onLeave = (seat) => {
@@ -106,7 +121,9 @@ export const hostCoop = (ctx: GameContext, room: HostedRoom, ownLoadout: Loadout
     if (net.inBattle) {
       ctx.ui.setStatus(`${playerLabel(seat)} has left · ${hub.present().some((taken, other) => taken && other > 0) ? 'the others play on' : 'you play on alone'}`);
     } else {
-      net.loadouts = hub.compact().map((old) => net.loadouts[old]);
+      const seats = hub.compact();
+      net.loadouts = seats.map((old) => net.loadouts[old]);
+      net.teams = seats.map((old) => net.teams[old]);
     }
     announce();
   };
@@ -122,6 +139,7 @@ export const joinCoop = (ctx: GameContext, code: string, transport: Transport, o
   let notice = 'The host has left the game.';
   const net: NetLink = {
     role: 'guest', code, transport: guestLink(transport), wind: 0, loadouts: [undefined, ownLoadout], localIndex: 1, present: [], inBattle: false,
+    teams: [],
   };
   // First: a roster may already be waiting.
   session.net = net;
@@ -132,6 +150,7 @@ export const joinCoop = (ctx: GameContext, code: string, transport: Transport, o
       net.localIndex = message.you;
       net.present = message.present;
       net.loadouts = message.loadouts.map((loadout, seat) => (seat === message.you ? own : loadout ? normalizeLoadout(loadout) : undefined));
+      net.teams = message.teams?.map((team) => team ?? undefined) ?? [];
       session.playerCount = seatCount(net.present);
       // Joined (or the host lost track): the host gets this player's quiver.
       if (!message.loadouts[message.you]) {
@@ -141,7 +160,7 @@ export const joinCoop = (ctx: GameContext, code: string, transport: Transport, o
       return true;
     }
     if (message.t === 'full') {
-      notice = 'That room is full (four players).';
+      notice = 'That room is full.';
       return true;
     }
     return false;
@@ -166,7 +185,9 @@ export const settleSeats = (session: GameSession): void => {
   net.inBattle = false;
   const hub = hubs.get(net);
   if (hub && hasGaps(net.present)) {
-    net.loadouts = hub.compact().map((old) => net.loadouts[old]);
+    const seats = hub.compact();
+    net.loadouts = seats.map((old) => net.loadouts[old]);
+    net.teams = seats.map((old) => net.teams[old]);
     announcers.get(net)?.();
   }
 };
@@ -190,6 +211,29 @@ export const shareLoadout = (session: GameSession, loadout: Loadout): void => {
   } else {
     net.transport.send({ t: 'loadout', loadout });
   }
+};
+
+/** MOBA lobby: this player asks for `team` (the host decides: three a team at most). */
+export const pickTeam = (session: GameSession, team: Team): void => {
+  const { net } = session;
+  if (!net) {
+    return;
+  }
+  if (net.role === 'guest') {
+    net.transport.send({ t: 'team', team });
+  } else if (canJoinTeam(net.teams, 0, team)) {
+    net.teams[0] = team;
+    announcers.get(net)?.();
+  }
+};
+
+/** MOBA lobby: everyone in the room with their team. */
+export const roomTeams = (session: GameSession): Array<{ label: string; team: Team; you: boolean }> => {
+  const { net } = session;
+  return (net?.present ?? []).flatMap((taken, index) => {
+    const team = net?.teams[index];
+    return taken && team ? [{ label: playerLabel(index), team, you: index === net?.localIndex }] : [];
+  });
 };
 
 /** The other players in the room (not this one), with their quivers (undefined until picked). */

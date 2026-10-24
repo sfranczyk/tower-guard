@@ -17,6 +17,10 @@ export interface BattleMobaDeps {
   popups(): DamageNumbers;
   /** `player` bought something or moved vault gold: his HUD, quiver and shop redraw. */
   changed?(player: Player): void;
+  /** Co-op host: a guest's gold popup (`by` is not this browser's player). */
+  goldShown?(by: number, at: { x: number; y: number }, delta: number): void;
+  /** Co-op host: `player` is back at his keep. */
+  revived?(player: Player): void;
 }
 
 /**
@@ -129,6 +133,7 @@ export class BattleMoba {
     player.bowman.revive(playerStartX(player.slot, player.team));
     player.bowman.figure.facing = player.team === 'red' ? -1 : 1;
     this.deps.team.status(player, 'Back in the fight');
+    this.deps.revived?.(player);
   }
 
   /** `by` landed the last hit on `victim` at `at`: his purse changes, and he sees by how much there. */
@@ -137,8 +142,13 @@ export class BattleMoba {
       return;
     }
     const delta = this.economy.kill(by, victim);
-    if (delta !== 0 && this.deps.team.list[by]?.local) {
+    if (delta === 0) {
+      return;
+    }
+    if (this.deps.team.list[by]?.local) {
       this.deps.popups().showGold(at, delta);
+    } else {
+      this.deps.goldShown?.(by, at, delta);
     }
   }
 }

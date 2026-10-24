@@ -1,4 +1,5 @@
 import type { Loadout } from '../data/loadout';
+import { MAX_TEAM_SIZE, teamsReady, type Team } from '../data/moba';
 import { editQuiverIn } from './quiverEditing';
 import { panelTop, renderPanel } from './panelLayout';
 import { partnerQuiver, quiverPage, type PartnerQuiver } from './quiverPage';
@@ -8,13 +9,29 @@ export type CoopView =
   /** Host a game or join one by code (with the last error, if any). */
   | { kind: 'choose'; error?: string }
   /** Hosting: the code to pass on, and the guests who are in (up to three) with the quivers they picked. */
-  | { kind: 'hosting'; code?: string; guests: PartnerQuiver[] }
+  | { kind: 'hosting'; code?: string; guests: PartnerQuiver[]; teams?: LobbyTeams }
   | { kind: 'joining'; code: string }
   /**
    * Joined: waiting for the host to start the battle, meanwhile picking a quiver; the others' beside it. `you` names
    * this player's seat once the host has told it.
    */
-  | { kind: 'joined'; code: string; notice?: string; you?: string; loadout: Loadout; others: PartnerQuiver[] };
+  | { kind: 'joined'; code: string; notice?: string; you?: string; loadout: Loadout; others: PartnerQuiver[]; teams?: LobbyTeams };
+
+/** MOBA lobby: who is on which team (instead of the quivers: arrows are bought in the match). */
+export type LobbyTeams = ReadonlyArray<{ label: string; team: Team; you: boolean }>;
+
+const TEAM_NAMES: Readonly<Record<Team, string>> = { blue: 'Blue · left keep', red: 'Red · right keep' };
+
+/** The two teams side by side, with a button to switch to the other one (when it has room). */
+const teamsHtml = (teams: LobbyTeams): string => {
+  const own = teams.find((entry) => entry.you)?.team;
+  return `<div class="coop-teams">${(['blue', 'red'] as const).map((team) => {
+    const members = teams.filter((entry) => entry.team === team);
+    const join = own && own !== team && members.length < MAX_TEAM_SIZE ? `<button class="chip-button" data-coop-team="${team}">Join</button>` : '';
+    return `<div class="coop-team coop-team-${team}"><h3>${TEAM_NAMES[team]}</h3>`
+      + `${members.map((entry) => `<p${entry.you ? ' class="you"' : ''}>${escapeHtml(entry.label)}${entry.you ? ' (you)' : ''}</p>`).join('') || '<p class="empty">Nobody yet</p>'}${join}</div>`;
+  }).join('')}</div>`;
+};
 
 export interface CoopPanelCallbacks {
   host(): void;
@@ -25,6 +42,8 @@ export interface CoopPanelCallbacks {
   leave(): void;
   /** Joined: the guest changed their quiver. */
   loadoutChange(loadout: Loadout): void;
+  /** MOBA: this player switches team. */
+  teamChange(team: Team): void;
 }
 
 const escapeHtml = (text: string): string => text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -58,6 +77,8 @@ export class CoopPanel {
         callbacks.setup();
       } else if (target.closest('[data-coop-leave]')) {
         callbacks.leave();
+      } else if (target.closest<HTMLElement>('[data-coop-team]')) {
+        callbacks.teamChange(target.closest<HTMLElement>('[data-coop-team]')!.dataset.coopTeam as Team);
       }
     });
     root.addEventListener('keydown', (event) => {
@@ -88,14 +109,16 @@ export class CoopPanel {
         break;
       case 'hosting':
         leave = view.code ? 'Close the room' : 'Cancel';
-        actions = view.code && view.guests.length > 0 ? '<button class="primary-button" data-coop-setup>Battle setup</button>' : '';
+        // MOBA: a player on each team first.
+        actions = view.code && view.guests.length > 0 && (!view.teams || teamsReady(view.teams.map((entry) => entry.team)))
+          ? `<button class="primary-button" data-coop-setup>${view.teams ? 'Start match' : 'Battle setup'}</button>` : '';
         body = view.code
-          ? `
+          ? (view.teams ? this.mobaHosting(view.code, view.guests.length, view.teams) : `
           <p class="coop-copy">Give the others this room code (up to three can join):</p>
           <div class="coop-code">${escapeHtml(view.code)}</div>
           <p class="coop-status">${view.guests.length === 0 ? 'Waiting for players…'
             : view.guests.length < 3 ? `${view.guests.length + 1} of 4 in · more can still join` : 'The room is full!'}</p>
-          ${view.guests.map(partnerQuiver).join('')}`
+          ${view.guests.map(partnerQuiver).join('')}`)
           : '<p class="coop-status">Opening a room…</p>';
         break;
       case 'joining':
@@ -105,16 +128,27 @@ export class CoopPanel {
       case 'joined':
         body = `
           <div class="coop-code">${escapeHtml(view.code)}</div>
-          <p class="coop-status">${escapeHtml(view.notice ?? `Connected${view.you ? ` as ${view.you}` : ''}! Pick your arrows while the host sets up the battle…`)}</p>
-          ${quiverPage(view.loadout, this.selectedSlot, view.others)}`;
+          <p class="coop-status">${escapeHtml(view.notice ?? `Connected${view.you ? ` as ${view.you}` : ''}! ${view.teams ? 'Pick your team' : 'Pick your arrows'} while the host sets up the battle…`)}</p>
+          ${view.teams ? teamsHtml(view.teams) : quiverPage(view.loadout, this.selectedSlot, view.others)}`;
         leave = 'Leave the room';
         break;
     }
     // The guest's quiver needs the room of a full card.
-    this.root.classList.toggle('coop-wide', view.kind === 'joined');
+    this.root.classList.toggle('coop-wide', view.kind === 'joined' && !view.teams);
     const back = `<button class="secondary-button small-button" data-coop-leave>← ${leave}</button>`;
     renderPanel(this.root, `${panelTop(back, 'Co-op', actions)}<div class="panel-body coop-body">${body}</div>`);
     this.root.querySelector<HTMLInputElement>('[data-coop-code]')?.focus();
+  }
+
+  /** MOBA host: the code, the teams (a match needs a player on each), up to six in the room. */
+  private mobaHosting(code: string, guests: number, teams: LobbyTeams): string {
+    const ready = teamsReady(teams.map((entry) => entry.team));
+    const status = guests === 0 ? 'Waiting for players…' : !ready ? 'Each team needs a player' : guests + 1 < MAX_TEAM_SIZE * 2 ? `${guests + 1} of ${MAX_TEAM_SIZE * 2} in · more can still join` : 'The room is full!';
+    return `
+          <p class="coop-copy">MOBA: give the others this room code (up to ${MAX_TEAM_SIZE} a team):</p>
+          <div class="coop-code">${escapeHtml(code)}</div>
+          <p class="coop-status">${status}</p>
+          ${teamsHtml(teams)}`;
   }
 
   private join(): void {

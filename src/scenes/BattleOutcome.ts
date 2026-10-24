@@ -13,7 +13,9 @@ import type { BattlePlayers } from './BattlePlayers';
 import type { BattleRelief } from './BattleRelief';
 import { BattleSurvival } from './BattleSurvival';
 import type { LevelOutcome } from './levelEnd';
-import { showLevelEnd } from './levelEndScreen';
+import { showLevelEnd, showMobaEnd } from './levelEndScreen';
+import { mobaEndInfo } from './levelEnd';
+import type { Team } from '../data/moba';
 
 export interface BattleOutcomeDeps {
   ctx: GameContext;
@@ -52,7 +54,7 @@ export class BattleOutcome {
     if (moba) {
       moba.handleFallen();
       if (playerTower.isDestroyed() || enemyTower.isDestroyed()) {
-        this.end(enemyTower.isDestroyed() === (team.local.team === 'blue'));
+        this.endMatch(enemyTower.isDestroyed() ? 'blue' : 'red');
       }
       return;
     }
@@ -82,11 +84,34 @@ export class BattleOutcome {
   }
 
   /** Guest: the host decides what comes after the level. */
-  public showGuestEnd(info: EndInfo): void {
+  public showGuestEnd(sent: EndInfo): void {
+    // MOBA: said from this player's team's side.
+    const info = sent.winner ? mobaEndInfo(sent.winner, this.deps.team.local.team, sent.stats) : sent;
     this.ended = true;
     this.won = info.outcome === 'win';
     this.deps.stopInput();
     this.deps.ctx.ui.dialogs.showEndScreen({ ...info, buttonLabel: 'Waiting for the host…', onButton: () => {} });
+  }
+
+  /** MOBA: `winner` brought the other keep down; its minions and players cheer. */
+  private endMatch(winner: Team): void {
+    const { ctx, team, foes, enemies, soldiers, playerTower, enemyTower } = this.deps;
+    const hostSync = this.deps.hostSync();
+    this.ended = true;
+    this.won = winner === team.local.team;
+    this.deps.stopInput();
+    foes.stopWaves();
+    if (winner === 'red') {
+      enemies.forEach((enemy) => enemy.celebrate());
+      hostSync?.push({ e: 'cheer' });
+    } else {
+      soldiers.celebrate();
+    }
+    const stats = [
+      { label: 'blue keep', value: `${Math.ceil(playerTower.getHealth())} / ${playerTower.maxHealth}` },
+      { label: 'red keep', value: `${Math.ceil(enemyTower.getHealth())} / ${enemyTower.maxHealth}` },
+    ];
+    this.endAction = showMobaEnd(ctx, winner, team.local.team, stats, hostSync);
   }
 
   private end(won: boolean, levelCleared = false): void {

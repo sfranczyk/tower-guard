@@ -10,10 +10,10 @@ import type { Player } from '../scenes/PlayerControl';
 import type { EffectsSystem } from '../systems/EffectsSystem';
 import type { Foe } from '../systems/CombatSystem';
 import { groundAt } from '../systems/terrain';
-import type { EnemyType, ProjectileType, Vec2 } from '../types';
+import type { ProjectileType, UnitType, Vec2 } from '../types';
 import { FRAME_MS, PING_MS, type ArrowLaunch } from './HostSync';
 import { PlaybackClock } from './playbackClock';
-import { toNetAim, type EndInfo, type GameEvent, type InputMessage, type NetMessage, type Snapshot, type SpawnPlace } from './protocol';
+import { toNetAim, type EndInfo, type GameEvent, type InputMessage, type MinionSpawn, type NetMessage, type Snapshot, type SpawnPlace } from './protocol';
 import { decodeSnapshot } from './snapCodec';
 import type { RoomLink } from './Transport';
 
@@ -37,7 +37,11 @@ export interface GuestWorld {
   readonly effects: EffectsSystem;
   readonly playerTower: Tower;
   readonly enemyTower: Tower;
-  spawnEnemy(type: EnemyType, place?: SpawnPlace): Foe;
+  spawnEnemy(type: UnitType, place?: SpawnPlace, minion?: MinionSpawn): Foe;
+  /** MOBA: the blue minions (soldiers and dragons; animated here like the enemies). */
+  readonly allies?: () => readonly Foe[];
+  /** MOBA: the economy, gold popups and respawns. */
+  moba?(event: Extract<GameEvent, { e: 'moba' | 'gold' | 'revive' }>): void;
   launchArrow(launch: ArrowLaunch): Arrow;
   /** A fire arrow the rain put out: it flies on as a plain one. */
   douseArrow(arrow: Arrow): void;
@@ -157,7 +161,7 @@ export class GuestSync {
     const { players, effects } = this.world;
     switch (event.e) {
       case 'spawn':
-        this.enemyById.set(event.id, this.world.spawnEnemy(event.type, event.place));
+        this.enemyById.set(event.id, this.world.spawnEnemy(event.type, event.place, event.m));
         break;
       case 'unseat': {
         const enemy = this.enemyById.get(event.id);
@@ -279,7 +283,17 @@ export class GuestSync {
       case 'wind':
         this.world.setWind(event.wind);
         break;
+      case 'moba':
+      case 'gold':
+      case 'revive':
+        this.world.moba?.(event);
+        break;
     }
+  }
+
+  /** MOBA: a purchase or vault move, for the host to decide. */
+  public sendShop(message: Extract<NetMessage, { t: 'shop' }>): void {
+    this.transport.send(message);
   }
 
   /** Every frame: the world as the host had it a moment ago, local arrows, and the guest's controls out. */
@@ -393,7 +407,7 @@ export class GuestSync {
   }
 
   private animateEnemies(deltaMs: number): void {
-    this.world.enemies.forEach((enemy) => {
+    [...this.world.enemies, ...(this.world.allies?.() ?? [])].forEach((enemy) => {
       if (enemy instanceof DragonEnemy) {
         enemy.updateAnimation(deltaMs);
       } else {

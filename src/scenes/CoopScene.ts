@@ -5,12 +5,13 @@ import { centeredCameraX } from '../core/viewport';
 import { BATTLEGROUNDS } from '../data/battlegrounds';
 import { loadSandbox, saveSandbox } from '../core/sandboxStorage';
 import type { Loadout } from '../data/loadout';
-import { hostCoop, joinCoop, leaveCoop, otherQuivers, playerLabel, setRoomListener, settleSeats, shareLoadout, transportMode } from '../net/coopLink';
+import { hostCoop, joinCoop, leaveCoop, otherQuivers, pickTeam, playerLabel, roomTeams, setRoomListener, settleSeats, shareLoadout, transportMode } from '../net/coopLink';
 import type { NetMessage } from '../net/protocol';
 import { normalizeRoomCode } from '../net/roomCode';
 import { hostRoom, joinRoom, type HostedRoom } from '../net/Transport';
 import { Background } from '../rendering/Background';
 import type { CoopView } from '../ui/DomUi';
+import type { LobbyTeams } from '../ui/CoopPanel';
 
 /**
  * The co-op lobby: host a room (and pass on its code) or join one; up to three guests. The host then sets up the
@@ -31,9 +32,11 @@ export class CoopScene extends Scene {
 
     ui.handlers.coopHost = () => void this.host();
     ui.handlers.coopJoin = (code) => void this.join(code);
-    ui.handlers.coopSetup = () => this.ctx.goTo('sandbox');
+    // MOBA: no setup to pick (the setup's first map), straight into the match.
+    ui.handlers.coopSetup = () => this.ctx.goTo(session.moba ? 'game' : 'sandbox');
     ui.handlers.coopLeave = () => this.leave();
     ui.handlers.coopLoadout = (loadout) => this.pickLoadout(loadout);
+    ui.handlers.coopTeam = (team) => pickTeam(session, team);
     // Someone joined or left, or picked a quiver: show it.
     setRoomListener(() => this.refreshRoom());
     this.onExit(() => {
@@ -42,6 +45,7 @@ export class CoopScene extends Scene {
       ui.handlers.coopSetup = undefined;
       ui.handlers.coopLeave = undefined;
       ui.handlers.coopLoadout = undefined;
+      ui.handlers.coopTeam = undefined;
       setRoomListener(undefined);
     });
     this.listenWindow('keydown', (event) => {
@@ -54,7 +58,7 @@ export class CoopScene extends Scene {
     const { net } = session;
     if (net?.role === 'host') {
       settleSeats(session);
-      this.render({ kind: 'hosting', code: net.code, guests: otherQuivers(session) });
+      this.render({ kind: 'hosting', code: net.code, guests: otherQuivers(session), teams: this.teams() });
     } else if (net?.role === 'guest') {
       this.listenAsGuest();
       this.renderJoined(net.code);
@@ -84,7 +88,7 @@ export class CoopScene extends Scene {
       }
       // The room stays open: guests come (and go) while the host waits here or sets up the battle.
       hostCoop(this.ctx, room, this.ctx.session.sandbox.loadout);
-      this.render({ kind: 'hosting', code: room.code, guests: [] });
+      this.render({ kind: 'hosting', code: room.code, guests: [], teams: this.teams() });
     } catch (error) {
       this.render({ kind: 'choose', error: (error as Error).message });
     }
@@ -120,6 +124,8 @@ export class CoopScene extends Scene {
         const { session } = this.ctx;
         session.sandbox = message.sandbox;
         session.run = message.run;
+        session.moba = message.moba;
+        session.teams = message.teams;
         if (session.net) {
           session.net.wind = message.wind;
         }
@@ -134,7 +140,12 @@ export class CoopScene extends Scene {
     const net = session.net;
     const loadout = (net && net.loadouts[net.localIndex]) ?? loadSandbox().loadout;
     const you = net?.present.length ? playerLabel(net.localIndex) : undefined;
-    this.render({ kind: 'joined', code, notice, you, loadout, others: otherQuivers(session) });
+    this.render({ kind: 'joined', code, notice, you, loadout, others: otherQuivers(session), teams: this.teams() });
+  }
+
+  /** MOBA: the room's teams (undefined otherwise). */
+  private teams(): LobbyTeams | undefined {
+    return this.ctx.session.moba ? roomTeams(this.ctx.session) : undefined;
   }
 
   private refreshRoom(): void {
@@ -142,7 +153,7 @@ export class CoopScene extends Scene {
     if (this.view.kind === 'joined') {
       this.renderJoined(this.view.code, this.view.notice);
     } else if (this.view.kind === 'hosting' && this.view.code) {
-      this.render({ ...this.view, guests: otherQuivers(session) });
+      this.render({ ...this.view, guests: otherQuivers(session), teams: this.teams() });
     }
   }
 

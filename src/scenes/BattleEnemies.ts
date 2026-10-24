@@ -6,13 +6,14 @@ import { getEnemyStats } from '../data/enemies';
 import { ENEMY_KINDS, isFlyingType } from '../data/enemyKinds';
 import { levelEnemyTotal, type LevelEnemyCounts } from '../data/sandbox';
 import type { HostSync } from '../net/HostSync';
-import type { SpawnPlace } from '../net/protocol';
+import type { MinionSpawn, SpawnPlace } from '../net/protocol';
 import DragonEnemy from '../objects/dragon/DragonEnemy';
 import Enemy, { type HitInfo, type RiderOff } from '../objects/enemy/Enemy';
 import type { Foe } from '../systems/CombatSystem';
 import { SurvivalDirector } from '../systems/survivalWaves';
 import { WaveDirector } from '../systems/waveDirector';
 import type { EnemyType } from '../types';
+import { minionPower } from '../data/upgrades';
 import { worldWidth } from '../systems/battlefield';
 
 /** Enemies come in from beyond the right edge of the battlefield (out of view), past the enemy keep. */
@@ -119,9 +120,10 @@ export class BattleEnemies {
 
   /**
    * A new enemy walking (or flying) in, or (`place`) a mounted knight's rider thrown off where his horse stood.
-   * `power`: MOBA minion upgrades, × its health and damage.
+   * `minion`: a MOBA lane minion (its level: × health and damage, minionPower).
    */
-  public spawn(type: EnemyType, place?: SpawnPlace, power = 1): Foe {
+  public spawn(type: EnemyType, place?: SpawnPlace, minion?: MinionSpawn): Foe {
+    const power = minion ? minionPower(minion.lv) : 1;
     const stats = getEnemyStats(type, 1);
     const enemy = isFlyingType(type)
       ? new DragonEnemy(enemySpawnX(), stats.health * power, stats.speed, type)
@@ -134,7 +136,7 @@ export class BattleEnemies {
       this.total += 1;
     }
     this.deps.world.addChild(enemy);
-    this.deps.hostSync()?.trackEnemy(enemy, type, place);
+    this.deps.hostSync()?.trackEnemy(enemy, type, place, minion);
     // Called before the hit lands, so its health is what the hit takes from.
     enemy.onDamaged = (amount: number, hit?: HitInfo) => this.deps.onDamaged?.(enemy, shownDamage(amount, enemy.currentHealth), hit);
     if (enemy instanceof Enemy) {

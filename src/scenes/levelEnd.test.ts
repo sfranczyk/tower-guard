@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { normalizeSandbox } from '../data/sandbox';
-import { levelEndInfo, type LevelOutcome } from './levelEnd';
+import { levelEndInfo, mobaEndInfo, type LevelOutcome } from './levelEnd';
 
 const sandbox = { ...normalizeSandbox(undefined), levelCount: 3, bowmanHealth: 100 };
 const outcome = (changes: Partial<LevelOutcome> = {}): LevelOutcome => ({
@@ -62,5 +62,10 @@ describe('levelEndInfo in survival', () => {
     expect(held({ levelIndex: 1 }).info).toMatchObject({ title: 'Victory!', copy: 'You held out all 2 levels.' });
     const minutes = survival.survival.levels[0].minutes;
     expect(held({ won: false, levelCleared: false, survivedMs: minutes * 60_000 - 75_000 }).info.copy).toMatch(/with 1:15 to dawn/);
+  });
+
+  it('tells each MOBA team its own result', () => {
+    expect(mobaEndInfo('red', 'red')).toMatchObject({ title: 'Victory!', outcome: 'win', winner: 'red' });
+    expect(mobaEndInfo('red', 'blue').copy).toBe('The blue keep has fallen. The red team wins the match.');
   });
 });

@@ -131,6 +131,7 @@ export class DomUi {
       setup: () => this.handlers.coopSetup?.(),
       leave: () => this.handlers.coopLeave?.(),
       loadoutChange: (loadout) => this.handlers.coopLoadout?.(loadout),
+      teamChange: (team) => this.handlers.coopTeam?.(team),
     });
     this.soundLabScreen = this.query('[data-sound-lab]');
     this.soundLabPanel = new SoundLabPanel(this.query('[data-sound-lab-panel]'), {

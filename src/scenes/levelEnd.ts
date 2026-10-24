@@ -1,6 +1,7 @@
 import { BATTLEGROUNDS } from '../data/battlegrounds';
 import { runBattleground, runLevelCount, type SandboxSettings } from '../data/sandbox';
 import type { EndInfo } from '../net/protocol';
+import { otherTeam, type Team } from '../data/moba';
 import { clockText } from './battleText';
 
 /** How a level ended and what's left standing, for the end screen. */
@@ -68,3 +69,12 @@ export const levelEndInfo = (outcome: LevelOutcome, sandbox: SandboxSettings): {
     },
   };
 };
+
+/** MOBA's end screen as `viewer`'s team sees it (pure, tested): `winner` brought the other keep down. */
+export const mobaEndInfo = (winner: Team, viewer: Team, stats: EndInfo['stats'] = []): EndInfo => ({
+  title: winner === viewer ? 'Victory!' : 'Defeat',
+  outcome: winner === viewer ? 'win' : 'loss',
+  copy: `The ${otherTeam(winner)} keep has fallen. ${winner === viewer ? 'Your team wins the match.' : `The ${winner} team wins the match.`}`,
+  stats,
+  winner,
+});

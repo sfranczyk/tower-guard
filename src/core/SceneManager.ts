@@ -93,8 +93,9 @@ export class SceneManager {
     } else if (getDevUrlParam(DESIGN_LAB_PARAM) !== null) {
       this.goTo('designLab');
     } else if (this.ctx.session.moba) {
-      // Straight into a MOBA battle on the setup's first map (dev: the mode has no menu entry yet).
-      this.goTo('game');
+      // Straight into a MOBA battle on the setup's first map (dev: the mode has no menu entry yet); with ?net, the
+      // co-op lobby (teams picked there).
+      this.goTo(getDevUrlParam('net') !== null ? 'coop' : 'game');
     } else {
       this.goTo(getDevUrlParam(SOUND_LAB_PARAM) !== null ? 'soundLab' : 'menu');
     }

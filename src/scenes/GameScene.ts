@@ -48,7 +48,7 @@ import { firstArrow, type Loadout } from '../data/loadout';
 import type Enemy from '../objects/enemy/Enemy';
 import DragonEnemy from '../objects/dragon/DragonEnemy';
 import { ALLY_ORDER_LABELS } from '../systems/allyOrders';
-import type { Vec2 } from '../types';
+import type { EnemyType, Vec2 } from '../types';
 import { enemyKeepX, useBattlefield, worldWidth } from '../systems/battlefield';
 
 /**
@@ -119,7 +119,9 @@ export class GameScene extends Scene {
     ctx.ui.limitViewWidth(worldWidth());
     this.battleground = BATTLEGROUNDS[runBattleground(sandbox, run.levelIndex)];
     this.role = ctx.session.net?.role ?? 'solo';
-    this.teams = matchTeams(ctx.session.playerCount, !!ctx.session.moba, ctx.session.teams);
+    // MOBA online: the teams picked in the lobby (the host's; a guest gets them with `start`).
+    const lobbyTeams = ctx.session.net?.role === 'host' ? ctx.session.net.teams : ctx.session.teams;
+    this.teams = matchTeams(ctx.session.playerCount, !!ctx.session.moba, lobbyTeams);
     this.localIndex = ctx.session.net?.localIndex ?? 0;
     enterBattle(ctx.session);
     // Windy maps roll a fresh wind for every level (direction and strength); a co-op guest takes the host's.
@@ -146,8 +148,8 @@ export class GameScene extends Scene {
     });
     if (ctx.session.moba) {
       this.moba = new MobaMode({
-        ctx, world: this.world, soldiers: this.soldiers, foes: this.foes, teams: this.teams, guest: this.role === 'guest',
-        popups: () => this.damageNumbers,
+        ctx, world: this.world, soldiers: this.soldiers, foes: this.foes, teams: this.teams,
+        popups: () => this.damageNumbers, hostSync: () => this.hostSync, guestSync: () => this.guestSync,
       });
     }
     this.shots = new BattleArrows({
@@ -227,7 +229,7 @@ export class GameScene extends Scene {
       guestSync: () => this.guestSync,
     });
     const keepOf = (player: Player): Tower => (player.team === 'red' ? this.enemyTower : this.playerTower);
-    this.moba?.start(this.team, keepOf);
+    this.moba?.start(this.team, keepOf, this.role === 'guest');
     this.onExit(() => this.moba?.destroy());
     this.control = new PlayerControl(keepOf, {
       enteredTower: (player) => this.team.status(player, 'Hidden in tower · press S to exit'),
@@ -325,7 +327,8 @@ export class GameScene extends Scene {
       effects: this.effects,
       playerTower: this.playerTower,
       enemyTower: this.enemyTower,
-      spawnEnemy: (type, place) => this.foes.spawn(type, place),
+      spawnEnemy: (type, place, minion) => (minion && this.moba ? this.moba.lanes.spawn(type, minion) : this.foes.spawn(type as EnemyType, place)),
+      moba: this.moba,
       playSound: (id, at) => this.playSound(id, at),
       showGuestEnd: (info) => this.outcome.showGuestEnd(info),
       guestPaused: (paused) => controls.setPaused(paused, !controls.pauseAsked),
@@ -334,6 +337,7 @@ export class GameScene extends Scene {
       setSurvivalClock: (ms) => this.survival?.sync(ms),
     }));
     if (this.hostSync) {
+      this.moba?.listen(this.hostSync);
       this.hostSync.onPauseRequest = (paused, from) => controls.pauseFor(from, paused);
     }
     if (SHOW_HITBOX_DEBUG && (this.hostSync || this.guestSync)) {
@@ -449,7 +453,7 @@ export class GameScene extends Scene {
   }
 
   private updateHud(): void {
-    this.players.forEach((player) => player.bowman.setHealthRatio(player.health / (this.match?.maxHealth(player) ?? this.ctx.session.sandbox.bowmanHealth)));
+    this.players.forEach((player) => player.bowman.setHealthRatio(player.health / (this.moba?.maxHealth(player) ?? this.ctx.session.sandbox.bowmanHealth)));
     this.ctx.ui.updateAllies({ slots: this.soldiers.slots(), order: this.soldiers.order, orderLabel: ALLY_ORDER_LABELS[this.soldiers.order] });
     this.ctx.ui.updateHud({
       defeatedEnemies: this.foes.defeated(),
@@ -457,7 +461,7 @@ export class GameScene extends Scene {
       level: this.ctx.session.run.levelIndex + 1,
       levelCount: runLevelCount(this.ctx.session.sandbox),
       clockMs: this.survival?.remainingMs,
-      moba: this.match?.purse(this.localPlayer),
+      moba: this.moba?.purse(this.localPlayer),
     });
     this.ctx.ui.updateBanners(this.banners && this.ctx.session.bannerMarkers
       ? { player: this.banners.state('player'), enemy: this.banners.state('enemy') }

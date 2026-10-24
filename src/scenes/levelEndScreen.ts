@@ -1,6 +1,8 @@
 import type { GameContext, RunState } from '../core/Scene';
 import type { HostSync } from '../net/HostSync';
-import { levelEndInfo, type LevelOutcome } from './levelEnd';
+import type { EndInfo } from '../net/protocol';
+import type { Team } from '../data/moba';
+import { levelEndInfo, mobaEndInfo, type LevelOutcome } from './levelEnd';
 
 /**
  * Shows the end of a level. A cleared level with levels left offers the next one (`nextRun`: bowmen heal by the difficulty, the keep is whole);
@@ -23,5 +25,18 @@ export const showLevelEnd = (ctx: GameContext, outcome: LevelOutcome, nextRun: (
     };
   const backLabel = session.net ? 'Back to the lobby' : 'Return to menu';
   ui.dialogs.showEndScreen({ ...info, buttonLabel: next ? 'Next level' : backLabel, onButton: action });
+  return action;
+};
+
+/** MOBA: the match is over (`winner` brought the other keep down); back to the menu, or (co-op) everyone to the lobby. */
+export const showMobaEnd = (ctx: GameContext, winner: Team, viewer: Team, stats: EndInfo['stats'], hostSync?: HostSync): (() => void) => {
+  const { session, ui } = ctx;
+  const info = mobaEndInfo(winner, viewer, stats);
+  hostSync?.sendEnd(info);
+  const action = (): void => {
+    session.net?.transport.send({ t: 'lobby' });
+    ctx.goTo(session.net ? 'coop' : 'menu');
+  };
+  ui.dialogs.showEndScreen({ ...info, buttonLabel: session.net ? 'Back to the lobby' : 'Return to menu', onButton: action });
   return action;
 };

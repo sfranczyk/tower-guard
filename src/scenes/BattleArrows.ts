@@ -73,7 +73,10 @@ export class BattleArrows {
   /** Guest: an arrow the host launched (its sound comes as its own event). */
   public launchReplica(launch: ArrowLaunch): Arrow {
     if (launch.hostile) {
-      return this.fireEnemy(launch.from, launch.angle, launch.speed, launch.shooter ?? 'hunter', true);
+      return this.fireEnemy(launch.from, launch.angle, launch.speed, (launch.shooter ?? 'hunter') as EnemyType, true);
+    }
+    if (launch.owner === MINION_ARROW_OWNER) {
+      return this.fireMinion(launch.from, launch.angle, launch.speed, launch.shooter ?? 'blueArcher', 1, true);
     }
     if (launch.type !== 'fragment') {
       this.list.filter((arrow) => arrow.owner === launch.owner).forEach((arrow) => arrow.ageTrail(this.deps.arrowTrails()));
@@ -175,7 +178,7 @@ export class BattleArrows {
   }
 
   /** A MOBA blue archer's arrow (`MINION_ARROW_OWNER`): flies clean like an enemy's, hits only the enemies and their keep. */
-  public fireMinion(from: Vec2, angle: number, speed: number, shooter: UnitType, power = 1): Arrow {
+  public fireMinion(from: Vec2, angle: number, speed: number, shooter: UnitType, power = 1, silent = false): Arrow {
     const trail = new Graphics();
     trail.zIndex = 1;
     this.deps.world.addChild(trail);
@@ -188,7 +191,10 @@ export class BattleArrows {
     arrow.power = power;
     this.list.push(arrow);
     this.deps.world.addChild(arrow);
-    this.deps.playSound('bowShot', from);
+    this.deps.hostSync()?.trackArrow(arrow, { owner: MINION_ARROW_OWNER, type: 'normal', from, angle, speed, hostile: false, shooter });
+    if (!silent) {
+      this.deps.playSound('bowShot', from);
+    }
     return arrow;
   }
 

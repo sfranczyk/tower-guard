@@ -28,7 +28,7 @@ export const minionGroups = (): readonly MinionGroup<MinionRole>[] => [
 ];
 
 /** Player `index`'s team: as picked in the lobby (`teams`), else alternating (the local `?coop` test: 1 blue, 2 red, …). */
-export const mobaTeamOf = (index: number, teams?: readonly Team[]): Team => teams?.[index] ?? (index % 2 === 0 ? 'blue' : 'red');
+export const mobaTeamOf = (index: number, teams?: ReadonlyArray<Team | undefined>): Team => teams?.[index] ?? (index % 2 === 0 ? 'blue' : 'red');
 
 /** Player `index`'s place in their team (0 = first): their tower in the keep, where they stand at the start. */
 export const teamSlot = (index: number, teams: readonly Team[]): number =>
@@ -38,5 +38,23 @@ export const teamSlot = (index: number, teams: readonly Team[]): number =>
 export const otherTeam = (team: Team): Team => (team === 'blue' ? 'red' : 'blue');
 
 /** Every player's team, by index: all blue outside MOBA. */
-export const matchTeams = (playerCount: number, moba: boolean, teams?: readonly Team[]): Team[] =>
+export const matchTeams = (playerCount: number, moba: boolean, teams?: ReadonlyArray<Team | undefined>): Team[] =>
   Array.from({ length: Math.max(1, playerCount) }, (_, index) => (moba ? mobaTeamOf(index, teams) : 'blue'));
+
+/** Players a team holds at most (online: a room of six). */
+export const MAX_TEAM_SIZE = 3;
+
+const teamSize = (teams: ReadonlyArray<Team | undefined>, team: Team, except?: number): number =>
+  teams.filter((other, index) => other === team && index !== except).length;
+
+/** The team a newcomer joins: the smaller one (blue on a tie). */
+export const autoTeam = (teams: ReadonlyArray<Team | undefined>): Team =>
+  (teamSize(teams, 'red') < teamSize(teams, 'blue') ? 'red' : 'blue');
+
+/** Whether player `index` may switch to `team` (it has room for him). */
+export const canJoinTeam = (teams: ReadonlyArray<Team | undefined>, index: number, team: Team): boolean =>
+  teamSize(teams, team, index) < MAX_TEAM_SIZE;
+
+/** A match can start with at least one player on each team (`teams`: the players in the room). */
+export const teamsReady = (teams: ReadonlyArray<Team | undefined>): boolean =>
+  teamSize(teams, 'blue') > 0 && teamSize(teams, 'red') > 0;

@@ -28,6 +28,8 @@ export interface NetLink {
    * page, a guest in the lobby); the host passes them all round in the roster; undefined until picked.
    */
   loadouts: Array<Loadout | undefined>;
+  /** MOBA: each player's team, by player index, picked in the lobby (a newcomer joins the smaller one). */
+  teams: Array<Team | undefined>;
 }
 
 export interface GameTextures {
