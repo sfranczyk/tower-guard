@@ -161,6 +161,8 @@
         .health-chip { flex-direction: column; align-items: stretch; gap: 3px; }
         .health-line { display: flex; align-items: center; gap: 6px; font-family: var(--display); font-weight: 600; font-size: 13px; font-variant-numeric: tabular-nums; white-space: nowrap; }
         .health-chip .icon { width: 20px; height: 20px; }
+        .regen-icon { display: inline-flex; animation: regen-pulse 1.2s ease-in-out infinite; }
+        @keyframes regen-pulse { 50% { transform: scale(1.18); } }
         .moba-purse b { color: #b8860b; font-size: 15px; }
         .moba-team { font-weight: 700; padding: 0 5px; border-radius: 6px; color: #fff; }
         .moba-team.blue { background: #2f5d9a; }

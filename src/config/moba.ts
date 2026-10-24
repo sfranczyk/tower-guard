@@ -36,9 +36,9 @@ export const MOBA_PLAYERS = tunable('MOBA_PLAYERS', 'MOBA players', {
   playerGold: 100,
   teamKillPenalty: 200,
   respawnMs: 30000,
-  regenDelayMs: 10000,
+  regenDelayMs: 5000,
   regenAmount: 5,
-  regenEveryMs: 10000,
+  regenEveryMs: 4000,
   /** How close (px) to his keep's centre a player must be for the shop (I). */
   shopRange: 160,
 });

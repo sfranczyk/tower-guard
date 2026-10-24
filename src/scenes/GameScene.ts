@@ -520,6 +520,7 @@ export class GameScene extends Scene {
       health: {
         keep: { now: this.localKeep.getHealth(), max: this.localKeep.maxHealth },
         bowman: { now: this.localPlayer.health, max: this.moba?.maxHealth(this.localPlayer) ?? this.ctx.session.sandbox.bowmanHealth },
+        regenerating: this.moba?.regenerating(this.localPlayer),
       },
     });
     this.ctx.ui.updateBanners(this.banners && this.ctx.session.bannerMarkers

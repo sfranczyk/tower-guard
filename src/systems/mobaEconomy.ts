@@ -87,6 +87,10 @@ export const regenStep = (recovery: Recovery, deltaMs: number, amount = MOBA_PLA
   return amount;
 };
 
+/** Healing now: standing, hurt, and no hit for `regenDelayMs` (the HUD shows the regeneration icon). */
+export const isRegenerating = (recovery: Recovery, health: number, maxHealth: number): boolean =>
+  recovery.respawnMs === undefined && health > 0 && health < maxHealth && recovery.quietMs >= MOBA_PLAYERS.regenDelayMs;
+
 /** He was hit: the healing waits again. */
 export const noteHit = (recovery: Recovery): void => {
   recovery.quietMs = 0;

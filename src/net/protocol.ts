@@ -194,6 +194,8 @@ export interface MobaNet {
   lv: UpgradeLevels[];
   /** Each team's. */
   tlv: Record<Team, UpgradeLevels>;
+  /** The players healing now (their HUD shows the regeneration icon). */
+  rg: number[];
 }
 
 /** What the guest's end screen shows (the host decides what comes next). */

@@ -1,6 +1,6 @@
 import { ARROW_INFO, type ArrowType } from '../data/loadout';
 import type { AllyType } from '../types';
-import { ICON_ALLIES, ICON_BOWMAN, ICON_KEEP, ICON_LEVEL, ICON_ORDERS, ICON_WEAPONS } from './icons';
+import { ICON_ALLIES, ICON_BOWMAN, ICON_KEEP, ICON_LEVEL, ICON_ORDERS, ICON_UPGRADES, ICON_WEAPONS } from './icons';
 
 /**
  * Static DOM markup. Elements are looked up by their data-* attributes in DomUi.
@@ -119,7 +119,7 @@ export const allySlots = (allies: ReadonlyArray<{ type: AllyType; label: string 
 
 export const HUD_TOP_TEMPLATE = `
   <div class="hud-left"><div class="hud-chip">${ICON_LEVEL}<div><div class="chip-label">Level <span data-level-number>1 / 1</span></div><div class="survival-clock" data-survival-clock hidden></div><div class="pips" data-enemy-pips></div><div class="meter" hidden><i data-level-bar></i></div><div class="chip-value" data-enemy-count>0 of 0 defeated</div><div class="chip-value moba-purse" data-moba-purse hidden></div><div class="chip-value banner-line" data-banners hidden></div></div></div>
-  <div class="hud-chip health-chip" data-health-chip hidden><div class="health-line" title="Your keep's health">${ICON_KEEP}<span data-keep-health>0</span></div><div class="health-line" title="Your bowman's health">${ICON_BOWMAN}<span data-bowman-health>0</span></div></div></div>
+  <div class="hud-chip health-chip" data-health-chip hidden><div class="health-line" title="Your keep's health">${ICON_KEEP}<span data-keep-health>0</span></div><div class="health-line" title="Your bowman's health">${ICON_BOWMAN}<span data-bowman-health>0</span><span class="regen-icon" data-regen-icon hidden title="Regenerating">${ICON_UPGRADES.regen}</span></div></div></div>
   <div class="weapons" data-projectiles></div>
   <div class="weapons allies" data-allies hidden></div>
 `;

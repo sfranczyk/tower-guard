@@ -180,6 +180,11 @@ export class MobaMode implements ShopBackend {
     return Math.round(this.deps.ctx.session.sandbox.bowmanHealth * playerStats(levels).maxHealth);
   }
 
+  /** `player` is healing now (the HUD's regeneration icon; a co-op guest: as the host last sent). */
+  public regenerating(player: Player): boolean {
+    return this.match ? this.match.regenerating(player) : this.synced?.rg.includes(player.index) ?? false;
+  }
+
   /** The HUD's purse line for this browser's player. */
   public purse(player: Player): { team: Team; gold: number; vault: number } {
     if (this.match) {
@@ -233,6 +238,7 @@ export class MobaMode implements ShopBackend {
       vault: { ...match.economy.vault },
       lv: match.upgrades.playerLevels.map((levels) => ({ ...levels })),
       tlv: { blue: { ...match.upgrades.teamLevels.blue }, red: { ...match.upgrades.teamLevels.red } },
+      rg: this.team?.list.filter((player) => match.regenerating(player)).map((player) => player.index) ?? [],
     };
   }
 

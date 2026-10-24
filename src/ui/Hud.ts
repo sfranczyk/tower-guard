@@ -11,7 +11,7 @@ export interface HudValues {
   /** MOBA: the local player's team, gold and his team's vault (the chip shows them instead of the level's progress). */
   moba?: { team: 'blue' | 'red'; gold: number; vault: number };
   /** The local player's keep and bowman, as numbers beside the Level chip. */
-  health?: { keep: HealthValue; bowman: HealthValue };
+  health?: { keep: HealthValue; bowman: HealthValue; regenerating?: boolean };
 }
 
 export interface HealthValue {
@@ -35,6 +35,7 @@ export class Hud {
   private readonly healthChip: HTMLElement;
   private readonly keepHealth: HTMLElement;
   private readonly bowmanHealth: HTMLElement;
+  private readonly regenIcon: HTMLElement;
   private pipCount = -1;
 
   public constructor(root: HTMLElement) {
@@ -54,6 +55,7 @@ export class Hud {
     this.healthChip = query('[data-health-chip]');
     this.keepHealth = query('[data-keep-health]');
     this.bowmanHealth = query('[data-bowman-health]');
+    this.regenIcon = query('[data-regen-icon]');
   }
 
   public update(values: HudValues): void {
@@ -111,6 +113,7 @@ export class Hud {
     if (this.bowmanHealth.textContent !== bowman) {
       this.bowmanHealth.textContent = bowman;
     }
+    this.regenIcon.hidden = !health.regenerating;
   }
 
 }
