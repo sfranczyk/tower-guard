@@ -13,9 +13,9 @@ export const OVERLAY_TEMPLATE = `
           <h1 class="logo">Tower Guard</h1>
           <p class="tagline">Hold the keep. Read the wind. Loose the arrow.</p>
           <div class="menu-card">
-            <button class="primary-button" data-start>Start game <span class="key-hint">Space</span></button>
-            <button class="secondary-button" data-open-coop>Co-op online</button>
-            <button class="secondary-button" data-open-moba>Team battle online</button>
+            <button class="primary-button" data-start>Start single player <span class="key-hint">Space</span></button>
+            <button class="secondary-button" data-open-room>Create multiplayer room</button>
+            <button class="secondary-button" data-open-join>Join online</button>
             <button class="secondary-button" data-menu-settings>Settings</button>
             <button class="dev-toggle" data-dev-toggle aria-expanded="false">Dev tools ▾</button>
             <div class="dev-tools" data-dev-tools hidden>

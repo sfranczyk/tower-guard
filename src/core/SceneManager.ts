@@ -24,6 +24,7 @@ export class SceneManager {
     // A local co-op test: ?coop gives two bowmen, ?coop=3 or ?coop=4 more (the others driven from the console).
     const coop = getDevUrlParam(COOP_PARAM);
     const playerCount = coop === null ? 1 : Math.max(2, Math.min(4, Number(coop) || 2));
+    const moba = getDevUrlParam(MOBA_PARAM) !== null;
     const root = new Container();
     root.sortableChildren = true;
     app.stage.addChild(root);
@@ -36,9 +37,9 @@ export class SceneManager {
       sound,
       session: {
         sandbox,
-        run: newRun(sandbox, playerCount),
+        run: newRun(sandbox, playerCount, moba),
         playerCount,
-        moba: getDevUrlParam(MOBA_PARAM) !== null,
+        moba,
         showTrajectory: true,
         keepSide: loadKeepSide(),
         showCursorCircle: false,
@@ -51,12 +52,13 @@ export class SceneManager {
 
     ui.handlers.start = () => this.goTo('sandbox');
     ui.handlers.labMenu = () => this.goTo('menu');
-    ui.handlers.openCoop = () => {
-      this.ctx.session.moba = false;
+    // The menu's online entries: the room's mode picker (host) or the room code dialog (join); both open the lobby.
+    ui.handlers.openRoom = () => {
+      this.ctx.session.lobbyEntry = 'create';
       this.goTo('coop');
     };
-    ui.handlers.openMoba = () => {
-      this.ctx.session.moba = true;
+    ui.handlers.openJoin = () => {
+      this.ctx.session.lobbyEntry = 'join';
       this.goTo('coop');
     };
     ui.handlers.openAnimationLab = () => this.goTo('animationLab');
@@ -110,6 +112,7 @@ export class SceneManager {
     } else if (this.ctx.session.moba) {
       // Straight into a MOBA battle on the setup's first map (dev: the mode has no menu entry yet); with ?net, the
       // co-op lobby (teams picked there).
+      this.ctx.session.lobbyEntry = 'create';
       this.goTo(getDevUrlParam('net') !== null ? 'coop' : 'game');
     } else {
       this.goTo(getDevUrlParam(SOUND_LAB_PARAM) !== null ? 'soundLab' : 'menu');

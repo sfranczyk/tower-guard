@@ -26,7 +26,7 @@ export interface BattleMobaDeps {
 /**
  * MOBA players (`?moba`; the minions are scenes/BattleLanes.ts): gold for last hits (systems/mobaEconomy.ts, shown
  * rising over the victim to the player it is for), the team vaults, a fallen player's respawn at his keep after
- * MOBA_PLAYERS.respawnMs, and healing after a quiet spell. Runs on the host (or alone).
+ * the room's respawn time (data/mobaRules.ts), and healing after a quiet spell. Runs on the host (or alone).
  */
 export class BattleMoba {
   public readonly economy: MobaEconomy;
@@ -36,7 +36,7 @@ export class BattleMoba {
   private readonly lastHits: Array<BowmanHit | undefined>;
 
   public constructor(private readonly deps: BattleMobaDeps) {
-    this.economy = new MobaEconomy(deps.teams);
+    this.economy = new MobaEconomy(deps.teams, deps.ctx.session.sandbox.moba.startGold);
     this.upgrades = new MobaUpgrades({ ctx: deps.ctx, team: deps.team, economy: this.economy, changed: (player) => deps.changed?.(player) });
     this.recovery = deps.teams.map(freshRecovery);
     this.lastHits = deps.teams.map(() => undefined);
@@ -66,7 +66,7 @@ export class BattleMoba {
       team.fall(fallen);
       const killer = this.lastHits[fallen.index]?.by;
       this.reward(killer, { team: fallen.team, player: fallen.index }, { x: fallen.bowman.x, y: fallen.bowman.y - 70 });
-      this.recovery[fallen.index].respawnMs = MOBA_PLAYERS.respawnMs;
+      this.recovery[fallen.index].respawnMs = this.deps.ctx.session.sandbox.moba.respawnSeconds * 1000;
       this.lastHits[fallen.index] = undefined;
       team.list.filter((player) => player !== fallen).forEach((player) => {
         team.status(player, `${fallen.team === player.team ? 'Your teammate' : 'An enemy'} has fallen`);

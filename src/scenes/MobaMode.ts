@@ -180,7 +180,7 @@ export class MobaMode implements ShopBackend {
       return this.match.maxHealth(player);
     }
     const levels = this.synced?.lv[player.index] ?? {};
-    return Math.round(this.deps.ctx.session.sandbox.bowmanHealth * playerStats(levels).maxHealth);
+    return Math.round(this.deps.ctx.session.sandbox.moba.bowmanHealth * playerStats(levels).maxHealth);
   }
 
   /** `player` is healing now (the HUD's regeneration icon; a co-op guest: as the host last sent). */

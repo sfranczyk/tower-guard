@@ -13,7 +13,7 @@ export class MobaEconomy {
   public readonly gold: number[];
   public readonly vault: Record<Team, number> = { blue: 0, red: 0 };
 
-  public constructor(private readonly teams: readonly Team[], startGold = MOBA_PLAYERS.startGold) {
+  public constructor(private readonly teams: readonly Team[], startGold = 0) {
     this.gold = teams.map(() => startGold);
   }
 

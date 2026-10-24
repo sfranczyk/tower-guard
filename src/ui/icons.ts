@@ -230,3 +230,15 @@ export const ICON_UPGRADES = {
   quick: badge(`<circle cx="14" cy="15.5" r="9" fill="#f6f1e4" stroke="#2c3a38" stroke-width="2"/><path d="M12 4h4M14 4v2.5" stroke="#2c3a38" stroke-width="2"/>
   <path d="M15.5 9 10.5 16.5h4L12.5 22l5.5-8h-4z" fill="#f1c45a" stroke="#c4932f" stroke-width=".8"/>`),
 } as const;
+
+/** Starting gold (MOBA room rules): a stack of coins. */
+export const ICON_GOLD = `<svg class="icon" viewBox="0 0 28 28" aria-hidden="true">
+  <ellipse cx="11" cy="20" rx="7.5" ry="3.5" fill="#c4932f"/><ellipse cx="11" cy="17.5" rx="7.5" ry="3.5" fill="#f1c45a"/>
+  <ellipse cx="17" cy="12" rx="7.5" ry="3.5" fill="#c4932f"/><ellipse cx="17" cy="9.5" rx="7.5" ry="3.5" fill="#f1c45a"/>
+  <ellipse cx="17" cy="9.5" rx="3.5" ry="1.4" fill="none" stroke="#c4932f" stroke-width="1.2"/></svg>`;
+
+/** Respawn wait (MOBA room rules): an hourglass. */
+export const ICON_RESPAWN = `<svg class="icon" viewBox="0 0 28 28" aria-hidden="true">
+  <rect x="6" y="3" width="16" height="3" rx="1.5" fill="#8a5a32"/><rect x="6" y="22" width="16" height="3" rx="1.5" fill="#8a5a32"/>
+  <path d="M8.5 6h11c0 4.5-3.5 6-5.5 8 2 2 5.5 3.5 5.5 8h-11c0-4.5 3.5-6 5.5-8-2-2-5.5-3.5-5.5-8z" fill="#f6f1e4" stroke="#2c3a38" stroke-width="1.4"/>
+  <path d="M11 20.5c1-1.6 2-2.2 3-2.2s2 .6 3 2.2zM11.5 9h5c-.6 1.4-1.6 2.2-2.5 3-.9-.8-1.9-1.6-2.5-3z" fill="#e0a64a"/></svg>`;

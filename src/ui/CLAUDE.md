@@ -33,8 +33,11 @@
 - `CoopPanel.ts`: the co-op lobby (net/CLAUDE.md). `SoundLabPanel.ts`: the sound test panel.
 - `ShopPanel.ts` (`DomUi.shop`): MOBA's shop over the far side of the canvas, tabs Skills / Castle, chained buttons with
   the price, details line at the bottom; `handlers.shopBuy` / `shopVault` / `shopClose`. Hud's `moba` purse line.
-  The lobby's MOBA team columns: `CoopPanel` `teams`, `handlers.coopTeam`. Menu → "Team battle online" (`handlers.openMoba`)
-  opens the lobby in MOBA mode ("Practice alone": `mobaPractice`); upgrade icons `ICON_UPGRADES` + arrows/minions.
+  The lobby's MOBA team columns: `CoopPanel` `teams`, `handlers.coopTeam`; upgrade icons `ICON_UPGRADES` + arrows/minions.
+- **Menu**: "Start single player" (sandbox), "Create multiplayer room" (`handlers.openRoom` → lobby view `create`: Co-op / MOBA
+  mode cards and "Practice MOBA alone", `ui/roomSetup.ts`), "Join online" (`openJoin` → view `join`: the room code dialog,
+  either mode). The MOBA host's room has tabs Teams / Rules (`mobaRulesPage`: keep and bowman health, starting gold,
+  respawn time; `handlers.mobaRules`; rows shared with the setup's Rules page, `ui/optionRows.ts`).
 - Dev views (animation, design, sound lab) all have "← Menu" in their panel's top-right corner.
 - **Tuning panel** (`TuningPanel.ts`, `?tune` or menu → Dev tools → "Tuning panel"; a collapsible side panel over the
   canvas's right edge): every `tunable` group from `core/tuning.ts` (registry, pure, tested) as sliders + numbers,

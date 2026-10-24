@@ -2,6 +2,7 @@ import type { AudioSettings } from '../audio/audioSettings';
 import type { SoundId } from '../audio/SoundManager';
 import type { Loadout } from '../data/loadout';
 import type { Team } from '../data/moba';
+import type { MobaRules } from '../data/mobaRules';
 import type { SandboxSettings } from '../data/sandbox';
 import type { AllyType, ProjectileType } from '../types';
 import type { KeepSide } from '../core/keepSide';
@@ -39,12 +40,16 @@ export interface UiHandlers {
   sandboxChange?: (settings: SandboxSettings, level: number) => void;
   sandboxStart?: () => void;
   sandboxBack?: () => void;
-  openCoop?: () => void;
-  /** The menu's MOBA: the co-op lobby with teams (or a practice match alone). */
-  openMoba?: () => void;
-  /** MOBA lobby: a match alone (no room). */
+  /** The menu's "Create multiplayer room": the lobby's mode picker (Co-op or MOBA). */
+  openRoom?: () => void;
+  /** The menu's "Join online": the lobby's room code dialog (the room decides the mode). */
+  openJoin?: () => void;
+  /** Mode picker: a MOBA match alone (no room). */
   mobaPractice?: () => void;
-  coopHost?: () => void;
+  /** Mode picker: open a room in this mode (true: MOBA). */
+  coopHost?: (moba: boolean) => void;
+  /** MOBA host: the room's rules changed (Rules tab). */
+  mobaRules?: (rules: MobaRules) => void;
   coopJoin?: (code: string) => void;
   coopSetup?: () => void;
   coopLeave?: () => void;

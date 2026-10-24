@@ -1,15 +1,22 @@
 import type { Loadout } from '../data/loadout';
 import { MAX_TEAM_SIZE, teamsReady, type Team } from '../data/moba';
+import type { MobaRules } from '../data/mobaRules';
 import { editQuiverIn } from './quiverEditing';
 import { panelTop, renderPanel } from './panelLayout';
 import { partnerQuiver, quiverPage, type PartnerQuiver } from './quiverPage';
+import { mobaRulesPage, readMobaRules, roomModeCards, type RoomMode } from './roomSetup';
 
 /** What the co-op lobby shows. */
 export type CoopView =
-  /** Host a game or join one by code (with the last error, if any). */
-  | { kind: 'choose'; error?: string; moba?: boolean }
-  /** Hosting: the code to pass on, and the guests who are in (up to three) with the quivers they picked. */
-  | { kind: 'hosting'; code?: string; guests: PartnerQuiver[]; teams?: LobbyTeams }
+  /** The menu's "Create multiplayer room": pick the room's mode, Co-op or MOBA (with the last error, if any). */
+  | { kind: 'create'; error?: string }
+  /** The menu's "Join online": a dialog for the room code (co-op or MOBA: the host's room decides). */
+  | { kind: 'join'; error?: string }
+  /**
+   * Hosting: the code to pass on, and the guests who are in (up to three) with the quivers they picked. MOBA: the
+   * teams, and the match's `rules` on a tab of their own.
+   */
+  | { kind: 'hosting'; code?: string; guests: PartnerQuiver[]; teams?: LobbyTeams; rules?: MobaRules }
   | { kind: 'joining'; code: string }
   /**
    * Joined: waiting for the host to start the battle, meanwhile picking a quiver; the others' beside it. `you` names
@@ -34,7 +41,8 @@ const teamsHtml = (teams: LobbyTeams): string => {
 };
 
 export interface CoopPanelCallbacks {
-  host(): void;
+  /** Open a room in this mode (true: MOBA). */
+  host(moba: boolean): void;
   join(code: string): void;
   /** Host with at least one guest in: on to the battle setup. */
   setup(): void;
@@ -46,7 +54,12 @@ export interface CoopPanelCallbacks {
   teamChange(team: Team): void;
   /** MOBA: a practice match alone. */
   practice(): void;
+  /** MOBA host: the match's rules were changed on the Rules tab (clamped). */
+  rulesChange(rules: MobaRules): void;
 }
+
+/** The MOBA host's tabs: who is on which team, and the match's rules. */
+type HostTab = 'teams' | 'rules';
 
 const escapeHtml = (text: string): string => text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
@@ -55,6 +68,7 @@ export class CoopPanel {
   private view?: CoopView;
   /** Joined: the quiver slot the next picked arrow goes into. */
   private selectedSlot = 0;
+  private hostTab: HostTab = 'teams';
 
   public constructor(private readonly root: HTMLElement, private readonly callbacks: CoopPanelCallbacks) {
     editQuiverIn(
@@ -71,8 +85,13 @@ export class CoopPanel {
     );
     root.addEventListener('click', (event) => {
       const target = event.target as HTMLElement;
-      if (target.closest('[data-coop-host]')) {
-        callbacks.host();
+      const mode = target.closest<HTMLElement>('[data-room-mode]')?.dataset.roomMode as RoomMode | undefined;
+      const tab = target.closest<HTMLElement>('[data-host-tab]')?.dataset.hostTab as HostTab | undefined;
+      if (mode) {
+        callbacks.host(mode === 'moba');
+      } else if (tab && this.view) {
+        this.hostTab = tab;
+        this.render(this.view);
       } else if (target.closest('[data-coop-join]')) {
         this.join();
       } else if (target.closest('[data-coop-setup]')) {
@@ -85,6 +104,21 @@ export class CoopPanel {
         callbacks.teamChange(target.closest<HTMLElement>('[data-coop-team]')!.dataset.coopTeam as Team);
       }
     });
+    // Rules: each keystroke is kept (clamped); leaving the field shows the clamped value.
+    root.addEventListener('input', (event) => {
+      if ((event.target as HTMLElement).matches('[data-moba-rule]') && this.view?.kind === 'hosting' && this.view.rules) {
+        const rules = readMobaRules(root, this.view.rules);
+        this.view = { ...this.view, rules };
+        callbacks.rulesChange(rules);
+      }
+    });
+    root.addEventListener('change', (event) => {
+      const input = event.target as HTMLInputElement;
+      const rule = input.dataset.mobaRule as keyof MobaRules | undefined;
+      if (rule && this.view?.kind === 'hosting' && this.view.rules) {
+        input.value = `${this.view.rules[rule]}`;
+      }
+    });
     root.addEventListener('keydown', (event) => {
       if (event.key === 'Enter' && (event.target as HTMLElement).matches('[data-coop-code]')) {
         this.join();
@@ -95,23 +129,25 @@ export class CoopPanel {
   }
 
   public render(view: CoopView): void {
+    if (view.kind !== 'hosting' || this.view?.kind !== 'hosting') {
+      this.hostTab = 'teams';
+    }
     this.view = view;
     // Back / leave sits in the top bar.
     let leave = 'Back';
     let actions = '';
     let body: string;
     switch (view.kind) {
-      case 'choose':
+      case 'create':
+        body = `${roomModeCards()}${view.error ? `<p class="coop-error">${escapeHtml(view.error)}</p>` : ''}`;
+        break;
+      case 'join':
         body = `
-          <p class="coop-copy">${view.moba
-            ? 'Blue against red, up to three a side: minions march down the lane, gold buys upgrades by your keep (press I), the first keep to fall loses. One hosts, the others join with the room code.'
-            : 'Defend the keep together, two to four of you: one hosts, the others join with the room code.'}</p>
-          <button class="primary-button" data-coop-host>Host a game</button>
+          <p class="coop-copy">Type the room code the host gave you: co-op or MOBA, the room decides.</p>
           <div class="coop-join">
             <input data-coop-code maxlength="7" placeholder="Room code" autocomplete="off" spellcheck="false">
-            <button class="secondary-button" data-coop-join>Join</button>
+            <button class="primary-button" data-coop-join>Join</button>
           </div>
-          ${view.moba ? '<button class="secondary-button" data-moba-practice>Practice alone</button>' : ''}
           ${view.error ? `<p class="coop-error">${escapeHtml(view.error)}</p>` : ''}`;
         break;
       case 'hosting':
@@ -120,7 +156,7 @@ export class CoopPanel {
         actions = view.code && view.guests.length > 0 && (!view.teams || teamsReady(view.teams.map((entry) => entry.team)))
           ? `<button class="primary-button" data-coop-setup>${view.teams ? 'Start match' : 'Battle setup'}</button>` : '';
         body = view.code
-          ? (view.teams ? this.mobaHosting(view.code, view.guests.length, view.teams) : `
+          ? (view.teams ? this.mobaHosting(view.code, view.guests.length, view.teams, view.rules) : `
           <p class="coop-copy">Give the others this room code (up to three can join):</p>
           <div class="coop-code">${escapeHtml(view.code)}</div>
           <p class="coop-status">${view.guests.length === 0 ? 'Waiting for players…'
@@ -140,23 +176,31 @@ export class CoopPanel {
         leave = 'Leave the room';
         break;
     }
-    // The guest's quiver needs the room of a full card.
-    this.root.classList.toggle('coop-wide', view.kind === 'joined' && !view.teams);
+    // The mode cards, the guest's quiver and the rules need the room of a full card.
+    const rulesShown = view.kind === 'hosting' && view.rules !== undefined && view.code !== undefined && this.hostTab === 'rules';
+    this.root.classList.toggle('coop-wide', view.kind === 'create' || (view.kind === 'joined' && !view.teams) || rulesShown);
     const back = `<button class="secondary-button small-button" data-coop-leave>← ${leave}</button>`;
-    const moba = view.kind === 'choose' ? view.moba : view.kind !== 'joining' && view.teams !== undefined;
-    renderPanel(this.root, `${panelTop(back, moba ? 'MOBA' : 'Co-op', actions)}<div class="panel-body coop-body">${body}</div>`);
+    const moba = view.kind === 'hosting' ? view.rules !== undefined : view.kind === 'joined' && view.teams !== undefined;
+    const title = view.kind === 'create' ? 'Create a room' : view.kind === 'join' ? 'Join online' : moba ? 'MOBA' : 'Co-op';
+    renderPanel(this.root, `${panelTop(back, title, actions, view.kind === 'create' || view.kind === 'join' ? 'Multiplayer' : '')}<div class="panel-body coop-body">${body}</div>`);
     this.root.querySelector<HTMLInputElement>('[data-coop-code]')?.focus();
   }
 
-  /** MOBA host: the code, the teams (a match needs a player on each), up to six in the room. */
-  private mobaHosting(code: string, guests: number, teams: LobbyTeams): string {
+  /** MOBA host: the code, then the Teams tab (a match needs a player on each, up to six in the room) or the Rules tab. */
+  private mobaHosting(code: string, guests: number, teams: LobbyTeams, rules?: MobaRules): string {
     const ready = teamsReady(teams.map((entry) => entry.team));
     const status = guests === 0 ? 'Waiting for players…' : !ready ? 'Each team needs a player' : guests + 1 < MAX_TEAM_SIZE * 2 ? `${guests + 1} of ${MAX_TEAM_SIZE * 2} in · more can still join` : 'The room is full!';
-    return `
+    const room = `
           <p class="coop-copy">MOBA: give the others this room code (up to ${MAX_TEAM_SIZE} a team):</p>
           <div class="coop-code">${escapeHtml(code)}</div>
           <p class="coop-status">${status}</p>
           ${teamsHtml(teams)}`;
+    if (!rules) {
+      return room;
+    }
+    const tabs = (['teams', 'rules'] as const).map((tab) => `<button type="button" class="sandbox-page${tab === this.hostTab ? ' active' : ''}" role="tab" aria-selected="${tab === this.hostTab}" data-host-tab="${tab}">${tab === 'teams' ? 'Teams' : 'Rules'}</button>`).join('');
+    const head = `<div class="sandbox-head room-tabs"><div class="sandbox-pages" role="tablist" aria-label="Room pages">${tabs}</div></div>`;
+    return `${head}${this.hostTab === 'rules' ? mobaRulesPage(rules) : room}`;
   }
 
   private join(): void {

@@ -25,17 +25,14 @@ export const MOBA_LANES = tunable('MOBA_LANES', 'MOBA lanes', {
 
 /**
  * MOBA players (scenes/BattleMoba.ts, systems/mobaEconomy.ts): gold for the last hit on an enemy minion or player
- * (`*Gold`), the killer of a teammate pays `teamKillPenalty` (as much as he has), the start purse; a fallen player
- * is back at his keep after `respawnMs`; `regenDelayMs` without a hit, then `regenAmount` health every `regenEveryMs`.
+ * (`*Gold`), the killer of a teammate pays `teamKillPenalty` (as much as he has); `regenDelayMs` without a hit, then `regenAmount` health every `regenEveryMs`.
  */
 export const MOBA_PLAYERS = tunable('MOBA_PLAYERS', 'MOBA players', {
-  startGold: 0,
   troopGold: 5,
   archerGold: 8,
   dragonGold: 25,
   playerGold: 100,
   teamKillPenalty: 200,
-  respawnMs: 30000,
   regenDelayMs: 5000,
   regenAmount: 5,
   regenEveryMs: 4000,
@@ -43,9 +40,11 @@ export const MOBA_PLAYERS = tunable('MOBA_PLAYERS', 'MOBA players', {
   shopRange: 160,
 });
 
-/** MOBA keeps: their health, and how far in from each end of the field they stand (a battle's: KEEP_INSET). */
+/**
+ * MOBA keeps: how far in from each end of the field they stand (a battle's: KEEP_INSET). The start purse, keep and
+ * bowman health and the respawn wait are the room's rules (data/mobaRules.ts).
+ */
 export const MOBA_KEEPS = tunable('MOBA_KEEPS', 'MOBA keeps', {
-  health: 2400,
   inset: 210,
 });
 

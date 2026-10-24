@@ -3,6 +3,7 @@ import { BATTLEGROUNDS, BATTLEGROUND_IDS, type BattlegroundId } from './battlegr
 import type { EnemyType } from '../types';
 import { ENEMY_KINDS, ENEMY_TYPES } from './enemyKinds';
 import { DEFAULT_LOADOUT, normalizeLoadout, type Loadout } from './loadout';
+import { DEFAULT_MOBA_RULES, normalizeMobaRules, type MobaRules } from './mobaRules';
 
 /**
  * Sandbox setup chosen on the setup screen: how many levels, what each level sends and where it's
@@ -80,6 +81,8 @@ export interface SandboxSettings {
   friendlyFire: boolean;
   /** Friendly fire with others (off by default), kept apart so each keeps its own default (`friendlyFireOn`). */
   coopFriendlyFire: boolean;
+  /** The MOBA room's rules (the host's Rules tab, data/mobaRules.ts). */
+  moba: MobaRules;
 }
 
 /** Default levels alternate battlegrounds; the first (a new run's only level) is a varied one of 24 in four waves. */
@@ -134,6 +137,7 @@ export const createDefaultSandbox = (): SandboxSettings => ({
   support: true,
   friendlyFire: true,
   coopFriendlyFire: false,
+  moba: { ...DEFAULT_MOBA_RULES },
 });
 
 const clampInt = (value: unknown, min: number, max: number, fallback: number): number => {
@@ -205,6 +209,7 @@ export const normalizeSandbox = (input: (Partial<SandboxSettings> & LegacySandbo
     support: typeof input.support === 'boolean' ? input.support : defaults.support,
     friendlyFire: typeof input.friendlyFire === 'boolean' ? input.friendlyFire : defaults.friendlyFire,
     coopFriendlyFire: typeof input.coopFriendlyFire === 'boolean' ? input.coopFriendlyFire : defaults.coopFriendlyFire,
+    moba: normalizeMobaRules(input.moba),
   };
 };
 

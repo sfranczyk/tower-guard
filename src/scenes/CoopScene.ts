@@ -1,10 +1,12 @@
 import { Container } from 'pixi.js';
 import { BACKDROP_WIDTH } from '../config';
-import { Scene } from '../core/Scene';
+import { Scene, newRun } from '../core/Scene';
 import { centeredCameraX } from '../core/viewport';
 import { BATTLEGROUNDS } from '../data/battlegrounds';
 import { loadSandbox, saveSandbox } from '../core/sandboxStorage';
 import type { Loadout } from '../data/loadout';
+import type { MobaRules } from '../data/mobaRules';
+import { normalizeSandbox } from '../data/sandbox';
 import { hostCoop, joinCoop, leaveCoop, otherQuivers, pickTeam, playerLabel, roomTeams, setRoomListener, settleSeats, shareLoadout, transportMode } from '../net/coopLink';
 import type { NetMessage } from '../net/protocol';
 import { normalizeRoomCode } from '../net/roomCode';
@@ -14,13 +16,15 @@ import type { CoopView } from '../ui/DomUi';
 import type { LobbyTeams } from '../ui/CoopPanel';
 
 /**
- * The co-op lobby: host a room (and pass on its code) or join one; up to three guests. The host then sets up the
- * battle (SandboxScene) and starts it; the guests wait here until the host's `start` arrives.
+ * The online lobby, opened from the menu's "Create multiplayer room" (pick Co-op or MOBA, then the room opens and its
+ * code is passed on) or "Join online" (a room code; the host's room decides the mode). Co-op: up to three guests, the
+ * host then sets up the battle (SandboxScene) and starts it. MOBA: teams, and the host's Rules tab, then the match.
+ * The guests wait here until the host's `start` arrives.
  */
 export class CoopScene extends Scene {
   private readonly backdrop = new Container();
   private room?: HostedRoom;
-  private view: CoopView = { kind: 'choose' };
+  private view: CoopView = { kind: 'create' };
 
   public enter(): void {
     const { ui, session } = this.ctx;
@@ -30,14 +34,21 @@ export class CoopScene extends Scene {
     new Background(this.backdrop, BATTLEGROUNDS.greenMeadow, BACKDROP_WIDTH);
     this.ctx.root.addChild(this.backdrop);
 
-    ui.handlers.coopHost = () => void this.host();
+    ui.handlers.coopHost = (moba) => {
+      session.moba = moba;
+      void this.host();
+    };
     ui.handlers.coopJoin = (code) => void this.join(code);
-    // MOBA: no setup to pick (the setup's first map), straight into the match.
-    ui.handlers.coopSetup = () => this.ctx.goTo(session.moba ? 'game' : 'sandbox');
+    // MOBA: no battle setup (always the Green Meadow; the rules are the Rules tab's), straight into the match.
+    ui.handlers.coopSetup = () => (session.moba ? this.startMoba() : this.ctx.goTo('sandbox'));
     ui.handlers.coopLeave = () => this.leave();
     ui.handlers.coopLoadout = (loadout) => this.pickLoadout(loadout);
     ui.handlers.coopTeam = (team) => pickTeam(session, team);
-    ui.handlers.mobaPractice = () => this.ctx.goTo('game');
+    ui.handlers.mobaPractice = () => {
+      session.moba = true;
+      this.startMoba();
+    };
+    ui.handlers.mobaRules = (rules) => this.changeRules(rules);
     // Someone joined or left, or picked a quiver: show it.
     setRoomListener(() => this.refreshRoom());
     this.onExit(() => {
@@ -48,6 +59,7 @@ export class CoopScene extends Scene {
       ui.handlers.coopLoadout = undefined;
       ui.handlers.coopTeam = undefined;
       ui.handlers.mobaPractice = undefined;
+      ui.handlers.mobaRules = undefined;
       setRoomListener(undefined);
     });
     this.listenWindow('keydown', (event) => {
@@ -60,12 +72,14 @@ export class CoopScene extends Scene {
     const { net } = session;
     if (net?.role === 'host') {
       settleSeats(session);
-      this.render({ kind: 'hosting', code: net.code, guests: otherQuivers(session), teams: this.teams() });
+      this.render({ kind: 'hosting', code: net.code, guests: otherQuivers(session), teams: this.teams(), rules: this.rules() });
     } else if (net?.role === 'guest') {
       this.listenAsGuest();
       this.renderJoined(net.code);
     } else {
-      this.render({ kind: 'choose', error: session.coopNotice, moba: session.moba });
+      // A notice (the host left, the room was full) is about joining.
+      const entry = session.coopNotice ? 'join' : session.lobbyEntry ?? 'create';
+      this.render({ kind: entry, error: session.coopNotice });
       session.coopNotice = undefined;
     }
   }
@@ -80,7 +94,7 @@ export class CoopScene extends Scene {
   }
 
   private async host(): Promise<void> {
-    this.render({ kind: 'hosting', guests: [] });
+    this.render({ kind: 'hosting', guests: [], rules: this.rules() });
     try {
       const room = await hostRoom(transportMode());
       this.room = room;
@@ -90,18 +104,20 @@ export class CoopScene extends Scene {
       }
       // The room stays open: guests come (and go) while the host waits here or sets up the battle.
       hostCoop(this.ctx, room, this.ctx.session.sandbox.loadout);
-      this.render({ kind: 'hosting', code: room.code, guests: [], teams: this.teams() });
+      this.render({ kind: 'hosting', code: room.code, guests: [], teams: this.teams(), rules: this.rules() });
     } catch (error) {
-      this.render({ kind: 'choose', error: (error as Error).message, moba: this.ctx.session.moba });
+      this.render({ kind: 'create', error: (error as Error).message });
     }
   }
 
   private async join(input: string): Promise<void> {
     const code = normalizeRoomCode(input);
     if (!code) {
-      this.render({ kind: 'choose', error: 'A room code has five letters and digits.', moba: this.ctx.session.moba });
+      this.render({ kind: 'join', error: 'A room code has five letters and digits.' });
       return;
     }
+    // Co-op until the host's roster says the room is a MOBA one.
+    this.ctx.session.moba = false;
     this.render({ kind: 'joining', code });
     try {
       const transport = await joinRoom(code, transportMode());
@@ -115,7 +131,7 @@ export class CoopScene extends Scene {
       transport.send({ t: 'hello' });
       this.renderJoined(code);
     } catch (error) {
-      this.render({ kind: 'choose', error: (error as Error).message, moba: this.ctx.session.moba });
+      this.render({ kind: 'join', error: (error as Error).message });
     }
   }
 
@@ -145,6 +161,25 @@ export class CoopScene extends Scene {
     this.render({ kind: 'joined', code, notice, you, loadout, others: otherQuivers(session), teams: this.teams() });
   }
 
+  /** MOBA host: the match's rules for the Rules tab (undefined otherwise). */
+  private rules(): MobaRules | undefined {
+    return this.ctx.session.moba ? this.ctx.session.sandbox.moba : undefined;
+  }
+
+  /** MOBA host: the Rules tab changed; kept with the setup (and sent to the guests with `start`). */
+  private changeRules(rules: MobaRules): void {
+    const { session } = this.ctx;
+    session.sandbox = normalizeSandbox({ ...session.sandbox, moba: rules });
+    saveSandbox(session.sandbox);
+  }
+
+  /** MOBA (in the room, or alone): a fresh run at the room's bowman health, then the match. */
+  private startMoba(): void {
+    const { session } = this.ctx;
+    session.run = newRun(session.sandbox, session.playerCount, true);
+    this.ctx.goTo('game');
+  }
+
   /** MOBA: the room's teams (undefined otherwise). */
   private teams(): LobbyTeams | undefined {
     return this.ctx.session.moba ? roomTeams(this.ctx.session) : undefined;
@@ -155,7 +190,7 @@ export class CoopScene extends Scene {
     if (this.view.kind === 'joined') {
       this.renderJoined(this.view.code, this.view.notice);
     } else if (this.view.kind === 'hosting' && this.view.code) {
-      this.render({ ...this.view, guests: otherQuivers(session), teams: this.teams() });
+      this.render({ ...this.view, guests: otherQuivers(session), teams: this.teams(), rules: this.rules() });
     }
   }
 

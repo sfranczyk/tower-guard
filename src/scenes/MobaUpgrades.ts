@@ -82,7 +82,7 @@ export class MobaUpgrades {
 
   /** Full health of `player`. */
   public maxHealth(player: Player): number {
-    return Math.round(this.deps.ctx.session.sandbox.bowmanHealth * this.stats(player).maxHealth);
+    return Math.round(this.deps.ctx.session.sandbox.moba.bowmanHealth * this.stats(player).maxHealth);
   }
 
   /** Extra health a healing tick gives `player`. */

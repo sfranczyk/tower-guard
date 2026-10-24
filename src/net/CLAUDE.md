@@ -1,8 +1,9 @@
 # Co-op online (src/net)
 
 Two to four bowmen, host-authoritative over PeerJS (`peerjs`, its free public broker only to find each other;
-`?net=local` links tabs with a BroadcastChannel instead, envelopes addressed host → one guest). Menu → "Co-op online" →
-`CoopScene` (lobby, `ui/CoopPanel.ts`): host a room (5-character code, `net/roomCode.ts`) or join one. The room stays
+`?net=local` links tabs with a BroadcastChannel instead, envelopes addressed host → one guest). Menu → "Create multiplayer room" (pick Co-op or MOBA)
+or "Join online" (`session.lobbyEntry`) → `CoopScene` (lobby, `ui/CoopPanel.ts`): host a room (5-character code,
+`net/roomCode.ts`) or join one by code (the roster's `teams` tell the guest it's a MOBA room). The room stays
 open while the host waits, sets up or fights: up to three guests (`MAX_PLAYERS`), a fifth gets `{ t: 'full' }`.
 `net/RoomHub.ts` holds the host's links by seat (player index; `net/seats.ts`, pure: lowest free seat, closing gaps)
 as one `RoomLink` (`send` to all, `sendTo`, messages tagged `from`); a guest's link is `guestLink`. `net/coopLink.ts`:
