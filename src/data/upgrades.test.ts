@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MAX_BOUGHT_ARROWS, UPGRADES, blockedBy, minionLevel, minionPower, playerStats, upgradeById, upgradeCost } from './upgrades';
+import { MAX_BOUGHT_ARROWS, UPGRADES, blockedBy, boughtArrows, minionLevel, minionPower, playerStats, upgradeById, upgradeCost } from './upgrades';
 
 const def = (id: string) => upgradeById(id)!;
 
@@ -44,5 +44,15 @@ describe('upgrades', () => {
     expect(minionLevel({}, 'troop')).toBe(1);
     expect(minionLevel({ 'minion:troop': 2 }, 'troop')).toBe(3);
     expect([1, 2, 3].map(minionPower)).toEqual([1, 1.5, 2]);
+  });
+
+  it('puts bought arrows in the quiver in the order they were bought', () => {
+    const levels: Record<string, number> = {};
+    levels['arrow:vortex'] = 1;
+    levels.regen = 1;
+    levels['arrow:explosive'] = 1;
+    levels['arrow:fire'] = 1;
+    expect(boughtArrows(levels)).toEqual(['vortex', 'explosive', 'fire']);
+    expect(playerStats(JSON.parse(JSON.stringify(levels)) as Record<string, number>).quiver).toEqual(['normal', 'vortex', 'explosive', 'fire']);
   });
 });

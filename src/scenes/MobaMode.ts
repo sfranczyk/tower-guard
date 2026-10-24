@@ -1,5 +1,5 @@
 import type { Container } from 'pixi.js';
-import { BOWMAN_WALK_SPEED } from '../config';
+import { BOWMAN_WALK_SPEED, MOBA_ARROW_CHARGES } from '../config';
 import type { GameContext } from '../core/Scene';
 import { firstArrow } from '../data/loadout';
 import type { Team } from '../data/moba';
@@ -78,6 +78,9 @@ export class MobaMode implements ShopBackend {
   /** The players stand: the match (host or alone) and the shop at `keepOf` the local player's keep. */
   public start(team: BattlePlayers, keepOf: (player: Player) => Tower, guest: boolean): void {
     this.team = team;
+    team.list.forEach((player) => {
+      player.cooldowns.limits = MOBA_ARROW_CHARGES;
+    });
     if (!guest) {
       this.match = new BattleMoba({
         ctx: this.deps.ctx, team, teams: this.deps.teams, popups: this.deps.popups,

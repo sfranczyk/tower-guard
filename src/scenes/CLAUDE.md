@@ -57,4 +57,5 @@ everything under `ctx.root` on each switch. Scenes never touch the DOM: they cal
   Red players use `enemyTower`; the end is `BattleOutcome.endMatch` / `showMobaEnd` (`mobaEndInfo`, per team).
   Rules from the host's Rules tab: `SandboxSettings.moba` (`data/mobaRules.ts`: keep/bowman health, start gold, respawn;
   sent with `start`; `newRun(…, moba)`). Field `MOBA_WORLD_WIDTH` (2800), keeps `MOBA_KEEPS` (`inset` from the ends), always Green Meadow; Esc only opens this player's menu, the battle runs on
-  (`BattleControls.frozen`), and the quiver is what was bought (no editing in the keep).
+  (`BattleControls.frozen`), and the quiver is what was bought, in the order bought (no editing in the keep);
+  `MOBA_ARROW_CHARGES` (one vortex) via `ArrowCooldowns.limits`.

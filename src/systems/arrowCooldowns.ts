@@ -11,6 +11,8 @@ export class ArrowCooldowns {
   private readonly spent = new Map<ArrowType, { count: number; ms: number }>();
   /** × on a type's reload (MOBA: a bought quick draw). */
   public pace: Partial<Record<ArrowType, number>> = {};
+  /** Charges held instead of ARROW_CHARGES (MOBA: MOBA_ARROW_CHARGES). */
+  public limits: Partial<Record<ArrowType, number>> = {};
 
   private reloadMs(type: ArrowType): number {
     return ARROW_COOLDOWN[type] * 1000 * (this.pace[type] ?? 1);
@@ -30,7 +32,7 @@ export class ArrowCooldowns {
   }
 
   public max(type: ArrowType): number {
-    return Math.max(1, Math.round(ARROW_CHARGES[type]));
+    return Math.max(1, Math.round(this.limits[type] ?? ARROW_CHARGES[type]));
   }
 
   /** Shots ready now. */

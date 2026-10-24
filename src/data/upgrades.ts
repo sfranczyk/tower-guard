@@ -121,9 +121,15 @@ export const blockedBy = (def: UpgradeDef, levels: UpgradeLevels, purse: number)
   return undefined;
 };
 
-/** The arrows bought, in the order of the catalogue. */
+/**
+ * The arrows bought, in the order they were bought (each takes the next quiver slot, so the keys already learnt stay):
+ * the levels' own key order, which is the order of first purchase and survives copying and the co-op JSON.
+ */
 export const boughtArrows = (levels: UpgradeLevels): ArrowType[] =>
-  BOUGHT_ARROWS.filter((type) => levelOf(levels, `arrow:${type}`) > 0);
+  Object.keys(levels)
+    .filter((id) => id.startsWith('arrow:') && levelOf(levels, id) > 0)
+    .map((id) => id.slice('arrow:'.length) as ArrowType)
+    .filter((type) => (BOUGHT_ARROWS as readonly ArrowType[]).includes(type));
 
 /** What a player's levels make of him. */
 export interface PlayerStats {

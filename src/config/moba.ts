@@ -48,5 +48,10 @@ export const MOBA_KEEPS = tunable('MOBA_KEEPS', 'MOBA keeps', {
   inset: 210,
 });
 
+/** MOBA: arrows holding fewer charges than ARROW_CHARGES (one vortex at a time). */
+export const MOBA_ARROW_CHARGES = tunable('MOBA_ARROW_CHARGES', 'MOBA arrow charges', {
+  vortex: 1,
+});
+
 /** The shop's vault buttons: the gold one click moves to or from the team vault. */
 export const MOBA_VAULT_STEPS: readonly number[] = [10, 50, 100];
