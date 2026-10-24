@@ -8,6 +8,8 @@ export interface HudValues {
   levelCount: number;
   /** Survival: ms left on the clock (the chip shows it and the defeated count instead of pips). */
   clockMs?: number;
+  /** MOBA: the local player's team, gold and his team's vault (the chip shows them instead of the level's progress). */
+  moba?: { team: 'blue' | 'red'; gold: number; vault: number };
 }
 
 /** Up to this many enemies the level shows one pip each; bigger levels get a progress bar. */
@@ -20,6 +22,7 @@ export class Hud {
   private readonly levelBar: HTMLElement;
   private readonly enemyCount: HTMLElement;
   private readonly clock: HTMLElement;
+  private readonly purse: HTMLElement;
   private pipCount = -1;
 
   public constructor(root: HTMLElement) {
@@ -35,10 +38,24 @@ export class Hud {
     this.levelBar = query('[data-level-bar]');
     this.enemyCount = query('[data-enemy-count]');
     this.clock = query('[data-survival-clock]');
+    this.purse = query('[data-moba-purse]');
   }
 
   public update(values: HudValues): void {
     this.level.textContent = `${values.level} / ${values.levelCount}`;
+    const { moba } = values;
+    this.purse.hidden = !moba;
+    this.enemyCount.hidden = !!moba;
+    if (moba) {
+      this.pips.hidden = true;
+      this.levelBar.parentElement!.hidden = true;
+      this.clock.hidden = true;
+      const text = `<span class="moba-team ${moba.team}">${moba.team === 'blue' ? 'Blue' : 'Red'}</span> <b>${moba.gold}</b> gold · vault ${moba.vault}`;
+      if (this.purse.innerHTML !== text) {
+        this.purse.innerHTML = text;
+      }
+      return;
+    }
     const survival = values.clockMs !== undefined;
     this.clock.hidden = !survival;
     if (survival) {

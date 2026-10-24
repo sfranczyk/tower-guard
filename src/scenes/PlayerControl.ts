@@ -1,8 +1,10 @@
-import { ARROW_COOLDOWN_SLACK_MS, BOWMAN_START_X, BOWMAN_Y, TOWER_ENTRY_ZONE_HEIGHT, TOWER_ENTRY_ZONE_WIDTH } from '../config';
+import { ARROW_COOLDOWN_SLACK_MS, BOWMAN_START_X, BOWMAN_Y, PLAYER_TOWER_X, TOWER_ENTRY_ZONE_HEIGHT, TOWER_ENTRY_ZONE_WIDTH } from '../config';
 import type { ArrowType } from '../data/loadout';
 import type { PlayerInput } from '../input/PlayerInput';
 import type Bowman from '../objects/bowman/Bowman';
 import type Tower from '../objects/Tower';
+import type { Team } from '../data/moba';
+import { enemyKeepX } from '../systems/battlefield';
 import type { ArrowCooldowns } from '../systems/arrowCooldowns';
 import { groundAt } from '../systems/terrain';
 import type { ProjectileType } from '../types';
@@ -10,6 +12,10 @@ import type { ProjectileType } from '../types';
 /** One player in a battle: their bowman, controls, health and weapon. */
 export interface Player {
   readonly index: number;
+  /** MOBA: blue (the left keep) or red (the right one); everyone is blue in the other modes. */
+  readonly team: Team;
+  /** Their place in their team (0 first): their tower in the keep, where they start. */
+  readonly slot: number;
   readonly bowman: Bowman;
   readonly input: PlayerInput;
   /** This browser's player: the camera follows them, and their aim overlay, messages and HUD bar show. */
@@ -31,7 +37,10 @@ const START_SPACING = 45;
 export const canDrawBow = (player: Player): boolean =>
   player.cooldowns.ready(player.projectile as ArrowType, player.local ? 0 : ARROW_COOLDOWN_SLACK_MS);
 
-export const playerStartX = (index: number): number => BOWMAN_START_X + index * START_SPACING;
+/** Where player `slot` of `team` starts: in front of their keep (red: the right one, mirrored). */
+export const playerStartX = (slot: number, team: Team = 'blue'): number => (team === 'blue'
+  ? BOWMAN_START_X + slot * START_SPACING
+  : enemyKeepX() - (BOWMAN_START_X - PLAYER_TOWER_X) - slot * START_SPACING);
 
 /** What PlayerControl reports to the scene (status messages for the local player). */
 export interface PlayerControlEvents {
@@ -44,8 +53,9 @@ export interface PlayerControlEvents {
  * (jump under it) and coming out (S), and drawing the bow. Shooting is the scene's job.
  */
 export class PlayerControl {
+  /** `towerOf`: the keep a player hides in (MOBA: their team's). */
   public constructor(
-    private readonly tower: Tower,
+    private readonly towerOf: (player: Player) => Tower,
     private readonly events: PlayerControlEvents,
   ) {}
 
@@ -64,7 +74,7 @@ export class PlayerControl {
     const sprinting = input.isSprintDown();
     // A jump under the keep takes him inside instead.
     const jumped = input.isJumpPressed();
-    const entering = jumped && !bowman.isInTower && !bowman.isStunned && !bowman.isPinned && this.canEnterTower(bowman);
+    const entering = jumped && !bowman.isInTower && !bowman.isStunned && !bowman.isPinned && this.canEnterTower(player);
     if (entering) {
       this.enterTower(player);
     } else if (jumped) {
@@ -94,8 +104,9 @@ export class PlayerControl {
     bowman.updateAnimation(deltaMs, direction !== 0 && !bowman.isAgainstEdge(direction), sprinting);
   }
 
-  private canEnterTower(bowman: Bowman): boolean {
-    const left = this.tower.x - TOWER_ENTRY_ZONE_WIDTH / 2;
+  private canEnterTower(player: Player): boolean {
+    const { bowman } = player;
+    const left = this.towerOf(player).x - TOWER_ENTRY_ZONE_WIDTH / 2;
     const top = BOWMAN_Y - TOWER_ENTRY_ZONE_HEIGHT * 0.55;
     return bowman.x >= left
       && bowman.x <= left + TOWER_ENTRY_ZONE_WIDTH
@@ -106,7 +117,7 @@ export class PlayerControl {
   private enterTower(player: Player): void {
     player.bowman.enterTower();
     // Feet hidden behind the parapet, head and shoulders above the merlons (co-op: the second bowman in the lower tower).
-    const spot = this.tower.hideSpot(player.index);
+    const spot = this.towerOf(player).hideSpot(player.slot);
     player.bowman.setTowerPosition(spot.x, spot.y);
     this.events.enteredTower(player);
   }
@@ -115,7 +126,7 @@ export class PlayerControl {
     const { bowman } = player;
     bowman.exitTower();
     // Out at the foot of the tower he hid in, under its middle (co-op: the second bowman under the lower tower).
-    bowman.setHorizontalPosition(this.tower.hideSpot(player.index).x);
+    bowman.setHorizontalPosition(this.towerOf(player).hideSpot(player.slot).x);
     bowman.y = groundAt(bowman.x);
     this.events.leftTower(player);
   }

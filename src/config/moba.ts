@@ -22,3 +22,25 @@ export const MOBA_LANES = tunable('MOBA_LANES', 'MOBA lanes', {
   /** Blue archers shoot the red keep's wall from this far (and foes within ENEMY_ATTACK.archerRange). */
   archerKeepRange: 300,
 });
+
+/**
+ * MOBA players (scenes/BattleMoba.ts, systems/mobaEconomy.ts): gold for the last hit on an enemy minion or player
+ * (`*Gold`), the killer of a teammate pays `teamKillPenalty` (as much as he has), the start purse; a fallen player
+ * is back at his keep after `respawnMs`; `regenDelayMs` without a hit, then `regenAmount` health every `regenEveryMs`.
+ */
+export const MOBA_PLAYERS = tunable('MOBA_PLAYERS', 'MOBA players', {
+  startGold: 100,
+  troopGold: 5,
+  archerGold: 8,
+  dragonGold: 25,
+  playerGold: 200,
+  teamKillPenalty: 200,
+  respawnMs: 30000,
+  regenDelayMs: 10000,
+  regenAmount: 5,
+  regenEveryMs: 10000,
+  /** How close (px) to his keep's centre a player must be for the shop (I). */
+  shopRange: 160,
+  /** Gold one click moves to or from the team vault. */
+  vaultStep: 10,
+});

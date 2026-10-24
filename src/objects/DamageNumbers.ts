@@ -7,6 +7,9 @@ const FONT = 'Fredoka, ui-rounded, system-ui, sans-serif';
 const COLOR = 0xffffff;
 const HEADSHOT_COLOR = 0xffd54a;
 const OUTLINE = 0x1b1a20;
+/** MOBA gold popups: gained, lost. */
+const GOLD_COLOR = 0xffc93c;
+const GOLD_LOST_COLOR = 0xff6b5a;
 /** Numbers from hits close together spread sideways this far (px) so they don't sit on each other. */
 const JITTER_X = 8;
 
@@ -49,6 +52,29 @@ export class DamageNumbers {
     });
     text.anchor.set(0.5, 1);
     const popup = { text, x: top.x + (Math.random() * 2 - 1) * JITTER_X, y: top.y - DAMAGE_NUMBERS.aboveHead, ageMs: 0 };
+    this.popups.push(popup);
+    this.layer.addChild(text);
+    this.place(popup);
+  }
+
+  /** MOBA: gold won (or lost) by a last hit, rising over where the victim fell (always shown, for the player it is for). */
+  public showGold(at: { x: number; y: number }, delta: number): void {
+    if (delta === 0) {
+      return;
+    }
+    const text = new Text({
+      text: `${delta > 0 ? '+' : '−'}${Math.abs(Math.round(delta))} gold`,
+      resolution: 2,
+      style: {
+        fontFamily: FONT,
+        fontWeight: '700',
+        fontSize: DAMAGE_NUMBERS.headshotFontSize,
+        fill: delta > 0 ? GOLD_COLOR : GOLD_LOST_COLOR,
+        stroke: { color: OUTLINE, width: 4, join: 'round' },
+      },
+    });
+    text.anchor.set(0.5, 1);
+    const popup = { text, x: at.x, y: at.y - DAMAGE_NUMBERS.aboveHead, ageMs: 0 };
     this.popups.push(popup);
     this.layer.addChild(text);
     this.place(popup);

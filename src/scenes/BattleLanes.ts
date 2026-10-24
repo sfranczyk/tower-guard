@@ -2,7 +2,8 @@ import type { Container } from 'pixi.js';
 import { ALLIES, MOBA_LANES } from '../config';
 import { getEnemyStats } from '../data/enemies';
 import { isFlyingType } from '../data/enemyKinds';
-import { MINION_KINDS, minionGroups, type MinionRole } from '../data/moba';
+import { MINION_KINDS, minionGroups, type MinionRole, type Team } from '../data/moba';
+import type { Foe } from '../systems/combatGeometry';
 import DragonEnemy from '../objects/dragon/DragonEnemy';
 import { BLUE_DRAGON_LOOK } from '../objects/dragon/dragonKinds';
 import type { HitInfo } from '../objects/enemy/Enemy';
@@ -19,6 +20,8 @@ export interface BattleLanesDeps {
   fliers: DragonEnemy[];
   /** A blue dragon took a hit (damage numbers). */
   onDamaged?(dragon: DragonEnemy, amount: number, hit?: HitInfo): void;
+  /** Every new minion, its team and role (its last hit pays gold: BattleMoba.watch). */
+  spawned?(unit: Foe, team: Team, role: MinionRole): void;
 }
 
 /**
@@ -35,16 +38,15 @@ export class BattleLanes {
   /** Until the match is decided (GameScene stops calling it). */
   public update(deltaMs: number): void {
     this.waves.update(deltaMs).forEach((role) => {
-      this.deployBlue(role);
-      this.deps.foes.spawn(MINION_KINDS.red[role]);
+      this.deps.spawned?.(this.deployBlue(role), 'blue', role);
+      this.deps.spawned?.(this.deps.foes.spawn(MINION_KINDS.red[role]), 'red', role);
     });
   }
 
-  private deployBlue(role: MinionRole): void {
+  private deployBlue(role: MinionRole): Foe {
     const kind = MINION_KINDS.blue[role];
     if (!isFlyingType(kind)) {
-      this.deps.soldiers.deploy(kind);
-      return;
+      return this.deps.soldiers.deploy(kind);
     }
     const stats = getEnemyStats(kind, 1);
     const dragon = new DragonEnemy(ALLIES.spawnX - 40, stats.health, stats.speed, kind, BLUE_DRAGON_LOOK);
@@ -53,5 +55,6 @@ export class BattleLanes {
     dragon.onDamaged = (amount, hit) => this.deps.onDamaged?.(dragon, shownDamage(amount, dragon.currentHealth), hit);
     this.deps.fliers.push(dragon);
     this.deps.world.addChild(dragon);
+    return dragon;
   }
 }

@@ -15,6 +15,12 @@ export interface ArmorPalette {
   bowString: number;
 }
 
+/** MOBA: the team's cloth over the map's armor (both teams' bowmen and minions wear their team's colour). */
+export const teamArmor = (palette: ArmorPalette, team: 'blue' | 'red'): ArmorPalette => ({
+  ...palette,
+  ...(team === 'blue' ? { limb: 0x2f5d9a, limbRear: 0x1f3f6e } : { limb: 0xa8343a, limbRear: 0x7a2226 }),
+});
+
 /**
  * The second player's armor in co-op: the same cloth, but bronze plates and silver trim instead of steel and
  * gold, so the two bowmen tell apart at a glance on any map.

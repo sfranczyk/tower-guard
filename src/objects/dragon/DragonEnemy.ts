@@ -13,7 +13,7 @@ import { enemyArchetype } from '../../data/enemyKinds';
 import type { Bounds, Vec2 } from '../../types';
 import { drawHealthBar } from '../../rendering/healthBar';
 import { boundsAround } from '../../utils/math';
-import type { HitBox, HitInfo } from '../enemy/enemyTypes';
+import { killerOf, type HitBox, type HitInfo } from '../enemy/enemyTypes';
 import { AfflictionLayer, type AfflictionNet } from '../AfflictionLayer';
 import { DragonBow } from './DragonBow';
 import { DragonBreath } from './DragonBreath';
@@ -51,6 +51,9 @@ export default class DragonEnemy extends Container {
   public readonly kind: DragonKind;
   /** Every hit taken (host and co-op guest alike): the battle shows its damage number. */
   public onDamaged?: (amount: number, hit?: HitInfo) => void;
+  /** MOBA: as Enemy.onKilled. */
+  public onKilled?: (by: number | undefined) => void;
+  public lastHitBy?: number;
   /** Co-op host: hears about every hit, to replay it on the guest's screen. */
   public netHooks?: { damaged(amount: number, hit?: HitInfo): void };
   public readonly isArcher = false;
@@ -166,7 +169,11 @@ export default class DragonEnemy extends Container {
     }
     this.netHooks?.damaged(amount, hit);
     this.onDamaged?.(amount, hit);
+    this.lastHitBy = hit?.by ?? this.lastHitBy;
     this.health = Math.max(0, this.health - Math.max(0, amount));
+    if (this.health === 0 && hit) {
+      this.onKilled?.(killerOf(hit, this.lastHitBy));
+    }
     this.drawHealthBar();
     if (this.health === 0) {
       const startY = GIB_GROUND_Y - (groundAt(this.x) - this.y) / DRAGON_SCALE;

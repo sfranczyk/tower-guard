@@ -1,6 +1,7 @@
 import type { Application, Container, Texture } from 'pixi.js';
 import { enemyKeepHealth } from '../data/difficulty';
 import type { Loadout } from '../data/loadout';
+import type { Team } from '../data/moba';
 import type { SandboxSettings } from '../data/sandbox';
 import type { ProjectileType } from '../types';
 import type { SoundManager } from '../audio/SoundManager';
@@ -66,6 +67,8 @@ export interface GameSession {
   net?: NetLink;
   /** MOBA mode (`?moba`, dev only for now): battles are two keeps sending lane minions at each other (scenes/BattleLanes.ts). */
   moba?: boolean;
+  /** MOBA: each player's team, by player index (the lobby's pick; none: alternating, data/moba `mobaTeamOf`). */
+  teams?: Team[];
   /** Shown once in the co-op lobby (e.g. "The host left"). */
   coopNotice?: string;
   /** Draw the predicted arrow path while aiming (settings drawer, off by default). */

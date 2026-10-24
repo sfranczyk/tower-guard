@@ -26,3 +26,17 @@ export const minionGroups = (): readonly MinionGroup<MinionRole>[] => [
   { role: 'archer', count: MOBA_LANES.archerCount, everyMs: MOBA_LANES.archerEveryMs },
   { role: 'dragon', count: MOBA_LANES.dragonCount, everyMs: MOBA_LANES.dragonEveryMs, firstMs: MOBA_LANES.dragonFirstMs },
 ];
+
+/** Player `index`'s team: as picked in the lobby (`teams`), else alternating (the local `?coop` test: 1 blue, 2 red, …). */
+export const mobaTeamOf = (index: number, teams?: readonly Team[]): Team => teams?.[index] ?? (index % 2 === 0 ? 'blue' : 'red');
+
+/** Player `index`'s place in their team (0 = first): their tower in the keep, where they stand at the start. */
+export const teamSlot = (index: number, teams: readonly Team[]): number =>
+  teams.slice(0, index).filter((team) => team === teams[index]).length;
+
+/** The other team. */
+export const otherTeam = (team: Team): Team => (team === 'blue' ? 'red' : 'blue');
+
+/** Every player's team, by index: all blue outside MOBA. */
+export const matchTeams = (playerCount: number, moba: boolean, teams?: readonly Team[]): Team[] =>
+  Array.from({ length: Math.max(1, playerCount) }, (_, index) => (moba ? mobaTeamOf(index, teams) : 'blue'));

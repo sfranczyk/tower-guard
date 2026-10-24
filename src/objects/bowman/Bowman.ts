@@ -10,6 +10,7 @@ import type { ArmorPalette } from '../../rendering/armor';
 import { STANDING_BURN_POINTS } from '../../rendering/burning';
 import { drawHealthBar } from '../../rendering/healthBar';
 import { relight } from '../../systems/burning';
+import { groundAt } from '../../systems/terrain';
 import type { BowmanLook } from '../../rendering/bowmanBody';
 import { FALL_DURATION_MS, getFallPose, type FallKind } from '../../rendering/stickmanFall';
 import { deathFallFor, type BowmanHit } from '../../systems/bowmanDeath';
@@ -61,7 +62,8 @@ export class Bowman extends Container {
   public deathFall?: { kind: FallKind; timeMs: number };
   /** What hurt him last (picks how he falls if it kills him). */
   private lastHit?: BowmanHit;
-  public readonly movementSpeed: number;
+  /** Walking speed (px/s); MOBA's speed skill raises it. */
+  public movementSpeed: number;
   private inTower = false;
   /** Knocked down (falling, lying, getting up). */
   public knockdown?: Knockdown;
@@ -390,6 +392,23 @@ export class Bowman extends Container {
 
   public get isDead(): boolean {
     return this.deathMs !== undefined;
+  }
+
+  /** MOBA: back on his feet at `x` (his keep) after the respawn wait: no fall, burn, ice, pin or aim left. */
+  public revive(x: number): void {
+    this.deathMs = undefined;
+    this.deathFall = undefined;
+    this.knockdown = undefined;
+    this.lastHit = undefined;
+    this.afflictions.warm();
+    this.afflictions.extinguish();
+    this.motion.setPin(0);
+    this.aim.drop();
+    this.exitTower();
+    this.footing.horizontalSpeed = 0;
+    this.setHorizontalPosition(x);
+    this.y = groundAt(x);
+    this.figure.redraw();
   }
 
   /**

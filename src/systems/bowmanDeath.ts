@@ -15,6 +15,8 @@ export interface BowmanHit {
   cause: BowmanHitCause;
   /** World x the hit came from (he falls as if hit from there). */
   fromX: number;
+  /** MOBA: the player (index) whose arrow or blast it was. */
+  by?: number;
 }
 
 /**

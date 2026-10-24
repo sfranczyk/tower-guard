@@ -1,12 +1,13 @@
 import { DRAGON_FLIGHT, DRAGON_RANGE, ENEMY_ARROW_POWER, ENEMY_ATTACK, GROUND_Y, MOBA_LANES } from '../config';
 import { bowSpeed } from '../data/projectiles';
 import Arrow from '../objects/Arrow';
+import type Bowman from '../objects/bowman/Bowman';
 import type DragonEnemy from '../objects/dragon/DragonEnemy';
 import type Enemy from '../objects/enemy/Enemy';
 import type Tower from '../objects/Tower';
 import type { UnitType, Vec2 } from '../types';
 import { solveLaunchAngle } from './ballistics';
-import { TOWER_HALF_WIDTH, type Foe } from './combatGeometry';
+import { BOWMAN_CHEST, TOWER_HALF_WIDTH, type Foe } from './combatGeometry';
 import { groundAt } from './terrain';
 
 /** Re-solve the aim this often (as EnemyRanged: the solver simulates many trajectories). */
@@ -16,6 +17,8 @@ const BEHIND = 40;
 
 export interface AllyRangedWorld {
   readonly enemies: readonly Foe[];
+  /** MOBA: the red team's bowmen (shot like the red minions while out in the open). */
+  readonly foeBowmen?: readonly Bowman[];
   readonly enemyTower: Tower;
   wind(): number;
 }
@@ -25,8 +28,13 @@ export interface AllyRangedEvents {
   allyShot(from: Vec2, angle: number, speed: number, shooter: UnitType): void;
 }
 
-/** Where an archer aims at a foe: the chest of a man, the body of a dragon. */
-const aimPointOf = (foe: Foe): Vec2 => (foe.isFlying ? { x: foe.x, y: foe.y } : { x: foe.x, y: foe.y - 25 * foe.size });
+/** Something the blue side shoots: a red minion or a red bowman. */
+type Target = Foe | Bowman;
+
+/** Where an archer aims at a target: the chest of a man or a bowman, the body of a dragon. */
+const aimPointOf = (target: Target): Vec2 => ('kind' in target
+  ? (target.isFlying ? { x: target.x, y: target.y } : { x: target.x, y: target.y - 25 * target.size })
+  : { x: target.x, y: target.y - BOWMAN_CHEST });
 
 /**
  * The player's side's archers (MOBA blue archers; AllyAI hands them over): walk down the lane until an enemy is within
@@ -61,9 +69,8 @@ export class AllyRanged {
    * in range, the rider shoots it as the red dragon archers do (EnemyRanged.updateDragon).
    */
   public updateDragon(dragon: DragonEnemy, deltaMs: number): void {
-    const foe = this.world.enemies
-      .filter((candidate) => candidate.isAlive())
-      .reduce<Foe | undefined>((best, candidate) => (!best || Math.abs(candidate.x - dragon.x) < Math.abs(best.x - dragon.x) ? candidate : best), undefined);
+    const foe = this.targets()
+      .reduce<Target | undefined>((best, candidate) => (!best || Math.abs(candidate.x - dragon.x) < Math.abs(best.x - dragon.x) ? candidate : best), undefined);
     const tower = this.world.enemyTower;
     const aimPoint = foe ? aimPointOf(foe) : { x: tower.x, y: GROUND_Y - 90 };
     dragon.update(deltaMs, aimPoint.x);
@@ -86,9 +93,9 @@ export class AllyRanged {
 
   /** The nearest living enemy in range (not far behind him), else the enemy keep's wall in range, else none. */
   private target(archer: Enemy): Vec2 | undefined {
-    const foe = this.world.enemies
-      .filter((candidate) => candidate.isAlive() && candidate.x >= archer.x - BEHIND && Math.abs(candidate.x - archer.x) <= ENEMY_ATTACK.archerRange)
-      .reduce<Foe | undefined>((best, candidate) => (!best || Math.abs(candidate.x - archer.x) < Math.abs(best.x - archer.x) ? candidate : best), undefined);
+    const foe = this.targets()
+      .filter((candidate) => candidate.x >= archer.x - BEHIND && Math.abs(candidate.x - archer.x) <= ENEMY_ATTACK.archerRange)
+      .reduce<Target | undefined>((best, candidate) => (!best || Math.abs(candidate.x - archer.x) < Math.abs(best.x - archer.x) ? candidate : best), undefined);
     if (foe) {
       return aimPointOf(foe);
     }
@@ -98,6 +105,12 @@ export class AllyRanged {
       return { x: wall, y: GROUND_Y - 70 };
     }
     return undefined;
+  }
+
+  /** The living red minions and the red bowmen out in the open. */
+  private targets(): Target[] {
+    const bowmen = (this.world.foeBowmen ?? []).filter((bowman) => !bowman.isDead && !bowman.isInTower);
+    return [...this.world.enemies.filter((candidate) => candidate.isAlive()), ...bowmen];
   }
 
   private aimAngle(archer: Foe, release: Vec2, aimPoint: Vec2, speed: number, deltaMs: number): number {

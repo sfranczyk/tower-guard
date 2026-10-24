@@ -8,6 +8,7 @@ import { livingBowmen } from '../systems/targeting';
 import type { BattleAllies } from './BattleAllies';
 import type { BattleBanners } from './BattleBanners';
 import type { BattleEnemies } from './BattleEnemies';
+import type { BattleMoba } from './BattleMoba';
 import type { BattlePlayers } from './BattlePlayers';
 import type { BattleRelief } from './BattleRelief';
 import { BattleSurvival } from './BattleSurvival';
@@ -25,6 +26,8 @@ export interface BattleOutcomeDeps {
   banners?: BattleBanners;
   survival?: BattleSurvival;
   relief?: BattleRelief;
+  /** MOBA: fallen players come back (BattleMoba); the match ends only with a keep, won by the local player's team. */
+  moba?: BattleMoba;
   hostSync: () => HostSync | undefined;
   /** The level is decided: this browser's keyboard and mouse stop. */
   stopInput: () => void;
@@ -45,7 +48,14 @@ export class BattleOutcome {
   public constructor(private readonly deps: BattleOutcomeDeps) {}
 
   public check(): void {
-    const { team, playerTower, enemyTower, banners, foes, survival } = this.deps;
+    const { team, playerTower, enemyTower, banners, foes, survival, moba } = this.deps;
+    if (moba) {
+      moba.handleFallen();
+      if (playerTower.isDestroyed() || enemyTower.isDestroyed()) {
+        this.end(enemyTower.isDestroyed() === (team.local.team === 'blue'));
+      }
+      return;
+    }
     team.handleFallen();
     if (livingBowmen(team.bowmen).length === 0 || playerTower.isDestroyed() || banners?.outcome === 'lost') {
       this.end(false);

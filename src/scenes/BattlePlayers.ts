@@ -8,7 +8,8 @@ import { loadoutOf } from '../net/coopLink';
 import type { GuestSync } from '../net/GuestSync';
 import type { HostSync } from '../net/HostSync';
 import Bowman from '../objects/bowman/Bowman';
-import { secondPlayerArmor } from '../rendering/armor';
+import { secondPlayerArmor, teamArmor } from '../rendering/armor';
+import { teamSlot, type Team } from '../data/moba';
 import { BOWMAN_LOOKS } from '../rendering/bowmanBody';
 import { playerLabel } from '../net/coopLink';
 import type { AimOverlay } from '../rendering/AimOverlay';
@@ -27,6 +28,8 @@ export interface BattlePlayersDeps {
   world: Container;
   battleground: Battleground;
   localIndex: number;
+  /** Each player's team (data/moba `matchTeams`: all blue outside MOBA). */
+  teams: readonly Team[];
   shots: BattleArrows;
   aimOverlay: AimOverlay;
   control(): PlayerControl;
@@ -52,20 +55,27 @@ export class BattlePlayers {
     const { sandbox, run, playerCount } = session;
     const armor = deps.battleground.player;
     this.list = Array.from({ length: Math.max(1, playerCount) }, (_, index) => {
-      const bowman = new Bowman(playerStartX(index), BOWMAN_Y, { x: 0, y: 0, width: worldWidth(), height: GAME_HEIGHT }, {
-        armorColors: index === 1 ? secondPlayerArmor(armor) : armor,
+      const team = deps.teams[index] ?? 'blue';
+      const slot = teamSlot(index, deps.teams);
+      // MOBA: each team in its colour; otherwise player 2 in bronze and silver.
+      const armorColors = session.moba ? teamArmor(armor, team) : index === 1 ? secondPlayerArmor(armor) : armor;
+      const bowman = new Bowman(playerStartX(session.moba ? slot : index, team), BOWMAN_Y, { x: 0, y: 0, width: worldWidth(), height: GAME_HEIGHT }, {
+        armorColors,
         // Player 1 is the ranger; in co-op the keep warden, the steppe archer and the huntsman follow.
         look: BOWMAN_LOOKS[index % BOWMAN_LOOKS.length],
         burnMs: relight(sandbox.difficulty),
       });
       bowman.y = groundAt(bowman.x);
+      if (team === 'red') {
+        bowman.figure.facing = -1;
+      }
       const health = run.bowmanHealths[index] ?? sandbox.bowmanHealth;
       if (health <= 0) {
         bowman.die({}, true);
       }
       deps.world.addChild(bowman);
       const input: PlayerInput = new ManualInput();
-      return { index, bowman, input, local: index === deps.localIndex, health,
+      return { index, team, slot, bowman, input, local: index === deps.localIndex, health,
         projectile: firstArrow(loadoutOf(session, index)) as ProjectileType, cooldowns: new ArrowCooldowns() };
     });
   }
@@ -154,15 +164,19 @@ export class BattlePlayers {
     this.deps.control().update(player, deltaMs);
   }
 
+  /** `player`'s bowman falls the way what killed him decides (frozen, his ice shatters); the guest plays the same fall. */
+  public fall(player: Player): void {
+    if (player.bowman.isFrozen) {
+      this.deps.effects().shatter({ x: player.bowman.x, y: player.bowman.y - 22 });
+    }
+    const kind = player.bowman.die();
+    this.deps.hostSync()?.push({ e: 'die', player: player.index, kind, fromX: Math.round(player.bowman.lastHitFromX ?? player.bowman.x) });
+  }
+
   /** A bowman at 0 falls (for the rest of the run), the way what killed him decides; the guest plays the same fall. */
   public handleFallen(): void {
     this.list.filter((player) => player.health <= 0 && !player.bowman.isDead).forEach((fallen) => {
-      // Frozen, his ice shatters.
-      if (fallen.bowman.isFrozen) {
-        this.deps.effects().shatter({ x: fallen.bowman.x, y: fallen.bowman.y - 22 });
-      }
-      const kind = fallen.bowman.die();
-      this.deps.hostSync()?.push({ e: 'die', player: fallen.index, kind, fromX: Math.round(fallen.bowman.lastHitFromX ?? fallen.bowman.x) });
+      this.fall(fallen);
       if (this.coop) {
         const standing = this.list.filter((player) => player.health > 0).length;
         const fightOn = standing === 0 ? '' : standing === 1 ? ' · one fights on' : ` · ${standing} fight on`;

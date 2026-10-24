@@ -3,6 +3,7 @@ import { ALLIES, CROWD, MEDIC, MOBA_LANES, PLAYER_TOWER_X, PRIEST_POST_SLACK, SH
 import { enemyDamage, rollDamage } from '../data/enemies';
 import { enemyArchetype, enemyArmor, enemyTraits } from '../data/enemyKinds';
 import type Bowman from '../objects/bowman/Bowman';
+import type { BowmanHit } from './bowmanDeath';
 import DragonEnemy from '../objects/dragon/DragonEnemy';
 import type Enemy from '../objects/enemy/Enemy';
 import type Tower from '../objects/Tower';
@@ -52,11 +53,14 @@ export interface AllyAIWorld {
   wind(): number;
   /** MOBA lanes: the blue dragons (systems/AllyRanged.ts flies them). */
   readonly allyFliers?: readonly DragonEnemy[];
+  /** MOBA: the red team's bowmen (the soldiers fight them, the archers shoot them). */
+  readonly foeBowmen?: readonly Bowman[];
   /** MOBA lanes: they march on the enemy keep and bring it down (fighters strike it, archers shoot it). */
   readonly lanes?: boolean;
 }
 
 export interface AllyAIEvents extends AllyRangedEvents {
+  bowmanDamaged(bowman: Bowman, amount: number, hit: BowmanHit): void;
   /** `bowman`'s health and his full health (the medic bandages him too). */
   bowmanHealth(bowman: Bowman): { health: number; max: number };
   bowmanHealed(bowman: Bowman, amount: number): void;
@@ -158,7 +162,8 @@ export class AllyAI {
       order = 'advance';
       post = this.world.enemyTower.x - MOBA_LANES.keepReach;
     }
-    const foes = this.groundFoes();
+    // MOBA: the red bowmen out in the open are foes too.
+    const foes: Array<Enemy | Bowman> = [...this.groundFoes(), ...(this.world.foeBowmen ?? []).filter((bowman) => !bowman.isDead && !bowman.isInTower)];
     const pick = pickFoe(ally.x, post, order, foes.map((foe) => foe.x), IN_REACH);
     // An enemy carrying our banner off comes first.
     const foe = banners?.thief('player') ?? (pick === undefined ? undefined : foes[pick]);
@@ -188,8 +193,17 @@ export class AllyAI {
       ally.faceTowards(foe.x);
       // The blow lands with the sword, ahead of him: an enemy that got beyond its reach (or past him) meanwhile is missed.
       ally.playAttackAnimation(() => {
-        if (foe.isAlive() && weaponReaches(ally.x, ally.figure.facing, foe.x, ally.strikeReach)) {
-          meleeBlow(foe, rollDamage(enemyDamage(ally.kind, 'melee', 'bowman')), ally.x, this.world.effects);
+        if (!weaponReaches(ally.x, ally.figure.facing, foe.x, ally.strikeReach)) {
+          return;
+        }
+        const damage = rollDamage(enemyDamage(ally.kind, 'melee', 'bowman'));
+        if (!('kind' in foe)) {
+          if (!foe.isDead && !foe.isInTower) {
+            this.world.effects.bloodBurst({ x: foe.x, y: foe.y - 30 });
+            this.events.bowmanDamaged(foe, damage, { cause: 'melee', fromX: ally.x });
+          }
+        } else if (foe.isAlive()) {
+          meleeBlow(foe, damage, ally.x, this.world.effects);
         }
       });
     }
