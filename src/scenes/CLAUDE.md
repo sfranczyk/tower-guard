@@ -56,4 +56,5 @@ everything under `ctx.root` on each switch. Scenes never touch the DOM: they cal
   or alone) with `MobaUpgrades` (levels bought, their effects), `BattleShop` (I by your keep, `ui/ShopPanel.ts`).
   Red players use `enemyTower`; the end is `BattleOutcome.endMatch` / `showMobaEnd` (`mobaEndInfo`, per team).
   Field `MOBA_WORLD_WIDTH` (2800), keeps `MOBA_KEEPS` (health, `inset` from the ends), always Green Meadow; Esc only opens this player's menu, the battle runs on
-  (`BattleControls.frozen`), and the quiver is what was bought (no editing in the keep).
+  (`BattleControls.frozen`), and the quiver is what was bought, in the order bought (no editing in the keep);
+  `MOBA_ARROW_CHARGES` (one vortex) via `ArrowCooldowns.limits`.
