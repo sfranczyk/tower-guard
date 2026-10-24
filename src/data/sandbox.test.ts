@@ -1,8 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { BATTLEGROUND_IDS, BATTLEGROUNDS } from './battlegrounds';
+import { DEFAULT_MOBA_RULES, MOBA_RULE_LIMITS } from './mobaRules';
 import { DEFAULT_SURVIVAL_MINUTES, HEALTH_LIMITS, MAX_ENEMIES_PER_TYPE, MAX_LEVELS, MAX_SURVIVAL_LEVELS, SURVIVAL_MINUTES, battlegroundsFor, createDefaultSandbox, normalizeSandbox, levelEnemyTotal, runBattleground, runLevelCount, supportAllowed, friendlyFireOn, withFriendlyFire, bannersInPlay } from './sandbox';
 
 describe('sandbox settings', () => {
+  it('keeps the MOBA room rules, clamped, with the setup', () => {
+    expect(createDefaultSandbox().moba).toEqual(DEFAULT_MOBA_RULES);
+    const settings = normalizeSandbox({ moba: { keepHealth: 5000, startGold: 99999 } as never });
+    expect(settings.moba).toEqual({ ...DEFAULT_MOBA_RULES, keepHealth: 5000, startGold: MOBA_RULE_LIMITS.startGold.max });
+  });
+
   it('defaults to one varied level of 24, then prepared levels that get harder', () => {
     const settings = createDefaultSandbox();
     expect(settings.levelCount).toBe(1);

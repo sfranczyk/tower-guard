@@ -232,8 +232,8 @@ export class GameScene extends Scene {
     // Co-op: the keep gets a second, lower tower for the second bowman.
     // MOBA: each keep a tower per player of its team.
     const towers = this.teams.filter((team) => team === 'blue').length;
-    // MOBA: both keeps start whole, at MOBA_KEEPS.health.
-    const playerKeep = this.moba ? { max: MOBA_KEEPS.health, now: MOBA_KEEPS.health } : { max: sandbox.keepHealth, now: run.keepHealth };
+    // MOBA: both keeps start whole, at the room's keep health.
+    const playerKeep = this.moba ? { max: sandbox.moba.keepHealth, now: sandbox.moba.keepHealth } : { max: sandbox.keepHealth, now: run.keepHealth };
     this.playerTower = new Tower(playerKeepX(), GROUND_Y, { hillColor, enemy: false, towers }, playerKeep.max, playerKeep.now);
     // Survival: the enemy has no keep (they come from beyond the field).
     // MOBA: both keeps are alike.

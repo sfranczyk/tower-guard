@@ -26,6 +26,7 @@ import {
 import type { EnemyType } from '../types';
 import { ICON_BANNERS, ICON_BOWMAN, ICON_DIFFICULTY, ICON_ENEMIES, ICON_FRIENDLY_FIRE, ICON_KEEP, ICON_SUPPORT, ICON_TRASH } from './icons';
 import { mapThumbnail } from './mapThumbnail';
+import { numberInput, optionRow } from './optionRows';
 import { panelTop, renderPanel } from './panelLayout';
 import { editQuiverIn } from './quiverEditing';
 import { quiverPage, type PartnerQuiver } from './quiverPage';
@@ -181,18 +182,12 @@ export class SandboxForm {
   /** The run's rules, one per row: health, difficulty, friendly fire, banners (battle) and support (battle; survival never has it). */
   private rulesPage(settings: SandboxSettings): string {
     const survival = settings.mode === 'survival';
-    const numberInput = (attribute: string, value: number, limits: { min: number; max: number; step: number }): string =>
-      `<input type="number" ${attribute} value="${value}" min="${limits.min}" max="${limits.max}" step="${limits.step}">`;
     const choice = <T>(name: string, attribute: string, values: readonly T[], current: T, label: (value: T) => string, disabled = false): string =>
       `<div class="segmented" role="radiogroup" aria-label="${name}">
         ${values.map((value) => `<button type="button" class="chip-button${value === current ? ' active' : ''}" role="radio" aria-checked="${value === current}" ${attribute}="${value}"${disabled ? ' disabled' : ''}>${label(value)}</button>`).join('')}
       </div>`;
     const onOff = (on: boolean): string => (on ? 'On' : 'Off');
-    // Only a number field's row is a <label>: a label round the chips would press the first one on any click in the row.
-    const row = (label: string, hint: string, control: string, icon: string): string => {
-      const tag = control.startsWith('<input') ? 'label' : 'div';
-      return `<${tag} class="option-row">${icon}<span><strong>${label}</strong><small>${hint}</small></span>${control}</${tag}>`;
-    };
+    const row = optionRow;
     return `<div class="rules-list">
       ${row('Bowman health', 'Each bowman starts the run with this; it carries over between levels', numberInput('data-bowman-health', settings.bowmanHealth, HEALTH_LIMITS.bowman), ICON_BOWMAN)}
       ${row('Keep health', 'Your keep falls and the run is lost when this runs out', numberInput('data-keep-health', settings.keepHealth, HEALTH_LIMITS.keep), ICON_KEEP)}

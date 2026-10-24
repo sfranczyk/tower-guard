@@ -126,13 +126,14 @@ export class DomUi {
     });
     this.coopScreen = this.query('[data-coop]');
     this.coopPanel = new CoopPanel(this.query('[data-coop-panel]'), {
-      host: () => this.handlers.coopHost?.(),
+      host: (moba) => this.handlers.coopHost?.(moba),
       join: (code) => this.handlers.coopJoin?.(code),
       setup: () => this.handlers.coopSetup?.(),
       leave: () => this.handlers.coopLeave?.(),
       loadoutChange: (loadout) => this.handlers.coopLoadout?.(loadout),
       teamChange: (team) => this.handlers.coopTeam?.(team),
       practice: () => this.handlers.mobaPractice?.(),
+      rulesChange: (rules) => this.handlers.mobaRules?.(rules),
     });
     this.soundLabScreen = this.query('[data-sound-lab]');
     this.soundLabPanel = new SoundLabPanel(this.query('[data-sound-lab-panel]'), {
@@ -147,8 +148,8 @@ export class DomUi {
     this.bannersLine = this.query<HTMLElement>('[data-banners]');
 
     this.onClick('[data-start]', () => this.handlers.start?.());
-    this.onClick('[data-open-coop]', () => this.handlers.openCoop?.());
-    this.onClick('[data-open-moba]', () => this.handlers.openMoba?.());
+    this.onClick('[data-open-room]', () => this.handlers.openRoom?.());
+    this.onClick('[data-open-join]', () => this.handlers.openJoin?.());
     this.onClick('[data-menu-settings]', () => this.handlers.toggleOptions?.());
     this.onClick('[data-dev-toggle]', () => this.toggleDevTools());
     this.onClick('[data-open-test]', () => this.handlers.openAnimationLab?.());

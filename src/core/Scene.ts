@@ -48,9 +48,10 @@ export interface RunState {
 }
 
 /** A fresh run: level 1, every bowman and both keeps at full health (the enemy's by the difficulty, `enemyKeepHealth`). */
-export const newRun = (sandbox: SandboxSettings, playerCount: number): RunState => ({
+export const newRun = (sandbox: SandboxSettings, playerCount: number, moba = false): RunState => ({
   levelIndex: 0,
-  bowmanHealths: Array.from({ length: playerCount }, () => sandbox.bowmanHealth),
+  // MOBA: the room's rules (data/mobaRules.ts) instead of the battle setup's.
+  bowmanHealths: Array.from({ length: playerCount }, () => (moba ? sandbox.moba.bowmanHealth : sandbox.bowmanHealth)),
   keepHealth: sandbox.keepHealth,
   enemyKeepHealth: enemyKeepHealth(sandbox.difficulty, sandbox.keepHealth),
 });
@@ -74,6 +75,8 @@ export interface GameSession {
   teams?: Team[];
   /** MOBA: each player's quiver, the normal arrow and the ones bought (it replaces the battle setup's). */
   mobaLoadouts?: Loadout[];
+  /** How the lobby was opened from the menu: picking a mode to host a room, or typing a code to join one. */
+  lobbyEntry?: 'create' | 'join';
   /** Shown once in the co-op lobby (e.g. "The host left"). */
   coopNotice?: string;
   /** Draw the predicted arrow path while aiming (settings drawer, on by default). */
