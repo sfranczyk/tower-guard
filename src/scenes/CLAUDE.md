@@ -29,7 +29,8 @@ everything under `ctx.root` on each switch. Scenes never touch the DOM: they cal
   `players` / `PlayerControl.ts`: see net/CLAUDE.md. Follows the bowman across `worldWidth()` (centred,
   `centeredCameraX(width, worldWidth())`, in a wider view); scrolls `world` by `cameraX`.
 - **Leftovers** (`BattleLeftovers.ts`, config `LEFTOVERS`, pure fade `systems/leftovers.ts`): corpses (enemies, soldiers,
-  MOBA blue dragons) and stuck arrows fade and are gone after 20 s, host and guest each on their own;
+  MOBA blue dragons) and stuck arrows fade and are gone after 20 s, host and guest each on their own; blood stains and
+  scorch marks likewise (`systems/groundMarks.ts`, fed by `EffectsSystem` / `MagicVisuals`);
   `BattleEnemies.corpseCleared` keeps the defeated count. HUD health chip (keep, bowman) beside the Level chip
   (`HudValues.health`, MOBA regeneration icon from `BattleMoba.regenerating` / `MobaNet.rg`); blue numbers over hit bowmen (`DamageNumbers.showPlayerHit`, from the health drop each frame).
 - **Aim camera** (`core/camera.ts`, pure): while the local player draws, `GameScene.updateAim` simulates the shot every

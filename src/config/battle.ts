@@ -187,12 +187,21 @@ export const DIFFICULTY_SCALE = tunable('DIFFICULTY_SCALE', 'Difficulty', {
 }, { meta: { mediumChainFalloff: { max: 1 }, hardChainFalloff: { max: 1 } } });
 
 /**
- * Leftovers on the field (scenes/BattleLeftovers.ts, everywhere: battle, survival, MOBA): a fallen enemy, soldier or
- * minion is gone `corpseMs` after it fell, an arrow `arrowMs` after it stuck (in the ground, the stone or a body), each
- * fading out over its last `fadeMs`.
+ * Leftovers on the field (scenes/BattleLeftovers.ts, systems/groundMarks.ts; everywhere: battle, survival, MOBA): a
+ * fallen enemy, soldier or minion is gone `corpseMs` after it fell, an arrow `arrowMs` after it stuck (in the ground,
+ * the stone or a body), a mark on the ground (blood stain, scorch) `markMs` after it was made, each fading out over its
+ * last `fadeMs`.
  */
-export const LEFTOVERS = tunable('LEFTOVERS', 'Bodies and arrows', {
+export const LEFTOVERS = tunable('LEFTOVERS', 'Bodies, arrows and stains', {
   corpseMs: 20000,
   arrowMs: 20000,
+  markMs: 20000,
   fadeMs: 1000,
-}, { meta: { corpseMs: { min: 1000, max: 120000, step: 1000 }, arrowMs: { min: 1000, max: 120000, step: 1000 }, fadeMs: { min: 0, max: 5000, step: 100 } } });
+}, {
+  meta: {
+    corpseMs: { min: 1000, max: 120000, step: 1000 },
+    arrowMs: { min: 1000, max: 120000, step: 1000 },
+    markMs: { min: 1000, max: 120000, step: 1000 },
+    fadeMs: { min: 0, max: 5000, step: 100 },
+  },
+});
