@@ -11,9 +11,14 @@ export interface MobaRules {
   startGold: number;
   /** How long a fallen player waits before he is back at his keep. */
   respawnSeconds: number;
+  /** Killing your own team's minion or player costs half the gold an enemy one would pay (systems/mobaEconomy.ts). */
+  allyPenalty: boolean;
 }
 
-export const MOBA_RULE_LIMITS: Readonly<Record<keyof MobaRules, { min: number; max: number; step: number }>> = {
+/** The rules typed in as numbers. */
+export type MobaNumberRule = Exclude<keyof MobaRules, 'allyPenalty'>;
+
+export const MOBA_RULE_LIMITS: Readonly<Record<MobaNumberRule, { min: number; max: number; step: number }>> = {
   keepHealth: { min: 500, max: 10000, step: 100 },
   bowmanHealth: { min: 100, max: 1000, step: 10 },
   startGold: { min: 0, max: 2000, step: 50 },
@@ -25,6 +30,7 @@ export const DEFAULT_MOBA_RULES: Readonly<MobaRules> = {
   bowmanHealth: 300,
   startGold: 0,
   respawnSeconds: 30,
+  allyPenalty: true,
 };
 
 const clamp = (value: unknown, { min, max }: { min: number; max: number }, fallback: number): number => {
@@ -38,4 +44,5 @@ export const normalizeMobaRules = (input: Partial<MobaRules> | undefined): MobaR
   bowmanHealth: clamp(input?.bowmanHealth, MOBA_RULE_LIMITS.bowmanHealth, DEFAULT_MOBA_RULES.bowmanHealth),
   startGold: clamp(input?.startGold, MOBA_RULE_LIMITS.startGold, DEFAULT_MOBA_RULES.startGold),
   respawnSeconds: clamp(input?.respawnSeconds, MOBA_RULE_LIMITS.respawnSeconds, DEFAULT_MOBA_RULES.respawnSeconds),
+  allyPenalty: typeof input?.allyPenalty === 'boolean' ? input.allyPenalty : DEFAULT_MOBA_RULES.allyPenalty,
 });

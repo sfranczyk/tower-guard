@@ -100,6 +100,11 @@ export default class Enemy extends Container {
   public lastHitBy?: number;
   /** MOBA: × on its health (given at spawn) and on the damage it deals (minion upgrades, data/upgrades.ts). */
   public power = 1;
+  /**
+   * MOBA lane kamikaze (BattleLanes): runs past bowmen and soldiers at the enemy keep and blows up at its wall, always
+   * goes off when it dies, fireproof, and a blast only knocks it down (EnemyAI/AllyAI.siegeRun, CombatSystem.siegeBlast).
+   */
+  public siege = false;
   public onUnhorsed?: (x: number, hit: HitInfo, off: RiderOff) => Enemy | undefined;
 
   public constructor(

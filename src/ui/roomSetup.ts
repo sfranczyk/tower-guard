@@ -1,6 +1,6 @@
 import { BATTLEGROUNDS } from '../data/battlegrounds';
-import { MOBA_RULE_LIMITS, normalizeMobaRules, type MobaRules } from '../data/mobaRules';
-import { ICON_BOWMAN, ICON_GOLD, ICON_KEEP, ICON_RESPAWN } from './icons';
+import { MOBA_RULE_LIMITS, normalizeMobaRules, type MobaNumberRule, type MobaRules } from '../data/mobaRules';
+import { ICON_BOWMAN, ICON_FRIENDLY_FIRE, ICON_GOLD, ICON_KEEP, ICON_RESPAWN } from './icons';
 import { mapThumbnail } from './mapThumbnail';
 import { numberInput, optionRow } from './optionRows';
 
@@ -35,14 +35,19 @@ export const mobaRulesPage = (rules: MobaRules): string => `<div class="rules-li
   ${optionRow('Bowman health', 'Each bowman before upgrades (the shop\'s Max health raises it)', numberInput('data-moba-rule="bowmanHealth"', rules.bowmanHealth, MOBA_RULE_LIMITS.bowmanHealth), ICON_BOWMAN)}
   ${optionRow('Starting gold', 'Gold in each purse when the match starts', numberInput('data-moba-rule="startGold"', rules.startGold, MOBA_RULE_LIMITS.startGold), ICON_GOLD)}
   ${optionRow('Respawn time', 'Seconds a fallen bowman waits before he is back at his keep', numberInput('data-moba-rule="respawnSeconds"', rules.respawnSeconds, MOBA_RULE_LIMITS.respawnSeconds), ICON_RESPAWN)}
+  ${optionRow('Ally kill penalty', 'Killing a teammate or your own minion costs half the gold an enemy one pays', onOffChips('data-moba-toggle="allyPenalty"', rules.allyPenalty), ICON_FRIENDLY_FIRE)}
+</div>`;
+
+const onOffChips = (attribute: string, on: boolean): string => `<div class="segmented" role="radiogroup" aria-label="Ally kill penalty">
+  ${[true, false].map((value) => `<button type="button" class="chip-button${value === on ? ' active' : ''}" role="radio" aria-checked="${value === on}" ${attribute} data-value="${value}">${value ? 'On' : 'Off'}</button>`).join('')}
 </div>`;
 
 /** The rules as typed in the Rules tab, clamped (an empty field keeps `current`'s value). */
 export const readMobaRules = (root: HTMLElement, current: MobaRules): MobaRules => {
-  const typed: Partial<Record<keyof MobaRules, number>> = { ...current };
+  const typed: Partial<MobaRules> = { ...current };
   root.querySelectorAll<HTMLInputElement>('[data-moba-rule]').forEach((input) => {
     if (input.value !== '') {
-      typed[input.dataset.mobaRule as keyof MobaRules] = Number(input.value);
+      typed[input.dataset.mobaRule as MobaNumberRule] = Number(input.value);
     }
   });
   return normalizeMobaRules(typed);

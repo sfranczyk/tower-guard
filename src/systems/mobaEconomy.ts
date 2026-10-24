@@ -6,8 +6,8 @@ export type Victim = { team: Team; minion: MinionRole } | { team: Team; player: 
 
 /**
  * MOBA gold (pure, tested): each player's purse and each team's vault. The last hit on an enemy minion or player pays
- * its reward (MOBA_PLAYERS `*Gold`); one on your own minion pays nothing; killing a teammate costs `teamKillPenalty`
- * (no more than you have). Players move gold to and from their team's vault in MOBA_VAULT_STEPS.
+ * its reward (MOBA_PLAYERS `*Gold`); one on your own minion or a teammate costs half that reward (no more than you have),
+ * or nothing with the room's ally penalty off. Players move gold to and from their team's vault in MOBA_VAULT_STEPS.
  */
 export class MobaEconomy {
   public readonly gold: number[];
@@ -18,14 +18,13 @@ export class MobaEconomy {
   }
 
   /** Player `killer` landed the last hit on `victim`: the change to his purse (0 for none), already applied. */
-  public kill(killer: number, victim: Victim): number {
+  public kill(killer: number, victim: Victim, allyPenalty = true): number {
     const team = this.teams[killer];
     if (team === undefined || ('player' in victim && victim.player === killer)) {
       return 0;
     }
-    const delta = victim.team !== team
-      ? ('player' in victim ? MOBA_PLAYERS.playerGold : MOBA_PLAYERS[`${victim.minion}Gold`])
-      : ('player' in victim ? -Math.min(this.gold[killer], MOBA_PLAYERS.teamKillPenalty) : 0);
+    const reward = 'player' in victim ? MOBA_PLAYERS.playerGold : MOBA_PLAYERS[`${victim.minion}Gold`];
+    const delta = victim.team !== team ? reward : allyPenalty ? -Math.min(this.gold[killer], Math.round(reward / 2)) : 0;
     this.gold[killer] += delta;
     return delta;
   }

@@ -102,7 +102,11 @@ export class AllyAI {
   private readonly medics = new WeakMap<Enemy, MedicState>();
   private readonly ranged: AllyRanged;
 
-  public constructor(private readonly world: AllyAIWorld, private readonly events: AllyAIEvents) {
+  public constructor(
+    private readonly world: AllyAIWorld,
+    private readonly events: AllyAIEvents,
+    private readonly actions: { detonate(kamikaze: Enemy): void },
+  ) {
     this.ranged = new AllyRanged(world, events);
   }
 
@@ -111,7 +115,9 @@ export class AllyAI {
       ally.updateAnimation(deltaMs, false);
       return;
     }
-    if (enemyArchetype(ally.kind).bandages) {
+    if (ally.siege) {
+      this.siegeRun(ally, deltaMs);
+    } else if (enemyArchetype(ally.kind).bandages) {
       this.updateMedic(ally, deltaMs);
     } else if (enemyArchetype(ally.kind).shoots) {
       this.ranged.updateArcher(ally, deltaMs, this.world.enemyTower.x - MOBA_LANES.archerKeepRange + 40);
@@ -207,6 +213,17 @@ export class AllyAI {
           meleeBlow(foe, damage, ally.x, this.world.effects);
         }
       });
+    }
+  }
+
+  /** MOBA lane kamikaze (Enemy.siege): runs past bowmen and soldiers to the enemy keep and blows up at its wall. */
+  private siegeRun(ally: Enemy, deltaMs: number): void {
+    const blastX = this.world.enemyTower.x - MOBA_LANES.keepReach;
+    ally.update(deltaMs, { x: blastX, y: groundAt(blastX) }, 2);
+    ally.updateAnimation(deltaMs, ally.isMoving());
+    const stopped = ally.isDown || ally.afflictions.isFrozen || ally.afflictions.inVortex;
+    if (!stopped && ally.x >= blastX - IN_REACH) {
+      this.actions.detonate(ally);
     }
   }
 
