@@ -28,7 +28,7 @@ export type LevelEnemies =
 
 export interface BattleEnemiesDeps {
   world: Container;
-  /** The level's enemies (shared with CombatSystem and the co-op sync); the fallen stay as corpses. */
+  /** The level's enemies (shared with CombatSystem and the co-op sync); the fallen stay as corpses for a while (BattleLeftovers). */
   list: Foe[];
   /** A co-op guest runs no waves of its own: the host's enemies arrive as events. */
   guest: boolean;
@@ -46,6 +46,8 @@ export class BattleEnemies {
   /** Debug toggle (O key): hides and freezes all enemies. */
   public visible = true;
   private spawned = 0;
+  /** Defeated enemies whose corpses were cleared away (no longer in the list). */
+  private cleared = 0;
   private director?: WaveDirector | SurvivalDirector;
   /** Survival and MOBA lanes: the total grows with every enemy that comes, and more are due until the level ends. */
   private readonly survival: boolean;
@@ -87,11 +89,16 @@ export class BattleEnemies {
   }
 
   /**
-   * Fallen enemies stay in the list (corpses), so every non-living one counts as defeated (a priest that escaped too), but a dead horse whose rider
-   * hasn't come off it yet (he comes as an enemy of his own).
+   * Fallen enemies stay in the list (corpses) until cleared away, so every non-living one counts as defeated (a priest that escaped too), but a
+   * dead horse whose rider hasn't come off it yet (he comes as an enemy of his own); the cleared ones count too.
    */
   public defeated(): number {
-    return this.list.filter((enemy) => !enemy.isAlive() && !(enemy instanceof Enemy && enemy.riderPending)).length;
+    return this.cleared + this.list.filter((enemy) => !enemy.isAlive() && !(enemy instanceof Enemy && enemy.riderPending)).length;
+  }
+
+  /** A corpse was cleared away (BattleLeftovers took it out of the list): it still counts as defeated. */
+  public corpseCleared(): void {
+    this.cleared += 1;
   }
 
   /** More enemies still to come: waves not yet released, or a rider about to come off his dead horse. */

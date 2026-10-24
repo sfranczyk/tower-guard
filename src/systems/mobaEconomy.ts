@@ -7,7 +7,7 @@ export type Victim = { team: Team; minion: MinionRole } | { team: Team; player: 
 /**
  * MOBA gold (pure, tested): each player's purse and each team's vault. The last hit on an enemy minion or player pays
  * its reward (MOBA_PLAYERS `*Gold`); one on your own minion pays nothing; killing a teammate costs `teamKillPenalty`
- * (no more than you have). Players move gold to and from their team's vault in `vaultStep`s.
+ * (no more than you have). Players move gold to and from their team's vault in MOBA_VAULT_STEPS.
  */
 export class MobaEconomy {
   public readonly gold: number[];
@@ -48,8 +48,8 @@ export class MobaEconomy {
     return true;
   }
 
-  /** One `vaultStep` (or what is left) from player `index`'s purse into his team's vault (`deposit`) or back. */
-  public moveVault(index: number, deposit: boolean, step = MOBA_PLAYERS.vaultStep): void {
+  /** `step` gold (or what is left) from player `index`'s purse into his team's vault (`deposit`) or back. */
+  public moveVault(index: number, deposit: boolean, step: number): void {
     const team = this.teams[index];
     const amount = Math.min(step, deposit ? this.gold[index] : this.vault[team]);
     this.gold[index] += deposit ? -amount : amount;

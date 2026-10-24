@@ -19,9 +19,9 @@ export interface UiHandlers {
   /** Animation lab: leave the zoomed view and return to the list. */
   labBack?: () => void;
   toggleOptions?: () => void;
-  /** MOBA shop: buy the next level of an upgrade, move vault gold (true: deposit), close it. */
+  /** MOBA shop: buy the next level of an upgrade, move `step` vault gold (true: deposit), close it. */
   shopBuy?: (id: string) => void;
-  shopVault?: (deposit: boolean) => void;
+  shopVault?: (deposit: boolean, step: number) => void;
   shopClose?: () => void;
   /** The pause dialog's "Resume", "Restart level" and "Main menu" buttons. */
   pauseResume?: () => void;

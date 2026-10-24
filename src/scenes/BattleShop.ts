@@ -9,7 +9,7 @@ import type { Player } from './PlayerControl';
 export interface ShopBackend {
   shopFunds(player: Player): ShopFunds;
   buy(player: Player, id: string): string | undefined;
-  moveVault(player: Player, deposit: boolean): void;
+  moveVault(player: Player, deposit: boolean, step: number): void;
 }
 
 export interface BattleShopDeps {
@@ -35,8 +35,8 @@ export class BattleShop {
   public constructor(private readonly deps: BattleShopDeps) {
     const { handlers } = deps.ctx.ui;
     handlers.shopBuy = (id) => this.buy(id);
-    handlers.shopVault = (deposit) => {
-      this.deps.backend()?.moveVault(this.deps.local(), deposit);
+    handlers.shopVault = (deposit, step) => {
+      this.deps.backend()?.moveVault(this.deps.local(), deposit, step);
       this.refresh();
     };
     handlers.shopClose = () => this.close();

@@ -1,24 +1,33 @@
-import { Container, Text } from 'pixi.js';
+import { Container, Graphics, Text } from 'pixi.js';
 import { DAMAGE_NUMBERS } from '../config';
 import { damageLabel, damagePopupFrame, showsDamageNumber } from '../rendering/damagePopup';
 import type { HitInfo } from './enemy/enemyTypes';
 
 const FONT = 'Fredoka, ui-rounded, system-ui, sans-serif';
 const COLOR = 0xffffff;
-const HEADSHOT_COLOR = 0xffd54a;
+/** A critical hit (headshot). */
+const HEADSHOT_COLOR = 0xff3b30;
+/** A hit on a player's bowman. */
+const PLAYER_HIT_COLOR = 0x4aa8ff;
 const OUTLINE = 0x1b1a20;
-/** MOBA gold popups: gained, lost. */
+/** MOBA gold popups: gained, lost; the coin beside them. */
 const GOLD_COLOR = 0xffc93c;
 const GOLD_LOST_COLOR = 0xff6b5a;
+const COIN_RADIUS = 8;
 /** Numbers from hits close together spread sideways this far (px) so they don't sit on each other. */
 const JITTER_X = 8;
 
 interface Popup {
-  text: Text;
+  view: Container;
   x: number;
   y: number;
   ageMs: number;
 }
+
+/** A gold coin (its bottom at y 0, centred on x 0), for the gold popups. */
+const coin = (): Graphics => new Graphics()
+  .circle(0, -COIN_RADIUS - 2, COIN_RADIUS).fill(0xf2b417).stroke({ color: OUTLINE, width: 2 })
+  .circle(0, -COIN_RADIUS - 2, COIN_RADIUS - 3.5).stroke({ color: 0xffe07a, width: 1.5 });
 
 /** How much each arrow hit takes off, rising over the enemy's head and fading (on/off: settings drawer). */
 export class DamageNumbers {
@@ -36,47 +45,56 @@ export class DamageNumbers {
     if (!label || !this.enabled() || !showsDamageNumber(hit?.cause) || !foe.parent) {
       return;
     }
-    const bounds = foe.getBounds();
-    const top = this.layer.toLocal({ x: bounds.x + bounds.width / 2, y: bounds.y });
     const headshot = hit?.cause === 'headshot';
-    const text = new Text({
-      text: label,
-      resolution: 2,
-      style: {
-        fontFamily: FONT,
-        fontWeight: '700',
-        fontSize: headshot ? DAMAGE_NUMBERS.headshotFontSize : DAMAGE_NUMBERS.fontSize,
-        fill: headshot ? HEADSHOT_COLOR : COLOR,
-        stroke: { color: OUTLINE, width: 4, join: 'round' },
-      },
-    });
-    text.anchor.set(0.5, 1);
-    const popup = { text, x: top.x + (Math.random() * 2 - 1) * JITTER_X, y: top.y - DAMAGE_NUMBERS.aboveHead, ageMs: 0 };
-    this.popups.push(popup);
-    this.layer.addChild(text);
-    this.place(popup);
+    this.spawn(this.label(label, headshot ? DAMAGE_NUMBERS.headshotFontSize : DAMAGE_NUMBERS.fontSize, headshot ? HEADSHOT_COLOR : COLOR), this.topOf(foe), true);
   }
 
-  /** MOBA: gold won (or lost) by a last hit, rising over where the victim fell (always shown, for the player it is for). */
+  /** A player's bowman lost `amount` health: a blue number over his head. */
+  public showPlayerHit(bowman: Container, amount: number): void {
+    const label = damageLabel(amount);
+    if (!label || !this.enabled() || !bowman.parent) {
+      return;
+    }
+    this.spawn(this.label(label, DAMAGE_NUMBERS.fontSize, PLAYER_HIT_COLOR), this.topOf(bowman), true);
+  }
+
+  /** MOBA: gold won (or lost) by a last hit, with a coin, rising over where the victim fell (always shown, for the player it is for). */
   public showGold(at: { x: number; y: number }, delta: number): void {
     if (delta === 0) {
       return;
     }
-    const text = new Text({
-      text: `${delta > 0 ? '+' : '−'}${Math.abs(Math.round(delta))} gold`,
+    const text = this.label(`${delta > 0 ? '+' : '−'}${Math.abs(Math.round(delta))}`, DAMAGE_NUMBERS.headshotFontSize, delta > 0 ? GOLD_COLOR : GOLD_LOST_COLOR);
+    const view = new Container();
+    const icon = coin();
+    // The coin and the number side by side, centred together.
+    const gap = 3;
+    const width = COIN_RADIUS * 2 + gap + text.width;
+    icon.x = -width / 2 + COIN_RADIUS;
+    text.anchor.set(0, 1);
+    text.x = icon.x + COIN_RADIUS + gap;
+    view.addChild(icon, text);
+    this.spawn(view, at, false);
+  }
+
+  private label(text: string, fontSize: number, fill: number): Text {
+    const label = new Text({
+      text,
       resolution: 2,
-      style: {
-        fontFamily: FONT,
-        fontWeight: '700',
-        fontSize: DAMAGE_NUMBERS.headshotFontSize,
-        fill: delta > 0 ? GOLD_COLOR : GOLD_LOST_COLOR,
-        stroke: { color: OUTLINE, width: 4, join: 'round' },
-      },
+      style: { fontFamily: FONT, fontWeight: '700', fontSize, fill, stroke: { color: OUTLINE, width: 4, join: 'round' } },
     });
-    text.anchor.set(0.5, 1);
-    const popup = { text, x: at.x, y: at.y - DAMAGE_NUMBERS.aboveHead, ageMs: 0 };
+    label.anchor.set(0.5, 1);
+    return label;
+  }
+
+  private topOf(target: Container): { x: number; y: number } {
+    const bounds = target.getBounds();
+    return this.layer.toLocal({ x: bounds.x + bounds.width / 2, y: bounds.y });
+  }
+
+  private spawn(view: Container, at: { x: number; y: number }, jitter: boolean): void {
+    const popup = { view, x: at.x + (jitter ? (Math.random() * 2 - 1) * JITTER_X : 0), y: at.y - DAMAGE_NUMBERS.aboveHead, ageMs: 0 };
     this.popups.push(popup);
-    this.layer.addChild(text);
+    this.layer.addChild(view);
     this.place(popup);
   }
 
@@ -85,7 +103,7 @@ export class DamageNumbers {
       const popup = this.popups[i];
       popup.ageMs += deltaMs;
       if (popup.ageMs >= DAMAGE_NUMBERS.lifeMs) {
-        popup.text.destroy();
+        popup.view.destroy({ children: true });
         this.popups.splice(i, 1);
       } else {
         this.place(popup);
@@ -95,8 +113,8 @@ export class DamageNumbers {
 
   private place(popup: Popup): void {
     const frame = damagePopupFrame(popup.ageMs, DAMAGE_NUMBERS.lifeMs, DAMAGE_NUMBERS.rise);
-    popup.text.position.set(popup.x, popup.y - frame.rise);
-    popup.text.alpha = frame.alpha;
-    popup.text.scale.set(frame.scale);
+    popup.view.position.set(popup.x, popup.y - frame.rise);
+    popup.view.alpha = frame.alpha;
+    popup.view.scale.set(frame.scale);
   }
 }

@@ -28,6 +28,10 @@ everything under `ctx.root` on each switch. Scenes never touch the DOM: they cal
   `CAMERA_LOOK.panSpeed`); Space doesn't act on the hidden card.
   `players` / `PlayerControl.ts`: see net/CLAUDE.md. Follows the bowman across `worldWidth()` (centred,
   `centeredCameraX(width, worldWidth())`, in a wider view); scrolls `world` by `cameraX`.
+- **Leftovers** (`BattleLeftovers.ts`, config `LEFTOVERS`, pure fade `systems/leftovers.ts`): corpses (enemies, soldiers,
+  MOBA blue dragons) and stuck arrows fade and are gone after 20 s, host and guest each on their own;
+  `BattleEnemies.corpseCleared` keeps the defeated count. HUD health chip (keep, bowman) beside the Level chip
+  (`HudValues.health`); blue numbers over hit bowmen (`DamageNumbers.showPlayerHit`, from the health drop each frame).
 - **Aim camera** (`core/camera.ts`, pure): while the local player draws, `GameScene.updateAim` simulates the shot every
   frame; `aimLookAhead` ignores a landing within `CAMERA_LOOK.deadZone` of the view, then slides up to the bowman
   `CAMERA_LOOK.edgeMargin` from the edge, eased (`CAMERA_LOOK.aimMs`); only slides further out unless he aims the other way
@@ -50,5 +54,5 @@ everything under `ctx.root` on each switch. Scenes never touch the DOM: they cal
   minions on one clock, at their team's level: `spawn`), `BattleMoba` (gold for last hits, vaults, respawn, regen; host
   or alone) with `MobaUpgrades` (levels bought, their effects), `BattleShop` (I by your keep, `ui/ShopPanel.ts`).
   Red players use `enemyTower`; the end is `BattleOutcome.endMatch` / `showMobaEnd` (`mobaEndInfo`, per team).
-  Field `MOBA_WORLD_WIDTH` (2800), always Green Meadow; Esc only opens this player's menu, the battle runs on
+  Field `MOBA_WORLD_WIDTH` (2800), keeps `MOBA_KEEPS` (health, `inset` from the ends), always Green Meadow; Esc only opens this player's menu, the battle runs on
   (`BattleControls.frozen`), and the quiver is what was bought (no editing in the keep).

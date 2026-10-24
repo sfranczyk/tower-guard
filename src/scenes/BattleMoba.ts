@@ -1,4 +1,4 @@
-import { MOBA_PLAYERS } from '../config';
+import { MOBA_PLAYERS, MOBA_VAULT_STEPS } from '../config';
 import type { GameContext } from '../core/Scene';
 import type { MinionRole, Team } from '../data/moba';
 import type { ShopFunds } from '../data/shopView';
@@ -114,9 +114,12 @@ export class BattleMoba {
     return this.upgrades.buy(player, id);
   }
 
-  /** `player` puts MOBA_PLAYERS.vaultStep of his gold in his team's vault, or takes it out. */
-  public moveVault(player: Player, deposit: boolean): void {
-    this.economy.moveVault(player.index, deposit);
+  /** `player` puts `step` of his gold in his team's vault, or takes it out (only the shop's MOBA_VAULT_STEPS). */
+  public moveVault(player: Player, deposit: boolean, step: number): void {
+    if (!MOBA_VAULT_STEPS.includes(step)) {
+      return;
+    }
+    this.economy.moveVault(player.index, deposit, step);
     this.deps.changed?.(player);
   }
 

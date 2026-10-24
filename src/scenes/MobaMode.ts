@@ -98,7 +98,7 @@ export class MobaMode implements ShopBackend {
       }
       const reason = message.buy ? this.match.buy(player, message.buy) : undefined;
       if (message.deposit !== undefined) {
-        this.match.moveVault(player, message.deposit);
+        this.match.moveVault(player, message.deposit, message.step ?? 0);
       }
       if (reason) {
         this.team?.status(player, reason);
@@ -214,11 +214,11 @@ export class MobaMode implements ShopBackend {
     return undefined;
   }
 
-  public moveVault(player: Player, deposit: boolean): void {
+  public moveVault(player: Player, deposit: boolean, step: number): void {
     if (this.match) {
-      this.match.moveVault(player, deposit);
+      this.match.moveVault(player, deposit, step);
     } else {
-      this.deps.guestSync()?.sendShop({ t: 'shop', deposit });
+      this.deps.guestSync()?.sendShop({ t: 'shop', deposit, step });
     }
   }
 

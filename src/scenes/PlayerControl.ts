@@ -4,7 +4,7 @@ import type { PlayerInput } from '../input/PlayerInput';
 import type Bowman from '../objects/bowman/Bowman';
 import type Tower from '../objects/Tower';
 import type { Team } from '../data/moba';
-import { enemyKeepX } from '../systems/battlefield';
+import { enemyKeepX, playerKeepX } from '../systems/battlefield';
 import type { ArrowCooldowns } from '../systems/arrowCooldowns';
 import { groundAt } from '../systems/terrain';
 import type { ProjectileType } from '../types';
@@ -37,10 +37,13 @@ const START_SPACING = 45;
 export const canDrawBow = (player: Player): boolean =>
   player.cooldowns.ready(player.projectile as ArrowType, player.local ? 0 : ARROW_COOLDOWN_SLACK_MS);
 
+/** How far in front of his keep a bowman starts. */
+const START_OFFSET = BOWMAN_START_X - PLAYER_TOWER_X;
+
 /** Where player `slot` of `team` starts: in front of their keep (red: the right one, mirrored). */
 export const playerStartX = (slot: number, team: Team = 'blue'): number => (team === 'blue'
-  ? BOWMAN_START_X + slot * START_SPACING
-  : enemyKeepX() - (BOWMAN_START_X - PLAYER_TOWER_X) - slot * START_SPACING);
+  ? playerKeepX() + START_OFFSET + slot * START_SPACING
+  : enemyKeepX() - START_OFFSET - slot * START_SPACING);
 
 /** What PlayerControl reports to the scene (status messages for the local player). */
 export interface PlayerControlEvents {

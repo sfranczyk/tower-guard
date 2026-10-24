@@ -33,7 +33,7 @@
 - `CoopPanel.ts`: the co-op lobby (net/CLAUDE.md). `SoundLabPanel.ts`: the sound test panel.
 - `ShopPanel.ts` (`DomUi.shop`): MOBA's shop over the far side of the canvas, tabs Skills / Castle, chained buttons with
   the price, details line at the bottom; `handlers.shopBuy` / `shopVault` / `shopClose`. Hud's `moba` purse line.
-  The lobby's MOBA team columns: `CoopPanel` `teams`, `handlers.coopTeam`. Menu → "Online team battle" (`handlers.openMoba`)
+  The lobby's MOBA team columns: `CoopPanel` `teams`, `handlers.coopTeam`. Menu → "Team battle online" (`handlers.openMoba`)
   opens the lobby in MOBA mode ("Practice alone": `mobaPractice`); upgrade icons `ICON_UPGRADES` + arrows/minions.
 - Dev views (animation, design, sound lab) all have "← Menu" in their panel's top-right corner.
 - **Tuning panel** (`TuningPanel.ts`, `?tune` or menu → Dev tools → "Tuning panel"; a collapsible side panel over the

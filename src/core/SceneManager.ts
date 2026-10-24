@@ -38,7 +38,7 @@ export class SceneManager {
         run: newRun(sandbox, playerCount),
         playerCount,
         moba: getDevUrlParam(MOBA_PARAM) !== null,
-        showTrajectory: false,
+        showTrajectory: true,
         showCursorCircle: false,
         showDamageNumbers: true,
         bannerMarkers: true,
