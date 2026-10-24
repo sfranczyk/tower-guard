@@ -64,6 +64,8 @@ export interface GameSession {
   playerCount: number;
   /** Set while playing co-op online. */
   net?: NetLink;
+  /** MOBA mode (`?moba`, dev only for now): battles are two keeps sending lane minions at each other (scenes/BattleLanes.ts). */
+  moba?: boolean;
   /** Shown once in the co-op lobby (e.g. "The host left"). */
   coopNotice?: string;
   /** Draw the predicted arrow path while aiming (settings drawer, off by default). */

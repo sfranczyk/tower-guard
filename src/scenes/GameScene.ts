@@ -23,6 +23,7 @@ import { BattleArrows } from './BattleArrows';
 import { BattleCamera } from './BattleCamera';
 import { BattleAllies } from './BattleAllies';
 import { BattleBanners } from './BattleBanners';
+import { BattleLanes } from './BattleLanes';
 import { BattleControls } from './BattleControls';
 import { BattleEnemies } from './BattleEnemies';
 import { BattleOutcome } from './BattleOutcome';
@@ -66,6 +67,8 @@ export class GameScene extends Scene {
   /** The player's soldiers (also `soldiers.list`; for the ?debug console: `scene.allies[0]`). */
   private readonly allies: Enemy[] = [];
   private readonly soldiers: BattleAllies;
+  /** MOBA (`?moba`): both keeps' lane minions (scenes/BattleLanes.ts). */
+  private readonly lanes?: BattleLanes;
   /** The run's Banners option (solo only; scenes/BattleBanners.ts). */
   private banners?: BattleBanners;
   /** Every arrow of the level. */
@@ -104,7 +107,8 @@ export class GameScene extends Scene {
   public constructor(ctx: GameContext) {
     super(ctx);
     const { sandbox, run } = ctx.session;
-    this.survivalSetup = survivalLevel(sandbox, run.levelIndex);
+    // MOBA is fought on a battle map, whatever the setup's mode.
+    this.survivalSetup = ctx.session.moba ? undefined : survivalLevel(sandbox, run.levelIndex);
     // Before anything is laid out on it: a survival level's field is shorter (host and guest build the same).
     useBattlefield(this.survivalSetup ? SURVIVAL_WORLD_WIDTH : WORLD_WIDTH);
     // No view wider than the field: a big window letterboxes instead of showing ground nobody can play on.
@@ -122,7 +126,7 @@ export class GameScene extends Scene {
     const survival = this.survivalSetup;
     this.foes = new BattleEnemies(survival
       ? { survival: { kinds: survival.kinds, durationMs: survival.minutes * 60_000, levelIndex: run.levelIndex, difficulty, players: this.ctx.session.playerCount } }
-      : { counts: sandbox.levels[run.levelIndex].enemies }, {
+      : ctx.session.moba ? { lanes: true } : { counts: sandbox.levels[run.levelIndex].enemies }, {
       world: this.world,
       list: this.enemies,
       guest: this.role === 'guest',
@@ -135,6 +139,9 @@ export class GameScene extends Scene {
       list: this.allies,
       onDamaged: (ally, amount, hit) => this.damageNumbers.show(ally, amount, hit),
     });
+    if (ctx.session.moba) {
+      this.lanes = new BattleLanes(this.soldiers, this.foes);
+    }
     this.shots = new BattleArrows({
       world: this.world,
       textures: ctx.textures,
@@ -182,7 +189,9 @@ export class GameScene extends Scene {
     const towers = this.ctx.session.playerCount;
     this.playerTower = new Tower(PLAYER_TOWER_X, GROUND_Y, { hillColor, enemy: false, towers }, sandbox.keepHealth, run.keepHealth);
     // Survival: the enemy has no keep (they come from beyond the field).
-    this.enemyTower = new Tower(enemyKeepX(), GROUND_Y, { hillColor, enemy: true, absent: !!this.survivalSetup }, enemyKeepHealth(sandbox.difficulty, sandbox.keepHealth), run.enemyKeepHealth);
+    // MOBA: both keeps are alike.
+    const enemyKeep = this.lanes ? { max: sandbox.keepHealth, now: sandbox.keepHealth } : { max: enemyKeepHealth(sandbox.difficulty, sandbox.keepHealth), now: run.enemyKeepHealth };
+    this.enemyTower = new Tower(enemyKeepX(), GROUND_Y, { hillColor, enemy: true, absent: !!this.survivalSetup }, enemyKeep.max, enemyKeep.now);
     if (this.survivalSetup) {
       this.survival = new BattleSurvival(this.survivalSetup, this.background);
       this.relief = new BattleRelief(this.world);
@@ -207,7 +216,7 @@ export class GameScene extends Scene {
     });
 
     // Banners: solo only (the guest doesn't see the soldiers yet, net/CLAUDE.md).
-    if (bannersInPlay(sandbox, this.ctx.session.net !== undefined)) {
+    if (!this.lanes && bannersInPlay(sandbox, this.ctx.session.net !== undefined)) {
       this.banners = new BattleBanners({
         world: this.world,
         units: () => [...this.allies, ...this.enemies.filter((foe): foe is Enemy => !(foe instanceof DragonEnemy))],
@@ -227,7 +236,7 @@ export class GameScene extends Scene {
         enemyTower: this.enemyTower,
         enemies: this.enemies,
         allies: this.allies,
-        allyOrder: () => this.soldiers.order,
+        allyOrder: () => (this.lanes ? 'advance' : this.soldiers.order),
         arrows: this.shots.list,
         effects: this.effects,
         debug: this.debugGraphics,
@@ -235,8 +244,10 @@ export class GameScene extends Scene {
         weather: this.battleground.weather,
         friendlyFire: () => friendlyFireOn(this.ctx.session.sandbox, isMultiplayer(this.ctx.session)),
         reinforcementsDue: () => this.foes.reinforcementsDue,
-        enemyEdge: enemyEdge(this.ctx.session.sandbox.difficulty),
+        // MOBA: the red side hits as hard as the blue one.
+        enemyEdge: enemyEdge(this.lanes ? 'easy' : this.ctx.session.sandbox.difficulty),
         banners: this.banners?.field,
+        lanes: this.lanes !== undefined,
       },
       battleCombatEvents({ ctx: this.ctx, team: this.team, shots: this.shots, playSound: (id, at) => this.playSound(id, at) }),
     );
@@ -320,7 +331,7 @@ export class GameScene extends Scene {
       },
     });
     const hint = this.battleground.weather === 'storm' ? 'beware of lightning' : this.wind !== 0 ? windLabel(this.wind, this.battleground.wind ?? 0)
-      : this.survival ? `hold out for ${clockText(this.survival.durationMs)}` : 'defend your keep';
+      : this.survival ? `hold out for ${clockText(this.survival.durationMs)}` : this.lanes ? 'bring down the red keep' : 'defend your keep';
     const note = weatherArrowNote(this.battleground.weather);
     ui.setStatus(`Level ${run.levelIndex + 1} of ${runLevelCount(sandbox)} · ${this.battleground.name} · ${hint}${note ? ` · ${note}` : ''}`);
   }
@@ -333,6 +344,9 @@ export class GameScene extends Scene {
     }
     this.foes.update(deltaMs);
     this.soldiers.update(deltaMs);
+    if (!this.outcome.ended) {
+      this.lanes?.update(deltaMs);
+    }
     const shifted = this.windShifts.update(deltaMs, this.wind);
     if (shifted !== undefined) {
       this.setWind(shifted);

@@ -13,7 +13,7 @@ import { STANDING_BURN_POINTS, burnPoints } from '../../rendering/burning';
 import { FROZEN_TINT } from '../../rendering/afflictionArt';
 import { mountedBodyPoints, mountedIcePoints } from '../../rendering/horseHitZones';
 import { spriteToContainer, worldToSprite, type BodyTransform, type Torso } from '../../systems/bodyAnchor';
-import { enemyArchetype, isAllyType } from '../../data/enemyKinds';
+import { enemyArchetype, fightsForPlayer } from '../../data/enemyKinds';
 import { groundAt } from '../../systems/terrain';
 import type { Vec2 } from '../../types';
 import type Enemy from './Enemy';
@@ -288,7 +288,7 @@ export class EnemyFigure {
     const cheer = actions.advanceCheer(deltaMs);
     if (cheer) {
       // Cheering faces the beaten side: enemies the player's keep, his soldiers the enemy's.
-      this.body.scale.set((isAllyType(enemy.kind) ? 1 : -1) * BODY_SCALE.x, BODY_SCALE.y);
+      this.body.scale.set((fightsForPlayer(enemy.kind) ? 1 : -1) * BODY_SCALE.x, BODY_SCALE.y);
       this.body.rotation = 0;
       this.draw({ mode: 'joints', pose: getCheerPose(cheer.kind, cheer.timeMs), club: this.carriesClub });
       return;

@@ -178,7 +178,8 @@ export class BattleControls {
     ui.handlers.viewBattlefield = (viewing) => this.viewBattlefield(viewing);
     ui.handlers.selectProjectile = (type) => this.localInput?.queueProjectile(type);
     // The player's soldiers: with support on (battle mode only), not yet in online co-op (the guest doesn't see them yet).
-    const commandsSoldiers = !ctx.session.net && supportAllowed(ctx.session.sandbox);
+    // MOBA: the soldiers are lane minions nobody commands.
+    const commandsSoldiers = !ctx.session.net && !ctx.session.moba && supportAllowed(ctx.session.sandbox);
     ui.setAllies(commandsSoldiers ? ALLY_TYPES.map((type) => ({ type, label: ENEMY_KINDS[type].label })) : []);
     if (commandsSoldiers) {
       ui.handlers.summonAlly = (type) => this.summonAlly(type);

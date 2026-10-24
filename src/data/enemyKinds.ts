@@ -212,6 +212,8 @@ export interface EnemyKind {
   mount?: { health: number };
   /** One of the player's soldiers (summoned, fights the enemies: systems/AllyAI.ts); none = an enemy. */
   side?: 'ally';
+  /** A MOBA lane minion of the player's side only (never summoned, not in the HUD: scenes/BattleLanes.ts). */
+  minion?: boolean;
   /** What it costs of a survival wave's budget (systems/survivalWaves.ts; a raider 1). */
   threat?: number;
   /**
@@ -340,16 +342,25 @@ export const ENEMY_KINDS: Readonly<Record<UnitType, EnemyKind>> = {
     label: 'Medic', archetype: 'medic', race: 'human', magical: false, arrival: 0, side: 'ally',
     stats: { health: 25, speed: ENEMY_SPEED }, damage: { melee: [0, 0] }, build: { size: 1, strikeReach: 0 },
   },
+  // MOBA: the blue lane's archer, the hunter in the bowman's blue (scenes/BattleLanes.ts; AllyAI shoots with it).
+  blueArcher: {
+    label: 'Blue archer', archetype: 'archer', race: 'human', magical: false, arrival: 0, side: 'ally', minion: true,
+    stats: { health: 22, speed: 26 }, damage: { melee: [3, 5], arrow: [7, 10] }, keepDamage: { arrow: 0.5 },
+    build: { size: 1, strikeReach: 55 },
+  },
 };
 
 /** Every stickman kind, foes and allies (for the tables keyed by kind). */
 export const UNIT_TYPES = Object.keys(ENEMY_KINDS) as readonly UnitType[];
 
-/** One of the player's soldiers. */
-export const isAllyType = (type: UnitType): type is AllyType => ENEMY_KINDS[type].side === 'ally';
+/** Fights on the player's side: a soldier or a MOBA lane minion (blue bar, faces right, AllyAI). */
+export const fightsForPlayer = (type: UnitType): boolean => ENEMY_KINDS[type].side === 'ally';
+
+/** One of the player's soldiers (summoned from the HUD). */
+export const isAllyType = (type: UnitType): type is AllyType => fightsForPlayer(type) && !ENEMY_KINDS[type].minion;
 
 /** Every enemy, in the battle setup's order. */
-export const ENEMY_TYPES = UNIT_TYPES.filter((type) => !isAllyType(type)) as readonly EnemyType[];
+export const ENEMY_TYPES = UNIT_TYPES.filter((type) => !fightsForPlayer(type)) as readonly EnemyType[];
 
 /** The player's soldiers, in the HUD's order. */
 export const ALLY_TYPES = UNIT_TYPES.filter(isAllyType);

@@ -21,6 +21,8 @@ const enemySpawnX = (): number => worldWidth() + 60;
 /** What a level sends: set counts (battle) or as many as survivalWaves decides of some kinds for a while (survival). */
 export type LevelEnemies =
   | { counts: LevelEnemyCounts }
+  /** MOBA: the red lane's minions, sent by scenes/BattleLanes.ts (`spawn`) for as long as the match lasts. */
+  | { lanes: true }
   | { survival: { kinds: readonly EnemyType[]; durationMs: number; levelIndex: number; difficulty: DifficultyLevel; players: number } };
 
 export interface BattleEnemiesDeps {
@@ -44,19 +46,19 @@ export class BattleEnemies {
   public visible = true;
   private spawned = 0;
   private director?: WaveDirector | SurvivalDirector;
-  /** Survival: the total grows with every enemy that comes, and more are due until the time is up. */
+  /** Survival and MOBA lanes: the total grows with every enemy that comes, and more are due until the level ends. */
   private readonly survival: boolean;
   private stopped = false;
 
   public constructor(level: LevelEnemies, private readonly deps: BattleEnemiesDeps) {
-    this.survival = 'survival' in level;
+    this.survival = !('counts' in level);
     this.total = 'counts' in level ? levelEnemyTotal(level.counts) : 0;
-    if (deps.guest) {
+    if (deps.guest || 'lanes' in level) {
       return;
     }
     if ('counts' in level) {
       this.director = new WaveDirector(level.counts, deps.wavePacing);
-    } else {
+    } else if ('survival' in level) {
       const { kinds, durationMs, levelIndex, difficulty, players } = level.survival;
       this.director = new SurvivalDirector(kinds, durationMs, { levelIndex, difficulty, players, pacing: deps.wavePacing });
     }

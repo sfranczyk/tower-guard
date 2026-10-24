@@ -7,7 +7,7 @@ import {
   SHOW_HITBOX_DEBUG,
 } from '../config';
 import type { SoundId } from '../audio/SoundManager';
-import type Arrow from '../objects/Arrow';
+import { MINION_ARROW_OWNER, type default as Arrow } from '../objects/Arrow';
 import type { EnemyEdge } from '../data/difficulty';
 import type { Weather } from '../data/battlegrounds';
 import { enemyDamage, explosionDamage, rollDamage } from '../data/enemies';
@@ -75,6 +75,8 @@ export interface CombatWorld {
   readonly enemyEdge: EnemyEdge;
   /** The run's Banners option (systems/banners.ts; scenes/BattleBanners.ts steps it): who carries what. */
   readonly banners?: Banners<Enemy>;
+  /** MOBA lanes (scenes/BattleLanes.ts): the soldiers are lane minions marching on the enemy keep. */
+  readonly lanes?: boolean;
 }
 
 export interface CombatEvents {
@@ -87,6 +89,8 @@ export interface CombatEvents {
   sound(id: SoundId, at: Vec2): void;
   /** A hostile arrow loosed by `shooter` (its damage depends on who shot it). */
   enemyShot(from: Vec2, angle: number, speed: number, shooter: EnemyType): void;
+  /** A MOBA blue archer's arrow (Arrow.MINION_ARROW_OWNER): it hits the enemies and their keep. */
+  allyShot(from: Vec2, angle: number, speed: number, shooter: UnitType): void;
   /** `bowman`'s health and his full health (the medic bandages him). */
   bowmanHealth(bowman: Bowman): { health: number; max: number };
   bowmanHealed(bowman: Bowman, amount: number): void;
@@ -191,7 +195,16 @@ export class CombatSystem {
       });
     arrows
       .filter((arrow) => arrow.isActive && !arrow.isStuck)
-      .forEach((arrow) => (arrow.hostile ? this.hits.resolveHostile(arrow) : this.hits.resolve(arrow, arrowTargets, friendly)));
+      .forEach((arrow) => {
+        if (arrow.hostile) {
+          this.hits.resolveHostile(arrow);
+        } else if (arrow.owner === MINION_ARROW_OWNER) {
+          // A blue archer's arrow spares his own side.
+          this.hits.resolve(arrow, activeEnemies, []);
+        } else {
+          this.hits.resolve(arrow, arrowTargets, friendly);
+        }
+      });
     // Stuck or gone, an arrow hits nothing more: what it already hit can go.
     arrows.filter((arrow) => !arrow.isActive || arrow.isStuck).forEach((arrow) => this.hits.forget(arrow));
     arrows

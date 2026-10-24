@@ -18,12 +18,12 @@ import type { EnemyEdge } from '../data/difficulty';
 import { enemyDamage, explosionDamage, legHitLames, pinDurationMs, rollArrowDamage, rollDamage, type DamageTarget, type MountPart } from '../data/enemies';
 import { enemyArchetype, enemyArmor } from '../data/enemyKinds';
 import { bombGoesOff } from './kamikazeBomb';
-import type Arrow from '../objects/Arrow';
+import { MINION_ARROW_OWNER, type default as Arrow } from '../objects/Arrow';
 import type Bowman from '../objects/bowman/Bowman';
 import DragonEnemy from '../objects/dragon/DragonEnemy';
 import type Enemy from '../objects/enemy/Enemy';
 import type Tower from '../objects/Tower';
-import type { EnemyType, ProjectileType, Vec2 } from '../types';
+import type { ProjectileType, UnitType, Vec2 } from '../types';
 import type { ArrowMagic } from './ArrowMagic';
 import { isMagicArrow } from './ArrowMagic';
 import type { BowmanHit } from './bowmanDeath';
@@ -56,7 +56,7 @@ interface BowmanArrowHit {
 }
 
 /** Damage of a hostile arrow by who shot it (archer arrows if unknown). */
-const arrowDamage = (shooter: EnemyType | undefined, target: DamageTarget) => enemyDamage(shooter ?? 'hunter', 'arrow', target);
+const arrowDamage = (shooter: UnitType | undefined, target: DamageTarget) => enemyDamage(shooter ?? 'hunter', 'arrow', target);
 
 /** What the arrows need of the battle. */
 export interface ArrowHitsWorld {
@@ -241,8 +241,9 @@ export class ArrowHits {
       arrow.stickToWall(impactPoint, WALL_SINK);
       return;
     }
-    // Chips fly off where it lands.
-    this.world.enemyTower.takeDamage(ENEMY_TOWER_DAMAGE * (explosive ? KEEP_BLAST_FACTOR : 1), impactPoint);
+    // Chips fly off where it lands (a minion's arrow barely scratches it, as the enemy archers' do ours).
+    const minion = arrow.owner === MINION_ARROW_OWNER && arrow.shooter;
+    this.world.enemyTower.takeDamage(minion ? rollDamage(enemyDamage(minion, 'arrow', 'keep')) : ENEMY_TOWER_DAMAGE * (explosive ? KEEP_BLAST_FACTOR : 1), impactPoint);
     if (explosive) {
       this.actions.explode(impactPoint, activeEnemies);
       arrow.deactivate();
@@ -255,6 +256,9 @@ export class ArrowHits {
 
   /** What a player arrow's hit deals (an enemy, or a bowman with friendly fire). */
   private static arrowHitDamage(arrow: Arrow, headshot: boolean): number {
+    if (arrow.owner === MINION_ARROW_OWNER && arrow.shooter) {
+      return rollDamage(enemyDamage(arrow.shooter, 'arrow', 'bowman')) * (headshot ? ARROWS.headshotMultiplier : 1);
+    }
     if (arrow.type === 'explosive') {
       return explosionDamage(0);
     }
@@ -392,7 +396,7 @@ export class ArrowHits {
     const pinning = arrow.type === 'pinning';
     // A horse's leg takes HORSE_LEG.damage of the arrow's hit (an explosive arrow's blast is the blast).
     const damage = ArrowHits.arrowHitDamage(arrow, headshot) * armor * (leg && !explosive ? HORSE_LEG.damage : 1);
-    if (headshot && !explosive && !pinning) {
+    if (headshot && !explosive && !pinning && arrow.owner !== MINION_ARROW_OWNER) {
       this.events.headshot();
     }
     const fromLeft = arrow.x < enemy.x;

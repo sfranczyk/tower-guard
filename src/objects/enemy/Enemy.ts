@@ -9,7 +9,7 @@ import type { BodyColors } from '../../rendering/bodyColors';
 import { enemyGibColors } from '../../rendering/enemyBody';
 import { fromBodyAnchor, spriteToWorld, toBodyAnchor, type BodyAnchor } from '../../systems/bodyAnchor';
 import { ENEMY_LOOKS, type EnemyLook } from '../../data/enemies';
-import { enemyArchetype, isAllyType } from '../../data/enemyKinds';
+import { enemyArchetype, fightsForPlayer } from '../../data/enemyKinds';
 import { BANDAGE_KNEEL_MS } from '../../rendering/bandaging';
 import { mountHealth } from '../../data/enemyTuning';
 import { groundAt } from '../../systems/terrain';
@@ -113,7 +113,7 @@ export default class Enemy extends Container {
     this.figure.drawPlaceholder();
     this.afflictions = new AfflictionLayer(kind);
     this.addChild(this.buffAura.art, this.figure.body, this.afflictions.art);
-    this.bars = new EnemyBars(this.look.size, this.rider !== undefined, enemyArchetype(kind).heals, isAllyType(kind));
+    this.bars = new EnemyBars(this.look.size, this.rider !== undefined, enemyArchetype(kind).heals, fightsForPlayer(kind));
     this.addChild(this.bars.health);
     if (enemyArchetype(kind).heals) {
       this.mana = new ManaPool();

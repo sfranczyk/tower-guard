@@ -6,7 +6,7 @@ import { shownDamage } from '../rendering/damagePopup';
 import Enemy, { type HitInfo } from '../objects/enemy/Enemy';
 import { nextOrder, type AllyOrder } from '../systems/allyOrders';
 import { AllyRoster, type AllySlotState } from '../systems/allyRoster';
-import type { AllyType } from '../types';
+import type { AllyType, UnitType } from '../types';
 
 export interface BattleAlliesDeps {
   world: Container;
@@ -46,6 +46,11 @@ export class BattleAllies {
       return undefined;
     }
     this.roster.summoned(type);
+    return this.deploy(type);
+  }
+
+  /** A soldier (or a MOBA lane minion) of `type` comes in from beyond the left edge; summoning checks the reserve first. */
+  public deploy(type: UnitType): Enemy {
     const stats = getEnemyStats(type, 1);
     const ally = new Enemy(ALLIES.spawnX, stats.health, stats.speed, 'bowman', type);
     // Called before the hit lands, so its health is what the hit takes from.

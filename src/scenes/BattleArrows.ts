@@ -7,14 +7,14 @@ import type { GameTextures } from '../core/Scene';
 import type { AimInput } from '../managers/InputManager';
 import type { GuestSync } from '../net/GuestSync';
 import type { ArrowLaunch, HostSync } from '../net/HostSync';
-import Arrow from '../objects/Arrow';
+import Arrow, { MINION_ARROW_OWNER } from '../objects/Arrow';
 import { ArrowShards } from '../objects/ArrowShards';
 import type { EffectsSystem } from '../systems/EffectsSystem';
 import { isMagicArrow } from '../systems/ArrowMagic';
 import { simulateTrajectory } from '../systems/ballistics';
 import { rollArrowMishap } from '../systems/weatherArrows';
 import { groundAt } from '../systems/terrain';
-import type { EnemyType, ProjectileType, Vec2 } from '../types';
+import type { EnemyType, ProjectileType, UnitType, Vec2 } from '../types';
 import type { Player } from './PlayerControl';
 import { worldWidth } from '../systems/battlefield';
 
@@ -167,6 +167,23 @@ export class BattleArrows {
     if (!silent) {
       this.deps.playSound('bowShot', from);
     }
+    return arrow;
+  }
+
+  /** A MOBA blue archer's arrow (`MINION_ARROW_OWNER`): flies clean like an enemy's, hits only the enemies and their keep. */
+  public fireMinion(from: Vec2, angle: number, speed: number, shooter: UnitType): Arrow {
+    const trail = new Graphics();
+    trail.zIndex = 1;
+    this.deps.world.addChild(trail);
+    const arrow = new Arrow(from.x, from.y, this.deps.textures.arrows.normal, trail);
+    arrow.owner = MINION_ARROW_OWNER;
+    arrow.wind = this.deps.wind();
+    arrow.fire(angle, speed, 'normal');
+    arrow.hideTrail();
+    arrow.shooter = shooter;
+    this.list.push(arrow);
+    this.deps.world.addChild(arrow);
+    this.deps.playSound('bowShot', from);
     return arrow;
   }
 

@@ -6,7 +6,7 @@ import { HUMAN_BODY, ZOMBIE_BODY } from './bodyColors';
 import type { AttackStyle } from './attackSwing';
 import type { JointPose } from './stickmanPose';
 import { archerBody, attackBody, bandageBody, castBody, runBody, standBody, walkBody, withBanner, withClub, type BodyPose } from './designs/bodyPoses';
-import { banditArcherLook, goblinBomberLook, goblinLook, raiderLook, sapperLook } from './designs/enemySkins';
+import { banditArcherLook, blueArcherLook, goblinBomberLook, goblinLook, raiderLook, sapperLook } from './designs/enemySkins';
 import { ogreLook, trollLook, zombieLook } from './designs/heavySkins';
 import { blackKnightLook, darkPriestLook, heavyKnightLook } from './designs/knightSkins';
 import { shamanLook } from './designs/shamanSkin';
@@ -57,6 +57,8 @@ const LOOKS: Readonly<Record<GroundEnemy, EnemyBodyLook>> = {
   squire: { look: fixed(squireLook()), club: 'overhead', gibs: { ...HUMAN_BODY, bone: 0xe0b48c, boneRear: 0x2f5d9a } },
   allyKnight: { look: allyKnightLook, club: 'overhead', gibs: { ...HUMAN_BODY, bone: 0xc9d0da, boneRear: 0x2f5d9a } },
   medic: { look: medicLook, club: 'overhead', gibs: { ...HUMAN_BODY, bone: 0xf2efe6, boneRear: 0xc0392b } },
+  // MOBA: the blue lane's archer (the hunter's hood in the bowman's blue).
+  blueArcher: { look: fixed(blueArcherLook()), gibs: { ...HUMAN_BODY, bone: 0xd2a07a, boneRear: 0x2f5d9a } },
 };
 
 const lookOf = (kind: UnitType): EnemyBodyLook => LOOKS[kind as GroundEnemy] ?? LOOKS.raider;

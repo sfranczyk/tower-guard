@@ -6,3 +6,4 @@ export * from './enemies';
 export * from './bowman';
 export * from './battle';
 export * from './audio';
+export * from './moba';
