@@ -3,6 +3,8 @@ import type { ShopButton, ShopSection } from '../data/shopView';
 import type { ShopTab } from '../data/upgrades';
 import { MOBA_PLAYERS } from '../config';
 import type { UiHandlers } from './uiHandlers';
+import type { ArrowType } from '../data/loadout';
+import { ICON_ALLIES, ICON_ENEMIES, ICON_UPGRADES, ICON_WEAPONS } from './icons';
 
 /** What the MOBA shop shows now (scenes/BattleShop.ts builds it). */
 export interface ShopView {
@@ -19,12 +21,27 @@ const TABS: ReadonlyArray<{ tab: ShopTab; label: string }> = [{ tab: 'skills', l
 
 const escapeHtml = (text: string): string => text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
+/** The picture on an upgrade's buttons: its arrow, its minion, or a badge of its own. */
+const upgradeIcon = (id: string): string => {
+  const [kind, what] = id.split(':') as [string, string | undefined];
+  if (kind === 'arrow' && what && what in ICON_WEAPONS) {
+    return ICON_WEAPONS[what as ArrowType];
+  }
+  if (kind === 'minion') {
+    return what === 'troop' ? ICON_ALLIES.squire : what === 'archer' ? ICON_ENEMIES.hunter : ICON_ENEMIES.dragon;
+  }
+  if (kind === 'basicArrow') {
+    return ICON_WEAPONS.normal;
+  }
+  return kind === 'quick' ? ICON_UPGRADES.quick : ICON_UPGRADES[kind as keyof typeof ICON_UPGRADES] ?? '';
+};
+
 const buttonHtml = (button: ShopButton): string => {
   const price = button.state === 'owned' ? '✓' : `${button.price} g`;
   // Only the next level can be clicked; the tooltip says why one can't.
   const disabled = button.state === 'buyable' ? '' : ' disabled';
   return `<button class="shop-button ${button.state}" data-shop-buy="${escapeHtml(button.id)}" data-shop-tip="${escapeHtml(button.tooltip)}" title="${escapeHtml(button.tooltip)}"${disabled}>`
-    + `<span class="shop-label">${escapeHtml(button.label)}</span><span class="shop-price">${price}</span>`
+    + `${upgradeIcon(button.id)}<span class="shop-label">${escapeHtml(button.label)}</span><span class="shop-price">${price}</span>`
     + '</button>';
 };
 

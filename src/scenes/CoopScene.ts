@@ -37,6 +37,7 @@ export class CoopScene extends Scene {
     ui.handlers.coopLeave = () => this.leave();
     ui.handlers.coopLoadout = (loadout) => this.pickLoadout(loadout);
     ui.handlers.coopTeam = (team) => pickTeam(session, team);
+    ui.handlers.mobaPractice = () => this.ctx.goTo('game');
     // Someone joined or left, or picked a quiver: show it.
     setRoomListener(() => this.refreshRoom());
     this.onExit(() => {
@@ -46,6 +47,7 @@ export class CoopScene extends Scene {
       ui.handlers.coopLeave = undefined;
       ui.handlers.coopLoadout = undefined;
       ui.handlers.coopTeam = undefined;
+      ui.handlers.mobaPractice = undefined;
       setRoomListener(undefined);
     });
     this.listenWindow('keydown', (event) => {
@@ -63,7 +65,7 @@ export class CoopScene extends Scene {
       this.listenAsGuest();
       this.renderJoined(net.code);
     } else {
-      this.render({ kind: 'choose', error: session.coopNotice });
+      this.render({ kind: 'choose', error: session.coopNotice, moba: session.moba });
       session.coopNotice = undefined;
     }
   }
@@ -90,14 +92,14 @@ export class CoopScene extends Scene {
       hostCoop(this.ctx, room, this.ctx.session.sandbox.loadout);
       this.render({ kind: 'hosting', code: room.code, guests: [], teams: this.teams() });
     } catch (error) {
-      this.render({ kind: 'choose', error: (error as Error).message });
+      this.render({ kind: 'choose', error: (error as Error).message, moba: this.ctx.session.moba });
     }
   }
 
   private async join(input: string): Promise<void> {
     const code = normalizeRoomCode(input);
     if (!code) {
-      this.render({ kind: 'choose', error: 'A room code has five letters and digits.' });
+      this.render({ kind: 'choose', error: 'A room code has five letters and digits.', moba: this.ctx.session.moba });
       return;
     }
     this.render({ kind: 'joining', code });
@@ -113,7 +115,7 @@ export class CoopScene extends Scene {
       transport.send({ t: 'hello' });
       this.renderJoined(code);
     } catch (error) {
-      this.render({ kind: 'choose', error: (error as Error).message });
+      this.render({ kind: 'choose', error: (error as Error).message, moba: this.ctx.session.moba });
     }
   }
 

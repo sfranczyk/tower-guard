@@ -37,6 +37,10 @@ export interface UiHandlers {
   sandboxStart?: () => void;
   sandboxBack?: () => void;
   openCoop?: () => void;
+  /** The menu's MOBA: the co-op lobby with teams (or a practice match alone). */
+  openMoba?: () => void;
+  /** MOBA lobby: a match alone (no room). */
+  mobaPractice?: () => void;
   coopHost?: () => void;
   coopJoin?: (code: string) => void;
   coopSetup?: () => void;

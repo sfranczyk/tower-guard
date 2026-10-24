@@ -27,6 +27,9 @@ export class MenuScene extends Scene {
 
   public enter(): void {
     const { ui } = this.ctx;
+    // Back from a MOBA match or lobby: "Start game" and "Co-op online" are the normal battle again.
+    this.ctx.session.moba = false;
+    this.ctx.session.teams = undefined;
     // The sun moves out from behind the logo, over the enemy keep.
     const meadow = BATTLEGROUNDS.greenMeadow;
     const battleground = { ...meadow, sun: meadow.sun && { ...meadow.sun, ...MENU_SUN } };

@@ -151,6 +151,8 @@ export const joinCoop = (ctx: GameContext, code: string, transport: Transport, o
       net.present = message.present;
       net.loadouts = message.loadouts.map((loadout, seat) => (seat === message.you ? own : loadout ? normalizeLoadout(loadout) : undefined));
       net.teams = message.teams?.map((team) => team ?? undefined) ?? [];
+      // The host's room decides: a MOBA room sends teams.
+      session.moba = message.teams !== undefined;
       session.playerCount = seatCount(net.present);
       // Joined (or the host lost track): the host gets this player's quiver.
       if (!message.loadouts[message.you]) {
