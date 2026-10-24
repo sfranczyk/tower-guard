@@ -26,6 +26,8 @@ export interface BattleControlsDeps {
   foes: BattleEnemies;
   /** The camera's left edge (world x), for mapping the mouse to the world. */
   cameraX: () => number;
+  /** The battle view is mirrored (settings drawer, core/keepSide.ts). */
+  mirrored: () => boolean;
   hostSync: () => HostSync | undefined;
   guestSync: () => GuestSync | undefined;
   /** The level is decided (the end screen is up). */
@@ -179,6 +181,7 @@ export class BattleControls {
       worldPointFromScreen: (point) => ({ x: point.x + this.deps.cameraX(), y: point.y + VIEW_TOP }),
       maxDragDistance: 200,
       screenSize: () => ({ x: viewWidth(), y: GAME_HEIGHT }),
+      mirrored: () => this.deps.mirrored(),
     }));
   }
 

@@ -90,6 +90,7 @@ export class BattleShop {
     const funds = backend.shopFunds(player);
     this.deps.ctx.ui.shop.show({
       team: player.team,
+      keepOnLeft: this.deps.ctx.session.keepSide === 'left',
       gold: funds.player.gold,
       vault: funds.team.gold,
       skills: shopSections('skills', funds),

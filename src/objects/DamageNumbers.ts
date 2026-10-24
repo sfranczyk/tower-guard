@@ -34,7 +34,8 @@ export class DamageNumbers {
   private readonly layer = new Container();
   private readonly popups: Popup[] = [];
 
-  public constructor(world: Container, private readonly enabled: () => boolean) {
+  /** `mirrored`: the battle view is flipped (core/keepSide.ts); the popups flip back so they read the right way. */
+  public constructor(world: Container, private readonly enabled: () => boolean, private readonly mirrored: () => boolean = () => false) {
     this.layer.zIndex = 5;
     world.addChild(this.layer);
   }
@@ -115,6 +116,6 @@ export class DamageNumbers {
     const frame = damagePopupFrame(popup.ageMs, DAMAGE_NUMBERS.lifeMs, DAMAGE_NUMBERS.rise);
     popup.view.position.set(popup.x, popup.y - frame.rise);
     popup.view.alpha = frame.alpha;
-    popup.view.scale.set(frame.scale);
+    popup.view.scale.set(this.mirrored() ? -frame.scale : frame.scale, frame.scale);
   }
 }

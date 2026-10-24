@@ -4,6 +4,7 @@ import type { Loadout } from '../data/loadout';
 import type { Team } from '../data/moba';
 import type { SandboxSettings } from '../data/sandbox';
 import type { AllyType, ProjectileType } from '../types';
+import type { KeepSide } from '../core/keepSide';
 
 /** What the HTML UI reports to the running scene: scenes assign `ui.handlers.*` (DomUi). */
 export interface UiHandlers {
@@ -22,6 +23,8 @@ export interface UiHandlers {
   /** MOBA shop: buy the next level of an upgrade, move `step` vault gold (true: deposit), close it. */
   shopBuy?: (id: string) => void;
   shopVault?: (deposit: boolean, step: number) => void;
+  /** Settings drawer: which side of the screen the player's keep is on. */
+  keepSideChange?: (side: KeepSide) => void;
   shopClose?: () => void;
   /** The pause dialog's "Resume", "Restart level" and "Main menu" buttons. */
   pauseResume?: () => void;

@@ -57,6 +57,10 @@ export const OVERLAY_TEMPLATE = `
         <h3 class="drawer-group">HUD</h3>
         <label class="field toggle-field" title="How much each arrow hit takes off, over the enemy's head"><span>Hit visibility</span><input data-damage-numbers type="checkbox" checked></label>
         <label class="field toggle-field" data-banner-markers-row hidden title="Where both banners are, in the HUD, and a marker at the edge for one carried out of view"><span>Banner markers</span><input data-banner-markers type="checkbox" checked></label>
+        <h3 class="drawer-group">View</h3>
+        <div class="field toggle-field" title="Which side of the screen your keep is on; the other side mirrors the whole battle"><span>Your keep</span><div class="segmented" role="radiogroup" aria-label="Your keep">
+          <button class="chip-button" data-keep-side="left" role="radio">Left</button><button class="chip-button" data-keep-side="right" role="radio">Right</button>
+        </div></div>
         <h3 class="drawer-group">Aim helpers</h3>
         <div class="field toggle-field"><span>Arrow trails</span><div class="segmented" data-arrow-trails role="radiogroup" aria-label="Arrow trails">
           <button class="chip-button" data-trail-count="0" role="radio">0</button><button class="chip-button" data-trail-count="1" role="radio">1</button><button class="chip-button" data-trail-count="2" role="radio">2</button><button class="chip-button" data-trail-count="3" role="radio">3</button>

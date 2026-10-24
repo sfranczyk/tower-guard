@@ -9,6 +9,8 @@ import { ICON_ALLIES, ICON_ENEMIES, ICON_UPGRADES, ICON_WEAPONS } from './icons'
 /** What the MOBA shop shows now (scenes/BattleShop.ts builds it). */
 export interface ShopView {
   team: Team;
+  /** The player's keep shows on the left of the screen (settings drawer: his side, mirrored or not). */
+  keepOnLeft: boolean;
   gold: number;
   vault: number;
   skills: ShopSection[];
@@ -111,7 +113,7 @@ export class ShopPanel {
     }
     this.element.hidden = false;
     // Over the side away from the player's keep, so he stays in sight.
-    this.element.classList.toggle('right', view.team === 'blue');
+    this.element.classList.toggle('right', view.keepOnLeft);
     this.render();
   }
 

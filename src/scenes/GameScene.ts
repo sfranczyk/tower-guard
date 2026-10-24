@@ -11,6 +11,7 @@ import {
 import type { SoundId } from '../audio/SoundManager';
 import { spatialMix } from '../audio/spatial';
 import { Scene, isMultiplayer, type GameContext } from '../core/Scene';
+import { isMirrored, mirrorX } from '../core/keepSide';
 import { viewWidth } from '../core/viewport';
 import { BATTLEGROUNDS, aimColorsOf, type Battleground } from '../data/battlegrounds';
 import { enemyEdge, enemyKeepHealth, wavePacing } from '../data/difficulty';
@@ -79,6 +80,8 @@ export class GameScene extends Scene {
   private banners?: BattleBanners;
   /** Every arrow of the level. */
   private readonly shots: BattleArrows;
+  /** Over the world: the weather that flies across the view (mirrored with it). */
+  private screenLayer!: Container;
   /** Corpses and stuck arrows cleared away after a while (config LEFTOVERS). */
   private readonly leftovers: BattleLeftovers;
   private readonly debugGraphics = new Graphics();
@@ -220,7 +223,7 @@ export class GameScene extends Scene {
     this.ctx.root.addChild(this.world);
     this.background = new Background(this.world, this.battleground);
     this.effects = new EffectsSystem(this.world);
-    this.damageNumbers = new DamageNumbers(this.world, () => this.ctx.session.showDamageNumbers);
+    this.damageNumbers = new DamageNumbers(this.world, () => this.ctx.session.showDamageNumbers, () => this.mirrored);
     this.aimOverlay.setColors(aimColorsOf(this.battleground));
 
     const { sandbox, run } = this.ctx.session;
@@ -331,6 +334,7 @@ export class GameScene extends Scene {
       soldiers: this.soldiers,
       foes: this.foes,
       cameraX: () => this.camera.x,
+      mirrored: () => this.mirrored,
       hostSync: () => this.hostSync,
       guestSync: () => this.guestSync,
       ended: () => this.outcome.ended,
@@ -379,12 +383,15 @@ export class GameScene extends Scene {
         delete (window as unknown as { __towerGuard?: unknown }).__towerGuard;
       });
     }
-    this.weather = new BattleWeather(this.battleground, this.world, this.ctx.root, this.background, this.wind, {
+    // Rain, snow and sand fly over the view in their own layer, mirrored with the world.
+    this.screenLayer = new Container();
+    this.ctx.root.addChild(this.screenLayer);
+    this.weather = new BattleWeather(this.battleground, this.world, this.screenLayer, this.background, this.wind, {
       // After the level is decided lightning still flashes but no longer hurts anyone.
       // A co-op guest's own bolts are only for show (the host's strikes arrive as effects).
       groundStrike: (point) => (this.outcome.ended || this.role === 'guest' ? this.effects.lightningStrike(point) : this.combat.lightningStrike(point)),
       thunder: (at, close) => {
-        const mix = spatialMix(at.x, this.camera.x, viewWidth());
+        const mix = spatialMix(this.heardX(at.x), this.camera.x, viewWidth());
         this.ctx.sound.play('thunder', { ...mix, gain: mix.gain * (close ? 1 : 0.45) });
       },
     });
@@ -459,8 +466,27 @@ export class GameScene extends Scene {
   }
 
   /** Panned and faded by where it happens relative to the camera (co-op host: the guest hears it too). */
+  /** The battle view is mirrored for this player (settings drawer: his keep on the other side of the screen). */
+  private get mirrored(): boolean {
+    return isMirrored(this.ctx.session.keepSide, this.localPlayer.team === 'red');
+  }
+
+  /** Where a sound at world `x` is heard from: mirrored with the view, so it comes from where it shows. */
+  private heardX(x: number): number {
+    return this.mirrored ? this.camera.x + mirrorX(x - this.camera.x, viewWidth()) : x;
+  }
+
+  /** Puts the world under the camera (`position`: the world's offset), mirrored when the player wants his keep on the other side. */
+  private placeWorld(position: Vec2): void {
+    const mirrored = this.mirrored;
+    this.world.scale.x = mirrored ? -1 : 1;
+    this.world.position.set(mirrored ? mirrorX(position.x, viewWidth()) : position.x, position.y);
+    this.screenLayer.scale.x = mirrored ? -1 : 1;
+    this.screenLayer.x = mirrored ? viewWidth() : 0;
+  }
+
   private playSound(id: SoundId, at: Vec2): void {
-    this.ctx.sound.play(id, spatialMix(at.x, this.camera.x, viewWidth()));
+    this.ctx.sound.play(id, spatialMix(this.heardX(at.x), this.camera.x, viewWidth()));
     this.hostSync?.sound(id, at);
   }
 
@@ -517,7 +543,7 @@ export class GameScene extends Scene {
     const pan = this.controls?.panInput;
     if (pan) {
       const position = this.camera.pan(deltaMs, pan.getMovementDirection(), pan.isSprintDown(), this.effects.cameraShake);
-      this.world.position.set(position.x, position.y);
+      this.placeWorld(position);
       return;
     }
     const { bowman, input } = this.localPlayer;
@@ -528,6 +554,6 @@ export class GameScene extends Scene {
       aimDirectionX: aim?.direction.x,
       aimLandingX: aim ? this.aimLandingX : undefined,
     }, this.effects.cameraShake);
-    this.world.position.set(position.x, position.y);
+    this.placeWorld(position);
   }
 }
