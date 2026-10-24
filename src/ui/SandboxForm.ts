@@ -38,6 +38,11 @@ const PAGES: ReadonlyArray<{ id: SandboxPage; label: string }> = [
   { id: 'levels', label: 'Levels' },
   { id: 'quiver', label: 'Quiver' },
 ];
+/** The top bar's primary button walks the pages in order (Rules → Levels → Quiver); on the last it starts the battle. */
+const NEXT_PAGE: Partial<Record<SandboxPage, { page: SandboxPage; label: string }>> = {
+  rules: { page: 'levels', label: 'Level setup' },
+  levels: { page: 'quiver', label: 'Quiver setup' },
+};
 
 export interface SandboxFormCallbacks {
   /** `level` is the level being edited (its battleground is previewed behind the form). */
@@ -51,7 +56,7 @@ export interface SandboxFormCallbacks {
  * health, difficulty, friendly fire, banners, support, one per row. Levels: the run is a row of levels (tabs, each with its map and enemy
  * count, plus add and remove); below, the selected level's battleground (map cards) and enemies (a card per type
  * with − / +). Quiver: which arrow goes in each weapon slot
- * (`quiverPage`). Back (to the mode picker) and Start sit in the top bar, the pages under it; only the page scrolls (SandboxSettings.levels; a level's enemies then come in waves, systems/waveDirector).
+ * (`quiverPage`). Back (to the mode picker) and the next-page button (Start on the last page) sit in the top bar, the pages under it; only the page scrolls (SandboxSettings.levels; a level's enemies then come in waves, systems/waveDirector).
  */
 export class SandboxForm {
   private settings?: SandboxSettings;
@@ -138,8 +143,12 @@ export class SandboxForm {
         </div>`);
       return;
     }
+    const next = NEXT_PAGE[this.page];
+    const primary = next
+      ? `<button class="primary-button" data-page="${next.page}">${next.label}</button>`
+      : '<button class="primary-button" data-sandbox-start>Start battle</button>';
     renderPanel(this.root, `
-      ${panelTop(back, 'Battle setup', '<button class="primary-button" data-sandbox-start>Start battle</button>', RUN_MODE_LABELS[settings.mode])}
+      ${panelTop(back, 'Battle setup', primary, RUN_MODE_LABELS[settings.mode])}
       <div class="sandbox-head">
         <div class="sandbox-pages" role="tablist" aria-label="Setup pages">
           ${PAGES.map(({ id, label }) => `<button type="button" class="sandbox-page${id === this.page ? ' active' : ''}" role="tab" aria-selected="${id === this.page}" data-page="${id}">${label}</button>`).join('')}

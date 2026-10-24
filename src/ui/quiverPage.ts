@@ -15,6 +15,7 @@ export const quiverPage = (loadout: Loadout, selectedSlot: number, partners?: re
       <div class="sandbox-section-label">${partners ? 'Your quiver' : 'Quiver'} · keys 1–${loadout.length}</div>
       <div class="quiver-slots">${loadout.map((type, index) => quiverSlot(type, index, index === selectedSlot, canClear)).join('')}</div>
     </div>
+    <p class="quiver-note">You can change your arrows during the battle too: pause the game while you're in the keep.</p>
     <div class="arrow-cards">${ARROW_PATHS.map((path) => `<div class="arrow-path">
       <div class="sandbox-section-label">${ARROW_PATH_NAMES[path]}</div>
       ${arrowsOnPath(path, ARROW_TYPES).map((type) => arrowCard(type, loadout.indexOf(type))).join('')}
