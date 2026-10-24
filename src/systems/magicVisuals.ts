@@ -45,7 +45,12 @@ interface Lasting {
 export class MagicVisuals {
   private lasting: Lasting[] = [];
 
-  public constructor(private readonly container: Container, private readonly spawn: SpawnParticle) {}
+  /** @param groundMark takes a mark left on the ground (a scorch), to clear it away after a while */
+  public constructor(
+    private readonly container: Container,
+    private readonly spawn: SpawnParticle,
+    private readonly groundMark: (sprite: Graphics) => void,
+  ) {}
 
   /** A fire arrow strikes: a puff of flame and embers. */
   public fireBurst(point: Vec2): void {
@@ -99,6 +104,7 @@ export class MagicVisuals {
     scorch.position.set(point.x, groundAt(point.x) + 1);
     scorch.zIndex = 0;
     this.container.addChild(scorch);
+    this.groundMark(scorch);
   }
 
   /** A vortex opens at `point` (on the ground) for VORTEX.ms and ends in a burst of light. */

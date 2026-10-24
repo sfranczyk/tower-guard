@@ -3,6 +3,7 @@ import { EXPLOSION_RADIUS, FIRE_DRAGON_BLAST_POWER, LIGHTNING_RADIUS, PRIEST_HEA
 import { HUMAN_BODY, type BodyColors } from '../rendering/bodyColors';
 import type { ProjectileType, Vec2 } from '../types';
 import { MagicVisuals } from './magicVisuals';
+import { GroundMarks } from './groundMarks';
 import { groundAt } from './terrain';
 
 /** Effects a co-op host replays on the guest's screen. */
@@ -56,6 +57,8 @@ export class EffectsSystem {
   private particles: Particle[] = [];
   private shakeMs = 0;
   private shake: Vec2 = { x: 0, y: 0 };
+  /** Blood stains and scorch marks, cleared away after a while. */
+  private readonly marks = new GroundMarks();
 
   /** Co-op host: told about every effect, to replay it on the guest's screen. */
   public onEffect?: (kind: EffectKind, point: Vec2, scale?: number) => void;
@@ -63,7 +66,11 @@ export class EffectsSystem {
   private readonly magic: MagicVisuals;
 
   public constructor(private readonly container: Container) {
-    this.magic = new MagicVisuals(container, (sprite, point, zIndex, spec) => this.spawn(sprite, point, zIndex, spec));
+    this.magic = new MagicVisuals(
+      container,
+      (sprite, point, zIndex, spec) => this.spawn(sprite, point, zIndex, spec),
+      (sprite) => this.marks.add(sprite),
+    );
   }
 
   /** A fire arrow strikes. */
@@ -329,6 +336,7 @@ export class EffectsSystem {
   public update(deltaMs: number): void {
     const deltaSeconds = deltaMs / 1000;
     this.magic.update(deltaMs);
+    this.marks.update(deltaMs);
     this.bloodParticles = this.bloodParticles.filter((particle) => {
       particle.lifeMs -= deltaMs;
       particle.velocity.y += BLOOD_GRAVITY * deltaSeconds;
@@ -377,7 +385,7 @@ export class EffectsSystem {
     this.particles.push({ ...spec, sprite, maxLifeMs: spec.lifeMs, startAlpha: spec.startAlpha ?? 1 });
   }
 
-  /** Stains stay on the ground until the scene is torn down. */
+  /** A stain on the ground, gone after LEFTOVERS.markMs. */
   private bloodStain(x: number, y: number, color: number = HUMAN_BODY.stain): void {
     const stain = new Graphics()
       .ellipse(0, 0, 3 + Math.random() * 6, 1.5 + Math.random() * 2)
@@ -386,9 +394,10 @@ export class EffectsSystem {
     stain.rotation = (Math.random() - 0.5) * 0.8;
     stain.zIndex = 0;
     this.container.addChild(stain);
+    this.marks.add(stain);
   }
 
-  /** Burnt patch left on the ground by an explosion; stays until the scene is torn down. */
+  /** Burnt patch left on the ground by an explosion, gone after LEFTOVERS.markMs. */
   private scorchMark(x: number, radius: number): void {
     const scorch = new Graphics()
       .ellipse(0, 0, radius * 0.5, 5).fill({ color: 0x2b2420, alpha: 0.45 })
@@ -396,6 +405,7 @@ export class EffectsSystem {
     scorch.position.set(x, groundAt(x) + 1);
     scorch.zIndex = 0;
     this.container.addChild(scorch);
+    this.marks.add(scorch);
   }
 
   private remove(sprite: Graphics): void {
