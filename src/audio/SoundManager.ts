@@ -1,3 +1,10 @@
+import allyCurse1 from '../assets/sounds/ally-curse-1.mp3';
+import allyCurse2 from '../assets/sounds/ally-curse-2.mp3';
+import allyCurse3 from '../assets/sounds/ally-curse-3.mp3';
+import allyCurse4 from '../assets/sounds/ally-curse-4.mp3';
+import allyCurse5 from '../assets/sounds/ally-curse-5.mp3';
+import allyCurse6 from '../assets/sounds/ally-curse-6.mp3';
+import allyCurse7 from '../assets/sounds/ally-curse-7.mp3';
 import arrowFleshSound from '../assets/sounds/arrow-flesh.mp3';
 import bowShotSound from '../assets/sounds/bow-shot.mp3';
 import explosionSound from '../assets/sounds/explosion.mp3';
@@ -11,14 +18,18 @@ import groan7 from '../assets/sounds/groan-7.mp3';
 import groan8 from '../assets/sounds/groan-8.mp3';
 import themeMusic from '../assets/sounds/theme.mp3';
 import thunderSound from '../assets/sounds/thunder.mp3';
-import { SOUND_MAX_VOICES, SOUND_PITCH_VARIATION, SOUND_RATES, SOUND_VOLUMES } from '../config';
+import { ALLY_CURSE_CHANCES, SOUND_MAX_VOICES, SOUND_PITCH_VARIATION, SOUND_RATES, SOUND_VOLUMES } from '../config';
 import { loadAudioSettings, normalizeAudioSettings, saveAudioSettings, type AudioSettings } from './audioSettings';
 import { MusicPlayer } from './MusicPlayer';
 import type { SpatialMix } from './spatial';
+import { pickVariant, variantShares } from './variantPick';
 
 export type SoundId = keyof typeof SOUND_VOLUMES;
 
-/** Every sound has one or more variants; a play picks one at random (never the same twice in a row). */
+/**
+ * Every sound has one or more variants; a play picks one at random, never the same twice in a row, except for sounds
+ * with chances in `VARIANT_CHANCES`, which follow them exactly (repeats included).
+ */
 const SOURCES: Record<SoundId, readonly string[]> = {
   bowShot: [bowShotSound],
   arrowFlesh: [arrowFleshSound],
@@ -26,6 +37,16 @@ const SOURCES: Record<SoundId, readonly string[]> = {
   explosion: [explosionSound],
   thunder: [thunderSound],
   shrapnelBurst: [bowShotSound],
+  allyCurse: [allyCurse1, allyCurse2, allyCurse3, allyCurse4, allyCurse5, allyCurse6, allyCurse7],
+};
+
+/** Relative chance of each variant, read at play time (tunable); sounds not listed pick uniformly. */
+const VARIANT_CHANCES: Partial<Record<SoundId, Readonly<Record<string, number>>>> = { allyCurse: ALLY_CURSE_CHANCES };
+
+const variantWeights = (id: SoundId, count: number): number[] => {
+  const chances = VARIANT_CHANCES[id];
+  const weights = chances ? Object.values(chances) : [];
+  return Array.from({ length: count }, (_, index) => weights[index] ?? 1);
 };
 
 /**
@@ -108,6 +129,11 @@ export class SoundManager {
     return (this.buffers.get(id) ?? []).map((buffer) => buffer.duration);
   }
 
+  /** Each variant's chance of being picked (0..1; for uniform sounds the no-repeat rule aside). */
+  public variantChances(id: SoundId): number[] {
+    return variantShares(variantWeights(id, this.buffers.get(id)?.length ?? 0));
+  }
+
   public get musicState(): { playing: boolean; position: number; duration: number } {
     const music = this.music;
     return { playing: music?.isPlaying ?? false, position: music?.position ?? 0, duration: music?.duration ?? 0 };
@@ -139,14 +165,8 @@ export class SoundManager {
 
   private pickVariant(id: SoundId): AudioBuffer | undefined {
     const variants = this.buffers.get(id) ?? [];
-    if (variants.length <= 1) {
-      return variants[0];
-    }
-    const last = this.lastVariant.get(id);
-    let index = Math.floor(Math.random() * (variants.length - 1));
-    if (last !== undefined && index >= last) {
-      index += 1;
-    }
+    const last = VARIANT_CHANCES[id] ? undefined : this.lastVariant.get(id);
+    const index = pickVariant(variantWeights(id, variants.length), last, Math.random());
     this.lastVariant.set(id, index);
     return variants[index];
   }

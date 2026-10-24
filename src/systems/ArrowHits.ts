@@ -15,6 +15,7 @@ import {
 } from '../config';
 import type { SoundId } from '../audio/SoundManager';
 import type { EnemyEdge } from '../data/difficulty';
+import type { Team } from '../data/moba';
 import { enemyDamage, explosionDamage, legHitLames, pinDurationMs, rollArrowDamage, rollDamage, type DamageTarget, type MountPart } from '../data/enemies';
 import { enemyArchetype, enemyArmor } from '../data/enemyKinds';
 import { bombGoesOff } from './kamikazeBomb';
@@ -79,6 +80,8 @@ export interface ArrowHitsWorld {
   readonly debug: Graphics;
   /** The difficulty's edge (data/difficulty.ts): enemy hits × `damage`, enemy archers' aim error × `aimSpread`. */
   readonly enemyEdge: EnemyEdge;
+  /** MOBA: each bowman's team (a soldier hit by his own team's player curses instead of groaning). */
+  readonly teamOf?: (bowman: Bowman) => Team;
 }
 
 export interface ArrowHitsEvents {
@@ -344,6 +347,18 @@ export class ArrowHits {
     }
   }
 
+  /** MOBA: whether `foe` fights for the team of the player who loosed `arrow`. */
+  private isOwnSoldier(arrow: Arrow, foe: Foe): boolean {
+    const { teamOf, allies, allyFliers = [] } = this.world;
+    const player = playerOf(arrow);
+    const shooter = player === undefined ? undefined : (this.world.allBowmen ?? this.world.bowmen)[player];
+    if (!teamOf || !shooter) {
+      return false;
+    }
+    const blue = foe instanceof DragonEnemy ? allyFliers.includes(foe) : allies.includes(foe);
+    return blue === (teamOf(shooter) === 'blue');
+  }
+
   private hitEnemy(
     arrow: Arrow,
     { enemy, headshot, leg = false, part }: EnemyHit,
@@ -425,9 +440,10 @@ export class ArrowHits {
     if (leg && !(enemy instanceof DragonEnemy) && legHitLames(arrow.type)) {
       enemy.lame(HORSE_LEG.lameMs);
     }
-    // Every arrow hit makes the enemy cry out (kills and headshots too); an explosive kill is just the blast.
+    // Every arrow hit makes the enemy cry out (kills and headshots too); an explosive kill is just the blast. MOBA: one of
+    // his own team's soldiers curses the player instead (ALLY_CURSE_CHANCES).
     if (!explosive || enemy.isAlive()) {
-      this.events.sound('groan', impactPoint);
+      this.events.sound(this.isOwnSoldier(arrow, enemy) ? 'allyCurse' : 'groan', impactPoint);
     }
     hitEnemies.add(enemy);
     arrow.registerImpact();
