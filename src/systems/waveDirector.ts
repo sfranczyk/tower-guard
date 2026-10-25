@@ -61,6 +61,11 @@ export class WaveDirector {
     return this.waveIndex >= this.waves.length;
   }
 
+  /** Waves that have begun coming out. */
+  public get wavesStarted(): number {
+    return this.waveIndex + (this.spawnIndex > 0 ? 1 : 0);
+  }
+
   /** Advances time; returns the enemies to spawn now. `alive` = enemies currently standing on the field. */
   public update(deltaMs: number, alive: number): EnemyType[] {
     const spawned: EnemyType[] = [];

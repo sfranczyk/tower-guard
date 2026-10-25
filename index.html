@@ -403,6 +403,49 @@
         .end-stats div { display: flex; flex-direction: column; min-width: 84px; padding: 6px 8px; border-radius: 12px; background: var(--panel-sunk); }
         .end-stats strong { font-family: var(--display); font-weight: 600; font-size: 17px; }
         .end-stats span { font-size: 11px; color: var(--ink-soft); }
+        .end-card.end-wide { width: min(640px, calc(100% - 28px)); max-height: calc(100% - 28px); overflow-y: auto; }
+        .end-card.end-wide .end-stats { margin-bottom: 12px; }
+        .end-report { align-self: stretch; margin-bottom: 18px; }
+        .report-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(72px, 1fr)); gap: 8px; }
+        .report-tiles div { display: flex; flex-direction: column; padding: 8px 6px; border-radius: 12px; background: #fffdf6; box-shadow: 0 2px 0 var(--panel-edge); }
+        .report-tiles strong { font-family: var(--display); font-weight: 700; font-size: 22px; line-height: 1.1; }
+        .report-tiles span { font-size: 11px; color: var(--ink-soft); }
+        .report-table-wrap { margin-top: 12px; overflow-x: auto; }
+        .report-table { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
+        .report-table th, .report-table td { padding: 5px 8px; text-align: right; white-space: nowrap; }
+        .report-table thead th { font-size: 11px; font-weight: 600; color: var(--ink-soft); }
+        .report-table th:first-child { text-align: left; }
+        .report-table tbody tr { border-top: 1px solid var(--panel-edge); }
+        .report-table tbody th { font-weight: 600; }
+        .report-table tr.you { background: color-mix(in srgb, var(--accent) 12%, transparent); }
+        .report-table tr[data-team="blue"] th::before, .report-table tr[data-team="red"] th::before { content: ''; display: inline-block; width: 8px; height: 8px; margin-right: 6px; border-radius: 50%; background: #2a78d6; }
+        .report-table tr[data-team="red"] th::before { background: #e34948; }
+        .report-table td.best { color: var(--good); font-weight: 700; }
+        .report-tabs { display: flex; justify-content: center; gap: 6px; margin-bottom: 10px; }
+        .report-pane { min-height: 200px; }
+        .report-empty { margin: 40px 0; color: var(--ink-soft); }
+        .report-chart { margin: 0 0 10px; padding: 8px 10px 4px; border-radius: 12px; background: #fffdf6; box-shadow: 0 2px 0 var(--panel-edge); text-align: left; }
+        .report-chart figcaption { font-family: var(--display); font-weight: 600; font-size: 13px; }
+        .report-chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+        .report-chart .grid { stroke: #e1e0d9; stroke-width: 1; }
+        .report-chart .axis { fill: var(--ink-soft); font-size: 10px; font-variant-numeric: tabular-nums; }
+        .report-chart .marker { stroke: #c3c2b7; stroke-width: 1; stroke-dasharray: 3 3; }
+        .report-chart .marker-label { fill: var(--ink-soft); font-size: 9px; }
+        .report-chart .hover { fill: transparent; }
+        .report-chart .hover:hover { fill: rgba(44, 58, 56, .06); }
+        .chart-legend { display: flex; flex-wrap: wrap; gap: 4px 12px; margin: 2px 0 4px; font-size: 11px; color: var(--ink-soft); }
+        .chart-legend i { display: inline-block; width: 10px; height: 10px; margin-right: 5px; border-radius: 3px; vertical-align: -1px; }
+        .bar-list { display: grid; gap: 4px; margin: 6px 0 6px; padding: 0; list-style: none; }
+        .bar-list li { display: grid; grid-template-columns: minmax(90px, 32%) 1fr auto; align-items: center; gap: 8px; font-size: 12px; }
+        .bar-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .bar-track { height: 10px; }
+        .bar-track i { display: block; height: 100%; min-width: 2px; border-radius: 0 4px 4px 0; background: #2a78d6; }
+        .bar-value { min-width: 34px; text-align: right; font-variant-numeric: tabular-nums; color: var(--ink-soft); }
+        .share-bar { display: flex; gap: 2px; height: 14px; margin: 6px 0 4px; }
+        .share-bar i:first-child { border-radius: 4px 0 0 4px; }
+        .share-bar i:last-child { border-radius: 0 4px 4px 0; }
+        .report-table .text { text-align: left; }
+        .report-table tr.total { font-weight: 700; border-top: 2px solid var(--panel-edge); }
 
         /* ---------- Lab buttons (inside the canvas-drawn panel's top-right corner, like the sound lab's top bar; --view-inset keeps them on the centred panel in wide views) ---------- */
         .test-screen { position: absolute; top: 24px; right: calc(30px + var(--view-inset, 0px)); display: flex; gap: 8px; pointer-events: none; }

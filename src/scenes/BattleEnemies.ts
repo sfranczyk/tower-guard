@@ -82,6 +82,11 @@ export class BattleEnemies {
     });
   }
 
+  /** Waves that have begun coming (the end screen's timeline marks them). */
+  public get wavesStarted(): number {
+    return this.director?.wavesStarted ?? 0;
+  }
+
   /** The level is over: no more waves. */
   public stopWaves(): void {
     this.director = undefined;

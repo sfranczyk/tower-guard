@@ -1,4 +1,6 @@
 import type { Loadout } from '../data/loadout';
+import type { LevelReport } from '../systems/battleStats';
+import { endReportHtml, type ReportTab } from './endReport';
 import type { UiHandlers } from './uiHandlers';
 import { onClickIn, queryIn } from './domQuery';
 import { compactQuiver } from './quiverPage';
@@ -23,6 +25,8 @@ export interface EndScreenOptions {
   copy: string;
   /** Small figures shown in a row under the copy (e.g. enemies defeated, keep health). */
   stats?: ReadonlyArray<{ label: string; value: string }>;
+  /** The level's count (systems/battleStats.ts): the card widens to show it. */
+  report?: LevelReport;
   buttonLabel: string;
   onButton: () => void;
 }
@@ -33,6 +37,11 @@ export class BattleDialogs {
   private readonly endTitle: HTMLElement;
   private readonly endCopy: HTMLElement;
   private readonly endStats: HTMLElement;
+  private readonly endReport: HTMLElement;
+  private readonly endCard: HTMLElement;
+  /** The report shown on the end card, and its open tab. */
+  private report?: LevelReport;
+  private reportTab: ReportTab = 'overview';
   private readonly endButton: HTMLButtonElement;
   private onEndButton?: () => void;
   private readonly pauseScreen: HTMLElement;
@@ -51,6 +60,8 @@ export class BattleDialogs {
     this.endTitle = queryIn(root, '[data-end-title]');
     this.endCopy = queryIn(root, '[data-end-copy]');
     this.endStats = queryIn(root, '[data-end-stats]');
+    this.endReport = queryIn(root, '[data-end-report]');
+    this.endCard = queryIn(root, '[data-end] .end-card');
     this.endButton = queryIn<HTMLButtonElement>(root, '[data-end-button]');
     this.pauseScreen = queryIn(root, '[data-pause]');
     this.pauseTitle = queryIn(root, '[data-pause-title]');
@@ -66,6 +77,13 @@ export class BattleDialogs {
       }
     });
     this.endButton.addEventListener('click', () => this.onEndButton?.());
+    this.endReport.addEventListener('click', (event) => {
+      const tab = (event.target as HTMLElement).closest<HTMLElement>('[data-report-tab]')?.dataset.reportTab;
+      if (tab && this.report) {
+        this.reportTab = tab as ReportTab;
+        this.endReport.innerHTML = endReportHtml(this.report, this.reportTab);
+      }
+    });
     onClickIn(root, '[data-end-view]', () => this.setEndViewing(true));
     onClickIn(root, '[data-end-back]', () => this.setEndViewing(false));
     onClickIn(root, '[data-pause-resume]', () => handlers.pauseResume?.());
@@ -88,6 +106,11 @@ export class BattleDialogs {
     this.endStats.innerHTML = (options.stats ?? [])
       .map(({ label, value }) => `<div><strong>${value}</strong><span>${label}</span></div>`).join('');
     this.endStats.hidden = !options.stats?.length;
+    this.report = options.report;
+    this.reportTab = 'overview';
+    this.endReport.innerHTML = options.report ? endReportHtml(options.report) : '';
+    this.endReport.hidden = !options.report;
+    this.endCard.classList.toggle('end-wide', options.report !== undefined);
     this.endButton.textContent = options.buttonLabel;
     this.onEndButton = options.onButton;
     this.endScreen.hidden = false;

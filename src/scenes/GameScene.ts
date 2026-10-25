@@ -23,6 +23,7 @@ import type { HostSync } from '../net/HostSync';
 import Tower from '../objects/Tower';
 import { BattleNetReadout } from './BattleNetReadout';
 import { BattleArrows } from './BattleArrows';
+import { BattleStatsWatch } from './BattleStatsWatch';
 import { BattleCamera } from './BattleCamera';
 import { BattleAllies } from './BattleAllies';
 import { BattleBanners } from './BattleBanners';
@@ -112,6 +113,8 @@ export class GameScene extends Scene {
   private readonly localIndex: number;
   private hostSync?: HostSync;
   private guestSync?: GuestSync;
+  /** What the level's end screen reports (host or solo; scenes/BattleStatsWatch.ts). */
+  private stats?: BattleStatsWatch;
   /** Co-op with ?debug: ping, jitter and traffic in a corner. */
   private netReadout?: BattleNetReadout;
 
@@ -157,12 +160,18 @@ export class GameScene extends Scene {
       guest: this.role === 'guest',
       wavePacing: wavePacing(difficulty),
       hostSync: () => this.hostSync,
-      onDamaged: (foe, amount, hit) => this.damageNumbers.show(foe, amount, hit),
+      onDamaged: (foe, amount, hit) => {
+        this.damageNumbers.show(foe, amount, hit);
+        this.stats?.foeHurt(foe, 'red', amount, hit);
+      },
     });
     this.soldiers = new BattleAllies({
       world: this.world,
       list: this.allies,
-      onDamaged: (ally, amount, hit) => this.damageNumbers.show(ally, amount, hit),
+      onDamaged: (ally, amount, hit) => {
+        this.damageNumbers.show(ally, amount, hit);
+        this.stats?.foeHurt(ally, 'blue', amount, hit);
+      },
     });
     if (ctx.session.moba) {
       this.moba = new MobaMode({
@@ -184,6 +193,7 @@ export class GameScene extends Scene {
       arrowPower: (owner, type) => this.moba?.arrowPower(owner, type),
       // MOBA: the other team's shots fly without a trail to read their aim by.
       showsTrail: (owner) => !this.moba || this.players.find((player) => player.index === owner)?.team === this.team.local.team,
+      fired: (owner, type) => this.stats?.shot(owner, type),
     });
     this.leftovers = new BattleLeftovers({
       pools: () => [
@@ -267,6 +277,20 @@ export class GameScene extends Scene {
     const keepOf = (player: Player): Tower => (player.team === 'red' ? this.enemyTower : this.playerTower);
     this.moba?.start(this.team, keepOf, this.role === 'guest');
     this.onExit(() => this.moba?.destroy());
+    // The end screen's report: counted on the host or alone (a co-op guest gets it with the end).
+    if (this.role !== 'guest') {
+      this.stats = new BattleStatsWatch({
+        session: this.ctx.session,
+        players: this.players,
+        sides: { red: () => this.enemies, blue: () => [...this.allies, ...(this.moba?.allyFliers ?? [])] },
+        playerTower: this.playerTower,
+        enemyTower: this.survivalSetup ? undefined : this.enemyTower,
+        moba: this.moba !== undefined,
+        economy: () => this.match?.economy,
+        wavesStarted: () => this.foes.wavesStarted,
+        levelMs: this.survivalSetup && this.survivalSetup.minutes * 60_000,
+      });
+    }
     this.control = new PlayerControl(keepOf, {
       enteredTower: (player) => this.team.status(player, 'Hidden in tower · press S to exit'),
       leftTower: (player) => this.team.status(player, DEFAULT_STATUS),
@@ -311,7 +335,11 @@ export class GameScene extends Scene {
       },
       battleCombatEvents({
         ctx: this.ctx, team: this.team, shots: this.shots, playSound: (id, at) => this.playSound(id, at),
-        bowmanHit: (player, hit) => this.match?.bowmanHit(player, hit),
+        bowmanHit: (player, hit, lost) => {
+          this.match?.bowmanHit(player, hit);
+          this.stats?.bowmanHit(player, hit, lost);
+        },
+        arrowLanded: (owner, type) => this.stats?.landed(owner, type),
       }),
     );
 
@@ -329,6 +357,7 @@ export class GameScene extends Scene {
       moba: this.match,
       allyFliers: this.moba?.allyFliers,
       hostSync: () => this.hostSync,
+      stats: this.stats,
       stopInput: () => this.controls?.destroy(),
     });
 
@@ -448,6 +477,7 @@ export class GameScene extends Scene {
       this.combat.update(deltaMs, this.foes.visible);
       this.banners?.update(deltaMs);
       this.moba?.sky?.strikeComet(deltaMs);
+      this.stats?.update(deltaMs);
     }
 
     this.shots.prune();

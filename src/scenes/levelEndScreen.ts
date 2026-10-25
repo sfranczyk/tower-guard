@@ -2,6 +2,9 @@ import type { GameContext, RunState } from '../core/Scene';
 import type { HostSync } from '../net/HostSync';
 import type { EndInfo } from '../net/protocol';
 import type { Team } from '../data/moba';
+import { BATTLEGROUNDS } from '../data/battlegrounds';
+import { runBattleground, runLevelCount } from '../data/sandbox';
+import { runLevel, type LevelReport } from '../systems/battleStats';
 import { levelEndInfo, mobaEndInfo, type LevelOutcome } from './levelEnd';
 
 /**
@@ -9,13 +12,18 @@ import { levelEndInfo, mobaEndInfo, type LevelOutcome } from './levelEnd';
  * otherwise it's the end of the run and the button goes back to the main menu (co-op: both to the lobby); a new run is
  * set up only from there. Returns what the button (and Space) does.
  */
-export const showLevelEnd = (ctx: GameContext, outcome: LevelOutcome, nextRun: () => RunState, hostSync?: HostSync): (() => void) => {
+export const showLevelEnd = (ctx: GameContext, outcome: LevelOutcome, nextRun: () => RunState, hostSync?: HostSync, report?: LevelReport): (() => void) => {
   const { session, ui } = ctx;
-  const { info, next } = levelEndInfo(outcome, session.sandbox);
+  const { info: said, next } = levelEndInfo(outcome, session.sandbox);
+  // The run's levels so far and this one; the run's last screen (of several levels) lists them all.
+  const place = BATTLEGROUNDS[runBattleground(session.sandbox, outcome.levelIndex)].name;
+  const levels = [...(session.run.levels ?? []), ...(report ? [runLevel(report, place, outcome.won)] : [])];
+  const runOver = !next && runLevelCount(session.sandbox) > 1 && levels.length > 1;
+  const info = { ...said, report: report && (runOver ? { ...report, run: levels } : report) };
   hostSync?.sendEnd(info);
   const action = next
     ? () => {
-      session.run = nextRun();
+      session.run = { ...nextRun(), levels };
       ctx.goTo('game');
     }
     : () => {
@@ -29,9 +37,9 @@ export const showLevelEnd = (ctx: GameContext, outcome: LevelOutcome, nextRun: (
 };
 
 /** MOBA: the match is over (`winner` brought the other keep down); back to the menu, or (co-op) everyone to the lobby. */
-export const showMobaEnd = (ctx: GameContext, winner: Team, viewer: Team, stats: EndInfo['stats'], hostSync?: HostSync): (() => void) => {
+export const showMobaEnd = (ctx: GameContext, winner: Team, viewer: Team, stats: EndInfo['stats'], hostSync?: HostSync, report?: LevelReport): (() => void) => {
   const { session, ui } = ctx;
-  const info = mobaEndInfo(winner, viewer, stats);
+  const info = { ...mobaEndInfo(winner, viewer, stats), report };
   hostSync?.sendEnd(info);
   const action = (): void => {
     session.net?.transport.send({ t: 'lobby' });

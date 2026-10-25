@@ -4,7 +4,7 @@ import type { GameContext } from '../core/Scene';
 import type { BowmanHit } from '../systems/bowmanDeath';
 import type { CombatEvents } from '../systems/CombatSystem';
 import { mishapStatus } from '../systems/weatherArrows';
-import type { Vec2 } from '../types';
+import type { ProjectileType, Vec2 } from '../types';
 import type { BattleArrows } from './BattleArrows';
 import type { BattlePlayers } from './BattlePlayers';
 import type { Player } from './PlayerControl';
@@ -13,20 +13,24 @@ import type { Player } from './PlayerControl';
  * What the level does with the combat's news (CombatSystem): the players' health (hits and heals), their status lines
  * (headshot, on fire, an arrow's weather mishap), enemy arrows loosed and sounds.
  */
-export const battleCombatEvents = ({ ctx, team, shots, playSound, bowmanHit }: {
+export const battleCombatEvents = ({ ctx, team, shots, playSound, bowmanHit, arrowLanded }: {
   ctx: GameContext;
   team: BattlePlayers;
   shots: BattleArrows;
   playSound: (id: SoundId, at: Vec2, heardBy?: number) => void;
-  /** MOBA: a player was hit (healing waits, whose kill it would be). */
-  bowmanHit?: (player: Player, hit: BowmanHit) => void;
+  /** A player was hit and lost `lost` health (MOBA: healing waits, whose kill it would be; the end screen's report). */
+  bowmanHit?: (player: Player, hit: BowmanHit, lost: number) => void;
+  /** A player's arrow hit its first target (the end screen's accuracy). */
+  arrowLanded?: (owner: number, type: ProjectileType) => void;
 }): CombatEvents => ({
   bowmanDamaged: (bowman, amount, hit) => {
     const player = team.of(bowman);
+    const before = player.health;
     player.health = Math.max(0, player.health - amount);
     bowman.noteHit(hit);
-    bowmanHit?.(player, hit);
+    bowmanHit?.(player, hit, before - player.health);
   },
+  arrowLanded: (owner, type) => arrowLanded?.(owner, type),
   headshot: () => ctx.ui.setStatus(`Headshot! ×${ARROWS.headshotMultiplier} damage`),
   bowmanIgnited: (bowman) => team.status(team.of(bowman), 'You are on fire! Get out of the flames'),
   enemyShot: (from, angle, speed, shooter, power) => shots.fireEnemy(from, angle, speed, shooter, false, power),

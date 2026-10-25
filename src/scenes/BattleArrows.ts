@@ -33,6 +33,8 @@ export interface BattleArrowsDeps {
   arrowPower?(owner: number, type: ProjectileType): number | undefined;
   /** How many of the latest shots keep their trail (settings drawer). */
   arrowTrails(): number;
+  /** A player loosed an arrow (host or solo: the end screen's shots). */
+  fired?(owner: number, type: ProjectileType): void;
   /** MOBA: whether `owner`'s shots show their trail here (only this player's team's do). */
   showsTrail?(owner: number): boolean;
   effects(): EffectsSystem;
@@ -92,6 +94,7 @@ export class BattleArrows {
     const releasePoint = player.bowman.getBowReleasePoint();
     this.launchPlayer(player.index, player.projectile, releasePoint, Math.atan2(aim.direction.y, aim.direction.x), launchSpeed(player.projectile, power));
     this.deps.playSound('bowShot', releasePoint);
+    this.deps.fired?.(player.index, player.projectile);
   }
 
   /** A player arrow (with a trail in the battleground's colours) flying from `from`. */

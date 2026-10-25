@@ -83,6 +83,7 @@ export const OVERLAY_TEMPLATE = `
           <h2 data-end-title>Victory</h2>
           <p data-end-copy>Press Space to return to the main menu.</p>
           <div class="end-stats" data-end-stats></div>
+          <div class="end-report" data-end-report hidden></div>
           <div class="end-actions">
             <button class="secondary-button" data-end-view>View battlefield</button>
             <button class="primary-button" data-end-button>Return to menu</button>

@@ -12,9 +12,14 @@ export type Victim = { team: Team; minion: MinionRole } | { team: Team; player: 
 export class MobaEconomy {
   public readonly gold: number[];
   public readonly vault: Record<Team, number> = { blue: 0, red: 0 };
+  /** Each player's gold earned (rewards) and spent (purse purchases) so far, for the end screen's report. */
+  public readonly earned: number[];
+  public readonly spent: number[];
 
   public constructor(private readonly teams: readonly Team[], startGold = 0) {
     this.gold = teams.map(() => startGold);
+    this.earned = teams.map(() => 0);
+    this.spent = teams.map(() => 0);
   }
 
   /** Player `killer` landed the last hit on `victim`: the change to his purse (0 for none), already applied. */
@@ -26,6 +31,7 @@ export class MobaEconomy {
     const reward = 'player' in victim ? MOBA_PLAYERS.playerGold : MOBA_PLAYERS[`${victim.minion}Gold`];
     const delta = victim.team !== team ? reward : allyPenalty ? -Math.min(this.gold[killer], Math.round(reward / 2)) : 0;
     this.gold[killer] += delta;
+    this.earned[killer] += Math.max(0, delta);
     return delta;
   }
 
@@ -35,6 +41,7 @@ export class MobaEconomy {
       return 0;
     }
     this.gold[index] += amount;
+    this.earned[index] += amount;
     return amount;
   }
 
@@ -44,6 +51,7 @@ export class MobaEconomy {
       return false;
     }
     this.gold[index] -= cost;
+    this.spent[index] += cost;
     return true;
   }
 

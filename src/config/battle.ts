@@ -206,6 +206,9 @@ export const LEFTOVERS = tunable('LEFTOVERS', 'Bodies, arrows and stains', {
   },
 });
 
+/** The end screen's report (systems/battleStats.ts): a timeline point every `sampleMs`, at most `maxSamples` (long levels thin out). */
+export const REPORT = { sampleMs: 1000, maxSamples: 240 } as const;
+
 /**
  * A level's end (scenes/BattleOutcome.ts): once a keep has fallen the end screen waits `keepFallMs` (the keep's fall,
  * rendering/keepCollapse.ts); in MOBA the losing minions die over `mobaDeathsMs` of it.
