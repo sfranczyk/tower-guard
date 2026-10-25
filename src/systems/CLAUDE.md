@@ -19,7 +19,9 @@ a shaman's spell, mid-swing), flees a noticed one's zone (`BlastDodge`, "!" = `E
 ## Allies (the player's soldiers)
 `Enemy` objects of the `side: 'ally'` kinds (squire, allyKnight, medic) in `CombatWorld.allies` (scenes/BattleAllies.ts).
 MOBA: `minionWaves.ts` (pure, tested: the lanes' group clock), `mobaEconomy.ts` (pure, tested: purses, vaults, last-hit
-gold, team-kill fine, respawn and regen `Recovery`); in lanes AllyAI marches the blue minions on `enemyTower`,
+gold, half-gold ally kill penalty, respawn and regen `Recovery`); in lanes AllyAI marches the blue minions on `enemyTower`;
+siege kamikazes (`Enemy.siege`, `EnemyAI`/`AllyAI.siegeRun`, `CombatSystem.siegeBlast`) run past everyone and blow up at the keep, always go off on death,
+blasts only knock them down; `MOBA_LANES.kamikaze*` (health, clock, keep damage);
 `AllyRanged.ts` shoots for blue archers and dragons (arrows `MINION_ARROW_OWNER`); `Enemy.power` / `Arrow.power` scale damage.
 `AllyAI.ts`: fighters go for the nearest ground enemy their order allows (`allyOrders.ts`, pure, tested: `orderPost`,
 `pickFoe`; hold / advance / retreat), strike with `meleeBlow` (cause `'melee'`, `armor` turns it); the medic (archetype `medic`, `bandages`) picks one

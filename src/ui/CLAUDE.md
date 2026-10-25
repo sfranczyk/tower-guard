@@ -37,7 +37,7 @@
 - **Menu**: "Start single player" (sandbox), "Create multiplayer room" (`handlers.openRoom` → lobby view `create`: Co-op / MOBA
   mode cards and "Practice MOBA alone", `ui/roomSetup.ts`), "Join online" (`openJoin` → view `join`: the room code dialog,
   either mode). The MOBA host's room has tabs Teams / Rules (`mobaRulesPage`: keep and bowman health, starting gold,
-  respawn time; `handlers.mobaRules`; rows shared with the setup's Rules page, `ui/optionRows.ts`).
+  respawn time, ally kill penalty On/Off chips `data-moba-toggle`; `handlers.mobaRules`; rows shared with the setup's Rules page, `ui/optionRows.ts`).
 - Dev views (animation, design, sound lab) all have "← Menu" in their panel's top-right corner.
 - **Tuning panel** (`TuningPanel.ts`, `?tune` or menu → Dev tools → "Tuning panel"; a collapsible side panel over the
   canvas's right edge): every `tunable` group from `core/tuning.ts` (registry, pure, tested) as sliders + numbers,

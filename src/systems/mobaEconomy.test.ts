@@ -13,18 +13,20 @@ describe('MobaEconomy', () => {
     expect(economy.gold).toEqual([MOBA_PLAYERS.troopGold + MOBA_PLAYERS.archerGold, MOBA_PLAYERS.dragonGold, 0]);
   });
 
-  it('pays nothing for your own minions', () => {
+  it('takes half the reward for your own minions, or nothing with the penalty off', () => {
     const economy = new MobaEconomy(teams, 50);
-    expect(economy.kill(0, { team: 'blue', minion: 'troop' })).toBe(0);
-    expect(economy.gold[0]).toBe(50);
+    expect(economy.kill(0, { team: 'blue', minion: 'dragon' })).toBe(-Math.round(MOBA_PLAYERS.dragonGold / 2));
+    expect(economy.kill(0, { team: 'blue', minion: 'troop' }, false)).toBe(0);
+    expect(economy.gold[0]).toBe(50 - Math.round(MOBA_PLAYERS.dragonGold / 2));
   });
 
-  it('pays for an enemy player and takes for a teammate, no more than he has', () => {
-    const economy = new MobaEconomy(teams, 50);
+  it('pays for an enemy player and takes half that for a teammate, no more than he has', () => {
+    const economy = new MobaEconomy(teams, 30);
     expect(economy.kill(0, { team: 'red', player: 1 })).toBe(MOBA_PLAYERS.playerGold);
-    expect(economy.kill(2, { team: 'blue', player: 0 })).toBe(-50);
+    expect(economy.kill(2, { team: 'blue', player: 0 })).toBe(-30);
     expect(economy.gold[2]).toBe(0);
     expect(economy.kill(1, { team: 'red', player: 1 })).toBe(0);
+    expect(new MobaEconomy(teams, 500).kill(2, { team: 'blue', player: 0 })).toBe(-MOBA_PLAYERS.playerGold / 2);
   });
 
   it('moves gold to and from the team vault in steps', () => {

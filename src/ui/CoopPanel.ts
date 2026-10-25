@@ -1,6 +1,6 @@
 import type { Loadout } from '../data/loadout';
 import { MAX_TEAM_SIZE, teamsReady, type Team } from '../data/moba';
-import type { MobaRules } from '../data/mobaRules';
+import type { MobaNumberRule, MobaRules } from '../data/mobaRules';
 import { editQuiverIn } from './quiverEditing';
 import { panelTop, renderPanel } from './panelLayout';
 import { partnerQuiver, quiverPage, type PartnerQuiver } from './quiverPage';
@@ -100,6 +100,11 @@ export class CoopPanel {
         callbacks.practice();
       } else if (target.closest('[data-coop-leave]')) {
         callbacks.leave();
+      } else if (target.closest<HTMLElement>('[data-moba-toggle]') && this.view?.kind === 'hosting' && this.view.rules) {
+        const toggle = target.closest<HTMLElement>('[data-moba-toggle]')!;
+        const rules = { ...readMobaRules(root, this.view.rules), [toggle.dataset.mobaToggle as 'allyPenalty']: toggle.dataset.value === 'true' };
+        callbacks.rulesChange(rules);
+        this.render({ ...this.view, rules });
       } else if (target.closest<HTMLElement>('[data-coop-team]')) {
         callbacks.teamChange(target.closest<HTMLElement>('[data-coop-team]')!.dataset.coopTeam as Team);
       }
@@ -114,7 +119,7 @@ export class CoopPanel {
     });
     root.addEventListener('change', (event) => {
       const input = event.target as HTMLInputElement;
-      const rule = input.dataset.mobaRule as keyof MobaRules | undefined;
+      const rule = input.dataset.mobaRule as MobaNumberRule | undefined;
       if (rule && this.view?.kind === 'hosting' && this.view.rules) {
         input.value = `${this.view.rules[rule]}`;
       }

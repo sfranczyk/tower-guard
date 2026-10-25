@@ -129,12 +129,13 @@ export class BattleEnemies {
    * A new enemy walking (or flying) in, or (`place`) a mounted knight's rider thrown off where his horse stood.
    * `minion`: a MOBA lane minion (its level: × health and damage, minionPower).
    */
-  public spawn(type: EnemyType, place?: SpawnPlace, minion?: MinionSpawn): Foe {
+  public spawn(type: EnemyType, place?: SpawnPlace, minion?: MinionSpawn, health?: number): Foe {
     const power = minion ? minionPower(minion.lv) : 1;
     const stats = getEnemyStats(type, 1);
+    const full = (health ?? stats.health) * power;
     const enemy = isFlyingType(type)
-      ? new DragonEnemy(enemySpawnX(), stats.health * power, stats.speed, type)
-      : new Enemy(place?.x ?? enemySpawnX(), stats.health * power, stats.speed, 'bowman', type);
+      ? new DragonEnemy(enemySpawnX(), full, stats.speed, type)
+      : new Enemy(place?.x ?? enemySpawnX(), full, stats.speed, 'bowman', type);
     enemy.power = power;
     enemy.visible = this.visible;
     this.list.push(enemy);

@@ -149,7 +149,7 @@ export class BattleMoba {
     if (by === undefined) {
       return;
     }
-    const delta = this.economy.kill(by, victim);
+    const delta = this.economy.kill(by, victim, this.deps.ctx.session.sandbox.moba.allyPenalty);
     if (delta === 0) {
       return;
     }

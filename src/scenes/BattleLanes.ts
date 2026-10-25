@@ -65,12 +65,16 @@ export class BattleLanes {
   /** A minion of `kind` for `minion.team` at its level (host, or a co-op guest replaying the host's `spawn`). */
   public spawn(kind: UnitType, minion: MinionSpawn): Foe {
     const power = minionPower(minion.lv);
-    const unit = minion.team === 'blue' ? this.deployBlue(kind, power) : this.deps.foes.spawn(kind as EnemyType, undefined, minion);
+    // The kamikaze is the lanes' siege unit (Enemy.siege), with its own health.
+    const siege = kind === MINION_KINDS[minion.team].kamikaze;
+    const health = siege ? MOBA_LANES.kamikazeHealth : undefined;
+    const unit = minion.team === 'blue' ? this.deployBlue(kind, power, health) : this.deps.foes.spawn(kind as EnemyType, undefined, minion, health);
     const color = TEAM_BAR_COLORS[minion.team];
     if (unit instanceof DragonEnemy) {
       unit.barColor = color;
       unit.setStars(minion.lv - 1);
     } else {
+      unit.siege = siege;
       unit.bars.teamColor = color;
       unit.bars.setStars(minion.lv - 1);
       unit.drawHealthBar();
@@ -78,9 +82,9 @@ export class BattleLanes {
     return unit;
   }
 
-  private deployBlue(kind: UnitType, power: number): Foe {
+  private deployBlue(kind: UnitType, power: number, health?: number): Foe {
     if (!isFlyingType(kind)) {
-      return this.deps.soldiers.deploy(kind, power);
+      return this.deps.soldiers.deploy(kind, power, health);
     }
     const stats = getEnemyStats(kind, 1);
     const dragon = new DragonEnemy(ALLIES.spawnX - 40, stats.health * power, stats.speed, kind, BLUE_DRAGON_LOOK);

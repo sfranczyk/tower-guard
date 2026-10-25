@@ -14,6 +14,12 @@ describe('moba rules', () => {
       bowmanHealth: MOBA_RULE_LIMITS.bowmanHealth.min,
       startGold: DEFAULT_MOBA_RULES.startGold,
       respawnSeconds: 13,
+      allyPenalty: true,
     });
+  });
+
+  it('keeps the ally penalty switch only when it is a boolean', () => {
+    expect(normalizeMobaRules({ allyPenalty: false }).allyPenalty).toBe(false);
+    expect(normalizeMobaRules({ allyPenalty: 'no' as unknown as boolean }).allyPenalty).toBe(true);
   });
 });
