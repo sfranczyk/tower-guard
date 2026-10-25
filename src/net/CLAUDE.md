@@ -10,7 +10,8 @@ as one `RoomLink` (`send` to all, `sendTo`, messages tagged `from`); a guest's l
 `hostCoop` / `joinCoop` build `ctx.session.net` (`NetLink`: role, code, `RoomLink`, `localIndex`, `present`,
 `loadouts`, wind) and take room messages out of the stream: a guest sends `{ t: 'loadout' }`, the host sends each guest
 `{ t: 'roster' }` (their seat `you`, who is in, every quiver) on every join, leave or quiver change
-(`setRoomListener` redraws the lobby and the setup's Quiver page; `otherQuivers`, `playerLabel`). `playerCount` =
+(`setRoomListener` redraws the lobby and the setup's Quiver page; `otherQuivers`, `playerLabel`). Aliases: the lobby's "Your name"
+(`core/aliasStorage.ts`, `data/playerAlias.ts`), guest `{ t: 'alias' }`, roster `aliases`, `NetLink.aliases`, `shareAlias`, `nameOf`. `playerCount` =
 up to the last taken seat. A guest who leaves mid-battle (`NetLink.inBattle`, `enterBattle`) leaves a gap: their
 bowman stands still; back in the lobby or the setup `settleSeats` closes up the seats and renumbers the rest. A new
 guest can join mid-run and fights from the next level. The host leaving sends every guest to the lobby with a notice.

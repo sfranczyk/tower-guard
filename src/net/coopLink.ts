@@ -2,6 +2,7 @@ import type { GameContext, GameSession, NetLink } from '../core/Scene';
 import { getDevUrlParam } from '../core/urlState';
 import { normalizeLoadout, type Loadout } from '../data/loadout';
 import { MAX_TEAM_SIZE, autoTeam, canJoinTeam, type Team } from '../data/moba';
+import { normalizeAlias, playerName } from '../data/playerAlias';
 import type { NetMessage } from './protocol';
 import { RoomHub, guestLink } from './RoomHub';
 import { hasGaps, seatCount } from './seats';
@@ -17,8 +18,11 @@ export const MAX_MOBA_PLAYERS = 2 * MAX_TEAM_SIZE;
 /** Each player's bowman (rendering/bowmanBody.ts BOWMAN_LOOKS), for the lobby's labels. */
 const LOOK_NAMES = ['Ranger', 'Keep warden', 'Steppe archer', 'Huntsman'];
 
-/** "Host · Ranger", "Player 3 · Steppe archer". */
-export const playerLabel = (index: number): string => `${index === 0 ? 'Host' : `Player ${index + 1}`} · ${LOOK_NAMES[index] ?? 'Archer'}`;
+/** What player `index` is called: their alias, else "Host" / "Player 3" (no room: "Player 1"). */
+export const nameOf = (session: GameSession, index: number): string => playerName(index, session.net?.aliases[index], session.net !== undefined);
+
+/** "Host · Ranger", "Robin · Steppe archer". */
+export const playerLabel = (session: GameSession, index: number): string => `${nameOf(session, index)} · ${LOOK_NAMES[index] ?? 'Archer'}`;
 
 /** Called when someone joins or leaves the room or picks a quiver (the lobby and the battle setup show it). */
 let onRoomChange: (() => void) | undefined;
@@ -69,11 +73,11 @@ const takeRoomMessages = (link: RoomLink, take: (message: NetMessage, from: numb
  * their own quiver. A guest who leaves mid-battle leaves their bowman standing still for the rest of the level;
  * back in the lobby or the setup the seats close up (`settleSeats`).
  */
-export const hostCoop = (ctx: GameContext, room: HostedRoom, ownLoadout: Loadout): void => {
+export const hostCoop = (ctx: GameContext, room: HostedRoom, ownLoadout: Loadout, ownAlias: string): void => {
   const { session } = ctx;
   const net: NetLink = {
     role: 'host', code: room.code, transport: undefined as unknown as RoomLink, wind: 0, loadouts: [ownLoadout], localIndex: 0, present: [true], inBattle: false,
-    teams: [session.moba ? 'blue' : undefined],
+    teams: [session.moba ? 'blue' : undefined], aliases: [normalizeAlias(ownAlias) || undefined],
   };
   session.net = net;
   session.playerCount = 1;
@@ -82,12 +86,14 @@ export const hostCoop = (ctx: GameContext, room: HostedRoom, ownLoadout: Loadout
     net.present = hub.present();
     net.loadouts.length = net.present.length;
     net.teams.length = net.present.length;
+    net.aliases.length = net.present.length;
     session.playerCount = seatCount(net.present);
     const loadouts = net.present.map((_, seat) => net.loadouts[seat] ?? null);
     const teams = session.moba ? net.present.map((_, seat) => net.teams[seat] ?? null) : undefined;
+    const aliases = net.present.map((_, seat) => net.aliases[seat] ?? null);
     net.present.forEach((taken, seat) => {
       if (taken && seat > 0) {
-        hub.sendTo(seat, { t: 'roster', you: seat, present: net.present, loadouts, teams });
+        hub.sendTo(seat, { t: 'roster', you: seat, present: net.present, loadouts, teams, aliases });
       }
     });
     onRoomChange?.();
@@ -102,6 +108,11 @@ export const hostCoop = (ctx: GameContext, room: HostedRoom, ownLoadout: Loadout
       announce();
       return true;
     }
+    if (message.t === 'alias') {
+      net.aliases[from] = normalizeAlias(message.alias) || undefined;
+      announce();
+      return true;
+    }
     if (message.t !== 'loadout') {
       return false;
     }
@@ -111,6 +122,7 @@ export const hostCoop = (ctx: GameContext, room: HostedRoom, ownLoadout: Loadout
   });
   hub.onJoin = (seat) => {
     net.loadouts[seat] = undefined;
+    net.aliases[seat] = undefined;
     // A newcomer goes to the smaller team (his seat's old team not counted).
     net.teams[seat] = undefined;
     net.teams[seat] = session.moba ? autoTeam(net.teams) : undefined;
@@ -119,11 +131,12 @@ export const hostCoop = (ctx: GameContext, room: HostedRoom, ownLoadout: Loadout
   hub.onLeave = (seat) => {
     net.loadouts[seat] = undefined;
     if (net.inBattle) {
-      ctx.ui.setStatus(`${playerLabel(seat)} has left · ${hub.present().some((taken, other) => taken && other > 0) ? 'the others play on' : 'you play on alone'}`);
+      ctx.ui.setStatus(`${playerLabel(session, seat)} has left · ${hub.present().some((taken, other) => taken && other > 0) ? 'the others play on' : 'you play on alone'}`);
     } else {
       const seats = hub.compact();
       net.loadouts = seats.map((old) => net.loadouts[old]);
       net.teams = seats.map((old) => net.teams[old]);
+      net.aliases = seats.map((old) => net.aliases[old]);
     }
     announce();
   };
@@ -134,12 +147,12 @@ export const hostCoop = (ctx: GameContext, room: HostedRoom, ownLoadout: Loadout
  * This browser joined a room: the host's roster tells it its seat and everyone's quivers. If the link drops (or the
  * room was full), back to the lobby with a notice.
  */
-export const joinCoop = (ctx: GameContext, code: string, transport: Transport, ownLoadout: Loadout): void => {
+export const joinCoop = (ctx: GameContext, code: string, transport: Transport, ownLoadout: Loadout, ownAlias: string): void => {
   const { session } = ctx;
   let notice = 'The host has left the game.';
   const net: NetLink = {
     role: 'guest', code, transport: guestLink(transport), wind: 0, loadouts: [undefined, ownLoadout], localIndex: 1, present: [], inBattle: false,
-    teams: [],
+    teams: [], aliases: [undefined, normalizeAlias(ownAlias) || undefined],
   };
   // First: a roster may already be waiting.
   session.net = net;
@@ -147,16 +160,21 @@ export const joinCoop = (ctx: GameContext, code: string, transport: Transport, o
   net.transport = takeRoomMessages(net.transport, (message) => {
     if (message.t === 'roster') {
       const own = net.loadouts[net.localIndex] ?? ownLoadout;
+      const alias = net.aliases[net.localIndex];
       net.localIndex = message.you;
       net.present = message.present;
       net.loadouts = message.loadouts.map((loadout, seat) => (seat === message.you ? own : loadout ? normalizeLoadout(loadout) : undefined));
       net.teams = message.teams?.map((team) => team ?? undefined) ?? [];
+      net.aliases = net.present.map((_, seat) => (seat === message.you ? alias : message.aliases?.[seat] ?? undefined));
       // The host's room decides: a MOBA room sends teams.
       session.moba = message.teams !== undefined;
       session.playerCount = seatCount(net.present);
       // Joined (or the host lost track): the host gets this player's quiver.
       if (!message.loadouts[message.you]) {
         transport.send({ t: 'loadout', loadout: own });
+      }
+      if ((message.aliases?.[message.you] ?? undefined) !== alias) {
+        transport.send({ t: 'alias', alias: alias ?? '' });
       }
       onRoomChange?.();
       return true;
@@ -190,6 +208,7 @@ export const settleSeats = (session: GameSession): void => {
     const seats = hub.compact();
     net.loadouts = seats.map((old) => net.loadouts[old]);
     net.teams = seats.map((old) => net.teams[old]);
+    net.aliases = seats.map((old) => net.aliases[old]);
     announcers.get(net)?.();
   }
 };
@@ -215,6 +234,20 @@ export const shareLoadout = (session: GameSession, loadout: Loadout): void => {
   }
 };
 
+/** This player changed their alias: shown to the others (the host sends it round in the roster). */
+export const shareAlias = (session: GameSession, alias: string): void => {
+  const { net } = session;
+  if (!net) {
+    return;
+  }
+  net.aliases[net.localIndex] = normalizeAlias(alias) || undefined;
+  if (net.role === 'host') {
+    announcers.get(net)?.();
+  } else {
+    net.transport.send({ t: 'alias', alias: net.aliases[net.localIndex] ?? '' });
+  }
+};
+
 /** MOBA lobby: this player asks for `team` (the host decides: three a team at most). */
 export const pickTeam = (session: GameSession, team: Team): void => {
   const { net } = session;
@@ -234,7 +267,7 @@ export const roomTeams = (session: GameSession): Array<{ label: string; team: Te
   const { net } = session;
   return (net?.present ?? []).flatMap((taken, index) => {
     const team = net?.teams[index];
-    return taken && team ? [{ label: playerLabel(index), team, you: index === net?.localIndex }] : [];
+    return taken && team ? [{ label: playerLabel(session, index), team, you: index === net?.localIndex }] : [];
   });
 };
 
@@ -249,7 +282,7 @@ export const otherPlayers = (session: GameSession): Array<{ index: number; loado
 
 /** The other players' quivers as the lobby and the Quiver page list them (ui/quiverPage.ts PartnerQuiver). */
 export const otherQuivers = (session: GameSession): Array<{ label: string; loadout?: Loadout }> =>
-  otherPlayers(session).map(({ index, loadout }) => ({ label: playerLabel(index), loadout }));
+  otherPlayers(session).map(({ index, loadout }) => ({ label: playerLabel(session, index), loadout }));
 
 /** Whether player `index` is still in the room (always, alone). */
 export const isPresent = (session: GameSession, index: number): boolean => !session.net || session.net.present[index] === true;

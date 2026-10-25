@@ -31,6 +31,8 @@ export interface NetLink {
   loadouts: Array<Loadout | undefined>;
   /** MOBA: each player's team, by player index, picked in the lobby (a newcomer joins the smaller one). */
   teams: Array<Team | undefined>;
+  /** Each player's alias, by player index (the lobby's "Your name"; undefined: none), passed round in the roster. */
+  aliases: Array<string | undefined>;
 }
 
 export interface GameTextures {

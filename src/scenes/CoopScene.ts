@@ -4,10 +4,12 @@ import { Scene, newRun } from '../core/Scene';
 import { centeredCameraX } from '../core/viewport';
 import { BATTLEGROUNDS } from '../data/battlegrounds';
 import { loadSandbox, saveSandbox } from '../core/sandboxStorage';
+import { loadAlias, saveAlias } from '../core/aliasStorage';
+import { normalizeAlias } from '../data/playerAlias';
 import type { Loadout } from '../data/loadout';
 import type { MobaRules } from '../data/mobaRules';
 import { normalizeSandbox } from '../data/sandbox';
-import { hostCoop, joinCoop, leaveCoop, otherQuivers, pickTeam, playerLabel, roomTeams, setRoomListener, settleSeats, shareLoadout, transportMode } from '../net/coopLink';
+import { hostCoop, joinCoop, leaveCoop, otherQuivers, pickTeam, playerLabel, roomTeams, setRoomListener, settleSeats, shareAlias, shareLoadout, transportMode } from '../net/coopLink';
 import type { NetMessage } from '../net/protocol';
 import { normalizeRoomCode } from '../net/roomCode';
 import { hostRoom, joinRoom, type HostedRoom } from '../net/Transport';
@@ -25,6 +27,8 @@ export class CoopScene extends Scene {
   private readonly backdrop = new Container();
   private room?: HostedRoom;
   private view: CoopView = { kind: 'create' };
+  /** This browser's alias ("Your name", kept in localStorage). */
+  private alias = loadAlias();
 
   public enter(): void {
     const { ui, session } = this.ctx;
@@ -49,6 +53,12 @@ export class CoopScene extends Scene {
       this.startMoba();
     };
     ui.handlers.mobaRules = (rules) => this.changeRules(rules);
+    ui.handlers.coopAlias = (alias) => {
+      this.alias = normalizeAlias(alias);
+      saveAlias(this.alias);
+      shareAlias(session, this.alias);
+      this.render(this.view);
+    };
     // Someone joined or left, or picked a quiver: show it.
     setRoomListener(() => this.refreshRoom());
     this.onExit(() => {
@@ -60,6 +70,7 @@ export class CoopScene extends Scene {
       ui.handlers.coopTeam = undefined;
       ui.handlers.mobaPractice = undefined;
       ui.handlers.mobaRules = undefined;
+      ui.handlers.coopAlias = undefined;
       setRoomListener(undefined);
     });
     this.listenWindow('keydown', (event) => {
@@ -90,7 +101,7 @@ export class CoopScene extends Scene {
 
   private render(view: CoopView): void {
     this.view = view;
-    this.ctx.ui.renderCoop(view);
+    this.ctx.ui.renderCoop(view, this.alias);
   }
 
   private async host(): Promise<void> {
@@ -103,7 +114,7 @@ export class CoopScene extends Scene {
         return;
       }
       // The room stays open: guests come (and go) while the host waits here or sets up the battle.
-      hostCoop(this.ctx, room, this.ctx.session.sandbox.loadout);
+      hostCoop(this.ctx, room, this.ctx.session.sandbox.loadout, this.alias);
       this.render({ kind: 'hosting', code: room.code, guests: [], teams: this.teams(), rules: this.rules() });
     } catch (error) {
       this.render({ kind: 'create', error: (error as Error).message });
@@ -126,7 +137,7 @@ export class CoopScene extends Scene {
         return;
       }
       // The guest starts from the quiver of their own last setup.
-      joinCoop(this.ctx, code, transport, loadSandbox().loadout);
+      joinCoop(this.ctx, code, transport, loadSandbox().loadout, this.alias);
       this.listenAsGuest();
       transport.send({ t: 'hello' });
       this.renderJoined(code);
@@ -157,7 +168,7 @@ export class CoopScene extends Scene {
     const { session } = this.ctx;
     const net = session.net;
     const loadout = (net && net.loadouts[net.localIndex]) ?? loadSandbox().loadout;
-    const you = net?.present.length ? playerLabel(net.localIndex) : undefined;
+    const you = net?.present.length ? playerLabel(session, net.localIndex) : undefined;
     this.render({ kind: 'joined', code, notice, you, loadout, others: otherQuivers(session), teams: this.teams() });
   }
 

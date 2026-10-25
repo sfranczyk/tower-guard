@@ -214,9 +214,9 @@ export type NetMessage =
   | { t: 'hello' }
   /**
    * Host → each guest, on joining and on every change in the room: the guest's player index (`you`), who is in
-   * (`present`, by player index, the host first) and everyone's quiver (null until picked).
+   * (`present`, by player index, the host first), everyone's quiver (null until picked) and alias (null: none).
    */
-  | { t: 'roster'; you: number; present: boolean[]; loadouts: Array<Loadout | null>; teams?: Array<Team | null> }
+  | { t: 'roster'; you: number; present: boolean[]; loadouts: Array<Loadout | null>; teams?: Array<Team | null>; aliases?: Array<string | null> }
   /** Guest → host, MOBA lobby: the team this player wants (handled by net/coopLink). */
   | { t: 'team'; team: Team }
   /** Guest → host, MOBA: buy the next level of upgrade `buy`, or move `step` vault gold (`deposit`: in, else out). */
@@ -237,6 +237,8 @@ export type NetMessage =
   | { t: 'lobby' }
   /** Guest → host: the guest's own quiver (sent on joining and on every change; handled by net/coopLink). */
   | { t: 'loadout'; loadout: Loadout }
+  /** Guest → host: the guest's alias (sent on joining and on every change; handled by net/coopLink). */
+  | { t: 'alias'; alias: string }
   /** Guest → host: Esc asks to pause or resume; host → guest: the battle is paused or resumed (both screens). */
   | { t: 'pause'; paused: boolean }
   | InputMessage;
