@@ -27,6 +27,8 @@ export const MOBA_LANES = tunable('MOBA_LANES', 'MOBA lanes', {
   kamikazeBlastSize: 3,
   /** × on the damage its bomb does to a keep (a kamikaze's own keep damage: data/enemyKinds.ts). */
   kamikazeKeepDamage: 3,
+  /** × on what minions (blows and arrows, either side's) do to a lane kamikaze; players' arrows hit it in full. */
+  kamikazeMinionDamage: 0.5,
   firstGroupMs: 4000,
   groupSpacingMs: 700,
   /** Blue fighters strike the red keep from this close to its centre (as the enemies do ours, EnemyAI). */
