@@ -70,7 +70,7 @@ const WALL_BREAKER: UpgradeDef = {
   id: 'wallBreaker', tab: 'skills', section: 'Arrows', scope: 'player', levels: 2, firstCost: 300, costGrowth: 2,
   requires: { id: 'arrow:explosive', level: 1 },
   label: (level) => `Wall breaker ${'I'.repeat(level)}`,
-  description: (level) => `Explosive arrows do ×${1 + WALL_BREAKER_STEP * level} damage to a keep (level ${level}).`,
+  description: (level) => `${ARROW_INFO.explosive.name} hits on a keep do ×${1 + WALL_BREAKER_STEP * level} damage (level ${level}).`,
 };
 
 export const UPGRADES: readonly UpgradeDef[] = [
