@@ -68,7 +68,11 @@ export class Background {
       container.addChild(glow);
     }
 
-    // Clouds float behind the hills (but in front of the sun), in one layer (a day sky tints it).
+    // A day sky's titles rise behind the clouds.
+    if (this.daySky) {
+      container.addChild(this.daySky.title, this.daySky.eclipseTitle);
+    }
+    // Clouds float behind the hills (but in front of the sun and the titles), in one layer (a day sky tints it).
     const cloudLayer = new Container();
     container.addChild(cloudLayer);
     const clouds = layoutClouds(sceneryWidth, skySeed(battleground.name), battleground.weather, sceneryWidth / BACKDROP_WIDTH);
@@ -83,9 +87,6 @@ export class Background {
       cloudLayer.addChild(cloud);
       return { sprite: cloud, speed, width: shape.width, alpha: cloud.alpha };
     });
-    if (this.daySky) {
-      container.addChild(this.daySky.title);
-    }
     const hills = this.tiledHills(drawHills(battleground));
     if (this.night) {
       const dayHills = this.tiledHills(drawHills({ ...battleground, hills: battleground.nightCycle!.dayHills }));

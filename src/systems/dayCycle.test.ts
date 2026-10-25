@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { MOBA_SKY } from '../config';
-import { cometAt, cycleMs, dayTitle, daySky, dayTime, eclipseAt, eclipsesUntil, moonLit, moonLitOutline, moonPhase, redSunset, segmentNear, sweptNear } from './dayCycle';
+import { cometAt, cycleMs, dayTitle, ordinal, ordinalWord, daySky, dayTime, eclipseAt, eclipsesUntil, moonLit, moonLitOutline, moonPhase, redSunset, segmentNear, sweptNear } from './dayCycle';
 
 const MINUTE = 60_000;
 
@@ -73,12 +73,20 @@ describe('day cycle', () => {
   });
 
   it('names each day as it starts, then lets the title go', () => {
-    expect([1, 2, 3, 4, 11, 12, 13, 21, 22, 101].map((n) => dayTitle(n).split(' ')[0]))
+    expect([1, 2, 3, 4, 11, 12, 13, 21, 22, 101].map((n) => ordinal(n)))
       .toEqual(['1st', '2nd', '3rd', '4th', '11th', '12th', '13th', '21st', '22nd', '101st']);
-    expect(dayTitle(1)).toBe('1st day of the battle');
+    expect(dayTitle(1)).toBe('The first day of battle');
+    expect([2, 12, 20, 21, 42, 99, 100].map(ordinalWord)).toEqual(['second', 'twelfth', 'twentieth', 'twenty-first', 'forty-second', 'ninety-ninth', '100th']);
     expect(daySky(1, 0)).toMatchObject({ dayNumber: 1, title: 0 });
     expect(daySky(1, cycleMs() + MOBA_SKY.dayTitleMs / 2)).toMatchObject({ dayNumber: 2, title: 0.5 });
     expect(daySky(1, MOBA_SKY.dayTitleMs + 1).title).toBeUndefined();
+  });
+
+  it('raises "Eclipse!" as an eclipse begins', () => {
+    const eclipse = eclipsesUntil(1, 60 * 60000)[0]!;
+    expect(daySky(1, eclipse.start - 1).eclipseTitle).toBeUndefined();
+    expect(daySky(1, eclipse.start).eclipseTitle).toBe(0);
+    expect(daySky(1, eclipse.start + 1000).eclipseTitle).toBeCloseTo(1000 / MOBA_SKY.dayTitleMs);
   });
 
   it('rolls each sunset red or dark, the same for the same seed', () => {

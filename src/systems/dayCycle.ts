@@ -140,9 +140,15 @@ export interface DaySkyState {
   dayNumber: number;
   /** The day's title on its way up from behind the hills (0 rising .. 1 gone out of the top), at the day's start only. */
   title?: number;
+  /** "Eclipse!" on its way up as the day's title (MOBA_SKY.dayTitleMs from the eclipse's start). */
+  eclipseTitle?: number;
   /** The eclipse going on: what it looks like (systems/nightCycle.ts eclipsePhase). */
   eclipse?: { offset: number; corona: number; diamond: number; moonRadius: number };
 }
+
+/** How far a title is on its way up `sinceMs` after it set off (undefined: gone). */
+const titleRise = (sinceMs: number): number | undefined =>
+  sinceMs >= 0 && sinceMs < MOBA_SKY.dayTitleMs ? sinceMs / Math.max(1, MOBA_SKY.dayTitleMs) : undefined;
 
 /** The sky at `timeMs` of a match with `seed`. */
 export const daySky = (seed: number, timeMs: number): DaySkyState => {
@@ -167,7 +173,8 @@ export const daySky = (seed: number, timeMs: number): DaySkyState => {
   return {
     part,
     dayNumber: time.index + 1,
-    title: at < MOBA_SKY.dayTitleMs ? at / Math.max(1, MOBA_SKY.dayTitleMs) : undefined,
+    title: titleRise(at),
+    eclipseTitle: going ? titleRise(timeMs - going.start) : undefined,
     light,
     day: light,
     dawn: part === 'sunrise' ? Math.sin(Math.PI * rising) : 0,
@@ -220,5 +227,26 @@ export const ordinal = (n: number): string => {
   return `${n}${suffix}`;
 };
 
-/** What rises at the start of day `dayNumber`. */
-export const dayTitle = (dayNumber: number): string => `${ordinal(dayNumber)} day of the battle`;
+const ORDINAL_UNITS = ['', 'first', 'second', 'third', 'fourth', 'fifth', 'sixth', 'seventh', 'eighth', 'ninth', 'tenth',
+  'eleventh', 'twelfth', 'thirteenth', 'fourteenth', 'fifteenth', 'sixteenth', 'seventeenth', 'eighteenth', 'nineteenth'];
+const TENS = ['', '', 'twenty', 'thirty', 'forty', 'fifty', 'sixty', 'seventy', 'eighty', 'ninety'];
+const TENTHS = ['', '', 'twentieth', 'thirtieth', 'fortieth', 'fiftieth', 'sixtieth', 'seventieth', 'eightieth', 'ninetieth'];
+
+/** first, second … twentieth, twenty-first … ninety-ninth; from 100 in figures (100th). */
+export const ordinalWord = (n: number): string => {
+  if (n < 1 || n > 99 || !Number.isInteger(n)) {
+    return ordinal(n);
+  }
+  if (n < 20) {
+    return ORDINAL_UNITS[n]!;
+  }
+  const tens = Math.floor(n / 10);
+  const unit = n % 10;
+  return unit === 0 ? TENTHS[tens]! : `${TENS[tens]}-${ORDINAL_UNITS[unit]}`;
+};
+
+/** What rises at the start of day `dayNumber`: "The second day of battle". */
+export const dayTitle = (dayNumber: number): string => `The ${ordinalWord(dayNumber)} day of battle`;
+
+/** What rises as an eclipse begins. */
+export const ECLIPSE_TITLE = 'Eclipse!';
