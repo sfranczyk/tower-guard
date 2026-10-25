@@ -56,6 +56,8 @@ export interface UiHandlers {
   coopLoadout?: (loadout: Loadout) => void;
   /** MOBA lobby: switch to this team. */
   coopTeam?: (team: Team) => void;
+  /** Lobby: this player's alias was edited (on leaving the field or Enter). */
+  coopAlias?: (alias: string) => void;
   trajectoryChange?: (enabled: boolean) => void;
   cursorCircleChange?: (enabled: boolean) => void;
   /** Damage numbers over the enemies' heads toggled in the settings drawer. */

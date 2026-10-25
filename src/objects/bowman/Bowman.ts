@@ -17,6 +17,7 @@ import { deathFallFor, type BowmanHit } from '../../systems/bowmanDeath';
 import { BowAim, type BowmanAim } from './bowAim';
 import { BowmanFigure } from './BowmanFigure';
 import { BowmanFooting } from './bowmanFooting';
+import { BowmanTags } from './BowmanTags';
 import { holdInVortex, pin, pinnedFootPoint, throwInAir, updateFlight } from './bowmanAloft';
 import { applyBowmanNet, applyRemote, bowmanNetState, type BowmanNet, type BowmanRemote } from './bowmanNet';
 
@@ -87,6 +88,8 @@ export class Bowman extends Container {
   private readonly healthBar = new Graphics();
   private readonly showHealth: boolean;
   private healthRatio = 1;
+  /** His player's name and the regeneration plus (`setNameTag`, `setRegenerating`). */
+  private readonly tags: BowmanTags;
   /** Co-op host: told when he's knocked down or catches fire, to replay it on the guest's screen. */
   public netHooks?: { knockedBack(fromX: number, strength: number): void; ignited(gen: number): void };
 
@@ -107,6 +110,7 @@ export class Bowman extends Container {
     this.afflictions = new AfflictionLayer('raider', { burnMs: config.burnMs ?? relight(), flameSize: BURN_FLAME_SIZE, burnFadeMs: BURN_FADE_MS });
 
     this.addChild(this.figure.body, this.afflictions.art, this.healthBar);
+    this.tags = new BowmanTags(this);
 
     this.scale.set(1 / 3);
     this.zIndex = 2;
@@ -439,17 +443,30 @@ export class Bowman extends Container {
     this.healthRatio = ratio;
   }
 
-  /** Under his feet as he is now (standing, falling, flailing); hidden once dead. */
+  /** His player's name over his head (online, while Ctrl is held; undefined: none). */
+  public setNameTag(name: string | undefined): void {
+    this.tags.setName(name);
+  }
+
+  /** A "+" right of his health bar while he heals (MOBA regeneration). */
+  public setRegenerating(regenerating: boolean): void {
+    this.tags.setRegenerating(regenerating);
+  }
+
+  /** Under his feet as he is now (standing, falling, flailing), the name over his head; hidden once dead. */
   private placeHealthBar(): void {
     this.healthBar.visible = this.showHealth && !this.isDead;
+    this.tags.setShown(this.healthBar.visible);
     if (!this.healthBar.visible) {
       return;
     }
     const points = this.figure.burnPoints();
     const bottom = Math.max(0, ...points.map((point) => point.y));
+    const top = Math.min(0, ...points.map((point) => point.y));
     const centre = points.reduce((sum, point) => sum + point.x, 0) / points.length;
     this.healthBar.position.set(centre, bottom + HEALTH_BAR.belowFeet);
     drawHealthBar(this.healthBar, this.healthRatio, HEALTH_BAR.width, HEALTH_BAR.height);
+    this.tags.place(centre, top, { y: this.healthBar.y, width: HEALTH_BAR.width });
   }
 
   private updateBody(deltaMs: number, moving: boolean, sprinting: boolean): void {

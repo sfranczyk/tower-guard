@@ -132,6 +132,7 @@ export class DomUi {
       leave: () => this.handlers.coopLeave?.(),
       loadoutChange: (loadout) => this.handlers.coopLoadout?.(loadout),
       teamChange: (team) => this.handlers.coopTeam?.(team),
+      aliasChange: (alias) => this.handlers.coopAlias?.(alias),
       practice: () => this.handlers.mobaPractice?.(),
       rulesChange: (rules) => this.handlers.mobaRules?.(rules),
     });
@@ -313,8 +314,8 @@ export class DomUi {
   }
 
   /** Rebuilds the sandbox setup form (e.g. after the level count changes). */
-  public renderCoop(view: CoopView): void {
-    this.coopPanel.render(view);
+  public renderCoop(view: CoopView, alias: string): void {
+    this.coopPanel.render(view, alias);
   }
 
   /** Opens the battle setup on its mode picker. */

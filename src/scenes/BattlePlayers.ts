@@ -181,7 +181,7 @@ export class BattlePlayers {
         const standing = this.list.filter((player) => player.health > 0).length;
         const fightOn = standing === 0 ? '' : standing === 1 ? ' · one fights on' : ` · ${standing} fight on`;
         this.list.forEach((player) => this.status(player, player === fallen ? `You have fallen${fightOn}`
-          : `${playerLabel(fallen.index)} has fallen${player.health > 0 && standing === 1 ? ' · hold on alone' : fightOn}`));
+          : `${playerLabel(this.deps.ctx.session, fallen.index)} has fallen${player.health > 0 && standing === 1 ? ' · hold on alone' : fightOn}`));
       }
     });
   }

@@ -30,6 +30,7 @@ import { matchTeams, type Team } from '../data/moba';
 import type { BattleMoba } from './BattleMoba';
 import { MobaMode } from './MobaMode';
 import { BattleControls } from './BattleControls';
+import { BattleNameTags } from './BattleNameTags';
 import { BattleEnemies } from './BattleEnemies';
 import { BattleOutcome } from './BattleOutcome';
 import { BattleSurvival } from './BattleSurvival';
@@ -103,6 +104,8 @@ export class GameScene extends Scene {
   private control!: PlayerControl;
   /** The local player's keyboard, mouse, pause and soldier commands (scenes/BattleControls.ts). */
   private controls?: BattleControls;
+  /** Ctrl held: the players' names over the bowmen. */
+  private nameTags?: BattleNameTags;
   private outcome!: BattleOutcome;
   /** Co-op online: this browser's role, and the sync with the other browser. */
   private readonly role: 'solo' | 'host' | 'guest';
@@ -348,6 +351,7 @@ export class GameScene extends Scene {
       moba: this.moba !== undefined,
       onExit: (dispose) => this.onExit(dispose),
     });
+    this.nameTags = new BattleNameTags(this.ctx.session, (type, handler) => this.listenWindow(type, handler));
     const controls = this.controls;
     ({ hostSync: this.hostSync, guestSync: this.guestSync } = startBattleSync({
       ctx: this.ctx,
@@ -510,7 +514,11 @@ export class GameScene extends Scene {
 
   private updateHud(): void {
     this.showPlayerHits();
-    this.players.forEach((player) => player.bowman.setHealthRatio(player.health / (this.moba?.maxHealth(player) ?? this.ctx.session.sandbox.bowmanHealth)));
+    this.players.forEach((player) => {
+      player.bowman.setHealthRatio(player.health / (this.moba?.maxHealth(player) ?? this.ctx.session.sandbox.bowmanHealth));
+      player.bowman.setRegenerating(this.moba?.regenerating(player) ?? false);
+    });
+    this.nameTags?.update(this.players);
     this.ctx.ui.updateAllies({ slots: this.soldiers.slots(), order: this.soldiers.order, orderLabel: ALLY_ORDER_LABELS[this.soldiers.order] });
     this.ctx.ui.updateHud({
       defeatedEnemies: this.foes.defeated(),

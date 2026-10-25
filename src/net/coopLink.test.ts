@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { GameContext, GameSession } from '../core/Scene';
 import { DEFAULT_LOADOUT, type Loadout } from '../data/loadout';
-import { enterBattle, hostCoop, isPresent, joinCoop, loadoutOf, otherPlayers, setRoomListener, settleSeats, shareLoadout } from './coopLink';
+import { enterBattle, hostCoop, isPresent, joinCoop, loadoutOf, nameOf, otherPlayers, setRoomListener, settleSeats, shareAlias, shareLoadout } from './coopLink';
 import type { NetMessage } from './protocol';
 import type { HostedRoom, Transport } from './Transport';
 
@@ -68,13 +68,13 @@ const quivers: Loadout[] = [hostQuiver, ['fire', 'frost', 'vortex'], ['piercing'
 const room = (guests: number): { host: GameContext; guests: GameContext[]; links: Transport[]; door: ReturnType<typeof testRoom> } => {
   const door = testRoom();
   const host = context();
-  hostCoop(host, door, hostQuiver);
+  hostCoop(host, door, hostQuiver, 'Stan');
   const links: Transport[] = [];
   const joined = Array.from({ length: guests }, (_, index) => {
     const guest = context();
     const link = door.knock();
     links.push(link);
-    joinCoop(guest, 'ABCDE', link, quivers[index + 1]);
+    joinCoop(guest, 'ABCDE', link, quivers[index + 1], index === 0 ? '' : `Guest ${index + 1}`);
     return guest;
   });
   return { host, guests: joined, links, door };
@@ -103,11 +103,24 @@ describe('co-op room', () => {
     [host, ...guests].forEach(({ session }) => expect(loadoutOf(session, 2)).toEqual(['vortex', null, null]));
   });
 
+  it('passes everyone\'s alias round, and a change of it', () => {
+    const { host, guests } = room(3);
+    [host, ...guests].forEach(({ session }) => {
+      expect([0, 1, 2, 3].map((index) => nameOf(session, index))).toEqual(['Stan', 'Player 2', 'Guest 2', 'Guest 3']);
+    });
+    shareAlias(guests[0].session, '  Robin  ');
+    shareAlias(host.session, '');
+    [host, ...guests].forEach(({ session }) => {
+      expect(nameOf(session, 0)).toBe('Host');
+      expect(nameOf(session, 1)).toBe('Robin');
+    });
+  });
+
   it('turns a fifth player away', () => {
     vi.useFakeTimers();
     const { door } = room(3);
     const late = context();
-    joinCoop(late, 'ABCDE', door.knock(), quivers[1]);
+    joinCoop(late, 'ABCDE', door.knock(), quivers[1], '');
     vi.runAllTimers();
     vi.useRealTimers();
     expect(late.session.net).toBeUndefined();
@@ -121,6 +134,7 @@ describe('co-op room', () => {
     expect(guests[1].session.net!.localIndex).toBe(1);
     expect(guests[2].session.net!.localIndex).toBe(2);
     expect(loadoutOf(host.session, 1)).toEqual(quivers[2]);
+    expect(nameOf(guests[2].session, 1)).toBe('Guest 2');
   });
 
   it('keeps a seat empty (and the bowman standing) while a battle is on, until back in the lobby', () => {
