@@ -34,7 +34,7 @@
   cursor circle); these live in `ctx.session` for the browser session.
 - `CoopPanel.ts`: the co-op lobby (net/CLAUDE.md); "Your name" (`aliasRow`, join, hosting and joined views; passed on on change, the field keeps focus through redraws). In battle a press of Ctrl shows the names over the bowmen, the next hides them (flipped back in a mirrored view) (`scenes/BattleNameTags.ts`, `objects/bowman/BowmanTags.ts`, which also draws MOBA regeneration's "+" by the health bar). `SoundLabPanel.ts`: the sound test panel.
 - `ShopPanel.ts` (`DomUi.shop`): MOBA's shop over the far side of the canvas (760 px, each section two upgrades to a row,
-  a 3-level section one), tabs Skills / Castle, chained buttons with
+  a 3-level section one; a second upgrade needing the same one, Wall breaker, is its own chain), tabs Skills / Keep (the `castle` tab id), a line between the two columns, chained buttons with
   the price, details line at the bottom; `handlers.shopBuy` / `shopVault` / `shopClose`. Hud's `moba` purse line.
   The lobby's MOBA team columns: `CoopPanel` `teams`, `handlers.coopTeam`; upgrade icons `ICON_UPGRADES` + arrows/minions.
 - **Menu**: "Start single player" (sandbox), "Create multiplayer room" (`handlers.openRoom` → lobby view `create`: Co-op / MOBA

@@ -197,6 +197,11 @@ export class MobaMode implements ShopBackend {
     return this.match?.upgrades.arrowPower(owner, type);
   }
 
+  /** The shop's Wall breaker on `owner`'s arrows of `type` hitting a keep. */
+  public keepPower(owner: number, type: ProjectileType): number | undefined {
+    return this.match?.upgrades.keepPower(owner, type);
+  }
+
   /** Full health of `player` (with his Max health levels). */
   public maxHealth(player: Player): number {
     if (this.match) {

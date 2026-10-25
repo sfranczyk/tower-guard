@@ -272,7 +272,7 @@ export class ArrowHits {
     }
     // Chips fly off where it lands (a minion's arrow barely scratches it, as the enemy archers' do ours).
     const minion = arrow.owner === MINION_ARROW_OWNER && arrow.shooter;
-    tower.takeDamage(minion ? arrowDamage(arrow, 'keep') : ENEMY_TOWER_DAMAGE * (explosive ? KEEP_BLAST_FACTOR : 1) * (arrow.power ?? 1), impactPoint);
+    tower.takeDamage(minion ? arrowDamage(arrow, 'keep') : ENEMY_TOWER_DAMAGE * (explosive ? KEEP_BLAST_FACTOR : 1) * (arrow.power ?? 1) * (arrow.keepPower ?? 1), impactPoint);
     if (explosive) {
       this.actions.explode(impactPoint, activeEnemies, undefined, undefined, undefined, playerOf(arrow));
       arrow.deactivate();

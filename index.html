@@ -69,6 +69,9 @@
         /* One column per level of the section's longest upgrade (3 at most), the same in every row, so the levels line up. */
         .shop-chain { display: grid; grid-template-columns: minmax(0, 1fr) 14px minmax(0, 1fr) 14px minmax(0, 1fr); align-items: stretch; gap: 4px; margin-bottom: 6px; }
         .shop-chains.steps-3 { grid-template-columns: minmax(0, 1fr); }
+        /* A line between the two columns of upgrades (in the middle of the column gap, unbroken down the rows). */
+        .shop-chains:not(.steps-3) .shop-chain:nth-child(odd) { position: relative; }
+        .shop-chains:not(.steps-3) .shop-chain:nth-child(odd)::after { content: ''; position: absolute; top: 0; bottom: -6px; right: -8px; width: 2px; border-radius: 1px; background: var(--panel-edge); }
         .shop-chains.steps-2 .shop-chain { grid-template-columns: minmax(0, 1fr) 14px minmax(0, 1fr); }
         .shop-chains.steps-1 .shop-chain { grid-template-columns: minmax(0, 1fr); }
         .shop-arrow { align-self: center; text-align: center; color: var(--ink-soft); font-weight: 700; }

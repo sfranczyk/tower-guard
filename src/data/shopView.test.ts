@@ -10,6 +10,9 @@ describe('shopSections', () => {
     expect(sections.map((section) => section.title)).toEqual(['Arrows', 'Passive']);
     const fire = sections[0].chains.find((chain) => chain[0].id === 'arrow:fire')!;
     expect(fire.map((button) => button.id)).toEqual(['arrow:fire', 'quick:fire']);
+    const ids = sections[0].chains.map((chain) => chain.map((button) => button.id).join(' '));
+    expect(ids.slice(ids.indexOf('arrow:explosive quick:explosive'), ids.indexOf('arrow:explosive quick:explosive') + 2))
+      .toEqual(['arrow:explosive quick:explosive', 'wallBreaker wallBreaker']);
   });
 
   it('marks owned, buyable, short of gold and locked levels', () => {

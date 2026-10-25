@@ -191,6 +191,7 @@ export class GameScene extends Scene {
       hostSync: () => this.hostSync,
       guestSync: () => this.guestSync,
       arrowPower: (owner, type) => this.moba?.arrowPower(owner, type),
+      keepPower: (owner, type) => this.moba?.keepPower(owner, type),
       // MOBA: the other team's shots fly without a trail to read their aim by.
       showsTrail: (owner) => !this.moba || this.players.find((player) => player.index === owner)?.team === this.team.local.team,
       fired: (owner, type) => this.stats?.shot(owner, type),
