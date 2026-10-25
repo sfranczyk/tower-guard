@@ -5,6 +5,7 @@ import {
   DRAGON_SCORCH_MS,
   EXPLOSION_RADIUS,
   GROUND_Y,
+  MOBA_LANES,
   PRIEST_ESCAPE_BEYOND,
   PRIEST_POST_SLACK,
   REGEN,
@@ -103,7 +104,7 @@ export class EnemyAI {
     const kamikazes = this.world.enemies.filter((enemy): enemy is Enemy =>
       !(enemy instanceof DragonEnemy) && enemy.isAlive() && enemyArchetype(enemy.kind).detonates && !enemy.afflictions.isFrozen);
     const spots = kamikazes.flatMap((kamikaze): BombSpot<Enemy>[] => {
-      const radius = EXPLOSION_RADIUS * kamikaze.buff.blastPower;
+      const radius = EXPLOSION_RADIUS * kamikaze.buff.blastPower * (kamikaze.siege ? MOBA_LANES.kamikazeBlastSize : 1);
       const here = { owner: kamikaze, x: kamikaze.x, radius, fused: false };
       if (kamikaze.isPinned || kamikaze.isCelebrating) {
         return [here];
@@ -208,7 +209,9 @@ export class EnemyAI {
       }
     }
     // The nearest bowman out in the open or soldier, or the keep when there's nobody out.
-    const melee = nearestMeleeTarget(this.world.bowmen, this.world.allies, enemy.x);
+    // MOBA: blue soldiers beyond our keep's wall (only just coming in) don't draw it away from the keep.
+    const allies = this.world.lanes ? this.world.allies.filter((ally) => ally.x >= playerTower.x - TOWER_HALF_WIDTH) : this.world.allies;
+    const melee = nearestMeleeTarget(this.world.bowmen, allies, enemy.x);
     if (melee?.ally) {
       this.fightAlly(enemy, melee.ally, deltaMs);
       return;

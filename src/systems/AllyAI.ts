@@ -170,7 +170,11 @@ export class AllyAI {
       post = this.world.enemyTower.x - MOBA_LANES.keepReach;
     }
     // MOBA: the red bowmen out in the open are foes too.
-    const foes: Array<Enemy | Bowman> = [...this.groundFoes(), ...(this.world.foeBowmen ?? []).filter((bowman) => !bowman.isDead && !bowman.isInTower)];
+    let foes: Array<Enemy | Bowman> = [...this.groundFoes(), ...(this.world.foeBowmen ?? []).filter((bowman) => !bowman.isDead && !bowman.isInTower)];
+    if (this.world.lanes) {
+      // MOBA: nobody beyond the red keep's wall (red minions only just coming in): he stays to bring the keep down.
+      foes = foes.filter((candidate) => candidate.x <= post + IN_REACH);
+    }
     const pick = pickFoe(ally.x, post, order, foes.map((foe) => foe.x), IN_REACH);
     // An enemy carrying our banner off comes first.
     const foe = banners?.thief('player') ?? (pick === undefined ? undefined : foes[pick]);

@@ -16,6 +16,9 @@ import type { LevelOutcome } from './levelEnd';
 import { showLevelEnd, showMobaEnd } from './levelEndScreen';
 import { mobaEndInfo } from './levelEnd';
 import type { Team } from '../data/moba';
+import { LEVEL_END } from '../config';
+import type DragonEnemy from '../objects/dragon/DragonEnemy';
+import { defeatDeaths } from '../systems/mobaDefeat';
 
 export interface BattleOutcomeDeps {
   ctx: GameContext;
@@ -30,6 +33,8 @@ export interface BattleOutcomeDeps {
   relief?: BattleRelief;
   /** MOBA: fallen players come back (BattleMoba); the match ends only with a keep, won by the local player's team. */
   moba?: BattleMoba;
+  /** MOBA: the blue dragons (they cheer or die with the other blue minions). */
+  allyFliers?: DragonEnemy[];
   hostSync: () => HostSync | undefined;
   /** The level is decided: this browser's keyboard and mouse stop. */
   stopInput: () => void;
@@ -47,7 +52,32 @@ export class BattleOutcome {
   /** What the end screen's button (and Space) does. */
   public endAction?: () => void;
 
+  /** What still waits for its moment once the level is decided (ms left): the end screen, MOBA's losers' deaths. */
+  private pending: Array<{ ms: number; run: () => void }> = [];
+
   public constructor(private readonly deps: BattleOutcomeDeps) {}
+
+  /** Every frame (host, solo or guest): runs what is due. */
+  public tick(deltaMs: number): void {
+    if (this.pending.length === 0) {
+      return;
+    }
+    this.pending.forEach((entry) => {
+      entry.ms -= deltaMs;
+    });
+    const due = this.pending.filter((entry) => entry.ms <= 0);
+    this.pending = this.pending.filter((entry) => entry.ms > 0);
+    due.forEach((entry) => entry.run());
+  }
+
+  /** Runs `run` after `ms` (at once for 0). */
+  private later(ms: number, run: () => void): void {
+    if (ms <= 0) {
+      run();
+    } else {
+      this.pending.push({ ms, run });
+    }
+  }
 
   public check(): void {
     const { team, playerTower, enemyTower, banners, foes, survival, moba } = this.deps;
@@ -93,25 +123,39 @@ export class BattleOutcome {
     this.deps.ctx.ui.dialogs.showEndScreen({ ...info, buttonLabel: 'Waiting for the host…', onButton: () => {} });
   }
 
-  /** MOBA: `winner` brought the other keep down; its minions and players cheer. */
+  /**
+   * MOBA: `winner` brought the other keep down: its minions cheer, the losing side's all die (each its own way,
+   * systems/mobaDefeat.ts; their hits reach a guest as ever), and the end screen comes once the keep has fallen.
+   */
   private endMatch(winner: Team): void {
-    const { ctx, team, foes, enemies, soldiers, playerTower, enemyTower } = this.deps;
+    const { ctx, team, foes, enemies, soldiers, playerTower, enemyTower, allyFliers = [] } = this.deps;
     const hostSync = this.deps.hostSync();
     this.ended = true;
     this.won = winner === team.local.team;
     this.deps.stopInput();
     foes.stopWaves();
-    if (winner === 'red') {
-      enemies.forEach((enemy) => enemy.celebrate());
-      hostSync?.push({ e: 'cheer' });
-    } else {
-      soldiers.celebrate();
-    }
+    const blue: Foe[] = [...soldiers.list, ...allyFliers];
+    const [winners, losers] = winner === 'red' ? [enemies, blue] : [blue, enemies];
+    winners.forEach((unit) => unit.celebrate());
+    hostSync?.push({ e: 'cheer', ...(winner === 'blue' ? { blue: true } : {}) });
+    // From the winners' side: the red ones fall away from the blue keep and the other way round.
+    const fromX = winner === 'red' ? enemyTower.x : playerTower.x;
+    const dying = losers.filter((unit) => unit.isAlive());
+    defeatDeaths(dying.length, LEVEL_END.mobaDeathsMs).forEach((death, index) => {
+      const unit = dying[index];
+      this.later(death.delayMs, () => {
+        if (unit.isAlive()) {
+          unit.takeDamage(Number.MAX_SAFE_INTEGER, { cause: death.cause, fromX: unit.x + Math.sign(fromX - unit.x) });
+        }
+      });
+    });
     const stats = [
       { label: 'blue keep', value: `${Math.ceil(playerTower.getHealth())} / ${playerTower.maxHealth}` },
       { label: 'red keep', value: `${Math.ceil(enemyTower.getHealth())} / ${enemyTower.maxHealth}` },
     ];
-    this.endAction = showMobaEnd(ctx, winner, team.local.team, stats, hostSync);
+    this.later(LEVEL_END.keepFallMs, () => {
+      this.endAction = showMobaEnd(ctx, winner, team.local.team, stats, hostSync);
+    });
   }
 
   private end(won: boolean, levelCleared = false): void {
@@ -155,6 +199,7 @@ export class BattleOutcome {
     if (won && survival?.timeUp) {
       relief?.arrive();
     }
-    show();
+    // A fallen keep comes down before the end screen (Tower: rendering/keepCollapse.ts).
+    this.later(playerTower.isDestroyed() || enemyTower.isDestroyed() ? LEVEL_END.keepFallMs : 0, show);
   }
 }

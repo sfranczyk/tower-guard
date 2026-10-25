@@ -56,6 +56,8 @@ All pure and tested. Tuning numbers live in `config/`, sandbox defaults in `sand
 - **Arrow tree** (`arrowTree.ts`): every arrow has a `path` (archer, craftsman, mage) and a `parent`, all growing out of
   normal (`ARROW_TREE`, `arrowLineage`, `arrowsOnPath`); the Quiver page shows one column per path. Whole tree open for
   now; progression (experience, gold, unlocks) will build on it. A new arrow gets an entry here.
-- **MOBA** (`moba.ts`): `Team`, `MinionRole`, `MINION_KINDS`, `minionGroups` (config `MOBA_LANES`), lobby rules
+- **MOBA** (`moba.ts`): `Team`, `MinionRole`, `MINION_KINDS` (troops: squires both sides, red `redSquire`, a `minion` kind
+  kept out of `ENEMY_TYPES`), `minionGroups` (config `MOBA_LANES`), lobby rules
   (`autoTeam`, `canJoinTeam`, `teamsReady`, `MAX_TEAM_SIZE`). Shop: one `UpgradeDef` per upgrade in `upgrades.ts`
-  (`playerStats`, `minionPower`, `blockedBy`; a new skill = an entry + its stat), buttons from `shopView.ts` (`shopSections`).
+  (`playerStats`, `minionPower`, `blockedBy`; a new skill = an entry + its stat; arrows in `BOUGHT_ARROWS` order, prices
+  `ARROW_PRICES`, walking `SPEED_BASE` 0.8 + `SPEED_STEP`), buttons from `shopView.ts` (`shopSections`).

@@ -88,10 +88,14 @@ export interface KeepLook {
   damage: KeepDamage;
   /** Co-op: one tower per bowman to hide in (1–4, see KEEP_TURRETS). */
   towers?: number;
+  /** Drawn over what `g` already holds (and under its current transform: keepRuin.ts), not after a clear. */
+  append?: boolean;
 }
 
-export const drawKeep = (g: Graphics, { tones: t, enemy, damage, towers = 1 }: KeepLook): void => {
-  g.clear();
+export const drawKeep = (g: Graphics, { tones: t, enemy, damage, towers = 1, append = false }: KeepLook): void => {
+  if (!append) {
+    g.clear();
+  }
   const rect = (x: number, y: number, w: number, h: number, color: number, radius = 2, alpha = 1): void => {
     g.roundRect(x, y, w, h, radius).fill({ color, alpha });
   };

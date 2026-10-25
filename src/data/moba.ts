@@ -1,6 +1,6 @@
 import { MOBA_LANES } from '../config';
 import type { MinionGroup } from '../systems/minionWaves';
-import type { EnemyType, UnitType } from '../types';
+import type { EnemyType, MinionType, UnitType } from '../types';
 
 /**
  * MOBA mode (`?moba`, dev only for now): two teams, each with its keep and lane minions. Blue holds the left keep (the
@@ -13,11 +13,11 @@ export type MinionRole = 'troop' | 'archer' | 'dragon' | 'kamikaze';
 
 /**
  * Each team's minion of each role: blue in the bowman's blue (its dragon is a dragon archer in BLUE_DRAGON_LOOK), red
- * the raiders, hunters and dark dragon archers. Both send the same kamikaze, a siege unit (Enemy.siege).
+ * squires in red (redSquire), hunters and dark dragon archers. Both send the same kamikaze, a siege unit (Enemy.siege).
  */
-export const MINION_KINDS: { readonly blue: Readonly<Record<MinionRole, UnitType>>; readonly red: Readonly<Record<MinionRole, EnemyType>> } = {
+export const MINION_KINDS: { readonly blue: Readonly<Record<MinionRole, UnitType>>; readonly red: Readonly<Record<MinionRole, EnemyType | MinionType>> } = {
   blue: { troop: 'squire', archer: 'blueArcher', dragon: 'dragon', kamikaze: 'kamikaze' },
-  red: { troop: 'raider', archer: 'hunter', dragon: 'dragon', kamikaze: 'kamikaze' },
+  red: { troop: 'redSquire', archer: 'hunter', dragon: 'dragon', kamikaze: 'kamikaze' },
 };
 
 /** The groups each keep sends now (config MOBA_LANES, tunable). */

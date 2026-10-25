@@ -10,7 +10,7 @@ import { banditArcherLook, blueArcherLook, goblinBomberLook, goblinLook, raiderL
 import { ogreLook, trollLook, zombieLook } from './designs/heavySkins';
 import { blackKnightLook, darkPriestLook, heavyKnightLook } from './designs/knightSkins';
 import { shamanLook } from './designs/shamanSkin';
-import { allyKnightLook, medicLook, squireLook } from './designs/allySkins';
+import { allyKnightLook, medicLook, redSquireLook, squireLook } from './designs/allySkins';
 import { drawHumanoid, PLAIN_HEAD, type DrawnBody, type HumanoidLook } from './designs/skinKit';
 
 export type { DrawnBody } from './designs/skinKit';
@@ -59,6 +59,8 @@ const LOOKS: Readonly<Record<GroundEnemy, EnemyBodyLook>> = {
   medic: { look: medicLook, club: 'overhead', gibs: { ...HUMAN_BODY, bone: 0xf2efe6, boneRear: 0xc0392b } },
   // MOBA: the blue lane's archer (the hunter's hood in the bowman's blue).
   blueArcher: { look: fixed(blueArcherLook()), gibs: { ...HUMAN_BODY, bone: 0xd2a07a, boneRear: 0x2f5d9a } },
+  // MOBA: the red lane's troop (the squire in red).
+  redSquire: { look: fixed(redSquireLook()), club: 'overhead', gibs: { ...HUMAN_BODY, bone: 0xe0b48c, boneRear: 0x9a2c37 } },
 };
 
 const lookOf = (kind: UnitType): EnemyBodyLook => LOOKS[kind as GroundEnemy] ?? LOOKS.raider;

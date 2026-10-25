@@ -212,7 +212,7 @@ export interface EnemyKind {
   mount?: { health: number };
   /** One of the player's soldiers (summoned, fights the enemies: systems/AllyAI.ts); none = an enemy. */
   side?: 'ally';
-  /** A MOBA lane minion of the player's side only (never summoned, not in the HUD: scenes/BattleLanes.ts). */
+  /** A MOBA lane minion only (never summoned, not in the HUD or a battle's setup: scenes/BattleLanes.ts). */
   minion?: boolean;
   /** What it costs of a survival wave's budget (systems/survivalWaves.ts; a raider 1). */
   threat?: number;
@@ -348,6 +348,11 @@ export const ENEMY_KINDS: Readonly<Record<UnitType, EnemyKind>> = {
     stats: { health: 22, speed: 26 }, damage: { melee: [3, 5], arrow: [7, 10] }, keepDamage: { arrow: 0.5 },
     build: { size: 1, strikeReach: 55 },
   },
+  // MOBA: the red lane's troop, the squire in red (both lanes send squires).
+  redSquire: {
+    label: 'Red squire', archetype: 'fighter', race: 'human', magical: false, arrival: 0, minion: true,
+    stats: { health: 30, speed: ENEMY_SPEED * 1.2 }, damage: { melee: [6, 10] }, build: { size: 0.95, strikeReach: 55 },
+  },
 };
 
 /** Every stickman kind, foes and allies (for the tables keyed by kind). */
@@ -360,7 +365,7 @@ export const fightsForPlayer = (type: UnitType): boolean => ENEMY_KINDS[type].si
 export const isAllyType = (type: UnitType): type is AllyType => fightsForPlayer(type) && !ENEMY_KINDS[type].minion;
 
 /** Every enemy, in the battle setup's order. */
-export const ENEMY_TYPES = UNIT_TYPES.filter((type) => !fightsForPlayer(type)) as readonly EnemyType[];
+export const ENEMY_TYPES = UNIT_TYPES.filter((type) => !fightsForPlayer(type) && !ENEMY_KINDS[type].minion) as readonly EnemyType[];
 
 /** The player's soldiers, in the HUD's order. */
 export const ALLY_TYPES = UNIT_TYPES.filter(isAllyType);

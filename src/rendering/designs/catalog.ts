@@ -12,7 +12,7 @@ import { ENEMY_DESIGNS } from './ideas';
 import { blackKnightLook, darkPriestLook, heavyKnightLook } from './knightSkins';
 import { gaitGroundSpeed, getHorsePose } from '../horseRider';
 import { drawHumanoid, type HumanoidLook } from './skinKit';
-import { allyKnightLook, medicLook, squireLook } from './allySkins';
+import { allyKnightLook, medicLook, redSquireLook, squireLook } from './allySkins';
 import { BANDAGE_LOOP_MS, bandageKneel } from '../bandaging';
 
 import {
@@ -383,6 +383,20 @@ const ALLIES: DesignEntry[] = [
       falling('Headshot', fixed(blueArcherLook()), 'deathStiff'),
       cheering(fixed(blueArcherLook()), 'cheerWave', true),
       blownApart('blueArcher'),
+    ],
+  },
+  {
+    id: 'redSquire',
+    name: 'Red squire',
+    tagline: 'MOBA: the red lane\'s troop',
+    description: 'The squire in the enemy keep\'s red: a red tunic over the white shirt, the same belt, cap and short sword. Both lanes send squires in MOBA mode (?moba): these march with the red lane.',
+    views: [
+      walking(redSquireLook, SQUIRE_SPEED, 'overhead'),
+      swinging('Sword cut', redSquireLook, 'overhead'),
+      falling('Death', redSquireLook, 'death'),
+      knockdown(redSquireLook),
+      cheering(redSquireLook, 'cheerFist', true),
+      blownApart('redSquire'),
     ],
   },
 ];

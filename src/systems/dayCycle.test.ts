@@ -15,15 +15,15 @@ const area = (points: number[]): number => {
 };
 
 describe('day cycle', () => {
-  it('runs 3.5 minutes of day (with 20 s sunrise and sunset) and 2.5 minutes of night', () => {
-    expect(cycleMs()).toBe(6 * MINUTE);
+  it('runs 2.5 minutes of day (with 20 s sunrise and sunset) and 1.5 minutes of night', () => {
+    expect(cycleMs()).toBe(4 * MINUTE);
     expect(dayTime(0).part).toBe('sunrise');
     expect(dayTime(19_999).part).toBe('sunrise');
     expect(dayTime(20_000).part).toBe('day');
-    expect(dayTime(3.5 * MINUTE - 20_001).part).toBe('day');
-    expect(dayTime(3.5 * MINUTE - 10_000).part).toBe('sunset');
-    expect(dayTime(3.5 * MINUTE).part).toBe('night');
-    expect(dayTime(6 * MINUTE)).toMatchObject({ index: 1, part: 'sunrise', at: 0 });
+    expect(dayTime(2.5 * MINUTE - 20_001).part).toBe('day');
+    expect(dayTime(2.5 * MINUTE - 10_000).part).toBe('sunset');
+    expect(dayTime(2.5 * MINUTE).part).toBe('night');
+    expect(dayTime(4 * MINUTE)).toMatchObject({ index: 1, part: 'sunrise', at: 0 });
   });
 
   it('brightens through the sunrise, stays light all day and is dark at night', () => {
@@ -31,26 +31,26 @@ describe('day cycle', () => {
     expect(lights).toEqual([...lights].sort((a, b) => a - b));
     expect(lights[0]).toBe(0);
     expect(daySky(1, MINUTE).light).toBe(1);
-    expect(daySky(1, 4 * MINUTE).light).toBe(0);
-    expect(daySky(1, 4 * MINUTE).stars).toBe(1);
+    expect(daySky(1, 3 * MINUTE).light).toBe(0);
+    expect(daySky(1, 3 * MINUTE).stars).toBe(1);
     expect(daySky(1, MINUTE).stars).toBe(0);
   });
 
   it('shows the sunrise sky at sunrise and the sunset sky at sunset only', () => {
     expect(daySky(1, 10_000).dawn).toBeCloseTo(1);
     expect(daySky(1, 10_000).dusk).toBe(0);
-    expect(daySky(1, 3.5 * MINUTE - 10_000).dusk).toBeCloseTo(1);
+    expect(daySky(1, 2.5 * MINUTE - 10_000).dusk).toBeCloseTo(1);
     expect(daySky(1, MINUTE).dawn + daySky(1, MINUTE).dusk).toBe(0);
   });
 
   it('crosses the sky from right to left: the sun by day, the moon by night', () => {
-    const sun = [0, MINUTE, 2 * MINUTE, 3 * MINUTE].map((time) => daySky(1, time).sun);
+    const sun = [0, 0.7 * MINUTE, 1.4 * MINUTE, 2.1 * MINUTE].map((time) => daySky(1, time).sun);
     expect(sun.every((s) => s.visible)).toBe(true);
     expect(sun.map((s) => s.x)).toEqual([...sun.map((s) => s.x)].sort((a, b) => b - a));
-    const night = daySky(1, 4 * MINUTE);
+    const night = daySky(1, 2.75 * MINUTE);
     expect(night.sun.visible).toBe(false);
     expect(night.moon.visible).toBe(true);
-    expect(daySky(1, 5.5 * MINUTE).moon.x).toBeLessThan(night.moon.x);
+    expect(daySky(1, 3.75 * MINUTE).moon.x).toBeLessThan(night.moon.x);
   });
 
   it('starts at a full moon, is new after 7 days and full again after 14', () => {

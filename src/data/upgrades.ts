@@ -1,4 +1,4 @@
-import { ARROW_INFO, ARROW_TYPES, type ArrowType } from './loadout';
+import { ARROW_INFO, type ArrowType } from './loadout';
 import type { MinionRole } from './moba';
 
 /**
@@ -41,13 +41,25 @@ export const BASIC_ARROW_DAMAGE_STEP = 0.25;
 export const QUICK_DRAW_COOLDOWN = 0.5;
 export const REGEN_STEP = 5;
 export const MAX_HP_STEP = 0.2;
-export const SPEED_STEP = 0.1;
+/** MOBA: a bowman walks at SPEED_BASE of the normal speed, each Speed level SPEED_STEP more. */
+export const SPEED_BASE = 0.8;
+export const SPEED_STEP = 0.2;
 /** A minion upgrade level: +50% health and damage. */
 export const MINION_STEP = 0.5;
 
 const percent = (share: number): string => `${Math.round(share * 100)}%`;
 
-const BOUGHT_ARROWS = ARROW_TYPES.filter((type) => type !== 'normal');
+/** The arrows to buy, in the shop's order. */
+const BOUGHT_ARROWS: readonly ArrowType[] = ['fire', 'frost', 'shrapnel', 'pinning', 'piercing', 'explosive', 'vortex'];
+
+/** What an arrow costs, and its quick draw (the rest: DEFAULT_ARROW_PRICE). */
+const ARROW_PRICES: Partial<Record<ArrowType, { arrow: number; quick: number }>> = {
+  fire: { arrow: 150, quick: 250 },
+  frost: { arrow: 200, quick: 250 },
+  shrapnel: { arrow: 200, quick: 250 },
+  pinning: { arrow: 200, quick: 250 },
+};
+const DEFAULT_ARROW_PRICE = { arrow: 250, quick: 300 };
 
 const MINION_NAMES: Readonly<Record<MinionRole, string>> = { troop: 'Troops', archer: 'Archers', dragon: 'Dragons', kamikaze: 'Kamikazes' };
 
@@ -59,12 +71,12 @@ export const UPGRADES: readonly UpgradeDef[] = [
   },
   ...BOUGHT_ARROWS.flatMap((type): UpgradeDef[] => [
     {
-      id: `arrow:${type}`, tab: 'skills', section: 'Arrows', scope: 'player', levels: 1, firstCost: 250, costGrowth: 1, arrow: type,
+      id: `arrow:${type}`, tab: 'skills', section: 'Arrows', scope: 'player', levels: 1, firstCost: (ARROW_PRICES[type] ?? DEFAULT_ARROW_PRICE).arrow, costGrowth: 1, arrow: type,
       label: () => ARROW_INFO[type].name,
       description: () => `${ARROW_INFO[type].name}: ${ARROW_INFO[type].summary}. Adds it to your quiver (up to ${MAX_BOUGHT_ARROWS} arrows besides the normal one).`,
     },
     {
-      id: `quick:${type}`, tab: 'skills', section: 'Arrows', scope: 'player', levels: 1, firstCost: 300, costGrowth: 1,
+      id: `quick:${type}`, tab: 'skills', section: 'Arrows', scope: 'player', levels: 1, firstCost: (ARROW_PRICES[type] ?? DEFAULT_ARROW_PRICE).quick, costGrowth: 1,
       requires: { id: `arrow:${type}`, level: 1 },
       label: () => 'Quick draw',
       description: () => `${ARROW_INFO[type].name} reloads twice as fast.`,
@@ -81,9 +93,9 @@ export const UPGRADES: readonly UpgradeDef[] = [
     description: (level) => `+${percent(MAX_HP_STEP * level)} health (level ${level}).`,
   },
   {
-    id: 'speed', tab: 'skills', section: 'Passive', scope: 'player', levels: 3, firstCost: 100, costGrowth: 1.6,
+    id: 'speed', tab: 'skills', section: 'Passive', scope: 'player', levels: 3, firstCost: 60, costGrowth: 2,
     label: (level) => `Speed ${'I'.repeat(level)}`,
-    description: (level) => `Walk +${percent(SPEED_STEP * level)} faster (level ${level}).`,
+    description: (level) => `Walk at ${percent(SPEED_BASE + SPEED_STEP * level)} of the normal speed (level ${level}; ${percent(SPEED_BASE)} without it).`,
   },
   ...(['troop', 'archer', 'dragon'] as const).map((role): UpgradeDef => ({
     id: `minion:${role}`, tab: 'castle', section: 'Minions', scope: 'team', levels: 2, firstCost: 400, costGrowth: 2,
@@ -153,7 +165,7 @@ export const playerStats = (levels: UpgradeLevels): PlayerStats => ({
   cooldown: Object.fromEntries(BOUGHT_ARROWS.filter((type) => levelOf(levels, `quick:${type}`) > 0).map((type) => [type, QUICK_DRAW_COOLDOWN])),
   regenBonus: REGEN_STEP * levelOf(levels, 'regen'),
   maxHealth: 1 + MAX_HP_STEP * levelOf(levels, 'maxHp'),
-  speed: 1 + SPEED_STEP * levelOf(levels, 'speed'),
+  speed: SPEED_BASE + SPEED_STEP * levelOf(levels, 'speed'),
 });
 
 /** A team's minion level per role (1 = none bought; stars under the health bar = level − 1). */

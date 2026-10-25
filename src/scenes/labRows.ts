@@ -12,6 +12,10 @@ import { drawJointPose } from '../rendering/stickmanPose';
 import { BANNER_GRIP, bandageBody, walkBody, withBanner } from '../rendering/designs/bodyPoses';
 import { BANDAGE_LOOP_MS, bandageKneel } from '../rendering/bandaging';
 import { WALK_PHASE_MS } from './labSequences';
+import { KEEP_COLLAPSE_MS } from '../rendering/keepCollapse';
+import { drawKeepRuin } from '../rendering/keepRuin';
+import { keepTones } from '../rendering/keepStyle';
+import { BATTLEGROUNDS } from '../data/battlegrounds';
 
 import {
   BOW_CYCLE_MS,
@@ -287,6 +291,16 @@ export const LAB_CATEGORIES: readonly LabCategory[] = [
         description: 'Head snaps back and the rigid body topples backwards around the feet, with a small bounce. Headshot, lightning.',
         offsetX: 54,
         render: (sprite, clock) => clock.falls.render(sprite, 'deathStiff'),
+      },
+      {
+        id: 'keep-collapse',
+        title: 'Keep falls',
+        description: 'A keep brought down, in every mode: it shakes, crumbles down into itself leaning towards the field, stones fly off and dust rolls out; a heap of rubble is left, smouldering.',
+        offsetX: -10,
+        previewScale: 0.5,
+        zoomScale: 1.2,
+        render: (sprite, clock) => drawKeepRuin(sprite, { tones: keepTones(BATTLEGROUNDS.greenMeadow.hills[0]), enemy: false },
+          clock.timeMs % (KEEP_COLLAPSE_MS + 1500), 1, 7, { x: 0, y: 60, scale: 0.5 }),
       },
       {
         id: 'blown-apart',

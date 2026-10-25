@@ -182,6 +182,8 @@ export class GameScene extends Scene {
       hostSync: () => this.hostSync,
       guestSync: () => this.guestSync,
       arrowPower: (owner, type) => this.moba?.arrowPower(owner, type),
+      // MOBA: the other team's shots fly without a trail to read their aim by.
+      showsTrail: (owner) => !this.moba || this.players.find((player) => player.index === owner)?.team === this.team.local.team,
     });
     this.leftovers = new BattleLeftovers({
       pools: () => [
@@ -325,6 +327,7 @@ export class GameScene extends Scene {
       survival: this.survival,
       relief: this.relief,
       moba: this.match,
+      allyFliers: this.moba?.allyFliers,
       hostSync: () => this.hostSync,
       stopInput: () => this.controls?.destroy(),
     });
@@ -454,6 +457,7 @@ export class GameScene extends Scene {
     if (!this.outcome.ended && this.role !== 'guest') {
       this.outcome.check();
     }
+    this.outcome.tick(deltaMs);
     this.hostSync?.update(deltaMs);
     this.netReadout?.update(deltaMs);
   }
