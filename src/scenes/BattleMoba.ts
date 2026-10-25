@@ -144,12 +144,21 @@ export class BattleMoba {
     this.deps.revived?.(player);
   }
 
+  /** `by` struck something worth `amount` at `at` (an eclipse's comet): paid, and he sees it there. */
+  public bonus(by: number, amount: number, at: { x: number; y: number }): void {
+    this.shown(by, this.economy.earn(by, amount), at);
+  }
+
   /** `by` landed the last hit on `victim` at `at`: his purse changes, and he sees by how much there. */
   private reward(by: number | undefined, victim: Victim, at: { x: number; y: number }): void {
     if (by === undefined) {
       return;
     }
-    const delta = this.economy.kill(by, victim, this.deps.ctx.session.sandbox.moba.allyPenalty);
+    this.shown(by, this.economy.kill(by, victim, this.deps.ctx.session.sandbox.moba.allyPenalty), at);
+  }
+
+  /** `by`'s purse changed by `delta` at `at`: he sees it rise (or fall) there. */
+  private shown(by: number, delta: number, at: { x: number; y: number }): void {
     if (delta === 0) {
       return;
     }

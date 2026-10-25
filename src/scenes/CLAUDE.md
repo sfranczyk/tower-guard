@@ -53,7 +53,8 @@ everything under `ctx.root` on each switch. Scenes never touch the DOM: they cal
 - **CoopScene**: the lobby (net/CLAUDE.md).
 - **MOBA** (menu → "Create multiplayer room" → MOBA, or "Practice MOBA alone"; dev `?moba`): `MobaMode.ts` gathers it for GameScene: `BattleLanes` (both keeps'
   minions on one clock, at their team's level: `spawn`; the kamikaze is a siege unit, `Enemy.siege`), `BattleMoba` (gold for last hits, vaults, respawn, regen; host
-  or alone) with `MobaUpgrades` (levels bought, their effects), `BattleShop` (I by your keep, `ui/ShopPanel.ts`).
+  or alone) with `MobaUpgrades` (levels bought, their effects), `BattleShop` (I by your keep, `ui/ShopPanel.ts`), `MobaSky` (days, nights,
+  eclipses: `Background.daySky`; the eclipse's comet in the world, `strikeComet` after the arrows move pays `MOBA_SKY.cometGold`; ?debug `scene.moba.sky.eclipseSoon()` / `skip(ms)`).
   Red players use `enemyTower`; the end is `BattleOutcome.endMatch` / `showMobaEnd` (`mobaEndInfo`, per team).
   Rules from the host's Rules tab: `SandboxSettings.moba` (`data/mobaRules.ts`: keep/bowman health, start gold, respawn, ally kill penalty;
   sent with `start`; `newRun(…, moba)`). Field `MOBA_WORLD_WIDTH` (2800), keeps `MOBA_KEEPS` (`inset` from the ends), always Green Meadow; Esc only opens this player's menu, the battle runs on

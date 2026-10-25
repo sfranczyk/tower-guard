@@ -41,6 +41,13 @@ describe('MobaEconomy', () => {
     expect(economy.vault).toEqual({ blue: 35, red: 0 });
   });
 
+  it('pays a bonus to a player in the match only', () => {
+    const economy = new MobaEconomy(['blue', 'red'], 10);
+    expect(economy.earn(1, 100)).toBe(100);
+    expect(economy.gold).toEqual([10, 110]);
+    expect(economy.earn(5, 100)).toBe(0);
+  });
+
   it('spends only what is there', () => {
     const economy = new MobaEconomy(teams, 100);
     expect(economy.spend(0, 150)).toBe(false);

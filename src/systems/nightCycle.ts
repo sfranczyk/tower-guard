@@ -37,8 +37,8 @@ export interface NightSkyState {
  * The moon's radius in sun radii: crossing the sun at an even pace over the whole level, it covers it all for
  * SURVIVAL.eclipseTotal of the time, (r - 1) / (r + 1) (0.06: 1.13).
  */
-export const eclipseMoonRadius = (): number => {
-  const total = Math.max(0, Math.min(0.5, SURVIVAL.eclipseTotal));
+export const eclipseMoonRadius = (totalShare = SURVIVAL.eclipseTotal): number => {
+  const total = Math.max(0, Math.min(0.5, totalShare));
   return (1 + total) / (1 - total);
 };
 
@@ -46,7 +46,7 @@ export const eclipseMoonRadius = (): number => {
 export const eclipseClear = (): number => 1 + eclipseMoonRadius();
 
 const clamp01 = (value: number): number => Math.max(0, Math.min(1, value));
-const smoothstep = (from: number, to: number, value: number): number => {
+export const smoothstep = (from: number, to: number, value: number): number => {
   const t = clamp01((value - from) / (to - from));
   return t * t * (3 - 2 * t);
 };
@@ -149,20 +149,43 @@ export const eclipseReach = (offset: number, angle: number, direction: number, r
   return inside > 0 ? Math.max(1, along + Math.sqrt(inside)) : 1;
 };
 
+/** One eclipse at `p` (0 the moon touches the sun .. 1 it has left it): where the moon is and what it leaves lit. */
+export interface EclipsePhase {
+  /** The moon's offset from the sun's centre (sun radii, NightSkyState.eclipse). */
+  eclipse: number;
+  corona: number;
+  diamond: number;
+  /** How much light the sky still gets (0 total .. 1 clear). */
+  light: number;
+  /** The moon's radius (sun radii), set by `totalShare`. */
+  moonRadius: number;
+}
+
 /**
- * An eclipse map's sky at `progress`: the moon touches the sun as the level starts and crosses it at an even pace,
- * covering it all for SURVIVAL.eclipseTotal of the time halfway, and leaves it as the time runs out. The light fades
- * only once most of the sun is hidden (a little sun lights a lot of sky) and comes back the same way; the corona shows
- * while it's dark, and the diamond ring flares just before and just after the total eclipse.
+ * An eclipse at `p` (0..1 of its time): the moon crosses the sun at an even pace, covering it all for `totalShare` of
+ * the time halfway. The light fades only once most of the sun is hidden (a little sun lights a lot of sky) and comes
+ * back the same way; the corona shows while it's dark, and the diamond ring flares for `diamondShare` of the time just
+ * before and just after the total eclipse. Survival's eclipse maps and MOBA's eclipses (systems/dayCycle.ts) share it.
  */
-const eclipseSky = (p: number): NightSkyState => {
-  const r = eclipseMoonRadius();
+export const eclipsePhase = (p: number, totalShare = SURVIVAL.eclipseTotal, diamondShare = SURVIVAL.eclipseDiamond): EclipsePhase => {
+  const r = eclipseMoonRadius(totalShare);
   const eclipse = (1 + r) * (1 - 2 * p);
-  const from = 0.5 - SURVIVAL.eclipseTotal / 2;
-  const to = 0.5 + SURVIVAL.eclipseTotal / 2;
+  const from = 0.5 - totalShare / 2;
+  const to = 0.5 + totalShare / 2;
   const light = sunShowing(Math.abs(eclipse), r) ** 0.45;
-  const width = SURVIVAL.eclipseDiamond;
   const flare = (t: number): number => (t > 0 && t < 1 ? Math.sin(Math.PI * t) ** 2 : 0);
+  return {
+    eclipse,
+    corona: 1 - smoothstep(0, 0.4, light),
+    diamond: Math.max(flare((p - (from - diamondShare)) / diamondShare), flare((p - to) / diamondShare)),
+    light,
+    moonRadius: r,
+  };
+};
+
+/** An eclipse map's sky at `progress`: the moon touches the sun as the level starts and leaves it as the time runs out. */
+const eclipseSky = (p: number): NightSkyState => {
+  const { eclipse, corona, diamond, light } = eclipsePhase(p);
   return {
     moon: { x: 0, height: 0, visible: false },
     stars: 1 - smoothstep(0, 0.35, light),
@@ -173,8 +196,8 @@ const eclipseSky = (p: number): NightSkyState => {
     sunRise: 1,
     calm: 0,
     eclipse,
-    corona: 1 - smoothstep(0, 0.4, light),
-    diamond: Math.max(flare((p - (from - width)) / width), flare((p - to) / width)),
+    corona,
+    diamond,
   };
 };
 

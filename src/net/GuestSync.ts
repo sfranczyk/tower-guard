@@ -42,7 +42,7 @@ export interface GuestWorld {
   /** MOBA: the blue minions (soldiers and dragons; animated here like the enemies). */
   readonly allies?: () => readonly Foe[];
   /** MOBA: the economy, gold popups and respawns. */
-  moba?(event: Extract<GameEvent, { e: 'moba' | 'gold' | 'revive' }>): void;
+  moba?(event: Extract<GameEvent, { e: 'moba' | 'gold' | 'revive' | 'sky' | 'comet' }>): void;
   launchArrow(launch: ArrowLaunch): Arrow;
   /** A fire arrow the rain put out: it flies on as a plain one. */
   douseArrow(arrow: Arrow): void;
@@ -287,6 +287,8 @@ export class GuestSync {
       case 'moba':
       case 'gold':
       case 'revive':
+      case 'sky':
+      case 'comet':
         this.world.moba?.(event);
         break;
     }

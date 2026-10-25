@@ -29,6 +29,15 @@ export class MobaEconomy {
     return delta;
   }
 
+  /** Player `index` earns `amount` outside a last hit (an eclipse's comet): the change to his purse. */
+  public earn(index: number, amount: number): number {
+    if (this.teams[index] === undefined || amount <= 0) {
+      return 0;
+    }
+    this.gold[index] += amount;
+    return amount;
+  }
+
   /** Spends `cost` from player `index`'s purse if he has it. */
   public spend(index: number, cost: number): boolean {
     if (this.gold[index] < cost) {
