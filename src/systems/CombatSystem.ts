@@ -166,14 +166,13 @@ export class CombatSystem {
     return this.world.friendlyFire() ? this.world.bowmen.filter((bowman) => !bowman.isInTower && !bowman.isDead) : [];
   }
 
-  /** With `enemiesActive` false (debug: enemies hidden) enemies freeze and arrows pass through them. */
-  public update(deltaMs: number, enemiesActive = true): void {
+  public update(deltaMs: number): void {
     this.fuses.tick(deltaMs).forEach((bomb) => this.blowUp(bomb));
     // A siege kamikaze always goes off when it dies (arrows, swords, burns, ice: anything that didn't set it off already).
     [...this.world.enemies, ...this.world.allies]
       .filter((unit): unit is Enemy => !(unit instanceof DragonEnemy) && unit.siege && !unit.isAlive() && !this.blown.has(unit))
       .forEach((kamikaze) => this.siegeBlast(kamikaze, false));
-    const activeEnemies = enemiesActive ? this.world.enemies.filter((enemy) => enemy.isAlive()) : [];
+    const activeEnemies = this.world.enemies.filter((enemy) => enemy.isAlive());
     const livingAllies = this.world.allies.filter((ally) => ally.isAlive());
     this.ai.beginFrame();
     activeEnemies.forEach((enemy) => this.ai.update(enemy, deltaMs));

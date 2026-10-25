@@ -43,8 +43,6 @@ export interface BattleEnemiesDeps {
 export class BattleEnemies {
   /** The level's enemies, and each rider thrown off his horse (he fights on as one more). */
   public total: number;
-  /** Debug toggle (O key): hides and freezes all enemies. */
-  public visible = true;
   private spawned = 0;
   /** Defeated enemies whose corpses were cleared away (no longer in the list). */
   private cleared = 0;
@@ -71,15 +69,12 @@ export class BattleEnemies {
     return this.deps.list;
   }
 
-  /** Releases the next enemies of the wave (until the level ends) and keeps them hidden while toggled off. */
+  /** Releases the next enemies of the wave (until the level ends). */
   public update(deltaMs: number): void {
     if (this.director) {
       const alive = this.list.filter((enemy) => enemy.isAlive()).length;
       this.director.update(deltaMs, alive).forEach((type) => this.spawn(type));
     }
-    this.list.forEach((enemy) => {
-      enemy.visible = this.visible;
-    });
   }
 
   /** Waves that have begun coming (the end screen's timeline marks them). */
@@ -122,14 +117,6 @@ export class BattleEnemies {
     return this.spawned >= this.total && this.defeated() >= this.total;
   }
 
-  public toggleVisible(): void {
-    this.visible = !this.visible;
-    this.list.forEach((enemy) => {
-      enemy.visible = this.visible;
-      enemy.setPaused(!this.visible);
-    });
-  }
-
   /**
    * A new enemy walking (or flying) in, or (`place`) a mounted knight's rider thrown off where his horse stood.
    * `minion`: a MOBA lane minion (its level: × health and damage, minionPower).
@@ -142,7 +129,6 @@ export class BattleEnemies {
       ? new DragonEnemy(enemySpawnX(), full, stats.speed, type)
       : new Enemy(place?.x ?? enemySpawnX(), full, stats.speed, 'bowman', type);
     enemy.power = power;
-    enemy.visible = this.visible;
     this.list.push(enemy);
     this.spawned += 1;
     if (place || this.survival) {

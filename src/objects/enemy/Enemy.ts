@@ -527,12 +527,6 @@ export default class Enemy extends Container {
     return Math.abs(this.velocity.x) > 1 || Math.abs(this.velocity.y) > 1;
   }
 
-  public setPaused(paused: boolean): void {
-    if (paused) {
-      this.halt();
-    }
-  }
-
   /** Where the blast was once it has been blown apart or shattered (the arrows in it break). */
   public get blownApartAt(): Vec2 | undefined {
     return this.figure.blownApartAt;

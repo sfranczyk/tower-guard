@@ -93,7 +93,6 @@ export default class DragonEnemy extends Container {
   /** Survival: the night is over, it turns and flies off right (`flee`, `flyOff`); `escaped` once out of sight. */
   public fleeing = false;
   private escaped = false;
-  private paused = false;
   /** Hovers and flights between them, side and turn, gusts and jolts, wing beat (DragonMotion). */
   private readonly motion: DragonMotion;
 
@@ -218,11 +217,6 @@ export default class DragonEnemy extends Container {
   }
 
   public clearHitTint(): void {}
-
-  /** Debug (O key): freeze or resume the wing beat. */
-  public setPaused(paused: boolean): void {
-    this.paused = paused;
-  }
 
   /**
    * Hovers in front of `targetX`, now and then flying to another height and distance (DragonMotion); `waiting`
@@ -367,14 +361,12 @@ export default class DragonEnemy extends Container {
         this.afflictions.art.clear();
       }
     } else {
-      if (!this.paused) {
-        this.timeMs += deltaMs;
-        this.breath.step(deltaMs);
-        const turning = this.isTurning;
-        this.motion.step(deltaMs);
-        if (turning) {
-          this.applyFacing();
-        }
+      this.timeMs += deltaMs;
+      this.breath.step(deltaMs);
+      const turning = this.isTurning;
+      this.motion.step(deltaMs);
+      if (turning) {
+        this.applyFacing();
       }
       // Buffeted, it tilts with the gusts, and the fire chokes off; diving it noses down, braking up (either way it faces).
       this.rotation = this.motion.tilt(this.timeMs, this.afflictions.turbulence);

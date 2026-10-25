@@ -369,7 +369,6 @@ export class GameScene extends Scene {
       localIndex: this.localIndex,
       team: this.team,
       soldiers: this.soldiers,
-      foes: this.foes,
       cameraX: () => this.camera.x,
       mirrored: () => this.mirrored,
       hostSync: () => this.hostSync,
@@ -378,7 +377,6 @@ export class GameScene extends Scene {
       endAction: () => this.outcome.endAction,
       won: () => this.outcome.won,
       enemyKeepHealth: () => this.enemyTower.getHealth(),
-      foesToggled: () => this.debugGraphics.clear(),
       onKeyDown: (handler) => this.listenWindow('keydown', handler),
       shop: this.moba?.shop,
       moba: this.moba !== undefined,
@@ -474,7 +472,7 @@ export class GameScene extends Scene {
     if (this.guestSync) {
       this.guestSync.update(deltaMs);
     } else {
-      this.combat.update(deltaMs, this.foes.visible);
+      this.combat.update(deltaMs);
       this.banners?.update(deltaMs);
       this.moba?.sky?.strikeComet(deltaMs);
       this.stats?.update(deltaMs);
