@@ -165,6 +165,7 @@ export class GameScene extends Scene {
       this.moba = new MobaMode({
         ctx, world: this.world, soldiers: this.soldiers, foes: this.foes, teams: this.teams,
         popups: () => this.damageNumbers, hostSync: () => this.hostSync, guestSync: () => this.guestSync,
+        background: () => this.background, arrows: () => this.shots.list, viewLeft: () => this.camera.x,
       });
     }
     this.shots = new BattleArrows({
@@ -222,7 +223,7 @@ export class GameScene extends Scene {
 
     this.world.sortableChildren = true;
     this.ctx.root.addChild(this.world);
-    this.background = new Background(this.world, this.battleground);
+    this.background = new Background(this.world, this.battleground, undefined, { dayCycle: this.moba !== undefined });
     this.effects = new EffectsSystem(this.world);
     this.damageNumbers = new DamageNumbers(this.world, () => this.ctx.session.showDamageNumbers, () => this.mirrored);
     this.aimOverlay.setColors(aimColorsOf(this.battleground));
@@ -439,6 +440,7 @@ export class GameScene extends Scene {
     } else {
       this.combat.update(deltaMs, this.foes.visible);
       this.banners?.update(deltaMs);
+      this.moba?.sky?.strikeComet(deltaMs);
     }
 
     this.shots.prune();

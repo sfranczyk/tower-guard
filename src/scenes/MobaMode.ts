@@ -1,5 +1,5 @@
 import type { Container } from 'pixi.js';
-import { BOWMAN_WALK_SPEED, MOBA_ARROW_CHARGES } from '../config';
+import { BOWMAN_WALK_SPEED, MOBA_ARROW_CHARGES, MOBA_SKY } from '../config';
 import type { GameContext } from '../core/Scene';
 import { firstArrow } from '../data/loadout';
 import type { Team } from '../data/moba';
@@ -9,9 +9,11 @@ import { loadoutOf } from '../net/coopLink';
 import type { GuestSync } from '../net/GuestSync';
 import type { HostSync } from '../net/HostSync';
 import type { GameEvent, MobaNet } from '../net/protocol';
+import type Arrow from '../objects/Arrow';
 import type { DamageNumbers } from '../objects/DamageNumbers';
 import type DragonEnemy from '../objects/dragon/DragonEnemy';
 import type Tower from '../objects/Tower';
+import type { Background } from '../rendering/Background';
 import type { Foe } from '../systems/combatGeometry';
 import type { ProjectileType } from '../types';
 import type { BattleAllies } from './BattleAllies';
@@ -20,6 +22,7 @@ import { BattleLanes } from './BattleLanes';
 import { BattleMoba } from './BattleMoba';
 import type { BattlePlayers } from './BattlePlayers';
 import { BattleShop, type ShopBackend } from './BattleShop';
+import { MobaSky } from './MobaSky';
 import type { Player } from './PlayerControl';
 
 export interface MobaModeDeps {
@@ -31,6 +34,11 @@ export interface MobaModeDeps {
   popups(): DamageNumbers;
   hostSync(): HostSync | undefined;
   guestSync(): GuestSync | undefined;
+  /** The scenery (its day sky) and the arrows in flight (the comet's hits), once the battle is built. */
+  background(): Background;
+  arrows(): readonly Arrow[];
+  /** The camera's left edge (the sky keeps its place in the view). */
+  viewLeft(): number;
 }
 
 /** How often the host checks whether the economy changed (and sends it to the guests). */
@@ -48,6 +56,8 @@ export class MobaMode implements ShopBackend {
   public readonly lanes: BattleLanes;
   public match?: BattleMoba;
   public shop?: BattleShop;
+  /** Days, nights, eclipses and their comets (?debug: `scene.moba.sky.eclipseSoon()`). */
+  public sky?: MobaSky;
   private team?: BattlePlayers;
   /** Co-op guest: the host's economy as last sent. */
   private synced?: MobaNet;
@@ -90,6 +100,10 @@ export class MobaMode implements ShopBackend {
       });
     }
     this.shop = new BattleShop({ ctx: this.deps.ctx, local: () => team.local, keepOf, backend: () => this });
+    this.sky = new MobaSky({
+      world: this.deps.world, background: this.deps.background, arrows: this.deps.arrows, hostSync: this.deps.hostSync, guest,
+      struck: (by, at) => this.match?.bonus(by, MOBA_SKY.cometGold, at),
+    });
   }
 
   /** Co-op host: the guests' purchases come in. */
@@ -116,6 +130,7 @@ export class MobaMode implements ShopBackend {
       this.match?.update(deltaMs);
     }
     this.shop?.update(deltaMs);
+    this.sky?.update(deltaMs, this.deps.viewLeft());
     this.sinceEconomyMs += deltaMs;
     const hostSync = this.deps.hostSync();
     if (hostSync && this.match && this.sinceEconomyMs >= ECONOMY_SYNC_MS) {
@@ -129,10 +144,14 @@ export class MobaMode implements ShopBackend {
     }
   }
 
-  /** Co-op guest: the host's economy, a gold popup for this player, or a player back at his keep. */
-  public applyNet(event: Extract<GameEvent, { e: 'moba' | 'gold' | 'revive' }>): void {
+  /** Co-op guest: the host's economy, a gold popup for this player, a player back at his keep, or the sky. */
+  public applyNet(event: Extract<GameEvent, { e: 'moba' | 'gold' | 'revive' | 'sky' | 'comet' }>): void {
     const team = this.team;
     if (!team) {
+      return;
+    }
+    if (event.e === 'sky' || event.e === 'comet') {
+      this.sky?.applyNet(event);
       return;
     }
     if (event.e === 'gold') {
@@ -232,6 +251,7 @@ export class MobaMode implements ShopBackend {
 
   public destroy(): void {
     this.shop?.destroy();
+    this.sky?.destroy();
     this.deps.ctx.session.mobaLoadouts = undefined;
   }
 

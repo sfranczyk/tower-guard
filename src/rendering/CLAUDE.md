@@ -76,11 +76,14 @@ animation gets a row in `scenes/labRows.ts` (or `scenes/labSequences.ts` for one
   per map, cached as textures, higher = slower). Rain (`Rain.ts`, `RAIN_*`) and snow (`Snow.ts`, `SNOW_*`) are screen
   space and cover `MAX_VIEW_WIDTH`. Mountains: valley mist (`drawMist`, horizon colour, thickening downwards) over the
   far peaks' and near slopes' feet, tunable in `MOUNTAIN_MIST`; planes step down in lightness, darkest in front.
+- **MOBA day** (`DaySky.ts`, `Background.daySky` with `dayCycle`; clock `systems/dayCycle.ts`): Green Meadow round the clock, night,
+  day, sunrise and red or dark sunset bands, the moon in its phase (`moonLitOutline`, craters masked), the sun (eclipsed by `drawEclipse`);
+  hills, trees, grass and the cloud layer tinted by the light (`tint`; clouds only from the second frame, their cache bakes the tint).
 - **Night** (`NightSky.ts`, `Background.night` on `nightCycle` maps): dawn/day bands, stars, moon and sun placed across
   the view (stars fixed to the view, like the moon), shade over hills and trees; the hills (`holdHills`) get a slight
   parallax (`NIGHT_SCENERY.hillsParallax`) and fade to `nightCycle.dayHills` at dawn; `show(progress, viewLeft, viewWidth)`.
   Northern lights on `nightCycle.aurora` maps: `aurora.ts` (pure curtain waves), drawn by `drawAurora` in `NightSky.ts`, tuning `AURORA`. On mountain maps the sun rises in the nearest deep valley (`MOUNTAIN_VALLEYS`, `nearestValley`).
-  `nightCycle.kind` eclipse (the moon crosses the sun at an even pace, total halfway for `SURVIVAL.eclipseTotal`, which sets `eclipseMoonRadius`; corona ring, the sun cut to a crescent by an undrawn moon, `sunCrescent`, diamond ring `drawDiamond`, the corona kept off sun and moon by `eclipseOutline` / `eclipseReach`; the sun drifts `sunAt` → `sunTo`) or dust (dim sun); `NightSky.calm` thins
+  `nightCycle.kind` eclipse (the moon crosses the sun at an even pace, total halfway for `SURVIVAL.eclipseTotal`, which sets `eclipseMoonRadius`; corona ring, the sun cut to a crescent by an undrawn moon, `sunCrescent`, diamond ring; drawn by `eclipseArt.ts` `drawEclipse`, shared with MOBA; the corona kept off sun and moon by `eclipseOutline` / `eclipseReach`; the sun drifts `sunAt` → `sunTo`) or dust (dim sun); `NightSky.calm` thins
   clouds (Background), rain and lightning (WeatherSystem) and the sandstorm (`Sand.ts`, tuning `SANDSTORM`) on `calms` maps.
 - **Aim overlay** (`AimOverlay.ts`): circles at the drag start (off by default, `session.showCursorCircle`) and at the
   bow; a ghost of the last shot stays where it was loosed.

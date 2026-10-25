@@ -63,3 +63,31 @@ export const MOBA_ARROW_CHARGES = tunable('MOBA_ARROW_CHARGES', 'MOBA arrow char
 
 /** The shop's vault buttons: the gold one click moves to or from the team vault. */
 export const MOBA_VAULT_STEPS: readonly number[] = [10, 50, 100];
+
+/**
+ * MOBA's sky (systems/dayCycle.ts, rendering/DaySky.ts; looks only, but for the comet's gold): days of `dayMs` (a
+ * `twilightMs` sunrise at the start and sunset at the end, a sunset red at `redSunsetChance`, else just darkening) and
+ * nights of `nightMs`, from a sunrise with a full moon; the moon wanes to new over `moonDays` days and waxes back over as
+ * many. An eclipse comes `eclipseMinMs`..`eclipseMaxMs` after the start (and after the previous one), moved to the next
+ * day if it falls outside the full day; it lasts `eclipseMs`, total for `eclipseTotal` of that (the diamond ring
+ * `eclipseDiamond` before and after), cut short when the sun sets. At a random moment of it a comet crosses the field
+ * in `cometMs` from `cometHighY` down to `cometLowY` (world y); a player's arrow through it (within `cometRadius`)
+ * pays him `cometGold`.
+ */
+export const MOBA_SKY = tunable('MOBA_SKY', 'MOBA sky', {
+  dayMs: 210000,
+  nightMs: 150000,
+  twilightMs: 20000,
+  redSunsetChance: 0.5,
+  moonDays: 7,
+  eclipseMinMs: 300000,
+  eclipseMaxMs: 900000,
+  eclipseMs: 120000,
+  eclipseTotal: 0.08,
+  eclipseDiamond: 0.025,
+  cometMs: 14000,
+  cometHighY: -20,
+  cometLowY: 90,
+  cometRadius: 26,
+  cometGold: 100,
+}, { meta: { redSunsetChance: { max: 1, step: 0.05 }, eclipseTotal: { max: 0.5, step: 0.01 }, eclipseDiamond: { max: 0.2, step: 0.005 }, cometHighY: { min: -110, max: 300 }, cometLowY: { min: -110, max: 300 } } });

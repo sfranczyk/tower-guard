@@ -179,7 +179,11 @@ export type GameEvent =
   /** MOBA: a last hit paid `player` (or cost him) `delta` gold, shown at (x, y) to him. */
   | { e: 'gold'; player: number; x: number; y: number; delta: number }
   /** MOBA: a fallen player is back at his keep. */
-  | { e: 'revive'; player: number; x: number };
+  | { e: 'revive'; player: number; x: number }
+  /** MOBA: the sky's seed and the match time (ms) its clock is at (scenes/MobaSky.ts, every few seconds). */
+  | { e: 'sky'; seed: number; t: number }
+  /** MOBA: eclipse `n`'s comet was struck (it bursts). */
+  | { e: 'comet'; n: number };
 
 /** MOBA: a lane minion's side and level (its health, damage and stars). */
 export interface MinionSpawn {

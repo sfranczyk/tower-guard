@@ -1,9 +1,10 @@
-import { Graphics, type Container } from 'pixi.js';
+import { Container, Graphics } from 'pixi.js';
 import { BACKDROP_WIDTH, GAME_HEIGHT, GROUND_Y, SCENERY_MARGIN, VIEW_BOTTOM, VIEW_TOP } from '../config';
 import type { Battleground } from '../data/battlegrounds';
 import { layoutClouds, mixColor, type CloudLayer, type CloudShape } from './clouds';
 import { drawHills, drawVegetation } from './landscape';
 import { groundAt, useTerrain } from '../systems/terrain';
+import { DaySky } from './DaySky';
 import { NightSky } from './NightSky';
 import { worldWidth } from '../systems/battlefield';
 
@@ -39,8 +40,10 @@ export class Background {
   private readonly right: number;
   /** Maps where night falls (`nightCycle`): moon, dawn and sunrise (rendering/NightSky.ts). */
   public readonly night?: NightSky;
+  /** MOBA (`dayCycle`): days and nights, the moon's phases and the eclipses (rendering/DaySky.ts). */
+  public readonly daySky?: DaySky;
 
-  public constructor(container: Container, battleground: Battleground, width = worldWidth()) {
+  public constructor(container: Container, battleground: Battleground, width = worldWidth(), options: { dayCycle?: boolean } = {}) {
     this.left = -SCENERY_MARGIN;
     this.right = width + SCENERY_MARGIN;
     const sceneryWidth = this.right - this.left;
@@ -53,16 +56,21 @@ export class Background {
     if (battleground.nightCycle) {
       this.night = new NightSky(battleground, this.left, this.right);
       container.addChild(this.night.sky);
+    } else if (options.dayCycle) {
+      this.daySky = new DaySky(this.left, this.right);
+      container.addChild(this.daySky.sky);
     }
 
     const { sun } = battleground;
-    if (sun) {
+    if (sun && !this.daySky) {
       const glow = new Graphics().circle(sun.x, sun.y, sun.radius).fill({ color: sun.color, alpha: 0.88 });
       glow.circle(sun.x, sun.y, sun.radius * 1.3).fill({ color: sun.color, alpha: 0.12 });
       container.addChild(glow);
     }
 
-    // Clouds float behind the hills (but in front of the sun).
+    // Clouds float behind the hills (but in front of the sun), in one layer (a day sky tints it).
+    const cloudLayer = new Container();
+    container.addChild(cloudLayer);
     const clouds = layoutClouds(sceneryWidth, skySeed(battleground.name), battleground.weather, sceneryWidth / BACKDROP_WIDTH);
     this.clouds = clouds.map(({ shape, x, y, speed, alpha }) => {
       const cloud = Background.createCloud(shape, battleground);
@@ -72,7 +80,7 @@ export class Background {
       cloud.cacheAsTexture({ resolution: Math.max(1, window.devicePixelRatio || 1), antialias: true });
       cloud.alpha = battleground.cloudAlpha * alpha;
       cloud.zIndex = 0;
-      container.addChild(cloud);
+      cloudLayer.addChild(cloud);
       return { sprite: cloud, speed, width: shape.width, alpha: cloud.alpha };
     });
     const hills = this.tiledHills(drawHills(battleground));
@@ -82,11 +90,14 @@ export class Background {
     } else {
       container.addChild(...hills);
     }
-    container.addChild(drawVegetation(battleground, this.left, this.right));
+    const vegetation = drawVegetation(battleground, this.left, this.right);
+    container.addChild(vegetation);
     if (this.night) {
       container.addChild(this.night.shade);
     }
-    container.addChild(this.createTerrain(battleground));
+    const terrain = this.createTerrain(battleground);
+    container.addChild(terrain);
+    this.daySky?.tint([...hills, vegetation, terrain], [cloudLayer]);
   }
 
   /**
