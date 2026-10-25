@@ -22,7 +22,7 @@ MOBA: `minionWaves.ts` (pure, tested: the lanes' group clock), `mobaEconomy.ts` 
 gold, half-gold ally kill penalty, comet `earn`, `earned` / `spent` for the report, respawn and regen `Recovery`); `dayCycle.ts` (pure, tested: MOBA's sky clock, config
 `MOBA_SKY`: `dayTime`, `daySky`, `moonPhase` / `moonLitOutline`, `eclipsesUntil` / `eclipseAt`, `cometAt`, `sweptNear`; shares `eclipsePhase` with `nightCycle.ts`); in lanes AllyAI marches the blue minions on `enemyTower`;
 siege kamikazes (`Enemy.siege`, `EnemyAI`/`AllyAI.siegeRun`, `CombatSystem.siegeBlast`) run past everyone and blow up at the keep, always go off on death,
-blasts only knock them down; `MOBA_LANES.kamikaze*` (health, clock, keep damage);
+blasts only knock them down, minion blows and arrows do `kamikazeMinionDamage` of their damage; `MOBA_LANES.kamikaze*` (health, clock, keep damage);
 `AllyRanged.ts` shoots for blue archers and dragons (arrows `MINION_ARROW_OWNER`); `Enemy.power` / `Arrow.power` scale damage.
 `AllyAI.ts`: fighters go for the nearest ground enemy their order allows (`allyOrders.ts`, pure, tested: `orderPost`,
 `pickFoe`; hold / advance / retreat), strike with `meleeBlow` (cause `'melee'`, `armor` turns it); the medic (archetype `medic`, `bandages`) picks one
