@@ -13,7 +13,6 @@ import type { HostSync } from '../net/HostSync';
 import { ALLY_ORDER_LABELS } from '../systems/allyOrders';
 import { ALLY_KEYS, ORDER_KEY } from '../ui/template';
 import type { BattleAllies } from './BattleAllies';
-import type { BattleEnemies } from './BattleEnemies';
 import type { BattlePlayers } from './BattlePlayers';
 import { slotOfKey } from './battleText';
 
@@ -23,7 +22,6 @@ export interface BattleControlsDeps {
   localIndex: number;
   team: BattlePlayers;
   soldiers: BattleAllies;
-  foes: BattleEnemies;
   /** The camera's left edge (world x), for mapping the mouse to the world. */
   cameraX: () => number;
   /** The battle view is mirrored (settings drawer, core/keepSide.ts). */
@@ -38,8 +36,6 @@ export interface BattleControlsDeps {
   won: () => boolean;
   /** The enemy keep's health now (a restarted level keeps its damage). */
   enemyKeepHealth: () => number;
-  /** O hid or showed the enemies (the debug hitboxes are redrawn). */
-  foesToggled: () => void;
   onKeyDown: (handler: (event: KeyboardEvent) => void) => void;
   /** MOBA: the shop, which I opens by the keep instead of the settings drawer (Esc closes it). */
   shop?: { readonly open: boolean; toggle(): void; close(): void };
@@ -269,10 +265,6 @@ export class BattleControls {
         if (event.code === `Key${ORDER_KEY}`) {
           this.cycleAllyOrder();
         }
-      }
-      if (event.code === 'KeyO') {
-        this.deps.foes.toggleVisible();
-        this.deps.foesToggled();
       }
       if (event.code === 'Space') {
         event.preventDefault();
