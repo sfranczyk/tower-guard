@@ -45,8 +45,8 @@ const shortSword = (g: Graphics, butt: Vec2, tip: Vec2): void => {
   limb(g, point(guard, -5), point(guard, 5), 2.2, 2.2, GOLD);
 };
 
-/** Squire: a blue tunic over a white shirt, a belt, a leather cap; a short sword. */
-export const squireLook = (): HumanoidLook => ({
+/** Squire: a blue tunic (`coat`, `trim`) over a white shirt, a belt, a leather cap; a short sword. */
+export const squireLook = (coat = BLUE, trim = 0x3d72b8): HumanoidLook => ({
   arm: limbs(0xe8e4da, SKIN, [7, 6], [6, 5]),
   armFar: limbs(0xbcb7ab, SKIN_DARK, [7, 6], [6, 5]),
   leg: limbs(0x6b5a48, 0x6b5a48, [10, 8], [8, 6.5]),
@@ -54,8 +54,8 @@ export const squireLook = (): HumanoidLook => ({
   hand: SKIN, handFar: SKIN_DARK, handRadius: 3.7,
   foot: { color: LEATHER, colorFar: 0x3a2616, length: 14, height: 7 },
   torso: (g, pose, frame) => {
-    shapeIn(g, pose.hip, frame, [[38, -8], [38, 9], [-12, 12], [-12, -11]], BLUE);
-    shapeIn(g, pose.hip, frame, [[38, 1], [38, 9], [26, 10], [22, 3]], 0x3d72b8);
+    shapeIn(g, pose.hip, frame, [[38, -8], [38, 9], [-12, 12], [-12, -11]], coat);
+    shapeIn(g, pose.hip, frame, [[38, 1], [38, 9], [26, 10], [22, 3]], trim);
     limb(g, at(pose.hip, frame, 0, -10), at(pose.hip, frame, 0, 11), 4, 4, LEATHER);
     g.circle(...xy(at(pose.hip, frame, 0, 7)), 2).fill({ color: GOLD });
   },
@@ -69,6 +69,9 @@ export const squireLook = (): HumanoidLook => ({
   },
   club: shortSword,
 });
+
+/** MOBA: the red lane's squire, in the enemy keep's banner red. */
+export const redSquireLook = (): HumanoidLook => squireLook(0x9a2c37, 0xc24a52);
 
 const MAIL = 0x8d96a0;
 const MAIL_DARK = 0x666e78;

@@ -197,7 +197,7 @@ export class GuestSync {
         break;
       }
       case 'cheer':
-        this.world.enemies.forEach((enemy) => enemy.celebrate());
+        (event.blue ? this.world.allies?.() ?? [] : this.world.enemies).forEach((enemy) => enemy.celebrate());
         break;
       case 'arrow':
         this.arrowById.set(event.id, this.world.launchArrow({

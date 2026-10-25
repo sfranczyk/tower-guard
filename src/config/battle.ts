@@ -205,3 +205,12 @@ export const LEFTOVERS = tunable('LEFTOVERS', 'Bodies, arrows and stains', {
     fadeMs: { min: 0, max: 5000, step: 100 },
   },
 });
+
+/**
+ * A level's end (scenes/BattleOutcome.ts): once a keep has fallen the end screen waits `keepFallMs` (the keep's fall,
+ * rendering/keepCollapse.ts); in MOBA the losing minions die over `mobaDeathsMs` of it.
+ */
+export const LEVEL_END = tunable('LEVEL_END', 'Level end', {
+  keepFallMs: 4000,
+  mobaDeathsMs: 2200,
+});

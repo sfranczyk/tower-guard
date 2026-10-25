@@ -43,12 +43,20 @@ const buttonHtml = (button: ShopButton): string => {
   // Only the next level can be clicked; the details line says why one can't.
   const disabled = button.state === 'buyable' ? '' : ' disabled';
   return `<button class="shop-button ${button.state}" data-shop-buy="${escapeHtml(button.id)}" data-shop-tip="${escapeHtml(button.tooltip)}"${disabled}>`
-    + `${upgradeIcon(button.id)}<span class="shop-label">${escapeHtml(button.label)}</span><span class="shop-price">${price}</span>`
+    + `${upgradeIcon(button.id)}<span class="shop-text"><span class="shop-label">${escapeHtml(button.label)}</span><span class="shop-price">${price}</span></span>`
     + '</button>';
 };
 
-const sectionHtml = (section: ShopSection): string => `<h3>${escapeHtml(section.title)}</h3>`
-  + section.chains.map((chain) => `<div class="shop-chain">${chain.map(buttonHtml).join('<span class="shop-arrow" aria-hidden="true">→</span>')}</div>`).join('');
+/**
+ * A section's upgrades two to a row (the panel shows them all without scrolling), one column per level of its longest
+ * upgrade, so the levels line up under each other.
+ */
+const sectionHtml = (section: ShopSection): string => {
+  const steps = Math.max(1, ...section.chains.map((chain) => chain.length));
+  return `<h3>${escapeHtml(section.title)}</h3><div class="shop-chains steps-${Math.min(3, steps)}">`
+    + section.chains.map((chain) => `<div class="shop-chain">${chain.map(buttonHtml).join('<span class="shop-arrow" aria-hidden="true">→</span>')}</div>`).join('')
+    + '</div>';
+};
 
 /**
  * MOBA's shop (press I by your own keep): a panel over the canvas's left side that doesn't pause or block the battle,

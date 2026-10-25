@@ -4,6 +4,8 @@ import { KEEP_BASE, KEEP_FIRE_SPOT, KEEP_SMOKE_SPOT, drawKeep, keepHideSpot, kee
 import { segmentHitTime, type AxisBounds } from '../systems/collision';
 import type { Vec2 } from '../types';
 import { keepDamageStage, keepTones, type KeepDamage, type KeepTones } from '../rendering/keepStyle';
+import { KEEP_COLLAPSE_MS } from '../rendering/keepCollapse';
+import { drawKeepRuin } from '../rendering/keepRuin';
 
 /** The keep is drawn at half size: 200×406 drawing space → ~100×203 in the world. */
 const KEEP_SCALE = 0.5;
@@ -13,6 +15,8 @@ export const TOWER_HEIGHT = 406 * KEEP_SCALE;
 const TORCH = { x: 130.5, y: 326 };
 const SMOKE_PUFFS = 3;
 const SMOKE_CYCLE_MS = 2400;
+/** Where the ruin smoulders once it has fallen (drawing space). */
+const RUIN_SMOKE_SPOT = { x: 100, y: 350 };
 
 export interface KeepOptions {
   /** Far hill colour of the battleground: the stone is tinted towards it. */
@@ -72,6 +76,9 @@ export default class Tower extends Container {
   private damage: KeepDamage = 0;
   private drawn = false;
   private timeMs = 0;
+  /** How long ago it fell (rendering/keepCollapse.ts), once it has; the ruin's own stones and heap. */
+  private fallenMs?: number;
+  private readonly ruinSeed = Math.floor(Math.random() * 0xffffffff);
 
   /** `currentHealth` lets a keep start a level already damaged (health carries over between levels). */
   public constructor(x: number, y: number, options: KeepOptions, health = 100, currentHealth = health) {
@@ -98,6 +105,7 @@ export default class Tower extends Container {
   public update(deltaMs = 16): void {
     this.y = this.groundY;
     this.timeMs += deltaMs;
+    this.updateCollapse(deltaMs);
     this.drawFlames();
     this.updateChips(deltaMs);
   }
@@ -109,13 +117,15 @@ export default class Tower extends Container {
     }
     this.health = Math.max(0, this.health - Math.max(0, amount));
     this.knockChips(amount, at);
+    this.fallIfDestroyed();
     this.redraw();
     return this.health;
   }
 
   /** The keep's silhouette in world space (rendering/keep.ts `keepHitParts`). */
   public hitParts(): AxisBounds[] {
-    if (this.options.absent) {
+    // Once fallen, arrows fly over the rubble.
+    if (this.options.absent || this.fallenMs !== undefined) {
       return [];
     }
     const { x, groundY } = this;
@@ -151,6 +161,7 @@ export default class Tower extends Container {
       this.knockChips(this.health - next);
     }
     this.health = next;
+    this.fallIfDestroyed();
     this.redraw();
   }
 
@@ -164,6 +175,25 @@ export default class Tower extends Container {
 
   public isDestroyed(): boolean {
     return this.health <= 0;
+  }
+
+  /** Just brought down (a keep built in ruins, the menu's, stays as it is): its fall starts. */
+  private fallIfDestroyed(): void {
+    if (this.isDestroyed() && this.fallenMs === undefined) {
+      this.fallenMs = 0;
+      this.healthBar.visible = false;
+    }
+  }
+
+  /** Brought down: it crumbles into a ruin (keepRuin.ts) over KEEP_COLLAPSE_MS, redrawn every frame until then. */
+  private updateCollapse(deltaMs: number): void {
+    if (this.fallenMs === undefined || this.fallenMs > KEEP_COLLAPSE_MS) {
+      return;
+    }
+    this.fallenMs += deltaMs;
+    const look = { tones: this.tones, enemy: this.options.enemy, towers: this.options.towers };
+    // The player's keep falls towards the field (right), the enemy's to the left.
+    drawKeepRuin(this.body, look, this.fallenMs, this.options.enemy ? -1 : 1, this.ruinSeed);
   }
 
   /** Grey stone chips fly off where it was hit (more for a harder hit), bounce on the ground and fade. */
@@ -234,6 +264,9 @@ export default class Tower extends Container {
 
   private redraw(): void {
     this.drawHealthBar();
+    if (this.fallenMs !== undefined) {
+      return;
+    }
     const damage = keepDamageStage(this.getHealthRatio());
     if (this.drawn && damage === this.damage) {
       return;
@@ -252,6 +285,10 @@ export default class Tower extends Container {
     if (this.options.abandoned) {
       return;
     }
+    if (this.fallenMs !== undefined) {
+      this.drawRuinSmoke();
+      return;
+    }
     flames.ellipse(TORCH.x, TORCH.y, 3.5 * flicker, 5 * flicker).fill({ color: 0xff9a2e });
     flames.ellipse(TORCH.x, TORCH.y - 1, 1.8, 3 * flicker).fill({ color: 0xffe27a });
     if (this.damage < 3) {
@@ -263,6 +300,16 @@ export default class Tower extends Container {
       const t = ((this.timeMs / SMOKE_CYCLE_MS) + index / SMOKE_PUFFS) % 1;
       const x = KEEP_SMOKE_SPOT.x + (index - 1) * 14 + Math.sin(t * Math.PI * 2 + index) * 4;
       this.smoke.circle(x, KEEP_SMOKE_SPOT.y - t * 40, 8 + t * 8).fill({ color: 0x5f6470, alpha: 0.5 * (1 - t) });
+    }
+  }
+
+  /** Smoke from the rubble once the dust has settled. */
+  private drawRuinSmoke(): void {
+    const rising = Math.min(1, Math.max(0, ((this.fallenMs ?? 0) - KEEP_COLLAPSE_MS * 0.6) / (KEEP_COLLAPSE_MS * 0.4)));
+    for (let index = 0; index < SMOKE_PUFFS; index += 1) {
+      const t = ((this.timeMs / SMOKE_CYCLE_MS) + index / SMOKE_PUFFS) % 1;
+      const x = RUIN_SMOKE_SPOT.x + (index - 1) * 26 + Math.sin(t * Math.PI * 2 + index) * 5;
+      this.smoke.circle(x, RUIN_SMOKE_SPOT.y - t * 60, 9 + t * 10).fill({ color: 0x5f6470, alpha: 0.45 * (1 - t) * rising });
     }
   }
 }

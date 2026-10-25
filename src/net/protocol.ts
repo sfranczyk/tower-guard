@@ -155,8 +155,8 @@ export type GameEvent =
   /** A priest casts its heal (`cast`), and an enemy gets health back (`heal`). */
   | { e: 'cast'; id: number }
   | { e: 'heal'; id: number; amount: number }
-  /** The enemies won: all of them cheer. */
-  | { e: 'cheer' }
+  /** The enemies won: all of them cheer (MOBA, `blue`: the blue minions won, they cheer). */
+  | { e: 'cheer'; blue?: true }
   | { e: 'arrow'; id: number; owner: number; type: ProjectileType; x: number; y: number; angle: number; speed: number; hostile: boolean; shooter?: UnitType }
   /** An arrow stuck into an enemy (at a world point) or the ground. */
   | { e: 'stick'; id: number; enemy?: number; x: number; y: number }

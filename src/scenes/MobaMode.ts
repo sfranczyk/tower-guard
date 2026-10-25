@@ -92,6 +92,8 @@ export class MobaMode implements ShopBackend {
     this.team = team;
     team.list.forEach((player) => {
       player.cooldowns.limits = MOBA_ARROW_CHARGES;
+      // Nothing bought yet: MOBA's own walking pace (upgrades.ts SPEED_BASE).
+      player.bowman.movementSpeed = BOWMAN_WALK_SPEED * playerStats({}).speed;
     });
     if (!guest) {
       this.match = new BattleMoba({

@@ -52,10 +52,12 @@ everything under `ctx.root` on each switch. Scenes never touch the DOM: they cal
 - **SoundLabScene** + `ui/SoundLabPanel.ts`: every effect and variant, the theme with a jump to its loop seam.
 - **CoopScene**: the lobby (net/CLAUDE.md).
 - **MOBA** (menu → "Create multiplayer room" → MOBA, or "Practice MOBA alone"; dev `?moba`): `MobaMode.ts` gathers it for GameScene: `BattleLanes` (both keeps'
-  minions on one clock, at their team's level: `spawn`; the kamikaze is a siege unit, `Enemy.siege`, bigger: `Enemy.resize`, its blast drawn `kamikazeBlastLook`×), `BattleMoba` (gold for last hits, vaults, respawn, regen; host
+  minions on one clock, at their team's level: `spawn`; the kamikaze is a siege unit, `Enemy.siege`, bigger: `Enemy.resize`, its blast `kamikazeBlastSize`× in look and reach), `BattleMoba` (gold for last hits, vaults, respawn, regen; host
   or alone) with `MobaUpgrades` (levels bought, their effects), `BattleShop` (I by your keep, `ui/ShopPanel.ts`), `MobaSky` (days, nights,
   eclipses: `Background.daySky`; the eclipse's comet in the world, `strikeComet` after the arrows move pays `MOBA_SKY.cometGold`; ?debug `scene.moba.sky.eclipseSoon()` / `skip(ms)`).
-  Red players use `enemyTower`; the end is `BattleOutcome.endMatch` / `showMobaEnd` (`mobaEndInfo`, per team).
+  Red players use `enemyTower`; the end is `BattleOutcome.endMatch` / `showMobaEnd` (`mobaEndInfo`, per team): winners cheer
+  (`cheer` event, `blue` for the blue side), losers die each their own way (`systems/mobaDefeat.ts`); the end screen waits
+  `LEVEL_END.keepFallMs` whenever a keep fell (`BattleOutcome.tick`/`later`). The other team's arrows have no trail (`showsTrail`).
   Rules from the host's Rules tab: `SandboxSettings.moba` (`data/mobaRules.ts`: keep/bowman health, start gold, respawn, ally kill penalty;
   sent with `start`; `newRun(…, moba)`). Field `MOBA_WORLD_WIDTH` (2800), keeps `MOBA_KEEPS` (`inset` from the ends), always Green Meadow; Esc only opens this player's menu, the battle runs on
   (`BattleControls.frozen`), and the quiver is what was bought, in the order bought (no editing in the keep);

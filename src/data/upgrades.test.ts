@@ -37,7 +37,8 @@ describe('upgrades', () => {
     expect(stats.cooldown).toEqual({ fire: 0.5 });
     expect(stats.regenBonus).toBe(5);
     expect(stats.maxHealth).toBeCloseTo(1.4);
-    expect(stats.speed).toBeCloseTo(1.3);
+    expect(stats.speed).toBeCloseTo(1.4);
+    expect(playerStats({}).speed).toBeCloseTo(0.8);
   });
 
   it('makes minions stronger by half a level each', () => {
@@ -54,5 +55,21 @@ describe('upgrades', () => {
     levels['arrow:fire'] = 1;
     expect(boughtArrows(levels)).toEqual(['vortex', 'explosive', 'fire']);
     expect(playerStats(JSON.parse(JSON.stringify(levels)) as Record<string, number>).quiver).toEqual(['normal', 'vortex', 'explosive', 'fire']);
+  });
+});
+
+describe('shop prices and order', () => {
+  it('prices speed 60, 120, 240 and the arrows as set', () => {
+    const speed = upgradeById('speed')!;
+    expect([1, 2, 3].map((level) => upgradeCost(speed, level))).toEqual([60, 120, 240]);
+    const prices = (type: string): number[] => [upgradeCost(upgradeById(`arrow:${type}`)!, 1), upgradeCost(upgradeById(`quick:${type}`)!, 1)];
+    expect(prices('pinning')).toEqual([200, 250]);
+    expect(prices('shrapnel')).toEqual([200, 250]);
+    expect(prices('fire')).toEqual([150, 250]);
+    expect(prices('frost')).toEqual([200, 250]);
+  });
+
+  it('lists the arrows fire, frost, shrapnel, pinning, piercing, explosive, vortex', () => {
+    expect(UPGRADES.filter((def) => def.arrow).map((def) => def.arrow)).toEqual(['fire', 'frost', 'shrapnel', 'pinning', 'piercing', 'explosive', 'vortex']);
   });
 });

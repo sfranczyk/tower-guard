@@ -33,6 +33,8 @@ export interface BattleArrowsDeps {
   arrowPower?(owner: number, type: ProjectileType): number | undefined;
   /** How many of the latest shots keep their trail (settings drawer). */
   arrowTrails(): number;
+  /** MOBA: whether `owner`'s shots show their trail here (only this player's team's do). */
+  showsTrail?(owner: number): boolean;
   effects(): EffectsSystem;
   playSound(id: SoundId, at: Vec2): void;
   hostSync(): HostSync | undefined;
@@ -110,7 +112,7 @@ export class BattleArrows {
     if (!this.deps.guestSync()) {
       arrow.mishap = rollArrowMishap(this.deps.battleground.weather, type);
     }
-    if (this.deps.arrowTrails() === 0) {
+    if (this.deps.arrowTrails() === 0 || this.deps.showsTrail?.(owner) === false) {
       arrow.hideTrail();
     }
     this.list.push(arrow);
