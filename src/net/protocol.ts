@@ -13,6 +13,7 @@ import type { AfflictionNet } from '../objects/AfflictionLayer';
 import type { BowmanNet } from '../objects/bowman/Bowman';
 import type { EffectKind } from '../systems/EffectsSystem';
 import type { WireSnapshot } from './snapCodec';
+import type { LevelReport } from '../systems/battleStats';
 
 /**
  * Co-op messages (host-authoritative): the host runs the battle and sends, 20 times a second, the events since the
@@ -211,6 +212,8 @@ export interface EndInfo {
   stats: Array<{ label: string; value: string }>;
   /** MOBA: the team that won (each guest's screen says it from its own team's side). */
   winner?: Team;
+  /** The host's count of the level (systems/battleStats.ts; the end card's Overview). */
+  report?: LevelReport;
 }
 
 export type NetMessage =

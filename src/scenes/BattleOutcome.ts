@@ -11,6 +11,7 @@ import type { BattleEnemies } from './BattleEnemies';
 import type { BattleMoba } from './BattleMoba';
 import type { BattlePlayers } from './BattlePlayers';
 import type { BattleRelief } from './BattleRelief';
+import type { BattleStatsWatch } from './BattleStatsWatch';
 import { BattleSurvival } from './BattleSurvival';
 import type { LevelOutcome } from './levelEnd';
 import { showLevelEnd, showMobaEnd } from './levelEndScreen';
@@ -36,6 +37,8 @@ export interface BattleOutcomeDeps {
   /** MOBA: the blue dragons (they cheer or die with the other blue minions). */
   allyFliers?: DragonEnemy[];
   hostSync: () => HostSync | undefined;
+  /** What the end screen reports (host or solo; stopped when the level is decided). */
+  stats?: BattleStatsWatch;
   /** The level is decided: this browser's keyboard and mouse stop. */
   stopInput: () => void;
 }
@@ -116,7 +119,9 @@ export class BattleOutcome {
   /** Guest: the host decides what comes after the level. */
   public showGuestEnd(sent: EndInfo): void {
     // MOBA: said from this player's team's side.
-    const info = sent.winner ? mobaEndInfo(sent.winner, this.deps.team.local.team, sent.stats) : sent;
+    const own = sent.winner ? { ...mobaEndInfo(sent.winner, this.deps.team.local.team, sent.stats), report: sent.report } : sent;
+    // The host's report, with this player's column marked.
+    const info = own.report ? { ...own, report: { ...own.report, local: this.deps.team.local.index } } : own;
     this.ended = true;
     this.won = info.outcome === 'win';
     this.deps.stopInput();
@@ -133,6 +138,7 @@ export class BattleOutcome {
     this.ended = true;
     this.won = winner === team.local.team;
     this.deps.stopInput();
+    this.deps.stats?.stop();
     foes.stopWaves();
     const blue: Foe[] = [...soldiers.list, ...allyFliers];
     const [winners, losers] = winner === 'red' ? [enemies, blue] : [blue, enemies];
@@ -154,7 +160,7 @@ export class BattleOutcome {
       { label: 'red keep', value: `${Math.ceil(enemyTower.getHealth())} / ${enemyTower.maxHealth}` },
     ];
     this.later(LEVEL_END.keepFallMs, () => {
-      this.endAction = showMobaEnd(ctx, winner, team.local.team, stats, hostSync);
+      this.endAction = showMobaEnd(ctx, winner, team.local.team, stats, hostSync, this.deps.stats?.report(team.local.index));
     });
   }
 
@@ -164,6 +170,7 @@ export class BattleOutcome {
     this.ended = true;
     this.won = won;
     this.deps.stopInput();
+    this.deps.stats?.stop();
     foes.stopWaves();
     if (!won) {
       enemies.filter((enemy) => !enemy.fleeing).forEach((enemy) => enemy.celebrate());
@@ -193,7 +200,7 @@ export class BattleOutcome {
       bowmanHealths: players.map((player) => healAfterLevel(sandbox.difficulty, player.health, sandbox.bowmanHealth)),
       keepHealth: sandbox.keepHealth,
       enemyKeepHealth: enemyTower.getHealth(),
-      }), hostSync);
+      }), hostSync, this.deps.stats?.report(team.local.index));
     };
     // A held survival level: the relief force marches in behind the end screen ("View battlefield" to watch it).
     if (won && survival?.timeUp) {

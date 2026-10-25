@@ -403,6 +403,24 @@
         .end-stats div { display: flex; flex-direction: column; min-width: 84px; padding: 6px 8px; border-radius: 12px; background: var(--panel-sunk); }
         .end-stats strong { font-family: var(--display); font-weight: 600; font-size: 17px; }
         .end-stats span { font-size: 11px; color: var(--ink-soft); }
+        .end-card.end-wide { width: min(640px, calc(100% - 28px)); max-height: calc(100% - 28px); overflow-y: auto; }
+        .end-card.end-wide .end-stats { margin-bottom: 12px; }
+        .end-report { align-self: stretch; margin-bottom: 18px; }
+        .report-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(72px, 1fr)); gap: 8px; }
+        .report-tiles div { display: flex; flex-direction: column; padding: 8px 6px; border-radius: 12px; background: #fffdf6; box-shadow: 0 2px 0 var(--panel-edge); }
+        .report-tiles strong { font-family: var(--display); font-weight: 700; font-size: 22px; line-height: 1.1; }
+        .report-tiles span { font-size: 11px; color: var(--ink-soft); }
+        .report-table-wrap { margin-top: 12px; overflow-x: auto; }
+        .report-table { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
+        .report-table th, .report-table td { padding: 5px 8px; text-align: right; white-space: nowrap; }
+        .report-table thead th { font-size: 11px; font-weight: 600; color: var(--ink-soft); }
+        .report-table th:first-child { text-align: left; }
+        .report-table tbody tr { border-top: 1px solid var(--panel-edge); }
+        .report-table tbody th { font-weight: 600; }
+        .report-table tr.you { background: color-mix(in srgb, var(--accent) 12%, transparent); }
+        .report-table tr[data-team="blue"] th::before, .report-table tr[data-team="red"] th::before { content: ''; display: inline-block; width: 8px; height: 8px; margin-right: 6px; border-radius: 50%; background: #3f6fb5; }
+        .report-table tr[data-team="red"] th::before { background: #b5443f; }
+        .report-table td.best { color: var(--good); font-weight: 700; }
 
         /* ---------- Lab buttons (inside the canvas-drawn panel's top-right corner, like the sound lab's top bar; --view-inset keeps them on the centred panel in wide views) ---------- */
         .test-screen { position: absolute; top: 24px; right: calc(30px + var(--view-inset, 0px)); display: flex; gap: 8px; pointer-events: none; }

@@ -92,6 +92,8 @@ export interface CombatEvents {
   /** `bowman` just caught fire. */
   bowmanIgnited(bowman: Bowman): void;
   headshot(): void;
+  /** Player `owner`'s arrow hit its first target (ArrowHits). */
+  arrowLanded?(owner: number): void;
   /** A sound-worthy impact at a world position (the scene plays it). */
   sound(id: SoundId, at: Vec2, heardBy?: number): void;
   /** A hostile arrow loosed by `shooter` (its damage depends on who shot it). */

@@ -13,6 +13,16 @@ describe('MobaEconomy', () => {
     expect(economy.gold).toEqual([MOBA_PLAYERS.troopGold + MOBA_PLAYERS.archerGold, MOBA_PLAYERS.dragonGold, 0]);
   });
 
+  it('counts what each player earned and spent', () => {
+    const economy = new MobaEconomy(teams, 100);
+    economy.kill(0, { team: 'red', minion: 'troop' });
+    economy.kill(0, { team: 'blue', minion: 'troop' });
+    economy.earn(2, 40);
+    economy.spend(0, 60);
+    expect(economy.earned).toEqual([MOBA_PLAYERS.troopGold, 0, 40]);
+    expect(economy.spent).toEqual([60, 0, 0]);
+  });
+
   it('takes half the reward for your own minions, or nothing with the penalty off', () => {
     const economy = new MobaEconomy(teams, 50);
     expect(economy.kill(0, { team: 'blue', minion: 'dragon' })).toBe(-Math.round(MOBA_PLAYERS.dragonGold / 2));

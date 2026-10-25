@@ -19,7 +19,7 @@ a shaman's spell, mid-swing), flees a noticed one's zone (`BlastDodge`, "!" = `E
 ## Allies (the player's soldiers)
 `Enemy` objects of the `side: 'ally'` kinds (squire, allyKnight, medic) in `CombatWorld.allies` (scenes/BattleAllies.ts).
 MOBA: `minionWaves.ts` (pure, tested: the lanes' group clock), `mobaEconomy.ts` (pure, tested: purses, vaults, last-hit
-gold, half-gold ally kill penalty, comet `earn`, respawn and regen `Recovery`); `dayCycle.ts` (pure, tested: MOBA's sky clock, config
+gold, half-gold ally kill penalty, comet `earn`, `earned` / `spent` for the report, respawn and regen `Recovery`); `dayCycle.ts` (pure, tested: MOBA's sky clock, config
 `MOBA_SKY`: `dayTime`, `daySky`, `moonPhase` / `moonLitOutline`, `eclipsesUntil` / `eclipseAt`, `cometAt`, `sweptNear`; shares `eclipsePhase` with `nightCycle.ts`); in lanes AllyAI marches the blue minions on `enemyTower`;
 siege kamikazes (`Enemy.siege`, `EnemyAI`/`AllyAI.siegeRun`, `CombatSystem.siegeBlast`) run past everyone and blow up at the keep, always go off on death,
 blasts only knock them down; `MOBA_LANES.kamikaze*` (health, clock, keep damage);
@@ -138,3 +138,6 @@ touching the ground.
 Steps −3..3 (`WIND_STEPS`, calm between, = the status line's arrows); `rollWind` per level; `WindShifts` every 45 s:
 ±1 step 50%, ±2 10%, wild (3+ away) 5%, else none (tunable `WIND_SHIFT`).
 GameScene reads it live (`wind()` in BattleArrows / CombatWorld; an arrow keeps the wind it was loosed in), co-op event `wind`.
+
+End-of-level report: `battleStats.ts` (pure, tested: `BattleStats` counts each player's shots, hits, kills, damage, falls;
+kills by kind and cause; `stop` when the level is decided; `LevelReport` = the snapshot + names, sent in the `end` message).

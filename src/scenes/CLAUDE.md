@@ -12,7 +12,9 @@ everything under `ctx.root` on each switch. Scenes never touch the DOM: they cal
   beyond the left edge, from the reserve, `order`; keys Z/X/C summon, V cycles the order; only with support on (`supportAllowed`: battle mode, Rules page), none in online co-op yet; each
   level starts with none), bowmen to `BattlePlayers` (creation, per-frame picks/shots/bursts,
   falls, `status`), co-op setup to `startBattleSync` (`battleSync.ts`), rain/lightning, snow and sand to `BattleWeather`, combat news to
-  `battleCombatEvents.ts`, win/loss checks to `BattleOutcome.ts` (`check`, `ended`, guest
+  `battleCombatEvents.ts`, the end screen's report to `BattleStatsWatch.ts` (host/solo: shots from `BattleArrows.fire`, first hits
+  `arrowLanded`, damage from `onDamaged`, kills by sweeping for new deaths; `BattleOutcome` stops it and puts `report` on the
+  `EndInfo`, the guest marks its own row), win/loss checks to `BattleOutcome.ts` (`check`, `ended`, guest
   `showGuestEnd`), the end screen to `showLevelEnd` (`levelEndScreen.ts`, text from pure `levelEndInfo`), banners to `BattleBanners` (Banners option, solo: steps `systems/banners.ts`, draws them (`rendering/banner.ts`), edge markers; a captured banner = level cleared, ours lost = defeat), status texts to `battleText.ts` (pure). A
   Survival (`sandbox.mode`): `BattleSurvival.ts` (clock, `background.night`, `fleeAll` at dawn = level held; ?debug
   `scene.survival.skip(ms)`), enemy keep `Tower` `absent`, no Banners; end texts in `levelEnd.ts` (`survivedMs`).

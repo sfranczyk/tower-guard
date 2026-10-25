@@ -87,6 +87,8 @@ export interface ArrowHitsWorld {
 export interface ArrowHitsEvents {
   bowmanDamaged(bowman: Bowman, amount: number, hit: BowmanHit): void;
   headshot(): void;
+  /** Player `owner`'s arrow hit its first target (someone or the keep): the end screen's accuracy. */
+  arrowLanded?(owner: number): void;
   /** `heardBy`: only that player hears it (the others hear `soundFor`'s stand-in). */
   sound(id: SoundId, at: Vec2, heardBy?: number): void;
 }
@@ -113,6 +115,8 @@ export interface ArrowHitsActions {
 export class ArrowHits {
   /** Enemies (and bowmen) each arrow has already hit, so piercing arrows hit each one once. */
   private readonly arrowHits = new Map<Arrow, Set<Foe | Bowman>>();
+  /** Players' arrows already counted as a hit (`events.arrowLanded`). */
+  private readonly landed = new WeakSet<Arrow>();
 
   public constructor(
     private readonly world: ArrowHitsWorld,
@@ -212,6 +216,11 @@ export class ArrowHits {
       .sort((first, second) => first.time - second.time)[0];
 
     const earliest = Math.min(towerHit ?? Infinity, enemyHit?.time ?? Infinity, bowmanHit?.time ?? Infinity);
+    const owner = playerOf(arrow);
+    if (earliest < Infinity && owner !== undefined && !this.landed.has(arrow)) {
+      this.landed.add(arrow);
+      this.events.arrowLanded?.(owner);
+    }
     if (towerHit !== undefined && towerHit <= earliest) {
       this.hitTower(arrow, pointAlong(start, travel, towerHit), activeEnemies, tower);
       return;

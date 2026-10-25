@@ -30,6 +30,8 @@ export const WORLD_WIDTH = 2400;
 export const SURVIVAL_WORLD_WIDTH = 2100;
 /** A MOBA match's field (`?moba`): longer lanes between the two keeps. */
 export const MOBA_WORLD_WIDTH = 2800;
+/** World px to a metre, for distances the player reads (the end screen's longest kill): a bowman is about 1.8 m. */
+export const PX_PER_METRE = 40;
 /**
  * Width of the backdrop behind menus, labs and the lobby (centred in the view), and of one stretch of the hills
  * drawing, which repeats (mirrored every other time) across the battlefield.
