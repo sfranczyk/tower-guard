@@ -39,6 +39,8 @@ export interface MobaModeDeps {
   arrows(): readonly Arrow[];
   /** The camera's left edge (the sky keeps its place in the view). */
   viewLeft(): number;
+  /** The battle view is flipped for this player (texts flip back). */
+  mirrored(): boolean;
 }
 
 /** How often the host checks whether the economy changed (and sends it to the guests). */
@@ -101,7 +103,7 @@ export class MobaMode implements ShopBackend {
     }
     this.shop = new BattleShop({ ctx: this.deps.ctx, local: () => team.local, keepOf, backend: () => this });
     this.sky = new MobaSky({
-      world: this.deps.world, background: this.deps.background, arrows: this.deps.arrows, hostSync: this.deps.hostSync, guest,
+      world: this.deps.world, background: this.deps.background, arrows: this.deps.arrows, hostSync: this.deps.hostSync, mirrored: this.deps.mirrored, guest,
       struck: (by, at) => this.match?.bonus(by, MOBA_SKY.cometGold, at),
     });
   }

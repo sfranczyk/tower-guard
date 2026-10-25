@@ -76,8 +76,8 @@ animation gets a row in `scenes/labRows.ts` (or `scenes/labSequences.ts` for one
   per map, cached as textures, higher = slower). Rain (`Rain.ts`, `RAIN_*`) and snow (`Snow.ts`, `SNOW_*`) are screen
   space and cover `MAX_VIEW_WIDTH`. Mountains: valley mist (`drawMist`, horizon colour, thickening downwards) over the
   far peaks' and near slopes' feet, tunable in `MOUNTAIN_MIST`; planes step down in lightness, darkest in front.
-- **MOBA day** (`DaySky.ts`, `Background.daySky` with `dayCycle`; clock `systems/dayCycle.ts`): Green Meadow round the clock, night,
-  day, sunrise and red or dark sunset bands, the moon in its phase (`moonLitOutline`, craters masked), the sun (eclipsed by `drawEclipse`);
+- **MOBA day** (`DaySky.ts`, `Background.daySky` with `dayCycle`; clock `systems/dayCycle.ts`): Green Meadow round the clock (sun and moon cross the field, not the view), night,
+  day, sunrise and red or dark sunset bands, the moon in its phase (`moonLitOutline`, craters masked), the sun (eclipsed by `drawEclipse`), the day's title rising from behind the hills (`dayTitle`, flipped back when mirrored);
   hills, trees, grass and the cloud layer tinted by the light (`tint`; clouds only from the second frame, their cache bakes the tint).
 - **Night** (`NightSky.ts`, `Background.night` on `nightCycle` maps): dawn/day bands, stars, moon and sun placed across
   the view (stars fixed to the view, like the moon), shade over hills and trees; the hills (`holdHills`) get a slight

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { MOBA_SKY } from '../config';
-import { cometAt, cycleMs, daySky, dayTime, eclipseAt, eclipsesUntil, moonLit, moonLitOutline, moonPhase, redSunset, segmentNear, sweptNear } from './dayCycle';
+import { cometAt, cycleMs, dayTitle, daySky, dayTime, eclipseAt, eclipsesUntil, moonLit, moonLitOutline, moonPhase, redSunset, segmentNear, sweptNear } from './dayCycle';
 
 const MINUTE = 60_000;
 
@@ -70,6 +70,15 @@ describe('day cycle', () => {
     const meanX = (points: number[]): number => points.filter((_, index) => index % 2 === 0).reduce((a, b) => a + b, 0);
     expect(meanX(moonLitOutline(0.3))).toBeLessThan(0);
     expect(meanX(moonLitOutline(0.7))).toBeGreaterThan(0);
+  });
+
+  it('names each day as it starts, then lets the title go', () => {
+    expect([1, 2, 3, 4, 11, 12, 13, 21, 22, 101].map((n) => dayTitle(n).split(' ')[0]))
+      .toEqual(['1st', '2nd', '3rd', '4th', '11th', '12th', '13th', '21st', '22nd', '101st']);
+    expect(dayTitle(1)).toBe('1st day of the battle');
+    expect(daySky(1, 0)).toMatchObject({ dayNumber: 1, title: 0 });
+    expect(daySky(1, cycleMs() + MOBA_SKY.dayTitleMs / 2)).toMatchObject({ dayNumber: 2, title: 0.5 });
+    expect(daySky(1, MOBA_SKY.dayTitleMs + 1).title).toBeUndefined();
   });
 
   it('rolls each sunset red or dark, the same for the same seed', () => {

@@ -136,6 +136,10 @@ export interface DaySkyState {
   /** Across the view (0 left .. 1 right) and how far along its arc (0 rising, 0.5 highest, 1 set); hidden at night. */
   sun: { x: number; arc: number; visible: boolean };
   moon: { x: number; arc: number; visible: boolean; phase: number };
+  /** Which day it is (1 = the first). */
+  dayNumber: number;
+  /** The day's title on its way up from behind the hills (0 rising .. 1 gone out of the top), at the day's start only. */
+  title?: number;
   /** The eclipse going on: what it looks like (systems/nightCycle.ts eclipsePhase). */
   eclipse?: { offset: number; corona: number; diamond: number; moonRadius: number };
 }
@@ -162,6 +166,8 @@ export const daySky = (seed: number, timeMs: number): DaySkyState => {
   }
   return {
     part,
+    dayNumber: time.index + 1,
+    title: at < MOBA_SKY.dayTitleMs ? at / Math.max(1, MOBA_SKY.dayTitleMs) : undefined,
     light,
     day: light,
     dawn: part === 'sunrise' ? Math.sin(Math.PI * rising) : 0,
@@ -206,3 +212,13 @@ export const segmentNear = (start: Vec2, end: Vec2, centre: Vec2, radius: number
  */
 export const sweptNear = (start: Vec2, end: Vec2, from: Vec2, to: Vec2, radius: number): boolean =>
   segmentNear({ x: start.x - from.x, y: start.y - from.y }, { x: end.x - to.x, y: end.y - to.y }, { x: 0, y: 0 }, radius);
+
+/** 1st, 2nd, 3rd, 4th … 11th, 12th, 13th … 21st, 22nd. */
+export const ordinal = (n: number): string => {
+  const tens = n % 100;
+  const suffix = tens >= 11 && tens <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] ?? 'th';
+  return `${n}${suffix}`;
+};
+
+/** What rises at the start of day `dayNumber`. */
+export const dayTitle = (dayNumber: number): string => `${ordinal(dayNumber)} day of the battle`;

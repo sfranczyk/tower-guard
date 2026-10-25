@@ -332,7 +332,9 @@ export class CombatSystem {
   private blowUp({ point, kind, power, chain, link }: Bomb, self?: Enemy, dragon = false): void {
     const { bowmen, playerTower, enemyTower, effects } = this.world;
     // The bowmen take the kamikaze's own blast below, not the arrows' splash; the kamikazes it catches are the chain's next link.
-    this.explode(point, [...this.world.enemies, ...this.world.allies].filter((enemy) => enemy.isAlive()), self, power, dragon, false, { chain, link: link + 1 });
+    // A MOBA siege kamikaze's bomb looks MOBA_LANES.kamikazeBlastLook times as big (its reach stays).
+    this.explode(point, [...this.world.enemies, ...this.world.allies].filter((enemy) => enemy.isAlive()), self, power, dragon, false, { chain, link: link + 1 }, undefined,
+      self?.siege ? MOBA_LANES.kamikazeBlastLook : 1);
     const reach = EXPLOSION_RADIUS * KAMIKAZE_REACH * power;
     bowmen.filter((bowman) => !bowman.isInTower && !bowman.isDead).forEach((bowman) => {
       const bowmanDistance = Math.hypot(bowman.x - point.x, bowman.y - BOWMAN_CHEST - point.y);
@@ -369,13 +371,13 @@ export class CombatSystem {
    */
   private explode(
     point: Vec2, activeEnemies: readonly Foe[], directHit?: Foe | Bowman, power = 1, dragon = false, hurtsBowmen = true,
-    bomb?: ChainStep, by?: number,
+    bomb?: ChainStep, by?: number, look = 1,
   ): number {
     const step = bomb ?? { chain: this.newChain().chain, link: 1 };
     if (dragon) {
       this.world.effects.dragonBlast(point);
     } else {
-      this.world.effects.explosion(point, power);
+      this.world.effects.explosion(point, power * look);
     }
     this.events.sound('explosion', point);
     // `power` scales both the reach and the damage (a fire dragon blowing up: FIRE_DRAGON_BLAST_POWER).

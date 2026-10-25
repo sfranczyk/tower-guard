@@ -1,6 +1,6 @@
-import { Container, Graphics } from 'pixi.js';
+import { Container, Graphics, Text } from 'pixi.js';
 import { GROUND_Y, MAX_VIEW_WIDTH, VIEW_TOP } from '../config';
-import { moonLit, moonLitOutline, type DaySkyState } from '../systems/dayCycle';
+import { dayTitle, moonLit, moonLitOutline, type DaySkyState } from '../systems/dayCycle';
 import { mixColor } from './clouds';
 import { drawEclipse } from './eclipseArt';
 
@@ -11,6 +11,9 @@ const MOON_TOP_Y = VIEW_TOP + 80;
 const SUN_RADIUS = 56;
 const MOON_RADIUS = 30;
 const STAR_COUNT = 140;
+/** The day's title: where it starts (behind the hills) and ends (out of the top of the view), its centre's world y. */
+const TITLE_FROM_Y = HORIZON_Y + 40;
+const TITLE_TO_Y = VIEW_TOP - 40;
 
 /** Green Meadow round the clock: its sky by day, Moonlit Hollow's by night, and the sunrise and sunset skies. */
 const SKIES = {
@@ -39,8 +42,8 @@ const seeded = (seed: number): (() => number) => () => {
  * MOBA's sky (systems/dayCycle.ts says where everything is): night bands under the day sky and the sunrise and
  * sunset skies (red or dark), stars, the moon in its phase crossing the night, the sun crossing the day (eclipsed
  * when there is one, rendering/eclipseArt.ts), all behind the hills (`sky`), and the land and clouds tinted by the light
- * (`tint`: the hills, trees, grass and clouds Background hands it). Sun, moon and stars keep their place in the view
- * while the camera moves. `show(state, viewLeft, viewWidth)` every frame.
+ * (`tint`: the hills, trees, grass and clouds Background hands it). Sun and moon cross the whole field (the camera
+ * pans past them); the stars and the day's title keep their place in the view. `show(state, viewLeft, viewWidth)` every frame.
  */
 export class DaySky {
   public readonly sky = new Container();
@@ -59,6 +62,12 @@ export class DaySky {
   private readonly sun = new Graphics();
   private readonly corona = new Graphics();
   private readonly crescent = new Graphics();
+  /** "1st day of the battle", rising at each sunrise: in front of the clouds, behind the hills (Background places it). */
+  public readonly title = new Text({
+    text: '',
+    resolution: 2,
+    style: { fontFamily: 'Fredoka, ui-rounded, system-ui, sans-serif', fontWeight: '700', fontSize: 46, fill: 0xfff3d6, stroke: { color: 0x1b1a20, width: 7, join: 'round' } },
+  });
   /** The moon's phase as last drawn (redrawn when it moves on a little). */
   private drawnPhase = -1;
   private land: readonly Container[] = [];
@@ -69,7 +78,7 @@ export class DaySky {
    */
   private cloudsBaked = false;
 
-  public constructor(left: number, right: number) {
+  public constructor(private readonly left: number, private readonly right: number) {
     const bands = (graphics: Graphics, colors: readonly number[]): Graphics => {
       const height = (GROUND_Y - VIEW_TOP) / colors.length;
       colors.forEach((color, index) => graphics.rect(left, VIEW_TOP + index * height, right - left, height + 1).fill({ color }));
@@ -95,6 +104,8 @@ export class DaySky {
     this.sun.circle(0, 0, SUN_RADIUS * 1.9).fill({ color: SUN_COLOR, alpha: 0.12 });
     this.sun.circle(0, 0, SUN_RADIUS * 1.3).fill({ color: SUN_COLOR, alpha: 0.18 });
     this.sun.circle(0, 0, SUN_RADIUS).fill({ color: SUN_COLOR, alpha: 0.95 });
+    this.title.anchor.set(0.5);
+    this.title.visible = false;
     this.sky.addChild(night, this.day, this.dawn, this.redDusk, this.darkDusk, this.stars, this.moon, this.corona, this.sun, this.crescent);
   }
 
@@ -104,17 +115,21 @@ export class DaySky {
     this.clouds = clouds;
   }
 
-  /** The sky as `state` says, with sun, moon and stars placed across the view at `viewLeft`. */
-  public show(state: DaySkyState, viewLeft: number, viewWidth: number): void {
+  /**
+   * The sky as `state` says: sun and moon across the field, the stars and the day's title kept in the view at `viewLeft`; `mirrored`: the battle view
+   * is flipped (core/keepSide.ts), and the day's title flips back so it reads the right way.
+   */
+  public show(state: DaySkyState, viewLeft: number, viewWidth: number, mirrored = false): void {
+    this.showTitle(state, viewLeft + viewWidth / 2, mirrored);
     this.day.alpha = state.day;
     this.dawn.alpha = state.dawn;
     this.redDusk.alpha = state.redDusk ? state.dusk : 0;
     this.darkDusk.alpha = state.redDusk ? 0 : state.dusk;
     this.stars.alpha = state.stars;
     this.stars.x = viewLeft;
-    this.showMoon(state, viewLeft, viewWidth);
+    this.showMoon(state);
     const sunY = HORIZON_Y + SUN_RADIUS - Math.sin(Math.PI * state.sun.arc) * (HORIZON_Y + SUN_RADIUS - SUN_TOP_Y);
-    const sunX = viewLeft + state.sun.x * viewWidth;
+    const sunX = this.acrossField(state.sun.x);
     const { eclipse } = state;
     this.sun.visible = state.sun.visible && !eclipse;
     this.sun.position.set(sunX, sunY);
@@ -141,14 +156,34 @@ export class DaySky {
     this.cloudsBaked = true;
   }
 
-  private showMoon(state: DaySkyState, viewLeft: number, viewWidth: number): void {
+  /** World x `share` of the way across the scenery (sun and moon cross the whole field, wherever the camera is). */
+  private acrossField(share: number): number {
+    return this.left + share * (this.right - this.left);
+  }
+
+  private showTitle(state: DaySkyState, x: number, mirrored: boolean): void {
+    this.title.visible = state.title !== undefined;
+    if (state.title === undefined) {
+      return;
+    }
+    const text = dayTitle(state.dayNumber);
+    if (this.title.text !== text) {
+      this.title.text = text;
+    }
+    // Slow out from behind the hills, then on up and out of the view.
+    const t = state.title;
+    this.title.position.set(x, TITLE_FROM_Y + (TITLE_TO_Y - TITLE_FROM_Y) * (0.5 * t + 0.5 * t * t));
+    this.title.scale.x = mirrored ? -1 : 1;
+  }
+
+  private showMoon(state: DaySkyState): void {
     const { moon } = state;
     this.moon.visible = moon.visible;
     if (!moon.visible) {
       return;
     }
     // From the horizon at nightfall, highest at midnight, down again by sunrise.
-    this.moon.position.set(viewLeft + moon.x * viewWidth, HORIZON_Y + MOON_RADIUS - Math.sin(Math.PI * moon.arc) * (HORIZON_Y + MOON_RADIUS - MOON_TOP_Y));
+    this.moon.position.set(this.acrossField(moon.x), HORIZON_Y + MOON_RADIUS - Math.sin(Math.PI * moon.arc) * (HORIZON_Y + MOON_RADIUS - MOON_TOP_Y));
     if (Math.abs(moon.phase - this.drawnPhase) < 0.002) {
       return;
     }

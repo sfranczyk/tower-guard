@@ -83,6 +83,9 @@ export class Background {
       cloudLayer.addChild(cloud);
       return { sprite: cloud, speed, width: shape.width, alpha: cloud.alpha };
     });
+    if (this.daySky) {
+      container.addChild(this.daySky.title);
+    }
     const hills = this.tiledHills(drawHills(battleground));
     if (this.night) {
       const dayHills = this.tiledHills(drawHills({ ...battleground, hills: battleground.nightCycle!.dayHills }));
