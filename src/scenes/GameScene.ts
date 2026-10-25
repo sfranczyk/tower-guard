@@ -168,7 +168,7 @@ export class GameScene extends Scene {
       this.moba = new MobaMode({
         ctx, world: this.world, soldiers: this.soldiers, foes: this.foes, teams: this.teams,
         popups: () => this.damageNumbers, hostSync: () => this.hostSync, guestSync: () => this.guestSync,
-        background: () => this.background, arrows: () => this.shots.list, viewLeft: () => this.camera.x,
+        background: () => this.background, arrows: () => this.shots.list, viewLeft: () => this.camera.x, mirrored: () => this.mirrored,
       });
     }
     this.shots = new BattleArrows({
@@ -520,7 +520,7 @@ export class GameScene extends Scene {
       player.bowman.setHealthRatio(player.health / (this.moba?.maxHealth(player) ?? this.ctx.session.sandbox.bowmanHealth));
       player.bowman.setRegenerating(this.moba?.regenerating(player) ?? false);
     });
-    this.nameTags?.update(this.players);
+    this.nameTags?.update(this.players, this.mirrored);
     this.ctx.ui.updateAllies({ slots: this.soldiers.slots(), order: this.soldiers.order, orderLabel: ALLY_ORDER_LABELS[this.soldiers.order] });
     this.ctx.ui.updateHud({
       defeatedEnemies: this.foes.defeated(),

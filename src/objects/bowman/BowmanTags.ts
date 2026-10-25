@@ -7,7 +7,7 @@ const NAME = { fontSize: 45, aboveHead: 30 };
 const PLUS = { size: 30, thickness: 9, gap: 12, color: 0x6fd36b };
 
 /**
- * What a bowman shows besides his body and health bar: his player's name over his head (online, while Ctrl is held,
+ * What a bowman shows besides his body and health bar: his player's name over his head (online, toggled by Ctrl,
  * scenes/BattleNameTags.ts) and a green "+" right of the health bar while he regenerates (MOBA).
  */
 export class BowmanTags {
@@ -34,9 +34,10 @@ export class BowmanTags {
     parent.addChild(this.name, this.plus);
   }
 
-  /** The name over his head (undefined: none). */
-  public setName(name: string | undefined): void {
+  /** The name over his head (undefined: none); `mirrored`: the battle view is flipped, the name flips back to read right. */
+  public setName(name: string | undefined, mirrored = false): void {
     this.name.visible = name !== undefined;
+    this.name.scale.x = mirrored ? -1 : 1;
     if (name !== undefined && this.name.text !== name) {
       this.name.text = name;
     }

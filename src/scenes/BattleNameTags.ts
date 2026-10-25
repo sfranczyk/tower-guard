@@ -5,30 +5,23 @@ import type { Player } from './PlayerControl';
 const NAME_KEYS = ['ControlLeft', 'ControlRight'];
 
 /**
- * With more than one bowman: holding Ctrl shows every player's name (their lobby alias, else "Host" / "Player N") over
- * their bowman, on this screen only. A lost focus (another window) counts as letting go.
+ * With more than one bowman: a press of Ctrl shows every player's name (their lobby alias, else "Host" / "Player N")
+ * over their bowman, on this screen only, and the next press hides them again.
  */
 export class BattleNameTags {
-  private held = false;
+  private shown = false;
 
-  public constructor(private readonly session: GameSession, listen: <K extends 'keydown' | 'keyup' | 'blur'>(type: K, handler: (event: WindowEventMap[K]) => void) => void) {
+  public constructor(private readonly session: GameSession, listen: <K extends 'keydown'>(type: K, handler: (event: WindowEventMap[K]) => void) => void) {
     listen('keydown', (event) => {
-      if (NAME_KEYS.includes(event.code)) {
-        this.held = true;
+      if (NAME_KEYS.includes(event.code) && !event.repeat) {
+        this.shown = !this.shown;
       }
-    });
-    listen('keyup', (event) => {
-      if (NAME_KEYS.includes(event.code)) {
-        this.held = false;
-      }
-    });
-    listen('blur', () => {
-      this.held = false;
     });
   }
 
-  public update(players: readonly Player[]): void {
-    const shown = this.held && players.length > 1;
-    players.forEach((player) => player.bowman.setNameTag(shown ? nameOf(this.session, player.index) : undefined));
+  /** `mirrored`: the battle view is flipped, and the names flip back so they read the right way. */
+  public update(players: readonly Player[], mirrored: boolean): void {
+    const shown = this.shown && players.length > 1;
+    players.forEach((player) => player.bowman.setNameTag(shown ? nameOf(this.session, player.index) : undefined, mirrored));
   }
 }

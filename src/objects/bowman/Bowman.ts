@@ -443,9 +443,9 @@ export class Bowman extends Container {
     this.healthRatio = ratio;
   }
 
-  /** His player's name over his head (online, while Ctrl is held; undefined: none). */
-  public setNameTag(name: string | undefined): void {
-    this.tags.setName(name);
+  /** His player's name over his head (online, toggled by Ctrl; undefined: none), flipped back in a `mirrored` view. */
+  public setNameTag(name: string | undefined, mirrored = false): void {
+    this.tags.setName(name, mirrored);
   }
 
   /** A "+" right of his health bar while he heals (MOBA regeneration). */

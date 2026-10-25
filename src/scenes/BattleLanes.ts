@@ -75,6 +75,9 @@ export class BattleLanes {
       unit.setStars(minion.lv - 1);
     } else {
       unit.siege = siege;
+      if (siege) {
+        unit.resize(MOBA_LANES.kamikazeSize);
+      }
       unit.bars.teamColor = color;
       unit.bars.setStars(minion.lv - 1);
       unit.drawHealthBar();

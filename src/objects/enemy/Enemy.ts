@@ -43,7 +43,8 @@ const ENEMY_SCALE = 2 / 3;
  * (thrown, pinned state) and enemyNet (co-op state).
  */
 export default class Enemy extends Container {
-  public readonly look: EnemyLook;
+  /** Its kind's look (`resize` gives it a size of its own). */
+  public look: EnemyLook;
   /** Its health (enemyDamage.ts). */
   public readonly vitals: Vitals;
   /** Walking speed (px/s). */
@@ -162,6 +163,13 @@ export default class Enemy extends Container {
   /** Body size (1 = a normal stickman; brutes are 1.5). */
   public get size(): number {
     return this.look.size;
+  }
+
+  /** Drawn `size` times a normal stickman instead of its kind's size (MOBA's lane kamikaze); the health bar keeps its size. */
+  public resize(size: number): void {
+    this.look = { ...this.look, size };
+    this.scale.set(ENEMY_SCALE * size);
+    this.bars.health.scale.set(1 / size);
   }
 
   /** How far the club reaches when it lands (see EnemyLook.strikeReach). */

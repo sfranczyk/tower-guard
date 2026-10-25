@@ -20,7 +20,11 @@ export const MOBA_LANES = tunable('MOBA_LANES', 'MOBA lanes', {
   kamikazeEveryMs: 150000,
   kamikazeFirstMs: 150000,
   /** A lane kamikaze's health: it runs past everyone at the enemy keep (Enemy.siege). */
-  kamikazeHealth: 90,
+  kamikazeHealth: 180,
+  /** Its size (1 = a normal stickman; 1.22 stands 1.3 times a bowman's height). */
+  kamikazeSize: 1.22,
+  /** × on how big its explosion looks (not its reach). */
+  kamikazeBlastLook: 3,
   /** × on the damage its bomb does to a keep (a kamikaze's own keep damage: data/enemyKinds.ts). */
   kamikazeKeepDamage: 3,
   firstGroupMs: 4000,
@@ -72,7 +76,8 @@ export const MOBA_VAULT_STEPS: readonly number[] = [10, 50, 100];
  * day if it falls outside the full day; it lasts `eclipseMs`, total for `eclipseTotal` of that (the diamond ring
  * `eclipseDiamond` before and after), cut short when the sun sets. At a random moment of it a comet crosses the field
  * in `cometMs` from `cometHighY` down to `cometLowY` (world y); a player's arrow through it (within `cometRadius`)
- * pays him `cometGold`.
+ * pays him `cometGold`. Each sunrise the day's number ("2nd day of the battle") rises from behind the hills and out of
+ * the top of the view in `dayTitleMs`.
  */
 export const MOBA_SKY = tunable('MOBA_SKY', 'MOBA sky', {
   dayMs: 210000,
@@ -90,4 +95,5 @@ export const MOBA_SKY = tunable('MOBA_SKY', 'MOBA sky', {
   cometLowY: 90,
   cometRadius: 26,
   cometGold: 100,
+  dayTitleMs: 10000,
 }, { meta: { redSunsetChance: { max: 1, step: 0.05 }, eclipseTotal: { max: 0.5, step: 0.01 }, eclipseDiamond: { max: 0.2, step: 0.005 }, cometHighY: { min: -110, max: 300 }, cometLowY: { min: -110, max: 300 } } });

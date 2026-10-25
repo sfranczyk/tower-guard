@@ -17,6 +17,8 @@ export interface MobaSkyDeps {
   background(): Background;
   arrows(): readonly Arrow[];
   hostSync(): HostSync | undefined;
+  /** The battle view is flipped (the day's title reads the right way all the same). */
+  mirrored(): boolean;
   /** A co-op guest: the host's clock and comet hits. */
   guest: boolean;
   /** Host or alone: player `by` struck the comet at `at` (his gold). */
@@ -57,7 +59,7 @@ export class MobaSky {
       this.sinceSyncMs = 0;
       hostSync.push({ e: 'sky', seed: this.seed, t: Math.round(this.timeMs) });
     }
-    this.deps.background().daySky?.show(daySky(this.seed, this.timeMs), viewLeft, viewWidth());
+    this.deps.background().daySky?.show(daySky(this.seed, this.timeMs), viewLeft, viewWidth(), this.deps.mirrored());
     this.updateComet();
     this.comet.update(deltaMs);
   }
