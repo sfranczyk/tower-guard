@@ -3,6 +3,7 @@ import {
   ARROWS,
   ENEMY_TOWER_DAMAGE,
   KEEP_BLAST_FACTOR,
+  MOBA_LANES,
   FIRE_ARROW_DAMAGE,
   FIRE_DRAGON_BLAST_POWER,
   FRIENDLY_FIRE_GRACE_MS,
@@ -59,6 +60,9 @@ interface BowmanArrowHit {
 /** Damage of a hostile arrow by who shot it (archer arrows if unknown). */
 /** An enemy's or minion's arrow: its shooter's damage, × the shooter's power (MOBA upgrades). */
 const arrowDamage = (arrow: Arrow, target: DamageTarget): number => rollDamage(enemyDamage(arrow.shooter ?? 'hunter', 'arrow', target)) * (arrow.power ?? 1);
+
+/** × on a minion's arrow in `foe`: a MOBA lane kamikaze shrugs off part of it. */
+const minionShare = (foe: Foe): number => (!(foe instanceof DragonEnemy) && foe.siege ? MOBA_LANES.kamikazeMinionDamage : 1);
 
 /** The player who loosed `arrow` (none: an enemy's or a minion's). */
 const playerOf = (arrow: Arrow): number | undefined => (arrow.hostile || arrow.owner < 0 ? undefined : arrow.owner);
@@ -182,7 +186,7 @@ export class ArrowHits {
   /** An enemy's arrow in one of the player's soldiers: his plate turns a body hit (sparks), else blood; it falls away. */
   private hostileHitAlly(arrow: Arrow, ally: Foe, headshot: boolean, point: Vec2, fromX: number): void {
     const armor = headshot ? 1 : enemyArmor(ally.kind);
-    const damage = arrowDamage(arrow, 'bowman') * this.world.enemyEdge.damage * armor * (headshot ? ARROWS.headshotMultiplier : 1);
+    const damage = arrowDamage(arrow, 'bowman') * this.world.enemyEdge.damage * armor * (headshot ? ARROWS.headshotMultiplier : 1) * minionShare(ally);
     if (armor < 1) {
       this.world.effects.impact(point);
     } else {
@@ -268,7 +272,7 @@ export class ArrowHits {
     }
     // Chips fly off where it lands (a minion's arrow barely scratches it, as the enemy archers' do ours).
     const minion = arrow.owner === MINION_ARROW_OWNER && arrow.shooter;
-    tower.takeDamage(minion ? arrowDamage(arrow, 'keep') : ENEMY_TOWER_DAMAGE * (explosive ? KEEP_BLAST_FACTOR : 1) * (arrow.power ?? 1), impactPoint);
+    tower.takeDamage(minion ? arrowDamage(arrow, 'keep') : ENEMY_TOWER_DAMAGE * (explosive ? KEEP_BLAST_FACTOR : 1) * (arrow.power ?? 1) * (arrow.keepPower ?? 1), impactPoint);
     if (explosive) {
       this.actions.explode(impactPoint, activeEnemies, undefined, undefined, undefined, playerOf(arrow));
       arrow.deactivate();
@@ -433,7 +437,8 @@ export class ArrowHits {
     const explosive = arrow.type === 'explosive';
     const pinning = arrow.type === 'pinning';
     // A horse's leg takes HORSE_LEG.damage of the arrow's hit (an explosive arrow's blast is the blast).
-    const damage = ArrowHits.arrowHitDamage(arrow, headshot) * armor * (leg && !explosive ? HORSE_LEG.damage : 1);
+    const damage = ArrowHits.arrowHitDamage(arrow, headshot) * armor * (leg && !explosive ? HORSE_LEG.damage : 1)
+      * (arrow.owner === MINION_ARROW_OWNER ? minionShare(enemy) : 1);
     if (headshot && !explosive && !pinning && arrow.owner !== MINION_ARROW_OWNER) {
       this.events.headshot();
     }

@@ -41,6 +41,8 @@ export default class Arrow extends Sprite {
   public shooter?: UnitType;
   /** MOBA: × on its damage (a minion's upgrades, a player's normal-arrow levels). */
   public power?: number;
+  /** MOBA: × on its damage to a keep (Wall breaker on explosive arrows). */
+  public keepPower?: number;
   /** Which player loosed a player arrow (co-op: their trails and shrapnel bursts are their own); MINION_ARROW_OWNER: a MOBA blue archer's. */
   public owner = 0;
   /** Co-op host: told when the arrow sticks (into a target or the ground) or is gone, for the guest. */

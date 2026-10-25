@@ -27,6 +27,8 @@ export const MOBA_LANES = tunable('MOBA_LANES', 'MOBA lanes', {
   kamikazeBlastSize: 3,
   /** × on the damage its bomb does to a keep (a kamikaze's own keep damage: data/enemyKinds.ts). */
   kamikazeKeepDamage: 3,
+  /** × on what minions (blows and arrows, either side's) do to a lane kamikaze; players' arrows hit it in full. */
+  kamikazeMinionDamage: 0.5,
   firstGroupMs: 4000,
   groupSpacingMs: 700,
   /** Blue fighters strike the red keep from this close to its centre (as the enemies do ours, EnemyAI). */
@@ -58,6 +60,8 @@ export const MOBA_PLAYERS = tunable('MOBA_PLAYERS', 'MOBA players', {
  */
 export const MOBA_KEEPS = tunable('MOBA_KEEPS', 'MOBA keeps', {
   inset: 210,
+  /** How often a standing keep gets the room's keep regeneration back (scenes/MobaMode.ts). */
+  regenEveryMs: 10000,
 });
 
 /** MOBA: arrows holding fewer charges than ARROW_CHARGES (one vortex at a time). */
@@ -76,8 +80,8 @@ export const MOBA_VAULT_STEPS: readonly number[] = [10, 50, 100];
  * day if it falls outside the full day; it lasts `eclipseMs`, total for `eclipseTotal` of that (the diamond ring
  * `eclipseDiamond` before and after), cut short when the sun sets. At a random moment of it a comet crosses the field
  * in `cometMs` from `cometHighY` down to `cometLowY` (world y); a player's arrow through it (within `cometRadius`)
- * pays him `cometGold`. Each sunrise the day's number ("2nd day of the battle") rises from behind the hills and out of
- * the top of the view in `dayTitleMs`.
+ * pays him `cometGold`. Each sunrise the day's number ("The second day of battle"), and each eclipse's start
+ * "Eclipse!", rises from behind the hills (and the clouds) and out of the top of the view in `dayTitleMs`.
  */
 export const MOBA_SKY = tunable('MOBA_SKY', 'MOBA sky', {
   dayMs: 150000,
@@ -95,5 +99,5 @@ export const MOBA_SKY = tunable('MOBA_SKY', 'MOBA sky', {
   cometLowY: 90,
   cometRadius: 26,
   cometGold: 100,
-  dayTitleMs: 10000,
+  dayTitleMs: 35000,
 }, { meta: { redSunsetChance: { max: 1, step: 0.05 }, eclipseTotal: { max: 0.5, step: 0.01 }, eclipseDiamond: { max: 0.2, step: 0.005 }, cometHighY: { min: -110, max: 300 }, cometLowY: { min: -110, max: 300 } } });

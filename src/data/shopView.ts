@@ -46,12 +46,18 @@ const levelButton = (def: UpgradeDef, level: number, funds: ShopFunds): ShopButt
 
 /**
  * The shop's tab `tab` (pure, tested): its sections in catalogue order, each upgrade a chain of its levels, followed by
- * the upgrades that need it (a bought arrow, then its quick draw).
+ * the first upgrade that needs it (a bought arrow, then its quick draw); a second one that needs it (Wall breaker after
+ * the explosive arrow) starts a chain of its own.
  */
 export const shopSections = (tab: ShopTab, funds: ShopFunds): ShopSection[] => {
   const defs = UPGRADES.filter((def) => def.tab === tab);
   const sections: ShopSection[] = [];
-  defs.filter((def) => !def.requires).forEach((root) => {
+  const follower = (def: UpgradeDef): UpgradeDef | undefined => defs.find((candidate) => candidate.requires?.id === def.id);
+  const roots = defs.filter((def) => {
+    const parent = def.requires && defs.find((candidate) => candidate.id === def.requires!.id);
+    return !parent || follower(parent) !== def;
+  });
+  roots.forEach((root) => {
     let section = sections.find((entry) => entry.title === root.section);
     if (!section) {
       section = { title: root.section, chains: [] };
@@ -64,7 +70,7 @@ export const shopSections = (tab: ShopTab, funds: ShopFunds): ShopSection[] => {
       for (let level = 1; level <= def.levels; level += 1) {
         chain.push(levelButton(def, level, funds));
       }
-      next = defs.find((candidate) => candidate.requires?.id === def.id);
+      next = follower(def);
     }
     section.chains.push(chain);
   });

@@ -39,6 +39,7 @@ describe('upgrades', () => {
     expect(stats.maxHealth).toBeCloseTo(1.4);
     expect(stats.speed).toBeCloseTo(1.4);
     expect(playerStats({}).speed).toBeCloseTo(0.8);
+    expect([0, 1, 2].map((level) => playerStats({ wallBreaker: level }).keepBlast)).toEqual([1, 2, 3]);
   });
 
   it('makes minions stronger by half a level each', () => {

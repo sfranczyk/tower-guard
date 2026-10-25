@@ -19,7 +19,7 @@ export interface ShopView {
 
 const DETAIL_HINT = 'Point at an upgrade for its details.';
 
-const TABS: ReadonlyArray<{ tab: ShopTab; label: string }> = [{ tab: 'skills', label: 'Skills' }, { tab: 'castle', label: 'Castle' }];
+const TABS: ReadonlyArray<{ tab: ShopTab; label: string }> = [{ tab: 'skills', label: 'Skills' }, { tab: 'castle', label: 'Keep' }];
 
 const escapeHtml = (text: string): string => text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
@@ -31,6 +31,9 @@ const upgradeIcon = (id: string): string => {
   }
   if (kind === 'minion') {
     return what === 'troop' ? ICON_ALLIES.squire : what === 'archer' ? ICON_ENEMIES.hunter : ICON_ENEMIES.dragon;
+  }
+  if (kind === 'wallBreaker') {
+    return ICON_WEAPONS.explosive;
   }
   if (kind === 'basicArrow') {
     return ICON_WEAPONS.normal;
@@ -60,7 +63,7 @@ const sectionHtml = (section: ShopSection): string => {
 
 /**
  * MOBA's shop (press I by your own keep): a panel over the canvas's left side that doesn't pause or block the battle,
- * with the Skills tab (arrows, passives; paid from the purse) and the Castle tab (the team vault, minion upgrades).
+ * with the Skills tab (arrows, passives; paid from the purse) and the Keep tab (the team vault, minion upgrades).
  * Each upgrade's levels are buttons joined by arrows, the price on the button, the details in the line under the panel (no tooltips).
  */
 export class ShopPanel {

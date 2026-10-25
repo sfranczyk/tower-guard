@@ -46,6 +46,8 @@ export const SPEED_BASE = 0.8;
 export const SPEED_STEP = 0.2;
 /** A minion upgrade level: +50% health and damage. */
 export const MINION_STEP = 0.5;
+/** Wall breaker: each level adds this × to an explosive arrow's damage to a keep (×2, then ×3). */
+export const WALL_BREAKER_STEP = 1;
 
 const percent = (share: number): string => `${Math.round(share * 100)}%`;
 
@@ -62,6 +64,14 @@ const ARROW_PRICES: Partial<Record<ArrowType, { arrow: number; quick: number }>>
 const DEFAULT_ARROW_PRICE = { arrow: 250, quick: 300 };
 
 const MINION_NAMES: Readonly<Record<MinionRole, string>> = { troop: 'Troops', archer: 'Archers', dragon: 'Dragons', kamikaze: 'Kamikazes' };
+
+/** After the explosive arrow (its own chain, beside the arrow's): more damage to a keep. */
+const WALL_BREAKER: UpgradeDef = {
+  id: 'wallBreaker', tab: 'skills', section: 'Arrows', scope: 'player', levels: 2, firstCost: 300, costGrowth: 2,
+  requires: { id: 'arrow:explosive', level: 1 },
+  label: (level) => `Wall breaker ${'I'.repeat(level)}`,
+  description: (level) => `${ARROW_INFO.explosive.name} hits on a keep do ×${1 + WALL_BREAKER_STEP * level} damage (level ${level}).`,
+};
 
 export const UPGRADES: readonly UpgradeDef[] = [
   {
@@ -81,6 +91,7 @@ export const UPGRADES: readonly UpgradeDef[] = [
       label: () => 'Quick draw',
       description: () => `${ARROW_INFO[type].name} reloads twice as fast.`,
     },
+    ...(type === 'explosive' ? [WALL_BREAKER] : []),
   ]),
   {
     id: 'regen', tab: 'skills', section: 'Passive', scope: 'player', levels: 3, firstCost: 100, costGrowth: 1.6,
@@ -149,6 +160,8 @@ export interface PlayerStats {
   quiver: ArrowType[];
   /** × on the normal arrow's damage. */
   basicDamage: number;
+  /** × on an explosive arrow's damage to a keep (Wall breaker). */
+  keepBlast: number;
   /** × on each arrow's reload. */
   cooldown: Partial<Record<ArrowType, number>>;
   /** Added to every healing tick. */
@@ -162,6 +175,7 @@ export interface PlayerStats {
 export const playerStats = (levels: UpgradeLevels): PlayerStats => ({
   quiver: ['normal', ...boughtArrows(levels)],
   basicDamage: 1 + BASIC_ARROW_DAMAGE_STEP * levelOf(levels, 'basicArrow'),
+  keepBlast: 1 + WALL_BREAKER_STEP * levelOf(levels, 'wallBreaker'),
   cooldown: Object.fromEntries(BOUGHT_ARROWS.filter((type) => levelOf(levels, `quick:${type}`) > 0).map((type) => [type, QUICK_DRAW_COOLDOWN])),
   regenBonus: REGEN_STEP * levelOf(levels, 'regen'),
   maxHealth: 1 + MAX_HP_STEP * levelOf(levels, 'maxHp'),

@@ -1,5 +1,5 @@
 import type { Container } from 'pixi.js';
-import { BOWMAN_WALK_SPEED, MOBA_ARROW_CHARGES, MOBA_SKY } from '../config';
+import { BOWMAN_WALK_SPEED, MOBA_ARROW_CHARGES, MOBA_KEEPS, MOBA_SKY } from '../config';
 import type { GameContext } from '../core/Scene';
 import { firstArrow } from '../data/loadout';
 import type { Team } from '../data/moba';
@@ -66,6 +66,9 @@ export class MobaMode implements ShopBackend {
   /** Co-op host: what was last sent of it. */
   private sentEconomy = '';
   private sinceEconomyMs = 0;
+  /** Both keeps (host or alone: the room's keep regeneration mends them). */
+  private keeps: readonly Tower[] = [];
+  private sinceKeepRegenMs = 0;
 
   public constructor(private readonly deps: MobaModeDeps) {
     this.lanes = new BattleLanes({
@@ -88,7 +91,8 @@ export class MobaMode implements ShopBackend {
   }
 
   /** The players stand: the match (host or alone) and the shop at `keepOf` the local player's keep. */
-  public start(team: BattlePlayers, keepOf: (player: Player) => Tower, guest: boolean): void {
+  public start(team: BattlePlayers, keepOf: (player: Player) => Tower, guest: boolean, keeps: readonly Tower[] = []): void {
+    this.keeps = keeps;
     this.team = team;
     team.list.forEach((player) => {
       player.cooldowns.limits = MOBA_ARROW_CHARGES;
@@ -132,6 +136,7 @@ export class MobaMode implements ShopBackend {
     if (live && !this.deps.guestSync()) {
       this.lanes.update(deltaMs);
       this.match?.update(deltaMs);
+      this.regenKeeps(deltaMs);
     }
     this.shop?.update(deltaMs);
     this.sky?.update(deltaMs, this.deps.viewLeft());
@@ -197,6 +202,11 @@ export class MobaMode implements ShopBackend {
     return this.match?.upgrades.arrowPower(owner, type);
   }
 
+  /** The shop's Wall breaker on `owner`'s arrows of `type` hitting a keep. */
+  public keepPower(owner: number, type: ProjectileType): number | undefined {
+    return this.match?.upgrades.keepPower(owner, type);
+  }
+
   /** Full health of `player` (with his Max health levels). */
   public maxHealth(player: Player): number {
     if (this.match) {
@@ -250,6 +260,20 @@ export class MobaMode implements ShopBackend {
       this.match.moveVault(player, deposit, step);
     } else {
       this.deps.guestSync()?.sendShop({ t: 'shop', deposit, step });
+    }
+  }
+
+  /** The room's keep regeneration: every MOBA_KEEPS.regenEveryMs each standing keep mends (the guests see it in the snapshot). */
+  private regenKeeps(deltaMs: number): void {
+    const amount = this.deps.ctx.session.sandbox.moba.keepRegen;
+    if (amount <= 0) {
+      return;
+    }
+    this.sinceKeepRegenMs += deltaMs;
+    const every = Math.max(1000, MOBA_KEEPS.regenEveryMs);
+    while (this.sinceKeepRegenMs >= every) {
+      this.sinceKeepRegenMs -= every;
+      this.keeps.forEach((keep) => keep.heal(amount));
     }
   }
 

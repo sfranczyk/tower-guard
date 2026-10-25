@@ -96,6 +96,12 @@ export class MobaUpgrades {
     return levels && type === 'normal' ? playerStats(levels).basicDamage : undefined;
   }
 
+  /** × on the damage of `owner`'s arrows of `type` to a keep (undefined: as normal). */
+  public keepPower(owner: number, type: string): number | undefined {
+    const levels = this.playerLevels[owner];
+    return levels && type === 'explosive' ? playerStats(levels).keepBlast : undefined;
+  }
+
   /** The level of `team`'s `role` minions (1 = none bought). */
   public minionLevel(team: Team, role: MinionRole): number {
     return minionLevel(this.teamLevels[team], role);

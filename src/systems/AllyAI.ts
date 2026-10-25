@@ -27,7 +27,7 @@ const chest = (body: { x: number; y: number; size?: number }): Vec2 => ({ x: bod
 
 /**
  * One stickman's blow on another (a soldier on an enemy, or an enemy on a soldier): plate (`armor`) turns most of it
- * with sparks, else blood; it reacts like an arrow's hit (cause 'melee').
+ * with sparks, else blood; it reacts like an arrow's hit (cause 'melee'). A lane kamikaze takes MOBA_LANES.kamikazeMinionDamage of it.
  */
 export const meleeBlow = (victim: Enemy, damage: number, fromX: number, effects: EffectsSystem): void => {
   const armor = enemyArmor(victim.kind);
@@ -37,7 +37,7 @@ export const meleeBlow = (victim: Enemy, damage: number, fromX: number, effects:
   } else {
     effects.bloodBurst(point, victim.bodyColors);
   }
-  victim.takeDamage(damage * armor, { cause: 'melee', fromX });
+  victim.takeDamage(damage * armor * (victim.siege ? MOBA_LANES.kamikazeMinionDamage : 1), { cause: 'melee', fromX });
 };
 
 export interface AllyAIWorld {

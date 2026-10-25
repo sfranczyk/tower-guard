@@ -191,6 +191,7 @@ export class GameScene extends Scene {
       hostSync: () => this.hostSync,
       guestSync: () => this.guestSync,
       arrowPower: (owner, type) => this.moba?.arrowPower(owner, type),
+      keepPower: (owner, type) => this.moba?.keepPower(owner, type),
       // MOBA: the other team's shots fly without a trail to read their aim by.
       showsTrail: (owner) => !this.moba || this.players.find((player) => player.index === owner)?.team === this.team.local.team,
       fired: (owner, type) => this.stats?.shot(owner, type),
@@ -275,7 +276,7 @@ export class GameScene extends Scene {
       guestSync: () => this.guestSync,
     });
     const keepOf = (player: Player): Tower => (player.team === 'red' ? this.enemyTower : this.playerTower);
-    this.moba?.start(this.team, keepOf, this.role === 'guest');
+    this.moba?.start(this.team, keepOf, this.role === 'guest', [this.playerTower, this.enemyTower]);
     this.onExit(() => this.moba?.destroy());
     // The end screen's report: counted on the host or alone (a co-op guest gets it with the end).
     if (this.role !== 'guest') {

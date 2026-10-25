@@ -31,6 +31,8 @@ export interface BattleArrowsDeps {
   wind(): number;
   /** MOBA: × on the damage of `owner`'s arrows of `type` (the shop's normal-arrow levels). */
   arrowPower?(owner: number, type: ProjectileType): number | undefined;
+  /** MOBA: × on the damage of `owner`'s arrows of `type` to a keep (the shop's Wall breaker). */
+  keepPower?(owner: number, type: ProjectileType): number | undefined;
   /** How many of the latest shots keep their trail (settings drawer). */
   arrowTrails(): number;
   /** A player loosed an arrow (host or solo: the end screen's shots). */
@@ -109,6 +111,7 @@ export class BattleArrows {
     }
     arrow.owner = owner;
     arrow.power = this.deps.arrowPower?.(owner, type);
+    arrow.keepPower = this.deps.keepPower?.(owner, type);
     arrow.wind = this.deps.wind();
     arrow.fire(angle, speed, type);
     // The weather may get it in flight (the host decides; a guest's copy hears of it).

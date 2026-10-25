@@ -154,6 +154,15 @@ export default class Tower extends Container {
     return { x: this.x + (spot.x - KEEP_BASE.x) * KEEP_SCALE, y: this.groundY + (spot.y - KEEP_BASE.y) * KEEP_SCALE };
   }
 
+  /** Mends `amount` of health, up to full (a fallen keep stays down). */
+  public heal(amount: number): void {
+    if (this.isDestroyed() || this.options.absent || amount <= 0) {
+      return;
+    }
+    this.health = Math.min(this.maxHealth, this.health + amount);
+    this.redraw();
+  }
+
   /** Co-op guest: the health the host's keep has (damage stage follows). */
   public setHealth(health: number): void {
     const next = Math.max(0, Math.min(this.maxHealth, health));

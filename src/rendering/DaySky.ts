@@ -1,6 +1,6 @@
 import { Container, Graphics, Text } from 'pixi.js';
 import { GROUND_Y, MAX_VIEW_WIDTH, VIEW_TOP } from '../config';
-import { dayTitle, moonLit, moonLitOutline, type DaySkyState } from '../systems/dayCycle';
+import { ECLIPSE_TITLE, dayTitle, moonLit, moonLitOutline, type DaySkyState } from '../systems/dayCycle';
 import { mixColor } from './clouds';
 import { drawEclipse } from './eclipseArt';
 
@@ -43,7 +43,7 @@ const seeded = (seed: number): (() => number) => () => {
  * sunset skies (red or dark), stars, the moon in its phase crossing the night, the sun crossing the day (eclipsed
  * when there is one, rendering/eclipseArt.ts), all behind the hills (`sky`), and the land and clouds tinted by the light
  * (`tint`: the hills, trees, grass and clouds Background hands it). Sun and moon cross the whole field (the camera
- * pans past them); the stars and the day's title keep their place in the view. `show(state, viewLeft, viewWidth)` every frame.
+ * pans past them); the stars and the titles keep their place in the view. `show(state, viewLeft, viewWidth)` every frame.
  */
 export class DaySky {
   public readonly sky = new Container();
@@ -62,12 +62,9 @@ export class DaySky {
   private readonly sun = new Graphics();
   private readonly corona = new Graphics();
   private readonly crescent = new Graphics();
-  /** "1st day of the battle", rising at each sunrise: in front of the clouds, behind the hills (Background places it). */
-  public readonly title = new Text({
-    text: '',
-    resolution: 2,
-    style: { fontFamily: 'Fredoka, ui-rounded, system-ui, sans-serif', fontWeight: '700', fontSize: 46, fill: 0xfff3d6, stroke: { color: 0x1b1a20, width: 7, join: 'round' } },
-  });
+  /** "The first day of battle", rising at each sunrise, and "Eclipse!" as one begins: behind the clouds (Background places them). */
+  public readonly title = DaySky.titleText();
+  public readonly eclipseTitle = DaySky.titleText();
   /** The moon's phase as last drawn (redrawn when it moves on a little). */
   private drawnPhase = -1;
   private land: readonly Container[] = [];
@@ -104,9 +101,18 @@ export class DaySky {
     this.sun.circle(0, 0, SUN_RADIUS * 1.9).fill({ color: SUN_COLOR, alpha: 0.12 });
     this.sun.circle(0, 0, SUN_RADIUS * 1.3).fill({ color: SUN_COLOR, alpha: 0.18 });
     this.sun.circle(0, 0, SUN_RADIUS).fill({ color: SUN_COLOR, alpha: 0.95 });
-    this.title.anchor.set(0.5);
-    this.title.visible = false;
     this.sky.addChild(night, this.day, this.dawn, this.redDusk, this.darkDusk, this.stars, this.moon, this.corona, this.sun, this.crescent);
+  }
+
+  private static titleText(): Text {
+    const text = new Text({
+      text: '',
+      resolution: 2,
+      style: { fontFamily: 'Fredoka, ui-rounded, system-ui, sans-serif', fontWeight: '700', fontSize: 46, fill: 0xfff3d6, stroke: { color: 0x1b1a20, width: 7, join: 'round' } },
+    });
+    text.anchor.set(0.5);
+    text.visible = false;
+    return text;
   }
 
   /** The hills, trees and grass, and the clouds, to darken at night (a tint on each). */
@@ -120,7 +126,8 @@ export class DaySky {
    * is flipped (core/keepSide.ts), and the day's title flips back so it reads the right way.
    */
   public show(state: DaySkyState, viewLeft: number, viewWidth: number, mirrored = false): void {
-    this.showTitle(state, viewLeft + viewWidth / 2, mirrored);
+    DaySky.showTitle(this.title, state.title, dayTitle(state.dayNumber), viewLeft + viewWidth / 2, mirrored);
+    DaySky.showTitle(this.eclipseTitle, state.eclipseTitle, ECLIPSE_TITLE, viewLeft + viewWidth / 2, mirrored);
     this.day.alpha = state.day;
     this.dawn.alpha = state.dawn;
     this.redDusk.alpha = state.redDusk ? state.dusk : 0;
@@ -161,19 +168,17 @@ export class DaySky {
     return this.left + share * (this.right - this.left);
   }
 
-  private showTitle(state: DaySkyState, x: number, mirrored: boolean): void {
-    this.title.visible = state.title !== undefined;
-    if (state.title === undefined) {
+  /** `title` `rise` of the way up (undefined: hidden): slow out from behind the hills, then on up and out of the view. */
+  private static showTitle(title: Text, rise: number | undefined, text: string, x: number, mirrored: boolean): void {
+    title.visible = rise !== undefined;
+    if (rise === undefined) {
       return;
     }
-    const text = dayTitle(state.dayNumber);
-    if (this.title.text !== text) {
-      this.title.text = text;
+    if (title.text !== text) {
+      title.text = text;
     }
-    // Slow out from behind the hills, then on up and out of the view.
-    const t = state.title;
-    this.title.position.set(x, TITLE_FROM_Y + (TITLE_TO_Y - TITLE_FROM_Y) * (0.5 * t + 0.5 * t * t));
-    this.title.scale.x = mirrored ? -1 : 1;
+    title.position.set(x, TITLE_FROM_Y + (TITLE_TO_Y - TITLE_FROM_Y) * (0.5 * rise + 0.5 * rise * rise));
+    title.scale.x = mirrored ? -1 : 1;
   }
 
   private showMoon(state: DaySkyState): void {
