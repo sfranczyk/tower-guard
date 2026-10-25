@@ -8,9 +8,10 @@ describe('moba rules', () => {
   });
 
   it('clamps and rounds what is out of range or not a number', () => {
-    const rules = normalizeMobaRules({ keepHealth: 99999, bowmanHealth: -4, startGold: 'lots' as unknown as number, respawnSeconds: 12.6 });
+    const rules = normalizeMobaRules({ keepHealth: 99999, keepRegen: 80, bowmanHealth: -4, startGold: 'lots' as unknown as number, respawnSeconds: 12.6 });
     expect(rules).toEqual({
       keepHealth: MOBA_RULE_LIMITS.keepHealth.max,
+      keepRegen: 50,
       bowmanHealth: MOBA_RULE_LIMITS.bowmanHealth.min,
       startGold: DEFAULT_MOBA_RULES.startGold,
       respawnSeconds: 13,

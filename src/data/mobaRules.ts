@@ -5,6 +5,8 @@
 export interface MobaRules {
   /** Each keep's health (both alike). */
   keepHealth: number;
+  /** Health each standing keep gets back every MOBA_KEEPS.regenEveryMs, up to its full health (0: none). */
+  keepRegen: number;
   /** Each bowman's health before upgrades (data/upgrades.ts scales it). */
   bowmanHealth: number;
   /** Gold in each player's purse at the start. */
@@ -20,6 +22,7 @@ export type MobaNumberRule = Exclude<keyof MobaRules, 'allyPenalty'>;
 
 export const MOBA_RULE_LIMITS: Readonly<Record<MobaNumberRule, { min: number; max: number; step: number }>> = {
   keepHealth: { min: 500, max: 10000, step: 100 },
+  keepRegen: { min: 0, max: 50, step: 1 },
   bowmanHealth: { min: 100, max: 1000, step: 10 },
   startGold: { min: 0, max: 2000, step: 50 },
   respawnSeconds: { min: 5, max: 120, step: 5 },
@@ -27,6 +30,7 @@ export const MOBA_RULE_LIMITS: Readonly<Record<MobaNumberRule, { min: number; ma
 
 export const DEFAULT_MOBA_RULES: Readonly<MobaRules> = {
   keepHealth: 2400,
+  keepRegen: 0,
   bowmanHealth: 300,
   startGold: 0,
   respawnSeconds: 30,
@@ -41,6 +45,7 @@ const clamp = (value: unknown, { min, max }: { min: number; max: number }, fallb
 /** Fills gaps and clamps every rule (stored, typed in, or sent by the host). */
 export const normalizeMobaRules = (input: Partial<MobaRules> | undefined): MobaRules => ({
   keepHealth: clamp(input?.keepHealth, MOBA_RULE_LIMITS.keepHealth, DEFAULT_MOBA_RULES.keepHealth),
+  keepRegen: clamp(input?.keepRegen, MOBA_RULE_LIMITS.keepRegen, DEFAULT_MOBA_RULES.keepRegen),
   bowmanHealth: clamp(input?.bowmanHealth, MOBA_RULE_LIMITS.bowmanHealth, DEFAULT_MOBA_RULES.bowmanHealth),
   startGold: clamp(input?.startGold, MOBA_RULE_LIMITS.startGold, DEFAULT_MOBA_RULES.startGold),
   respawnSeconds: clamp(input?.respawnSeconds, MOBA_RULE_LIMITS.respawnSeconds, DEFAULT_MOBA_RULES.respawnSeconds),

@@ -60,7 +60,7 @@ everything under `ctx.root` on each switch. Scenes never touch the DOM: they cal
   Red players use `enemyTower`; the end is `BattleOutcome.endMatch` / `showMobaEnd` (`mobaEndInfo`, per team): winners cheer
   (`cheer` event, `blue` for the blue side), losers die each their own way (`systems/mobaDefeat.ts`); the end screen waits
   `LEVEL_END.keepFallMs` whenever a keep fell (`BattleOutcome.tick`/`later`). The other team's arrows have no trail (`showsTrail`).
-  Rules from the host's Rules tab: `SandboxSettings.moba` (`data/mobaRules.ts`: keep/bowman health, start gold, respawn, ally kill penalty;
+  Rules from the host's Rules tab: `SandboxSettings.moba` (`data/mobaRules.ts`: keep/bowman health, keep regeneration (`MobaMode.regenKeeps`, every `MOBA_KEEPS.regenEveryMs`), start gold, respawn, ally kill penalty;
   sent with `start`; `newRun(…, moba)`). Field `MOBA_WORLD_WIDTH` (2800), keeps `MOBA_KEEPS` (`inset` from the ends), always Green Meadow; Esc only opens this player's menu, the battle runs on
   (`BattleControls.frozen`), and the quiver is what was bought, in the order bought (no editing in the keep);
   `MOBA_ARROW_CHARGES` (one vortex) via `ArrowCooldowns.limits`.

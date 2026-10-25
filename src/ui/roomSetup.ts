@@ -1,6 +1,6 @@
 import { BATTLEGROUNDS } from '../data/battlegrounds';
 import { MOBA_RULE_LIMITS, normalizeMobaRules, type MobaNumberRule, type MobaRules } from '../data/mobaRules';
-import { ICON_BOWMAN, ICON_FRIENDLY_FIRE, ICON_GOLD, ICON_KEEP, ICON_RESPAWN } from './icons';
+import { ICON_BOWMAN, ICON_FRIENDLY_FIRE, ICON_GOLD, ICON_KEEP, ICON_RESPAWN, ICON_UPGRADES } from './icons';
 import { mapThumbnail } from './mapThumbnail';
 import { numberInput, optionRow } from './optionRows';
 
@@ -32,6 +32,7 @@ export const roomModeCards = (): string => `
 /** The MOBA host's Rules tab: one rule per row (as the battle setup's Rules page). */
 export const mobaRulesPage = (rules: MobaRules): string => `<div class="rules-list">
   ${optionRow('Keep health', 'Each keep starts with this; the first to fall loses the match', numberInput('data-moba-rule="keepHealth"', rules.keepHealth, MOBA_RULE_LIMITS.keepHealth), ICON_KEEP)}
+  ${optionRow('Keep regeneration', 'Health each standing keep gets back every 10 seconds, up to full (0: none)', numberInput('data-moba-rule="keepRegen"', rules.keepRegen, MOBA_RULE_LIMITS.keepRegen), ICON_UPGRADES.regen)}
   ${optionRow('Bowman health', 'Each bowman before upgrades (the shop\'s Max health raises it)', numberInput('data-moba-rule="bowmanHealth"', rules.bowmanHealth, MOBA_RULE_LIMITS.bowmanHealth), ICON_BOWMAN)}
   ${optionRow('Starting gold', 'Gold in each purse when the match starts', numberInput('data-moba-rule="startGold"', rules.startGold, MOBA_RULE_LIMITS.startGold), ICON_GOLD)}
   ${optionRow('Respawn time', 'Seconds a fallen bowman waits before he is back at his keep', numberInput('data-moba-rule="respawnSeconds"', rules.respawnSeconds, MOBA_RULE_LIMITS.respawnSeconds), ICON_RESPAWN)}

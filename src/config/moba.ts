@@ -60,6 +60,8 @@ export const MOBA_PLAYERS = tunable('MOBA_PLAYERS', 'MOBA players', {
  */
 export const MOBA_KEEPS = tunable('MOBA_KEEPS', 'MOBA keeps', {
   inset: 210,
+  /** How often a standing keep gets the room's keep regeneration back (scenes/MobaMode.ts). */
+  regenEveryMs: 10000,
 });
 
 /** MOBA: arrows holding fewer charges than ARROW_CHARGES (one vortex at a time). */
