@@ -80,3 +80,20 @@ describe('wave director', () => {
     expect(grouped.filter((type, index) => type !== grouped[index - 1])).toHaveLength(3);
   });
 });
+
+describe('WaveDirector.wavesStarted', () => {
+  it('counts a wave from its first enemy out', () => {
+    const director = new WaveDirector({ raider: 30, fast: 0, tank: 0, troll: 0, hunter: 0, dragon: 0, fireDragon: 0, kamikaze: 0, goblinKamikaze: 0, zombie: 0, knight: 0, heavyKnight: 0, horseKnight: 0, priest: 0, shaman: 0 });
+    expect(director.wavesStarted).toBe(0);
+    director.update(WAVES.startDelayMs, 0);
+    expect(director.wavesStarted).toBe(1);
+    // The rest of the first wave out, then a cleared field releases the second.
+    for (let i = 0; i < 10; i++) {
+      director.update(WAVES.spawnIntervalMs, 5);
+    }
+    expect(director.wavesStarted).toBe(1);
+    director.update(WAVES.minGapMs, 0);
+    director.update(1, 0);
+    expect(director.wavesStarted).toBe(2);
+  });
+});

@@ -110,6 +110,11 @@ export class SurvivalDirector {
     }
   }
 
+  /** Waves released so far. */
+  public get wavesStarted(): number {
+    return this.waveIndex;
+  }
+
   public get remainingMs(): number {
     return Math.max(0, this.durationMs - this.elapsedMs);
   }

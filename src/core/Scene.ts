@@ -1,3 +1,4 @@
+import type { RunLevel } from '../systems/battleStats';
 import type { Application, Container, Texture } from 'pixi.js';
 import { enemyKeepHealth } from '../data/difficulty';
 import type { Loadout } from '../data/loadout';
@@ -47,6 +48,8 @@ export interface RunState {
   bowmanHealths: number[];
   keepHealth: number;
   enemyKeepHealth: number;
+  /** The levels played so far, for the Run tab on the run's last end screen. */
+  levels?: RunLevel[];
 }
 
 /** A fresh run: level 1, every bowman and both keeps at full health (the enemy's by the difficulty, `enemyKeepHealth`). */

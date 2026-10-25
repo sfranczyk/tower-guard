@@ -88,7 +88,7 @@ export interface ArrowHitsEvents {
   bowmanDamaged(bowman: Bowman, amount: number, hit: BowmanHit): void;
   headshot(): void;
   /** Player `owner`'s arrow hit its first target (someone or the keep): the end screen's accuracy. */
-  arrowLanded?(owner: number): void;
+  arrowLanded?(owner: number, type: ProjectileType): void;
   /** `heardBy`: only that player hears it (the others hear `soundFor`'s stand-in). */
   sound(id: SoundId, at: Vec2, heardBy?: number): void;
 }
@@ -217,9 +217,10 @@ export class ArrowHits {
 
     const earliest = Math.min(towerHit ?? Infinity, enemyHit?.time ?? Infinity, bowmanHit?.time ?? Infinity);
     const owner = playerOf(arrow);
-    if (earliest < Infinity && owner !== undefined && !this.landed.has(arrow)) {
+    // A shrapnel burst's fragments aren't shots of their own (they'd count one shot's hits three times).
+    if (earliest < Infinity && owner !== undefined && arrow.type !== 'fragment' && !this.landed.has(arrow)) {
       this.landed.add(arrow);
-      this.events.arrowLanded?.(owner);
+      this.events.arrowLanded?.(owner, arrow.type);
     }
     if (towerHit !== undefined && towerHit <= earliest) {
       this.hitTower(arrow, pointAlong(start, travel, towerHit), activeEnemies, tower);

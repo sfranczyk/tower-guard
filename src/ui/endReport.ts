@@ -1,12 +1,6 @@
 import { PX_PER_METRE } from '../config';
 import { accuracy, teamTotals, type LevelReport, type PlayerStats } from '../systems/battleStats';
-
-const escapeHtml = (text: string): string => text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-
-const clock = (ms: number): string => {
-  const seconds = Math.round(Math.max(0, ms) / 1000);
-  return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
-};
+import { breakdownHtml, clock, escapeHtml, runHtml, timelineHtml } from './endCharts';
 
 const metres = (px: number): string => (px > 0 ? `${Math.round(px / PX_PER_METRE)} m` : '–');
 
@@ -36,6 +30,15 @@ const MOBA_COLUMNS: Column[] = [
   { label: 'Damage', value: (player) => player.damage },
   { label: 'Gold earned', value: (player) => player.goldEarned },
   { label: 'Gold spent', value: (player) => player.goldSpent },
+];
+
+export type ReportTab = 'overview' | 'timeline' | 'breakdown' | 'run';
+
+const REPORT_TABS: ReadonlyArray<{ id: ReportTab; label: string }> = [
+  { id: 'overview', label: 'Overview' },
+  { id: 'timeline', label: 'Timeline' },
+  { id: 'breakdown', label: 'Breakdown' },
+  { id: 'run', label: 'Run' },
 ];
 
 /** The big numbers over the table: the whole team's (MOBA: this player's team's; alone: his own). */
@@ -79,8 +82,18 @@ const table = (report: LevelReport): string => {
   return `<div class="report-table-wrap"><table class="report-table"><thead>${head}</thead><tbody>${rows}</tbody></table></div>`;
 };
 
-/** The end card's Overview (pure, tested): the team's big numbers and, with more than one player, a row per player. */
-export const endReportHtml = (report: LevelReport): string => {
+/** The Overview: the team's big numbers and, with more than one player, a row per player. */
+const overviewHtml = (report: LevelReport): string => {
   const tileHtml = tiles(report).map(({ label, value }) => `<div><strong>${value}</strong><span>${label}</span></div>`).join('');
   return `<div class="report-tiles">${tileHtml}</div>${report.players.length > 1 ? table(report) : ''}`;
+};
+
+/** The end card's tabs (pure, tested): Overview, Timeline, Breakdown and, on a run's last screen, Run; `tab` is shown. */
+export const endReportHtml = (report: LevelReport, tab: ReportTab = 'overview'): string => {
+  const tabs = REPORT_TABS.filter((entry) => entry.id !== 'run' || report.run);
+  const shown = tabs.some((entry) => entry.id === tab) ? tab : 'overview';
+  const pane = { overview: overviewHtml, timeline: timelineHtml, breakdown: breakdownHtml, run: runHtml }[shown](report);
+  return `<div class="report-tabs" role="tablist">${tabs.map(({ id, label }) =>
+    `<button type="button" role="tab" aria-selected="${id === shown}" class="chip-button${id === shown ? ' active' : ''}" data-report-tab="${id}">${label}</button>`).join('')}</div>`
+    + `<div class="report-pane" role="tabpanel">${pane}</div>`;
 };

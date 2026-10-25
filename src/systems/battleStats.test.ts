@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { REPORT } from '../config';
 import { BattleStats, accuracy, teamTotals } from './battleStats';
 
 describe('BattleStats', () => {
@@ -59,5 +60,41 @@ describe('BattleStats', () => {
     stats.kill('raider', 'arrow', 1, 700);
     stats.gold([50, 20], [30, 0]);
     expect(teamTotals(stats.snapshot().players)).toMatchObject({ kills: 2, longestKill: 700, goldEarned: 70, goldSpent: 30 });
+  });
+});
+
+describe('BattleStats timeline', () => {
+  it('samples the battle every REPORT.sampleMs and ends with the final point', () => {
+    const stats = new BattleStats(1);
+    let alive = 0;
+    for (let ms = 0; ms < 3000; ms += 500) {
+      stats.tick(500, () => ({ alive: alive++, keep: 99.6 }));
+    }
+    stats.wave();
+    stats.stop({ alive: 0, keep: 50, enemyKeep: 20 });
+    const { timeline, waves } = stats.snapshot();
+    expect(timeline.map((sample) => sample.t)).toEqual([0, 1, 2, 3]);
+    expect(timeline[0]).toEqual({ t: 0, alive: 0, keep: 100 });
+    expect(timeline[3]).toEqual({ t: 3, alive: 0, keep: 50, enemyKeep: 20 });
+    expect(waves).toEqual([3]);
+  });
+
+  it('thins a long level out to at most REPORT.maxSamples', () => {
+    const stats = new BattleStats(1);
+    for (let s = 0; s < REPORT.maxSamples * 3; s++) {
+      stats.tick(REPORT.sampleMs, () => ({ alive: 1, keep: 100 }));
+    }
+    const { timeline } = stats.snapshot();
+    expect(timeline.length).toBeLessThanOrEqual(REPORT.maxSamples);
+    expect(timeline[timeline.length - 1].t).toBeGreaterThan(REPORT.maxSamples * 2 * REPORT.sampleMs / 1000);
+  });
+
+  it('counts shots and hits by arrow type', () => {
+    const stats = new BattleStats(2);
+    stats.shot(0, 'fire');
+    stats.shot(1, 'fire');
+    stats.hit(1, 'fire');
+    stats.shot(0, 'normal');
+    expect(stats.snapshot().arrows).toEqual({ fire: { shots: 2, hits: 1 }, normal: { shots: 1, hits: 0 } });
   });
 });

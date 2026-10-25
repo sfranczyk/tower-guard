@@ -12,7 +12,8 @@
   the pause) and the order button (`ICON_ORDERS`): `DomUi.setAllies` once, `updateAllies` every frame. Banners: a line under the level chip (`DomUi.updateBanners`, `ICON_BANNERS`), off with the drawer's "Banner markers" (`session.bannerMarkers`; the option shows only in a battle with banners, `showBannerMarkersOption`).
 - **DomUi parts**: `ui.settings` (`SettingsDrawer.ts`, the drawer's options), `ui.dialogs` (`BattleDialogs.ts`, end screen
   and pause dialog), `UiHandlers` in `uiHandlers.ts`, `queryIn` / `onClickIn` in `domQuery.ts`. The end card's report
-  (`EndScreenOptions.report`, widens it: `end-wide`) is drawn by pure `endReport.ts` (team tiles, a row per player, best marked).
+  (`EndScreenOptions.report`, widens it: `end-wide`) is drawn by pure `endReport.ts` (tabs; Overview: team tiles, a row per
+  player, best marked) and `endCharts.ts` (Timeline: SVG line charts per mode; Breakdown: bar lists; Run: a row per level).
 - **Overlays on the canvas** (menu, sandbox/sound panels, end screen, pause dialog `[data-pause]` (`PauseView`: restart button; in the keep the compact quiver editor `compactQuiver` (icon tiles, names in tooltips) left of the buttons) placed under the
   settings drawer and the tuning panel, settings drawer) are laid out for a canvas at
   scale 1 and zoom with it (`--ui-scale`, set in `fitCanvas`, `UI_SCALE` limits); the sandbox's buttons stay pinned

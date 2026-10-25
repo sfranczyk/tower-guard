@@ -3,7 +3,7 @@ import type { Team } from '../data/moba';
 import { nameOf } from '../net/coopLink';
 import { killerOf, type HitInfo } from '../objects/enemy/enemyTypes';
 import type Tower from '../objects/Tower';
-import { BattleStats, type KillCause, type LevelReport } from '../systems/battleStats';
+import { BattleStats, type KillCause, type LevelReport, type StatsSample } from '../systems/battleStats';
 import type { BowmanHit } from '../systems/bowmanDeath';
 import type { Foe } from '../systems/combatGeometry';
 import type { MobaEconomy } from '../systems/mobaEconomy';
@@ -15,8 +15,14 @@ export interface BattleStatsWatchDeps {
   /** Each side's units whose deaths count as kills: `red` the enemies (MOBA: red minions), `blue` the soldiers and blue dragons. */
   sides: Record<Team, () => readonly Foe[]>;
   playerTower: Tower;
+  /** Its health is the timeline's enemy keep (none in survival). */
+  enemyTower?: Tower;
   moba: boolean;
   economy?: () => MobaEconomy | undefined;
+  /** Waves begun so far (BattleEnemies.wavesStarted). */
+  wavesStarted(): number;
+  /** Survival: the level's full length (ms). */
+  levelMs?: number;
 }
 
 /**
@@ -32,6 +38,7 @@ export class BattleStatsWatch {
   private readonly lastBowmanHit: Array<number | undefined>;
   private readonly health: number[];
   private keepHealth: number;
+  private waves = 0;
 
   public constructor(private readonly deps: BattleStatsWatchDeps) {
     this.stats = new BattleStats(deps.players.length);
@@ -40,12 +47,12 @@ export class BattleStatsWatch {
     this.keepHealth = deps.playerTower.getHealth();
   }
 
-  public shot(owner: number): void {
-    this.stats.shot(owner);
+  public shot(owner: number, type: string): void {
+    this.stats.shot(owner, type);
   }
 
-  public landed(owner: number): void {
-    this.stats.hit(owner);
+  public landed(owner: number, type: string): void {
+    this.stats.hit(owner, type);
   }
 
   /** A unit of `side` is about to take `amount`. */
@@ -71,7 +78,11 @@ export class BattleStatsWatch {
   }
 
   public update(deltaMs: number): void {
-    this.stats.tick(deltaMs);
+    this.stats.tick(deltaMs, () => this.sample());
+    const waves = this.deps.wavesStarted();
+    for (; this.waves < waves; this.waves += 1) {
+      this.stats.wave();
+    }
     (['red', 'blue'] as const).forEach((side) => this.deps.sides[side]().forEach((foe) => this.sweep(foe, side)));
     this.deps.players.forEach((player, index) => {
       const lost = this.health[index] - player.health;
@@ -92,7 +103,7 @@ export class BattleStatsWatch {
 
   /** The level is decided: nothing more counts. */
   public stop(): void {
-    this.stats.stop();
+    this.stats.stop(this.sample());
   }
 
   public report(local: number): LevelReport {
@@ -104,7 +115,21 @@ export class BattleStatsWatch {
       ...this.stats.snapshot(),
       names: this.deps.players.map((player) => nameOf(this.deps.session, player.index)),
       local,
+      ...(this.deps.levelMs ? { levelSeconds: Math.round(this.deps.levelMs / 1000) } : {}),
       ...(this.deps.moba ? { teams: this.deps.players.map((player) => player.team) } : {}),
+    };
+  }
+
+  /** The battle now, for the timeline. */
+  private sample(): Omit<StatsSample, 't'> {
+    const { playerTower, enemyTower, sides, players } = this.deps;
+    const economy = this.deps.economy?.();
+    const earned = (team: Team): number => players.reduce((sum, player) => sum + (player.team === team ? economy?.earned[player.index] ?? 0 : 0), 0);
+    return {
+      alive: sides.red().filter((foe) => foe.isAlive()).length,
+      keep: (100 * playerTower.getHealth()) / playerTower.maxHealth,
+      ...(enemyTower ? { enemyKeep: (100 * enemyTower.getHealth()) / enemyTower.maxHealth } : {}),
+      ...(economy ? { gold: [earned('blue'), earned('red')] as [number, number] } : {}),
     };
   }
 

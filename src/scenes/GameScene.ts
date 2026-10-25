@@ -193,7 +193,7 @@ export class GameScene extends Scene {
       arrowPower: (owner, type) => this.moba?.arrowPower(owner, type),
       // MOBA: the other team's shots fly without a trail to read their aim by.
       showsTrail: (owner) => !this.moba || this.players.find((player) => player.index === owner)?.team === this.team.local.team,
-      fired: (owner) => this.stats?.shot(owner),
+      fired: (owner, type) => this.stats?.shot(owner, type),
     });
     this.leftovers = new BattleLeftovers({
       pools: () => [
@@ -284,8 +284,11 @@ export class GameScene extends Scene {
         players: this.players,
         sides: { red: () => this.enemies, blue: () => [...this.allies, ...(this.moba?.allyFliers ?? [])] },
         playerTower: this.playerTower,
+        enemyTower: this.survivalSetup ? undefined : this.enemyTower,
         moba: this.moba !== undefined,
         economy: () => this.match?.economy,
+        wavesStarted: () => this.foes.wavesStarted,
+        levelMs: this.survivalSetup && this.survivalSetup.minutes * 60_000,
       });
     }
     this.control = new PlayerControl(keepOf, {
@@ -336,7 +339,7 @@ export class GameScene extends Scene {
           this.match?.bowmanHit(player, hit);
           this.stats?.bowmanHit(player, hit, lost);
         },
-        arrowLanded: (owner) => this.stats?.landed(owner),
+        arrowLanded: (owner, type) => this.stats?.landed(owner, type),
       }),
     );
 

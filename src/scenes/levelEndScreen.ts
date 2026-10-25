@@ -2,7 +2,9 @@ import type { GameContext, RunState } from '../core/Scene';
 import type { HostSync } from '../net/HostSync';
 import type { EndInfo } from '../net/protocol';
 import type { Team } from '../data/moba';
-import type { LevelReport } from '../systems/battleStats';
+import { BATTLEGROUNDS } from '../data/battlegrounds';
+import { runBattleground, runLevelCount } from '../data/sandbox';
+import { runLevel, type LevelReport } from '../systems/battleStats';
 import { levelEndInfo, mobaEndInfo, type LevelOutcome } from './levelEnd';
 
 /**
@@ -13,11 +15,15 @@ import { levelEndInfo, mobaEndInfo, type LevelOutcome } from './levelEnd';
 export const showLevelEnd = (ctx: GameContext, outcome: LevelOutcome, nextRun: () => RunState, hostSync?: HostSync, report?: LevelReport): (() => void) => {
   const { session, ui } = ctx;
   const { info: said, next } = levelEndInfo(outcome, session.sandbox);
-  const info = { ...said, report };
+  // The run's levels so far and this one; the run's last screen (of several levels) lists them all.
+  const place = BATTLEGROUNDS[runBattleground(session.sandbox, outcome.levelIndex)].name;
+  const levels = [...(session.run.levels ?? []), ...(report ? [runLevel(report, place, outcome.won)] : [])];
+  const runOver = !next && runLevelCount(session.sandbox) > 1 && levels.length > 1;
+  const info = { ...said, report: report && (runOver ? { ...report, run: levels } : report) };
   hostSync?.sendEnd(info);
   const action = next
     ? () => {
-      session.run = nextRun();
+      session.run = { ...nextRun(), levels };
       ctx.goTo('game');
     }
     : () => {

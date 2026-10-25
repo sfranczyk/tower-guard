@@ -20,7 +20,7 @@ import type { BowmanHit } from './bowmanDeath';
 import DragonEnemy from '../objects/dragon/DragonEnemy';
 import type Enemy from '../objects/enemy/Enemy';
 import type Tower from '../objects/Tower';
-import type { EnemyType, UnitType, Vec2 } from '../types';
+import type { EnemyType, ProjectileType, UnitType, Vec2 } from '../types';
 import type { Team } from '../data/moba';
 import { struckBy } from './lightning';
 import { groundAt } from './terrain';
@@ -92,8 +92,8 @@ export interface CombatEvents {
   /** `bowman` just caught fire. */
   bowmanIgnited(bowman: Bowman): void;
   headshot(): void;
-  /** Player `owner`'s arrow hit its first target (ArrowHits). */
-  arrowLanded?(owner: number): void;
+  /** Player `owner`'s arrow of `type` hit its first target (ArrowHits). */
+  arrowLanded?(owner: number, type: ProjectileType): void;
   /** A sound-worthy impact at a world position (the scene plays it). */
   sound(id: SoundId, at: Vec2, heardBy?: number): void;
   /** A hostile arrow loosed by `shooter` (its damage depends on who shot it). */

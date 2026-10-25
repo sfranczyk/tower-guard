@@ -140,4 +140,5 @@ Steps −3..3 (`WIND_STEPS`, calm between, = the status line's arrows); `rollWin
 GameScene reads it live (`wind()` in BattleArrows / CombatWorld; an arrow keeps the wind it was loosed in), co-op event `wind`.
 
 End-of-level report: `battleStats.ts` (pure, tested: `BattleStats` counts each player's shots, hits, kills, damage, falls;
-kills by kind and cause; `stop` when the level is decided; `LevelReport` = the snapshot + names, sent in the `end` message).
+kills by kind and cause, arrows by type, waves, a timeline sampled every `REPORT.sampleMs`; `stop` when the level is decided;
+`LevelReport` = the snapshot + names (+ `run`: `RunState.levels`, the run's last screen), sent in the `end` message).
