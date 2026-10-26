@@ -172,14 +172,15 @@ export class CoopPanel {
         body = `${roomModeCards()}${view.error ? `<p class="coop-error">${escapeHtml(view.error)}</p>` : ''}`;
         break;
       case 'join':
-        body = `
+        body = `<div class="coop-inner">
           ${aliasRow(typed, 'Player')}
           <p class="coop-copy">Type the room code the host gave you: co-op or MOBA, the room decides.</p>
           <div class="coop-join">
             <input data-coop-code maxlength="7" placeholder="Room code" autocomplete="off" spellcheck="false">
             <button class="primary-button" data-coop-join>Join</button>
           </div>
-          ${view.error ? `<p class="coop-error">${escapeHtml(view.error)}</p>` : ''}`;
+          ${view.error ? `<p class="coop-error">${escapeHtml(view.error)}</p>` : ''}
+        </div>`;
         break;
       case 'hosting':
         leave = view.code ? 'Close the room' : 'Cancel';
@@ -188,17 +189,19 @@ export class CoopPanel {
           ? `<button class="primary-button" data-coop-setup>${view.teams ? 'Start match' : 'Battle setup'}</button>` : '';
         body = view.code
           ? (view.teams ? this.mobaHosting(view.code, view.guests.length, view.teams, view.rules, typed) : `
+          <div class="coop-inner">
           <p class="coop-copy">Give the others this room code (up to three can join):</p>
           <div class="coop-code">${escapeHtml(view.code)}</div>
           <p class="coop-status">${view.guests.length === 0 ? 'Waiting for players…'
             : view.guests.length < 3 ? `${view.guests.length + 1} of 4 in · more can still join` : 'The room is full!'}</p>
           ${aliasRow(typed, 'Host')}
+          </div>
           ${view.guests.map(partnerQuiver).join('')}`)
-          : '<p class="coop-status">Opening a room…</p>';
+          : '<div class="coop-inner"><p class="coop-status">Opening a room…</p></div>';
         break;
       case 'joining':
         leave = 'Cancel';
-        body = `<p class="coop-status">Joining room ${escapeHtml(view.code)}…</p>`;
+        body = `<div class="coop-inner"><p class="coop-status">Joining room ${escapeHtml(view.code)}…</p></div>`;
         break;
       case 'joined':
         body = `

@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tower Guard</title>
+    <!-- Browser tab icon: a stickman archer on the backdrop colour (drawn inline, no extra file). -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%2320363b'/><g fill='none' stroke='%23f6f1e4' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'><circle cx='27' cy='17' r='5'/><path d='M27 23 L25 39 M25 39 L20 53 M25 39 L30 53 M27 28 L21 34 M27 28 L35 31'/></g><path d='M43 12 Q54 32 43 52' fill='none' stroke='%23e8b64c' stroke-width='3.4' stroke-linecap='round'/><path d='M43 12 L36 32 L43 52' fill='none' stroke='%23f6f1e4' stroke-width='1.4'/><path d='M35 32 H56' stroke='%23f6f1e4' stroke-width='2.4' stroke-linecap='round'/><path d='M60 32 L53 28 L53 36 Z' fill='%23f6f1e4'/></svg>">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet">
@@ -230,20 +232,30 @@
         /* One frame for the setup and the online room windows: the same size in every view and tab, so the top bar
            (back, title, actions) never moves; the pages fill it (mode cards stretch, short views sit in its middle). */
         .panel-card[data-sandbox-form], .coop-card { width: min(780px, calc(100% - 28px)); height: min(660px, calc(100% - 28px)); }
-        .panel-body:has(> .mode-cards) { display: flex; flex-direction: column; }
+        /* The mode picker: square pictures side by side with their names, a reserved line under them for the hovered mode's text, and "Additional modes". */
+        .panel-body:has(> .mode-picker) { display: flex; flex-direction: column; justify-content: center; }
+        .mode-picker { display: flex; flex-direction: column; gap: 14px; }
+        .mode-cards { display: grid; grid-template-columns: repeat(var(--mode-count, 2), minmax(0, 1fr)); gap: 16px; }
+        .mode-card { display: flex; flex-direction: column; gap: 8px; padding: 12px; border-radius: 18px; background: var(--panel-sunk); color: var(--ink); box-shadow: 0 4px 0 var(--panel-edge); outline: 3px solid transparent; outline-offset: 1px; transition: transform .08s ease, outline-color .15s ease; }
+        .mode-card:hover, .mode-card:focus-visible { outline-color: var(--gold); transform: translateY(-2px); }
+        .mode-card .map-thumb { display: block; align-self: center; width: min(100%, 300px); height: auto; aspect-ratio: 1; border-radius: 12px; }
+        .mode-card strong { font-family: var(--display); font-weight: 600; font-size: 22px; text-align: center; }
+        /* The hints share one grid cell, so the row's height is always there; only the hovered card's text shows. */
+        .mode-hints { display: grid; min-height: 3em; }
+        .mode-hint { grid-area: 1 / 1; margin: 0; text-align: center; color: var(--ink-soft); font-size: 15px; line-height: 1.4; opacity: 0; transition: opacity .15s ease; }
+        .mode-picker:has(.mode-card[data-mode-index="0"]:hover, .mode-card[data-mode-index="0"]:focus-visible) .mode-hint[data-mode-index="0"],
+        .mode-picker:has(.mode-card[data-mode-index="1"]:hover, .mode-card[data-mode-index="1"]:focus-visible) .mode-hint[data-mode-index="1"],
+        .mode-picker:has(.mode-card[data-mode-index="2"]:hover, .mode-card[data-mode-index="2"]:focus-visible) .mode-hint[data-mode-index="2"] { opacity: 1; }
+        .mode-footer { display: flex; justify-content: center; }
+        .mode-list { display: flex; flex-direction: column; gap: 12px; }
+        .mode-list-item { display: flex; align-items: center; gap: 14px; padding: 12px; border-radius: 18px; background: var(--panel-sunk); color: var(--ink); text-align: left; box-shadow: 0 4px 0 var(--panel-edge); outline: 3px solid transparent; outline-offset: 1px; transition: outline-color .15s ease; }
+        .mode-list-item:hover, .mode-list-item:focus-visible { outline-color: var(--gold); }
+        .mode-list-item .map-thumb { flex: none; width: 120px; height: 90px; border-radius: 10px; }
+        .mode-list-item strong { display: block; font-family: var(--display); font-weight: 600; font-size: 22px; }
+        .mode-list-item span span { color: var(--ink-soft); font-size: 15px; line-height: 1.4; }
         /* Sandbox setup: levels as tabs, the selected level's map cards and enemy steppers. */
         .panel-card select, .panel-card input[type="number"] { min-width: 0; padding: 5px 8px; border: 0; border-radius: 9px; background: var(--panel-sunk); color: var(--ink); font-family: var(--display); font-weight: 500; font-size: 15px; box-shadow: inset 0 2px 0 rgba(0, 0, 0, .06); }
         .sandbox-head { display: flex; flex-shrink: 0; padding-bottom: 10px; }
-        /* The mode picker: two big cards, a map, the name and what the mode is. */
-        /* The cards fill the window's height; their pictures, names and texts line up across them (subgrid rows). */
-        .mode-cards { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(var(--mode-count, 2), minmax(0, 1fr)); grid-template-rows: minmax(0, 1fr) auto auto; column-gap: 16px; padding: 4px 0; }
-        .mode-cards .mode-card { grid-row: span 3; display: grid; grid-template-rows: subgrid; align-items: start; }
-        .mode-card { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; padding: 14px; border-radius: 18px; background: var(--panel-sunk); color: var(--ink); text-align: left; box-shadow: 0 4px 0 var(--panel-edge); outline: 3px solid transparent; outline-offset: 1px; transition: transform .08s ease, outline-color .15s ease; pointer-events: auto; }
-        .mode-card:hover { outline-color: var(--gold); transform: translateY(-2px); }
-        /* The picture takes the card's spare height (more sky, mapThumbnail), so the cards fill the window. */
-        .mode-card .map-thumb { width: 100%; height: 100%; min-height: 0; border-radius: 12px; }
-        .mode-card strong { font-family: var(--display); font-weight: 600; font-size: 24px; }
-        .mode-card span { color: var(--ink-soft); font-size: 14px; line-height: 1.4; }
         /* The Rules page: one rule per row, name and hint left, control right. */
         .rules-list { display: flex; flex-direction: column; padding: 0 14px; border-radius: 14px; background: #fffaf0; box-shadow: 0 3px 0 var(--panel-edge); }
         .option-row { display: flex; align-items: center; gap: 10px; min-height: 58px; padding: 8px 0; }
@@ -382,6 +394,8 @@
         .coop-team .chip-button { margin-top: 4px; }
         .coop-card .quiver-editor { text-align: left; }
         .coop-body { display: flex; flex-direction: column; align-items: stretch; gap: 12px; }
+        /* A small dialog's content sits in a sunk panel inside the frame (join, waiting for a room). */
+        .coop-inner { display: flex; flex-direction: column; gap: 12px; width: 100%; padding: 18px 20px; border-radius: 18px; background: var(--panel-sunk); box-shadow: 0 4px 0 var(--panel-edge); }
         .coop-copy, .coop-status { margin: 0; font-size: 15px; line-height: 1.4; }
         .coop-status { font-family: var(--display); font-weight: 500; }
         .coop-error { margin: 0; color: var(--bad); font-size: 14px; }

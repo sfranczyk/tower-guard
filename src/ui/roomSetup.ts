@@ -2,7 +2,7 @@ import { BATTLEGROUNDS } from '../data/battlegrounds';
 import { MOBA_RULE_LIMITS, normalizeMobaRules, type MobaNumberRule, type MobaRules } from '../data/mobaRules';
 import { battlegroundsFor, type RunMode } from '../data/sandbox';
 import { ICON_BOWMAN, ICON_FRIENDLY_FIRE, ICON_GOLD, ICON_KEEP, ICON_RESPAWN, ICON_UPGRADES } from './icons';
-import { mapThumbnail } from './mapThumbnail';
+import { squareThumbnail } from './mapThumbnail';
 import { modeCards } from './modeCards';
 import { numberInput, optionRow } from './optionRows';
 
@@ -27,7 +27,7 @@ const ROOM_MODES: ReadonlyArray<{ mode: RoomMode; label: string; text: string }>
 /** The host's mode picker: a big card per mode, as the single-player setup's (co-op shows the same pictures). */
 export const roomModeCards = (): string => modeCards(ROOM_MODES.map(({ mode, label, text }) => ({
   attribute: `data-room-mode="${mode}"`,
-  thumbnail: mode === 'moba' ? mapThumbnail(BATTLEGROUNDS.greenMeadow, { eclipse: true }) : mapThumbnail(BATTLEGROUNDS[battlegroundsFor(mode)[0]]),
+  thumbnail: mode === 'moba' ? squareThumbnail(BATTLEGROUNDS.greenMeadow, { eclipse: true }) : squareThumbnail(BATTLEGROUNDS[battlegroundsFor(mode)[0]]),
   label,
   text,
 })));

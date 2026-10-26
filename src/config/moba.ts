@@ -99,5 +99,5 @@ export const MOBA_SKY = tunable('MOBA_SKY', 'MOBA sky', {
   cometLowY: 90,
   cometRadius: 26,
   cometGold: 100,
-  dayTitleMs: 35000,
+  dayTitleMs: 27000,
 }, { meta: { redSunsetChance: { max: 1, step: 0.05 }, eclipseTotal: { max: 0.5, step: 0.01 }, eclipseDiamond: { max: 0.2, step: 0.005 }, cometHighY: { min: -110, max: 300 }, cometLowY: { min: -110, max: 300 } } });

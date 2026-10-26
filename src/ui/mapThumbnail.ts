@@ -8,10 +8,14 @@ const hex = (color: number): string => `#${color.toString(16).padStart(6, '0')}`
  */
 const SKY_ABOVE = 36;
 
-/** MOBA's look (the online room's mode card): a dimmer sky, the sun partly eclipsed, a comet. */
+/** MOBA's look (the online room's mode card): a dimmer sky, the sun totally eclipsed with a crown, a comet. */
 export interface ThumbnailOptions {
   eclipse?: boolean;
 }
+
+/** A square picture (a mode card): the same scene with only the top 12 units of sky, so the sun and the sky's bands stay. */
+export const squareThumbnail = (battleground: Battleground, options: ThumbnailOptions = {}): string =>
+  `<svg class="map-thumb map-thumb-square" viewBox="0 -12 48 48" preserveAspectRatio="xMidYMax slice" aria-hidden="true">${thumbnailArt(battleground, options)}</svg>`;
 
 /**
  * A tiny flat landscape (48×36 SVG) drawn from a battleground's palette, for map pickers: sky bands,
@@ -44,8 +48,9 @@ const thumbnailArt = (battleground: Battleground, { eclipse = false }: Thumbnail
     const cy = sun.y > 200 ? 20 : 9;
     parts.push(`<circle cx="${cx}" cy="${cy}" r="5" fill="${hex(sun.color)}"/>`);
     if (eclipse) {
-      // The moon, the sky's colour, takes a small bite out of its upper right.
-      parts.push(`<circle cx="${cx + 4.4}" cy="${cy - 3}" r="3.4" fill="${hex(sky[Math.max(0, Math.min(sky.length - 1, Math.floor((cy - 3) / band)))])}"/>`);
+      // A total eclipse: the moon (dark) covers the sun, its corona glowing round it, and a gold crown sits on top.
+      parts.push(`<circle cx="${cx}" cy="${cy}" r="7.6" fill="#fff4e0" opacity=".35"/><circle cx="${cx}" cy="${cy}" r="5" fill="#1d2440"/>`
+        + `<path d="M${cx - 5} ${cy - 9}V${cy - 13.5}L${cx - 2.5} ${cy - 11}L${cx} ${cy - 14.5}L${cx + 2.5} ${cy - 11}L${cx + 5} ${cy - 13.5}V${cy - 9}Z" fill="#e8b64c" stroke="#fffdf6" stroke-width=".6" stroke-linejoin="round"/>`);
     }
   }
   if (eclipse) {
