@@ -1,23 +1,33 @@
 import { Container, type Application } from 'pixi.js';
 import type { SoundManager } from '../audio/SoundManager';
 import type { DomUi } from '../ui/DomUi';
-import { AnimationLabScene } from '../scenes/AnimationLabScene';
 import { CoopScene } from '../scenes/CoopScene';
-import { DesignLabScene } from '../scenes/DesignLabScene';
 import { GameScene } from '../scenes/GameScene';
 import { MenuScene } from '../scenes/MenuScene';
 import { SandboxScene } from '../scenes/SandboxScene';
-import { SoundLabScene } from '../scenes/SoundLabScene';
 import { DEFAULT_ARROW_TRAILS, MAX_ARROW_TRAILS } from '../config';
 import { loadSandbox } from './sandboxStorage';
 import { newRun, type GameContext, type GameTextures, type Scene, type SceneName } from './Scene';
 import { COOP_PARAM, DESIGN_LAB_PARAM, LAB_PARAM, MOBA_PARAM, SOUND_LAB_PARAM, TUNE_PARAM, getDevUrlParam, setUrlParam } from './urlState';
 import { loadKeepSide, saveKeepSide } from './keepSide';
 
+type LabName = 'animationLab' | 'soundLab' | 'designLab';
+
+/** The developer scenes load on first use, each its own chunk (not in the first download). */
+const LAB_SCENES: Record<LabName, () => Promise<new (ctx: GameContext) => Scene>> = {
+  animationLab: async () => (await import('../scenes/AnimationLabScene')).AnimationLabScene,
+  soundLab: async () => (await import('../scenes/SoundLabScene')).SoundLabScene,
+  designLab: async () => (await import('../scenes/DesignLabScene')).DesignLabScene,
+};
+
+const isLab = (name: SceneName): name is LabName => name in LAB_SCENES;
+
 /** Owns the active scene, switches between scenes and forwards ticker updates. */
 export class SceneManager {
   private readonly ctx: GameContext;
   private current?: Scene;
+  /** Counts scene switches: a lab still loading is dropped when another switch came after it. */
+  private switches = 0;
 
   public constructor(app: Application, ui: DomUi, textures: GameTextures, sound: SoundManager) {
     const sandbox = loadSandbox();
@@ -131,11 +141,25 @@ export class SceneManager {
     }
     this.current?.exit();
     this.ctx.root.removeChildren().forEach((child) => child.destroy({ children: true }));
-    this.current = this.createScene(name);
-    this.current.enter();
+    const switchId = ++this.switches;
+    this.current = undefined;
+    if (isLab(name)) {
+      void LAB_SCENES[name]().then((LabScene) => {
+        if (switchId === this.switches) {
+          this.show(new LabScene(this.ctx));
+        }
+      });
+      return;
+    }
+    this.show(this.createScene(name));
   }
 
-  private createScene(name: SceneName): Scene {
+  private show(scene: Scene): void {
+    this.current = scene;
+    scene.enter();
+  }
+
+  private createScene(name: Exclude<SceneName, LabName>): Scene {
     switch (name) {
       case 'menu':
         return new MenuScene(this.ctx);
@@ -143,12 +167,6 @@ export class SceneManager {
         return new CoopScene(this.ctx);
       case 'sandbox':
         return new SandboxScene(this.ctx);
-      case 'animationLab':
-        return new AnimationLabScene(this.ctx);
-      case 'soundLab':
-        return new SoundLabScene(this.ctx);
-      case 'designLab':
-        return new DesignLabScene(this.ctx);
       case 'game':
         return new GameScene(this.ctx);
     }
