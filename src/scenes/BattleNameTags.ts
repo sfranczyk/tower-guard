@@ -22,6 +22,6 @@ export class BattleNameTags {
   /** `mirrored`: the battle view is flipped, and the names flip back so they read the right way. */
   public update(players: readonly Player[], mirrored: boolean): void {
     const shown = this.shown && players.length > 1;
-    players.forEach((player) => player.bowman.setNameTag(shown ? nameOf(this.session, player.index) : undefined, mirrored));
+    players.forEach((player) => player.bowman.tags.setName(shown ? nameOf(this.session, player.index) : undefined, mirrored));
   }
 }

@@ -1,23 +1,22 @@
-import { Container, Graphics } from 'pixi.js';
+import { Container } from 'pixi.js';
 import { BOWMAN_WALK_SPEED } from '../../config';
 import type { Rect, Vec2 } from '../../types';
 import { AfflictionLayer } from '../AfflictionLayer';
 import { BodyMotion } from '../../systems/bodyMotion';
 import { bodyBounds, headBounds, type BodyShape } from '../../systems/bodyHitShape';
 import type { HitBox } from '../enemy/enemyTypes';
-import { startKnockdown, stepKnockdown, type Knockdown } from '../../systems/bowmanMotion';
+import type { Knockdown } from '../../systems/bowmanMotion';
 import type { ArmorPalette } from '../../rendering/armor';
 import { STANDING_BURN_POINTS } from '../../rendering/burning';
-import { drawHealthBar } from '../../rendering/healthBar';
 import { relight } from '../../systems/burning';
-import { groundAt } from '../../systems/terrain';
 import type { BowmanLook } from '../../rendering/bowmanBody';
-import { FALL_DURATION_MS, getFallPose, type FallKind } from '../../rendering/stickmanFall';
-import { deathFallFor, type BowmanHit } from '../../systems/bowmanDeath';
+import type { FallKind } from '../../rendering/stickmanFall';
+import type { BowmanHit } from '../../systems/bowmanDeath';
 import { BowAim, type BowmanAim } from './bowAim';
 import { BowmanFigure } from './BowmanFigure';
 import { BowmanFooting } from './bowmanFooting';
 import { BowmanTags } from './BowmanTags';
+import { die, knockBack, revive, updateKnockdown } from './bowmanDown';
 import { holdInVortex, pin, pinnedFootPoint, throwInAir, updateFlight } from './bowmanAloft';
 import { applyBowmanNet, applyRemote, bowmanNetState, type BowmanNet, type BowmanRemote } from './bowmanNet';
 
@@ -31,8 +30,6 @@ const BURN_FLAME_SIZE = 1.6;
 const AFFLICTION_SIZE = 1;
 /** Levitating, he's drawn in front of the funnel. */
 const LEVITATE_Z = 4;
-/** Health bar over his head (container space, drawn at 1/3: the enemies' size on screen), `aboveHead` over his top point. */
-const HEALTH_BAR = { width: 60, height: 8, belowFeet: 22 };
 
 export interface BowmanConfig {
   /** The health bar under his feet (off in the menu). */
@@ -57,12 +54,12 @@ export interface BowmanConfig {
 export class Bowman extends Container {
   public readonly maxHealth: number;
   public health: number;
-  /** Time since death; undefined while alive. */
-  private deathMs?: number;
+  /** Time since death; undefined while alive (bowmanDown). */
+  public deathMs?: number;
   /** The fall he dies in (as the enemies': stickmanFall), unless a knockdown was already throwing him down. */
   public deathFall?: { kind: FallKind; timeMs: number };
   /** What hurt him last (picks how he falls if it kills him). */
-  private lastHit?: BowmanHit;
+  public lastHit?: BowmanHit;
   /** Walking speed (px/s); MOBA's speed skill raises it. */
   public movementSpeed: number;
   private inTower = false;
@@ -84,12 +81,8 @@ export class Bowman extends Container {
    * the foot to the ground by a pinning arrow (can't walk, jump or hide, still shoots).
    */
   public readonly motion = new BodyMotion();
-  /** The health bar over his head (`setHealthRatio`; players' health lives in the battle's Player). */
-  private readonly healthBar = new Graphics();
-  private readonly showHealth: boolean;
-  private healthRatio = 1;
-  /** His player's name and the regeneration plus (`setNameTag`, `setRegenerating`). */
-  private readonly tags: BowmanTags;
+  /** His health bar (players' health lives in the battle's Player), name and the regeneration plus (BowmanTags). */
+  public readonly tags: BowmanTags;
   /** Co-op host: told when he's knocked down or catches fire, to replay it on the guest's screen. */
   public netHooks?: { knockedBack(fromX: number, strength: number): void; ignited(gen: number): void };
 
@@ -104,13 +97,12 @@ export class Bowman extends Container {
     this.footing = new BowmanFooting(boardBounds, config.width ?? 32);
     this.movementSpeed = config.movementSpeed ?? BOWMAN_WALK_SPEED;
     this.maxHealth = config.maxHealth ?? 100;
-    this.showHealth = config.showHealth ?? true;
     this.health = this.maxHealth;
     this.figure = new BowmanFigure(this, config.look ?? 'ranger', config.armorColors);
     this.afflictions = new AfflictionLayer('raider', { burnMs: config.burnMs ?? relight(), flameSize: BURN_FLAME_SIZE, burnFadeMs: BURN_FADE_MS });
 
-    this.addChild(this.figure.body, this.afflictions.art, this.healthBar);
-    this.tags = new BowmanTags(this);
+    this.addChild(this.figure.body, this.afflictions.art);
+    this.tags = new BowmanTags(this, config.showHealth ?? true);
 
     this.scale.set(1 / 3);
     this.zIndex = 2;
@@ -278,24 +270,9 @@ export class Bowman extends Container {
     return this.knockdown !== undefined || this.isFrozen || this.isAloft;
   }
 
-  /**
-   * Thrown onto his back away from a blast at `fromX` (he turns to face it), slides up to
-   * BOWMAN_KNOCKBACK.pushMax × `strength` (0..1) further, lies a moment and gets up. Ignored inside the keep.
-   */
+  /** Thrown onto his back away from a blast at `fromX`, slides, lies a moment and gets up (bowmanDown). */
   public knockBack(fromX: number, strength: number): void {
-    if (this.inTower || this.knockdown || this.isAloft) {
-      return;
-    }
-    this.netHooks?.knockedBack(fromX, strength);
-    // The blast breaks the ice and tears the pin out.
-    this.afflictions.warm();
-    this.motion.setPin(0);
-    this.figure.facing = fromX >= this.x ? 1 : -1;
-    this.aim.carry(this.figure.facing);
-    this.dropDraw();
-    this.footing.horizontalSpeed = 0;
-    this.knockdown = startKnockdown(strength);
-    this.figure.redraw();
+    knockBack(this, fromX, strength);
   }
 
   public moveHorizontal(direction: number, deltaSeconds = 0, sprinting = false): void {
@@ -352,67 +329,18 @@ export class Bowman extends Container {
     return this.lastHit?.fromX;
   }
 
-  /**
-   * Killed: drops the aim and falls like an enemy would to what hit him last (deathFallFor), turned as if hit from
-   * there; `kind` and `fromX` set it instead (a co-op guest plays the host's). Thrown down by a blast already, he
-   * just stays down. `alreadyFallen` (fell in an earlier level) starts him lying on his back. Returns the fall.
-   */
+  /** Killed: falls to what hit him last, or as `death` says (bowmanDown); returns the fall. */
   public die(death: { kind?: FallKind; fromX?: number } = {}, alreadyFallen = false): FallKind {
-    if (this.deathMs !== undefined) {
-      return this.deathFall?.kind ?? 'knockback';
-    }
-    this.deathMs = 0;
-    this.aim.drop();
-    this.footing.horizontalSpeed = 0;
-    this.motion.setPin(0);
-    // Frozen solid, he topples stiffly (the scene shatters the ice).
-    const frozen = this.isFrozen;
-    this.afflictions.warm();
-    if (this.afflictions.inVortex) {
-      // Killed in a vortex: he drops out of it and lands lying.
-      this.throwInAir(0, 0, 0);
-    }
-    if (this.motion.isThrown) {
-      // Up in the air: he falls, lands on his back and stays there (land).
-      return 'knockback';
-    }
-    if (alreadyFallen) {
-      this.knockdown = undefined;
-      this.deathFall = { kind: 'knockback', timeMs: FALL_DURATION_MS.knockback };
-    } else if (this.knockdown?.kind === 'knockback') {
-      // Thrown down by the blast that killed him: he doesn't get up (updateKnockdown).
-      return 'knockback';
-    } else {
-      this.knockdown = undefined;
-      const fromX = death.fromX ?? this.lastHit?.fromX;
-      if (fromX !== undefined && fromX !== this.x) {
-        this.figure.facing = fromX > this.x ? 1 : -1;
-      }
-      this.deathFall = { kind: death.kind ?? (frozen ? 'deathStiff' : deathFallFor(this.lastHit?.cause)), timeMs: 0 };
-    }
-    this.figure.redraw();
-    return this.deathFall.kind;
+    return die(this, death, alreadyFallen);
   }
 
   public get isDead(): boolean {
     return this.deathMs !== undefined;
   }
 
-  /** MOBA: back on his feet at `x` (his keep) after the respawn wait: no fall, burn, ice, pin or aim left. */
+  /** MOBA: back on his feet at `x` (his keep) after the respawn wait (bowmanDown). */
   public revive(x: number): void {
-    this.deathMs = undefined;
-    this.deathFall = undefined;
-    this.knockdown = undefined;
-    this.lastHit = undefined;
-    this.afflictions.warm();
-    this.afflictions.extinguish();
-    this.motion.setPin(0);
-    this.aim.drop();
-    this.exitTower();
-    this.footing.horizontalSpeed = 0;
-    this.setHorizontalPosition(x);
-    this.y = groundAt(x);
-    this.figure.redraw();
+    revive(this, x);
   }
 
   /**
@@ -435,43 +363,12 @@ export class Bowman extends Container {
     this.figure.body.tint = this.afflictions.tint;
     // On the body as it is now (standing, falling, lying or flailing); the ice block round the standing figure.
     this.afflictions.draw(this.figure.burnPoints(), AFFLICTION_SIZE, this.figure.toContainer(STANDING_BURN_POINTS));
-    this.placeHealthBar();
-  }
-
-  /** His health share (0..1) for the bar under his feet. */
-  public setHealthRatio(ratio: number): void {
-    this.healthRatio = ratio;
-  }
-
-  /** His player's name over his head (online, toggled by Ctrl; undefined: none), flipped back in a `mirrored` view. */
-  public setNameTag(name: string | undefined, mirrored = false): void {
-    this.tags.setName(name, mirrored);
-  }
-
-  /** A "+" right of his health bar while he heals (MOBA regeneration). */
-  public setRegenerating(regenerating: boolean): void {
-    this.tags.setRegenerating(regenerating);
-  }
-
-  /** Under his feet as he is now (standing, falling, flailing), the name over his head; hidden once dead. */
-  private placeHealthBar(): void {
-    this.healthBar.visible = this.showHealth && !this.isDead;
-    this.tags.setShown(this.healthBar.visible);
-    if (!this.healthBar.visible) {
-      return;
-    }
-    const points = this.figure.burnPoints();
-    const bottom = Math.max(0, ...points.map((point) => point.y));
-    const top = Math.min(0, ...points.map((point) => point.y));
-    const centre = points.reduce((sum, point) => sum + point.x, 0) / points.length;
-    this.healthBar.position.set(centre, bottom + HEALTH_BAR.belowFeet);
-    drawHealthBar(this.healthBar, this.healthRatio, HEALTH_BAR.width, HEALTH_BAR.height);
-    this.tags.place(centre, top, { y: this.healthBar.y, width: HEALTH_BAR.width });
+    this.tags.place(this.figure.burnPoints(), !this.isDead);
   }
 
   private updateBody(deltaMs: number, moving: boolean, sprinting: boolean): void {
     if (this.knockdown) {
-      this.updateKnockdown(deltaMs);
+      updateKnockdown(this, deltaMs);
       return;
     }
     if (this.deathMs !== undefined) {
@@ -492,27 +389,6 @@ export class Bowman extends Container {
   /** Where the arrow is nocked: the string hand, in world space. */
   public getBowReleasePoint(): Vec2 {
     return this.figure.getBowReleasePoint();
-  }
-
-  /**
-   * Plays the fall, slides away from the blast meanwhile, lies BOWMAN_KNOCKBACK.lieMs and gets up; then moves
-   * to where the get-up pose ends. Killed meanwhile, he stays lying on his back.
-   */
-  private updateKnockdown(deltaMs: number): void {
-    const step = stepKnockdown(this.knockdown!, deltaMs, this.deathMs === undefined);
-    this.knockdown = step.knockdown;
-    const { facing } = this.figure;
-    if (step.slide !== 0) {
-      // Away from the blast is −facing.
-      this.x -= facing * step.slide;
-      this.footing.constrain(this);
-    } else if (step.stoodUp) {
-      // The get-up ends standing behind where the fall started; move there for real.
-      this.x += getFallPose('getUp', 1).hip.x * facing * this.scale.x;
-      this.footing.constrain(this);
-      this.figure.stand();
-    }
-    this.figure.redraw();
   }
 
   /** At the edge of the board with `direction` pointing out of it (he can't walk that way, and doesn't try). */

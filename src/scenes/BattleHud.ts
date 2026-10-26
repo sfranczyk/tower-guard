@@ -47,8 +47,8 @@ export class BattleHud {
         this.deps.damageNumbers().showPlayerHit(player.bowman, before - player.health);
       }
       this.shownHealth[player.index] = player.health;
-      player.bowman.setHealthRatio(player.health / maxHealth(player));
-      player.bowman.setRegenerating(moba?.regenerating(player) ?? false);
+      player.bowman.tags.setHealthRatio(player.health / maxHealth(player));
+      player.bowman.tags.setRegenerating(moba?.regenerating(player) ?? false);
     });
     this.deps.nameTags()?.update(players, this.deps.mirrored());
     ui.updateAllies({ slots: soldiers.slots(), order: soldiers.order, orderLabel: ALLY_ORDER_LABELS[soldiers.order] });
