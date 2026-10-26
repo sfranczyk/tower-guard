@@ -238,9 +238,8 @@
         .mode-cards { display: grid; grid-template-columns: repeat(var(--mode-count, 2), minmax(0, 1fr)); gap: 16px; }
         .mode-card { display: flex; flex-direction: column; gap: 8px; padding: 12px; border-radius: 18px; background: var(--panel-sunk); color: var(--ink); box-shadow: 0 4px 0 var(--panel-edge); outline: 3px solid transparent; outline-offset: 1px; transition: transform .08s ease, outline-color .15s ease; }
         .mode-card:hover, .mode-card:focus-visible { outline-color: var(--gold); transform: translateY(-2px); }
-        .mode-art { position: relative; display: block; align-self: center; width: min(100%, 300px); aspect-ratio: 1; border-radius: 12px; overflow: hidden; }
-        .mode-card .map-thumb { display: block; width: 100%; height: 100%; }
-        .mode-text { position: absolute; inset: auto 0 0; padding: 24px 10px 9px; background: linear-gradient(to bottom, rgba(16, 20, 34, 0), rgba(16, 20, 34, .84) 22px); color: #fff8ea; font-size: clamp(11px, 1.1vw, 13px); line-height: 1.3; text-align: center; text-shadow: 0 1px 2px rgba(0, 0, 0, .5); }
+        .mode-card .map-thumb { display: block; align-self: center; width: min(100%, 250px); height: auto; aspect-ratio: 1; border-radius: 12px; }
+        .mode-text { color: var(--ink-soft); font-size: 14px; line-height: 1.4; text-align: center; }
         .mode-card strong { font-family: var(--display); font-weight: 600; font-size: 22px; text-align: center; }
         .mode-footer { display: flex; justify-content: center; }
         .mode-list { display: flex; flex-direction: column; gap: 12px; }

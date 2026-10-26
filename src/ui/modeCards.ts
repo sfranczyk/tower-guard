@@ -1,4 +1,4 @@
-/** One card of a mode picker: a square picture with the mode's description (`text`) over its foot, and the mode's name. */
+/** One card of a mode picker: a square picture, the mode's name and its description (`text`) under it. */
 export interface ModeCard {
   /** The data attribute that picks it, e.g. `data-pick-mode="battle"`. */
   attribute: string;
@@ -8,14 +8,15 @@ export interface ModeCard {
 }
 
 /**
- * The mode pickers (the single-player setup's and the online room's): square cards side by side, each picture carrying
- * its mode's description on a dark band along its bottom. `footer` is an optional row of buttons below.
+ * The mode pickers (the single-player setup's and the online room's): cards side by side, each a square picture, the
+ * mode's name and its description under it. `footer` is an optional row of buttons below.
  */
 export const modeCards = (cards: readonly ModeCard[], footer = ''): string => `<div class="mode-picker" style="--mode-count: ${cards.length}">
   <div class="mode-cards">
     ${cards.map(({ attribute, thumbnail, label, text }, index) => `<button type="button" class="mode-card" data-mode-index="${index}" ${attribute}>
-      <span class="mode-art">${thumbnail}<span class="mode-text">${text}</span></span>
+      ${thumbnail}
       <strong>${label}</strong>
+      <span class="mode-text">${text}</span>
     </button>`).join('')}
   </div>
   ${footer}
