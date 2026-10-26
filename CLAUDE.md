@@ -58,7 +58,7 @@ src/
 
 - Pure logic (math, collision, data) has no Pixi/DOM imports and a `*.test.ts` next to it.
 - New tuning numbers go in `config/<area>.ts`, sandbox defaults in `data/sandbox.ts`.
-- Files of roughly 150–400 lines; split by responsibility rather than growing `GameScene` or `Enemy`.
+- Files of roughly 150–400 lines, never over 480 (`npm run verify` fails past it); split by responsibility rather than growing `GameScene` or `Enemy`.
 - Game text in the UI is English.
 - Branching and releases: see below.
 
