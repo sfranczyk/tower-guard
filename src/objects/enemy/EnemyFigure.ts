@@ -20,6 +20,7 @@ import type Enemy from './Enemy';
 import { torsoOf } from '../../systems/bodyHitShape';
 import { KNOCKDOWN_LIE_MS, fallProgress, startFallState, stepFall, type FallState } from './enemyFall';
 import { playerKeepX, worldWidth } from '../../systems/battlefield';
+import { isShownX } from '../../core/viewport';
 
 /** Body sprite scale (x is mirrored by facing). */
 export const BODY_SCALE = { x: 0.5, y: 0.52 };
@@ -78,6 +79,8 @@ export class EnemyFigure {
   private dropSpeed = 0;
   /** A settled corpse has been drawn as it rests (isSettledCorpse): it isn't redrawn again. */
   private settledDrawn = false;
+  /** On screen or near it (isShownX): off it, poses are still worked out (hit shapes) but nothing is drawn or rendered. */
+  private shown = true;
 
   public constructor(private readonly enemy: Enemy) {}
 
@@ -96,7 +99,7 @@ export class EnemyFigure {
 
   /** Draws the body in this enemy's look (rendering/enemyBody) in the given state. */
   public draw(state: EnemyBodyState): void {
-    this.drawn = drawEnemyBody(this.body, this.enemy.kind, state, BODY_ORIGIN_Y, this.lookClock);
+    this.drawn = drawEnemyBody(this.body, this.enemy.kind, state, BODY_ORIGIN_Y, this.lookClock, this.shown);
   }
 
   /**
@@ -159,12 +162,14 @@ export class EnemyFigure {
     const { enemy } = this;
     const { afflictions } = enemy;
     afflictions.tick(deltaMs);
+    this.shown = isShownX(enemy.x);
+    enemy.renderable = this.shown;
     // A corpse at rest stays as it was last drawn (no redrawing every frame).
     if (this.isSettledCorpse) {
       if (this.settledDrawn) {
         return;
       }
-      this.settledDrawn = true;
+      this.settledDrawn = this.shown;
     } else {
       this.settledDrawn = false;
     }
@@ -178,7 +183,9 @@ export class EnemyFigure {
       this.dropToGround(deltaMs);
       this.gibs.step(deltaMs);
       this.lookTimeMs += deltaMs;
-      drawEnemyGibs(this.body, enemy.kind, this.gibs, BODY_ORIGIN_Y, this.lookClock);
+      if (this.shown) {
+        drawEnemyGibs(this.body, enemy.kind, this.gibs, BODY_ORIGIN_Y, this.lookClock);
+      }
       this.body.tint = this.shattered ? FROZEN_TINT : 0xffffff;
       afflictions.art.clear();
       return;
@@ -198,6 +205,9 @@ export class EnemyFigure {
     }
     this.body.tint = afflictions.tint;
     const horse = enemy.rider?.pose;
+    if (!this.shown) {
+      return;
+    }
     if (horse) {
       afflictions.draw(this.afflictionPoints(mountedBodyPoints(horse)), AFFLICTION_SIZE, this.afflictionPoints(mountedIcePoints(horse)));
       return;

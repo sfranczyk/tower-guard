@@ -20,6 +20,8 @@ export const VIEW_TOP = VIEW_BOTTOM - GAME_HEIGHT;
 export const MAX_VIEW_SCALE = 1.2;
 /** Upper limit of the renderer resolution (backing pixels per game px) for big windows and browser zoom. */
 export const MAX_RENDER_RESOLUTION = 4;
+/** Bodies this far (px) outside the battle view are still drawn: covers a dragon's wings, a lance and a frame of camera lag. */
+export const VIEW_CULL_MARGIN = 300;
 /**
  * The battlefield of a battle level, keep to keep (independent of the view width); the camera follows the bowman across
  * it. A survival level is shorter (SURVIVAL_WORLD_WIDTH). At run time ask systems/battlefield.ts (`worldWidth()`).

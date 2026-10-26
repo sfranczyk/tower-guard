@@ -22,6 +22,7 @@ import { DragonMotion, type FlightNet } from './DragonMotion';
 import { frameLocalAngle, frameToLocal, frameToWorld, frameWorldAngle, type DragonFrame } from './dragonFrame';
 import { DRAGON_ARCHER_LOOK, DRAGON_KINDS, type DragonKind, type DragonLook } from './dragonKinds';
 import { worldWidth } from '../../systems/battlefield';
+import { isShownX } from '../../core/viewport';
 
 export type { DragonKind } from './dragonKinds';
 
@@ -352,6 +353,8 @@ export default class DragonEnemy extends Container {
   public updateAnimation(realDeltaMs: number): void {
     this.flashMs = Math.max(0, this.flashMs - realDeltaMs);
     this.afflictions.tick(realDeltaMs);
+    // Off screen it is still posed (its hit zones) but not rendered (isShownX).
+    this.renderable = isShownX(this.x);
     // Chilled: slower wing beats and breath.
     const deltaMs = realDeltaMs * this.afflictions.timeScale;
     if (this.corpse) {

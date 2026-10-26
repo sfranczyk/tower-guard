@@ -1,4 +1,4 @@
-import { BACKDROP_WIDTH, GAME_HEIGHT, GAME_WIDTH, MAX_VIEW_SCALE, MAX_VIEW_WIDTH } from '../config';
+import { BACKDROP_WIDTH, GAME_HEIGHT, GAME_WIDTH, MAX_VIEW_SCALE, MAX_VIEW_WIDTH, VIEW_CULL_MARGIN } from '../config';
 
 /**
  * The view's width in game px. Its height is always GAME_HEIGHT; the width grows from GAME_WIDTH when the
@@ -39,3 +39,21 @@ export const setViewWidth = (width: number): void => {
  * (negative once the view is wider than it).
  */
 export const centeredCameraX = (width = currentWidth, span = BACKDROP_WIDTH): number => (span - width) / 2;
+
+/**
+ * The stretch of world x the battle camera shows (GameScene sets it each frame, clears it on exit). Bodies outside it,
+ * plus a margin, skip drawing and rendering (EnemyFigure, DragonEnemy); unset (menus, labs) everything counts as shown.
+ */
+let shownRange: { left: number; right: number } | undefined;
+
+export const setShownRange = (left: number, right: number): void => {
+  shownRange = { left, right };
+};
+
+export const clearShownRange = (): void => {
+  shownRange = undefined;
+};
+
+/** Whether world `x` is on screen or within `margin` of it (always, with no range set). */
+export const isShownX = (x: number, margin = VIEW_CULL_MARGIN): boolean =>
+  !shownRange || (x >= shownRange.left - margin && x <= shownRange.right + margin);

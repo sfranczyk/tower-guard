@@ -8,6 +8,9 @@
   Never wider than the level's field: GameScene calls `ui.limitViewWidth(worldWidth())` (bars beside the canvas).
   The renderer resolution follows the shown size (`onCanvasFit` in `main.ts`: CSS scale × devicePixelRatio, capped by
   `MAX_RENDER_RESOLUTION`, refit on browser zoom).
+- **Culling** (`viewport.ts`): `GameScene` sets `setShownRange` to the camera's view each frame; `EnemyFigure` and
+  `DragonEnemy` ask `isShownX` (± `VIEW_CULL_MARGIN`): off it they are `renderable = false` and enemies skip painting
+  (`drawEnemyBody`'s `paint`) but still pose, so hit shapes stay right. Unset outside battle (labs, menus).
 - **Camera** (`camera.ts`): aim look-ahead, see scenes/CLAUDE.md; `centeredCameraX()`.
 - `GameContext` / `GameSession` (in `Scene.ts`): `ctx.session` (sandbox, run, net, playerCount, browser-session settings).
 - `sandboxStorage.ts`: setups in localStorage. `urlState.ts`: the URL flags (`?debug`, `?lab`, …); dev-only ones through `getDevUrlParam`, off in the

@@ -13,7 +13,7 @@ import { spatialMix } from '../audio/spatial';
 import { soundFor } from '../audio/soundCatalog';
 import { Scene, isMultiplayer, type GameContext } from '../core/Scene';
 import { isMirrored, mirrorX } from '../core/keepSide';
-import { viewWidth } from '../core/viewport';
+import { clearShownRange, setShownRange, viewWidth } from '../core/viewport';
 import { BATTLEGROUNDS, aimColorsOf, type Battleground } from '../data/battlegrounds';
 import { enemyEdge, enemyKeepHealth, wavePacing } from '../data/difficulty';
 import { bannersInPlay, friendlyFireOn, runBattleground, runLevelCount, survivalLevel, type SurvivalLevel } from '../data/sandbox';
@@ -445,6 +445,8 @@ export class GameScene extends Scene {
     if (this.controls?.frozen) {
       return;
     }
+    // Last frame's view: bodies far off it skip drawing (isShownX).
+    setShownRange(this.camera.x, this.camera.x + viewWidth());
     this.foes.update(deltaMs);
     this.soldiers.update(deltaMs);
     this.moba?.update(deltaMs, !this.outcome.ended);
@@ -503,6 +505,7 @@ export class GameScene extends Scene {
     super.exit();
     this.controls?.destroy();
     setBarsMirrored(false);
+    clearShownRange();
     useBattlefield();
     this.ctx.ui.limitViewWidth();
   }

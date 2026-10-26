@@ -126,19 +126,23 @@ const plainPoseFor = (kind: UnitType, state: HumanState): BodyPose => {
 
 /**
  * Draws an enemy of `kind` into `sprite` (cleared first); sets the sprite's y like drawStickman would. Returns the pose
- * drawn (none on horseback: MountedRider has its own zones).
+ * drawn (none on horseback: MountedRider has its own zones). `paint` false (off screen) only works the pose out: the
+ * hit shapes follow it, the sprite keeps its old drawing.
  */
-export const drawEnemyBody = (sprite: Graphics, kind: UnitType, state: EnemyBodyState, originY: number, timeMs: number): DrawnBody | undefined => {
-  sprite.clear();
+export const drawEnemyBody = (sprite: Graphics, kind: UnitType, state: EnemyBodyState, originY: number, timeMs: number, paint = true): DrawnBody | undefined => {
   sprite.y = state.mode === 'joints' || state.mode === 'mounted' ? originY : originY - LIVE_POSE_LIFT;
   if (state.mode === 'mounted') {
-    drawMountedKnight(sprite, state.pose, timeMs, { riderless: state.riderless });
+    if (paint) {
+      drawMountedKnight(sprite.clear(), state.pose, timeMs, { riderless: state.riderless });
+    }
     return undefined;
   }
   const cast = state.mode === 'cast' ? Math.sin(Math.PI * state.progress) : 0;
   const pose = poseFor(kind, state);
   const look = lookOf(kind).look(timeMs, cast);
-  drawHumanoid(sprite, pose, look);
+  if (paint) {
+    drawHumanoid(sprite.clear(), pose, look);
+  }
   return { pose, head: look.headHit ?? PLAIN_HEAD };
 };
 
