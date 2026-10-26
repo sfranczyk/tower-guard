@@ -34,7 +34,7 @@ export class BattleLeftovers {
       for (let index = pool.list.length - 1; index >= 0; index -= 1) {
         const foe = pool.list[index];
         // A dead horse waits for its rider to come off (he is an enemy of his own).
-        if (foe.isAlive() || (foe instanceof Enemy && foe.riderPending)) {
+        if (foe.isAlive() || (foe instanceof Enemy && foe.rider?.mount.riderPending)) {
           continue;
         }
         const age = (this.deadMs.get(foe) ?? 0) + deltaMs;

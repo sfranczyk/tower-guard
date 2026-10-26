@@ -284,7 +284,7 @@ export class AllyAI {
     this.medics.set(medic, state);
     state.restMs = Math.max(0, state.restMs - deltaMs);
     const helpless = medic.isDown || medic.afflictions.isFrozen || medic.afflictions.inVortex;
-    if (state.patient && (!this.stillWounded(state.patient) || (state.bandagedMs > 0 && !medic.isBandaging) || helpless)) {
+    if (state.patient && (!this.stillWounded(state.patient) || (state.bandagedMs > 0 && !medic.bandage.isBandaging) || helpless)) {
       this.endBandage(medic, state);
     }
     if (!state.patient && state.restMs <= 0 && !helpless) {
@@ -297,24 +297,25 @@ export class AllyAI {
     }
     const at = patient.x();
     const besideX = at - MEDIC.reach;
-    if (!medic.isBandaging) {
+    if (!medic.bandage.isBandaging) {
       medic.update(deltaMs, { x: besideX, y: groundAt(besideX) }, 3);
       medic.updateAnimation(deltaMs, medic.isMoving());
       if (Math.abs(medic.x - besideX) <= 3 && !helpless) {
         medic.faceTowards(at);
-        medic.startBandage();
+        medic.bandage.start();
+        medic.halt();
         state.bandagedMs = 0.001;
       }
       return;
     }
     medic.update(deltaMs, { x: medic.x, y: medic.y }, 1);
     medic.updateAnimation(deltaMs, false);
-    if (!medic.isKneeling || medic.isDown) {
+    if (!medic.bandage.isKneeling || medic.isDown) {
       return;
     }
     if (Math.abs(at - medic.x) > MEDIC.reach + 14) {
       // He walked off: she gets up and follows him.
-      medic.stopBandage();
+      medic.bandage.stop();
       state.bandagedMs = 0;
       return;
     }
@@ -340,7 +341,7 @@ export class AllyAI {
     }
     state.patient = undefined;
     state.bandagedMs = 0;
-    medic.stopBandage();
+    medic.bandage.stop();
   }
 
   private stillWounded(patient: Patient): boolean {

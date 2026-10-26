@@ -457,7 +457,7 @@ export class ArrowHits {
     }
     // Hit in the leg, the horse may go lame: it stumbles and walks for a while.
     if (leg && !(enemy instanceof DragonEnemy) && legHitLames(arrow.type)) {
-      enemy.lame(HORSE_LEG.lameMs);
+      enemy.rider?.lame(HORSE_LEG.lameMs);
     }
     // Every arrow hit makes the enemy cry out (kills and headshots too); an explosive kill is just the blast. MOBA: one of
     // his own team's soldiers curses the player instead (ALLY_CURSE_CHANCES), heard by that player alone.

@@ -9,6 +9,7 @@ import type { UnitType, Vec2 } from '../types';
 import { solveLaunchAngle } from './ballistics';
 import { BOWMAN_CHEST, TOWER_HALF_WIDTH, type Foe } from './combatGeometry';
 import { groundAt } from './terrain';
+import { aimBow, bowReleasePoint, relaxBow } from '../objects/enemy/enemyArchery';
 
 /** Re-solve the aim this often (as EnemyRanged: the solver simulates many trajectories). */
 const AIM_REFRESH_MS = 250;
@@ -50,15 +51,15 @@ export class AllyRanged {
     const aimPoint = this.target(archer);
     if (archer.isDown || !aimPoint) {
       archer.update(deltaMs, { x: laneEnd, y: groundAt(laneEnd) }, 4);
-      archer.relaxBow(deltaMs);
+      relaxBow(archer, deltaMs);
       this.aims.delete(archer);
     } else {
       const speed = bowSpeed(ENEMY_ARROW_POWER);
-      const release = archer.getBowReleasePoint();
+      const release = bowReleasePoint(archer);
       const angle = this.aimAngle(archer, release, aimPoint, speed, deltaMs);
-      if (archer.aimBow(angle, deltaMs)) {
+      if (aimBow(archer, angle, deltaMs)) {
         const spread = (Math.random() * 2 - 1) * ENEMY_ATTACK.archerSpread;
-        this.events.allyShot(archer.getBowReleasePoint(), angle + spread, speed * (0.97 + Math.random() * 0.06), archer.kind, archer.power);
+        this.events.allyShot(bowReleasePoint(archer), angle + spread, speed * (0.97 + Math.random() * 0.06), archer.kind, archer.power);
       }
     }
     archer.updateAnimation(deltaMs, archer.isMoving());

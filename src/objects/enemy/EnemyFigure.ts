@@ -307,7 +307,7 @@ export class EnemyFigure {
     }
 
     // The medic kneeling to bandage (or getting back up).
-    const kneel = enemy.advanceKneel(deltaMs);
+    const kneel = enemy.bandage.advance(deltaMs);
     if (kneel > 0) {
       this.body.rotation = 0;
       this.draw({ mode: 'bandage', kneel, timeMs: this.lookTimeMs });

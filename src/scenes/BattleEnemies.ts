@@ -93,7 +93,7 @@ export class BattleEnemies {
    * dead horse whose rider hasn't come off it yet (he comes as an enemy of his own); the cleared ones count too.
    */
   public defeated(): number {
-    return this.cleared + this.list.filter((enemy) => !enemy.isAlive() && !(enemy instanceof Enemy && enemy.riderPending)).length;
+    return this.cleared + this.list.filter((enemy) => !enemy.isAlive() && !(enemy instanceof Enemy && enemy.rider?.mount.riderPending)).length;
   }
 
   /** A corpse was cleared away (BattleLeftovers took it out of the list): it still counts as defeated. */
@@ -106,7 +106,7 @@ export class BattleEnemies {
     if (this.survival && !this.stopped) {
       return true;
     }
-    return this.spawned < this.total || this.list.some((enemy) => enemy instanceof Enemy && enemy.riderPending);
+    return this.spawned < this.total || this.list.some((enemy) => enemy instanceof Enemy && enemy.rider?.mount.riderPending);
   }
 
   /** Every enemy of the level down (never in survival: more keep coming until the time is up). */
