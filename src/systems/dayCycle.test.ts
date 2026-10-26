@@ -162,7 +162,7 @@ describe('day cycle', () => {
 describe('eclipses', () => {
   const seeds = Array.from({ length: 60 }, (_, index) => index * 7919 + 3);
 
-  it('come 5 to 15 minutes apart, only in full daylight, for at most 2 minutes, over by sunset', () => {
+  it('come 5 to 15 minutes apart, only in full daylight, for at most 2 minutes, over once the sun has sunk', () => {
     seeds.forEach((seed) => {
       const eclipses = eclipsesUntil(seed, 120 * MINUTE);
       expect(eclipses.length).toBeGreaterThan(3);
@@ -171,7 +171,7 @@ describe('eclipses', () => {
         expect(eclipse.start - before).toBeGreaterThanOrEqual(MOBA_SKY.eclipseMinMs);
         expect(dayTime(eclipse.start).part).toBe('day');
         expect(eclipse.end - eclipse.start).toBeLessThanOrEqual(MOBA_SKY.eclipseMs);
-        expect(eclipse.end).toBeLessThanOrEqual(dayTime(eclipse.start).start + MOBA_SKY.dayMs);
+        expect(eclipse.end).toBeLessThanOrEqual(dayTime(eclipse.start).start + MOBA_SKY.dayMs + MOBA_SKY.sinkMs);
       });
     });
   });
@@ -194,6 +194,37 @@ describe('eclipses', () => {
       expect(sky.stars).toBeGreaterThan(0.5);
     }
     expect(daySky(11, eclipse.end + 1).eclipse).toBeUndefined();
+  });
+
+  it('bring the stars out only just before totality', () => {
+    const eclipse = eclipsesUntil(11, 60 * MINUTE)[0];
+    const totality = eclipse.start + (0.5 - MOBA_SKY.eclipseTotal / 2) * MOBA_SKY.eclipseMs;
+    const lead = MOBA_SKY.eclipseStarLead * MOBA_SKY.eclipseMs;
+    if (totality < eclipse.end && dayTime(eclipse.start).at + MOBA_SKY.eclipseMs < MOBA_SKY.dayMs - MOBA_SKY.twilightMs) {
+      expect(daySky(11, totality - lead - 1).stars).toBe(0);
+      expect(daySky(11, totality - lead / 2).stars).toBeCloseTo(0.5);
+      expect(daySky(11, totality).stars).toBe(1);
+      expect(daySky(11, eclipse.start + MOBA_SKY.eclipseMs / 2).stars).toBe(1);
+    }
+  });
+
+  it('keep the stars from flickering when the sun sets eclipsed', () => {
+    const cut = seeds.flatMap((seed) => eclipsesUntil(seed, 120 * MINUTE).filter((eclipse) => eclipse.end - eclipse.start < MOBA_SKY.eclipseMs).map((eclipse) => ({ seed, eclipse })));
+    expect(cut.length).toBeGreaterThan(0);
+    cut.forEach(({ seed, eclipse }) => {
+      const nightOut = dayTime(eclipse.start).start + MOBA_SKY.dayMs + MOBA_SKY.sinkMs + MOBA_SKY.starFadeMs;
+      expect(eclipse.end).toBe(dayTime(eclipse.start).start + MOBA_SKY.dayMs + MOBA_SKY.sinkMs);
+      // The sun sinks out of sight still eclipsed: it never shows bare again that day.
+      expect(daySky(seed, eclipse.end - 1).eclipse).toBeDefined();
+      expect(daySky(seed, eclipse.end).sun.visible).toBe(false);
+      let before = daySky(seed, eclipse.start).stars;
+      for (let t = eclipse.start; t <= nightOut; t += 100) {
+        const stars = daySky(seed, t).stars;
+        expect(Math.abs(stars - before)).toBeLessThan(0.05);
+        before = stars;
+      }
+      expect(daySky(seed, nightOut).stars).toBe(1);
+    });
   });
 
   it('send one comet across the whole field inside the eclipse', () => {

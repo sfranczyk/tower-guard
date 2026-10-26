@@ -94,11 +94,12 @@ const inDaylight = (timeMs: number): number => {
 /**
  * The eclipses that have begun by `untilMs`: each MOBA_SKY.eclipseMinMs..eclipseMaxMs after the previous one's start
  * (the first after the match's), moved to the next full day if it falls outside one; over after MOBA_SKY.eclipseMs or
- * once the sun has set. Its comet's flight lies inside it (at its start if the eclipse is too short for it).
+ * once the setting sun has sunk behind the hills (so it never shows uneclipsed again that day). Its comet's flight lies
+ * inside it (at its start if the eclipse is too short for it).
  */
 export const eclipsesUntil = (seed: number, untilMs: number): Eclipse[] => {
   const random = createRandom((seed ^ 0x5bd1e995) >>> 0);
-  const { eclipseMinMs, eclipseMaxMs, eclipseMs, cometMs, dayMs } = MOBA_SKY;
+  const { eclipseMinMs, eclipseMaxMs, eclipseMs, cometMs, dayMs, sinkMs } = MOBA_SKY;
   const eclipses: Eclipse[] = [];
   let drawn = 0;
   for (let index = 0; index < 1000; index += 1) {
@@ -109,7 +110,7 @@ export const eclipsesUntil = (seed: number, untilMs: number): Eclipse[] => {
     if (start > untilMs) {
       break;
     }
-    const end = Math.min(start + eclipseMs, dayTime(start).start + dayMs);
+    const end = Math.min(start + eclipseMs, dayTime(start).start + dayMs + Math.max(0, sinkMs));
     eclipses.push({ index, start, end, comet: start + cometShare * Math.max(0, end - start - cometMs), cometRight });
     drawn = start;
   }
@@ -120,6 +121,18 @@ export const eclipsesUntil = (seed: number, untilMs: number): Eclipse[] => {
 export const eclipseAt = (seed: number, timeMs: number): Eclipse | undefined => {
   const last = eclipsesUntil(seed, timeMs).pop();
   return last && timeMs < last.end ? last : undefined;
+};
+
+/**
+ * How far the stars are out in `eclipse` at `timeMs`: they come out over MOBA_SKY.eclipseStarLead (share of the
+ * eclipse) just before totality, stay through it and go the same way after.
+ */
+export const eclipseStars = (eclipse: Eclipse, timeMs: number): number => {
+  const p = (timeMs - eclipse.start) / Math.max(1, MOBA_SKY.eclipseMs);
+  const lead = Math.max(1e-6, MOBA_SKY.eclipseStarLead);
+  const from = 0.5 - MOBA_SKY.eclipseTotal / 2;
+  const to = 0.5 + MOBA_SKY.eclipseTotal / 2;
+  return smoothstep(from - lead, from, p) * (1 - smoothstep(to, to + lead, p));
 };
 
 export interface DaySkyState {
@@ -182,7 +195,15 @@ export const daySky = (seed: number, timeMs: number): DaySkyState => {
   const fade = Math.max(1, MOBA_SKY.starFadeMs);
   // Out once the sun has sunk out of sight, gone before it shows again.
   const dark = Math.min(smoothstep(0, 1, (at - dayMs - sinkMs) / fade), 1 - smoothstep(0, 1, (at - (cycle - sinkMs - fade)) / fade));
-  const going = eclipseAt(seed, timeMs);
+  const last = eclipsesUntil(seed, timeMs).pop();
+  const going = last && timeMs < last.end ? last : undefined;
+  let stars = dark;
+  if (going) {
+    stars = Math.max(dark, eclipseStars(going, timeMs));
+  } else if (last && last.end - last.start < MOBA_SKY.eclipseMs && dayTime(last.start).index === time.index && at < dayMs + sinkMs + fade) {
+    // Cut short as the sun sank: its stars stay out until the night's own have caught up with them, never flickering.
+    stars = Math.max(dark, eclipseStars(last, last.end));
+  }
   let eclipse: DaySkyState['eclipse'];
   if (going) {
     const phase = eclipsePhase((timeMs - going.start) / MOBA_SKY.eclipseMs, MOBA_SKY.eclipseTotal, MOBA_SKY.eclipseDiamond);
@@ -201,8 +222,8 @@ export const daySky = (seed: number, timeMs: number): DaySkyState => {
     dusk: setting > 0 && setting < 1 ? Math.sin(Math.PI * setting) : 0,
     redDusk,
     sunRed: smoothstep(0, 1, setting) * MOBA_SKY.sunsetRed * (redDusk ? 1 : 0.5),
-    // Never with the sun up, but in an eclipse.
-    stars: eclipse ? Math.max(dark, 1 - smoothstep(0, 0.6, light)) : dark,
+    // Never with the sun up, but about an eclipse's totality.
+    stars,
     sun: { x: pathX(sunArc), arc: sunArc, visible: sunAt < dayMs + sinkMs },
     moon: { x: pathX(moonArc), arc: moonArc, visible: moonAt >= dayMs - sinkMs && moonAt < cycle + sinkMs, phase: moonPhase(timeMs) },
     eclipse,

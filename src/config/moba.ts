@@ -78,7 +78,8 @@ export const MOBA_VAULT_STEPS: readonly number[] = [10, 50, 100];
  * nights of `nightMs`, from a sunrise with a full moon; the moon wanes to new over `moonDays` days and waxes back over as
  * many. An eclipse comes `eclipseMinMs`..`eclipseMaxMs` after the start (and after the previous one), moved to the next
  * day if it falls outside the full day; it lasts `eclipseMs`, total for `eclipseTotal` of that (the diamond ring
- * `eclipseDiamond` before and after), cut short when the sun sets. At a random moment of it a comet crosses the field
+ * `eclipseDiamond` before and after; the stars come out over `eclipseStarLead` of it before totality and go as long after), cut short
+ * once the setting sun has sunk (its stars then stay until the night's are out). At a random moment of it a comet crosses the field
  * in `cometMs` from `cometHighY` down to `cometLowY` (world y); a player's arrow through it (within `cometRadius`)
  * pays him `cometGold`. Each sunrise the day's number ("The second day of battle"), and each eclipse's start
  * "Eclipse!", rises from behind the hills (and the clouds) and out of the top of the view in `dayTitleMs`. Sun and moon
@@ -97,6 +98,7 @@ export const MOBA_SKY = tunable('MOBA_SKY', 'MOBA sky', {
   eclipseMs: 90000,
   eclipseTotal: 0.08,
   eclipseDiamond: 0.025,
+  eclipseStarLead: 0.05,
   cometMs: 16000,
   cometHighY: -20,
   cometLowY: 90,
@@ -106,4 +108,4 @@ export const MOBA_SKY = tunable('MOBA_SKY', 'MOBA sky', {
   sinkMs: 10000,
   starFadeMs: 10000,
   sunsetRed: 0.7,
-}, { meta: { redSunsetChance: { max: 1, step: 0.05 }, sunsetRed: { max: 1, step: 0.05 }, eclipseTotal: { max: 0.5, step: 0.01 }, eclipseDiamond: { max: 0.2, step: 0.005 }, cometHighY: { min: -110, max: 300 }, cometLowY: { min: -110, max: 300 } } });
+}, { meta: { redSunsetChance: { max: 1, step: 0.05 }, sunsetRed: { max: 1, step: 0.05 }, eclipseTotal: { max: 0.5, step: 0.01 }, eclipseDiamond: { max: 0.2, step: 0.005 }, eclipseStarLead: { max: 0.3, step: 0.005 }, cometHighY: { min: -110, max: 300 }, cometLowY: { min: -110, max: 300 } } });
