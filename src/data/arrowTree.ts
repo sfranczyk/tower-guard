@@ -36,8 +36,6 @@ export const ARROW_TREE: Readonly<Record<ArrowType, ArrowNode>> = {
   vortex: { path: 'mage', parent: 'frost' },
 };
 
-export const arrowPath = (type: ArrowType): ArrowPath => ARROW_TREE[type].path;
-
 /** The arrows from the root down to `type` (root first, `type` last). */
 export const arrowLineage = (type: ArrowType): ArrowType[] => {
   const parent = ARROW_TREE[type].parent;
