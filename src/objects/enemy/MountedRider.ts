@@ -1,3 +1,4 @@
+import { HORSE_LEG } from '../../config';
 
 import { horseDeathThrow } from '../../rendering/horseDeath';
 import { mountedHitZones } from '../../rendering/horseHitZones';
@@ -30,6 +31,14 @@ export class MountedRider {
 
   public constructor(private readonly enemy: Enemy, horseHealth: number) {
     this.mount = new Mount(horseHealth);
+  }
+
+  /** The horse hit in the leg: it stumbles and goes lame for `durationMs` (a fresh one restarts it). */
+  public lame(durationMs: number): void {
+    if (this.enemy.isAlive()) {
+      this.mount.lame(durationMs);
+      this.enemy.actions.stagger(HORSE_LEG.stumbleMs);
+    }
   }
 
   public draw(gait: HorseGait, lance: LanceHold, riderless = false): void {

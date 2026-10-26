@@ -20,6 +20,7 @@ import { ICON_BANNERS, ICON_ORDERS } from './icons';
 import { BANNER_STATE_LABELS, type BannerAt } from '../systems/banners';
 import type { AllyType } from '../types';
 import { DEV_TOOLS } from '../core/devTools';
+import { setHeightShare, setText } from './domWrite';
 
 /** Breathing room kept around the canvas + HUD stack inside the window. */
 const PAGE_MARGIN = 16;
@@ -93,6 +94,9 @@ export class DomUi {
   private readonly weaponsRoot: HTMLElement;
   private readonly alliesRoot: HTMLElement;
   private shownOrder?: string;
+  /** The weapon and soldier slots' parts updated every frame, found once each time the slots are built. */
+  private weaponParts: Array<{ type: ArrowType; count?: HTMLElement | null; wait: HTMLElement | null }> = [];
+  private allySlotParts = new Map<AllyType, { slot: Element | null; count: HTMLElement | null; wait: HTMLElement | null }>();
   private readonly bannersLine: HTMLElement;
   private shownBanners = '';
 
@@ -249,24 +253,19 @@ export class DomUi {
   /** The weapon slots in the HUD, from the battle setup's quiver. */
   public setLoadout(loadout: readonly (ArrowType | null)[]): void {
     this.weaponsRoot.innerHTML = weaponSlots(loadout);
+    this.weaponParts = Array.from(this.weaponsRoot.querySelectorAll<HTMLButtonElement>('[data-projectile]'), (button) => ({
+      type: button.dataset.projectile as ArrowType,
+      count: button.parentElement?.querySelector<HTMLElement>('[data-ammo]'),
+      wait: button.querySelector<HTMLElement>('[data-wait]'),
+    }));
   }
 
   /** Each frame: shots ready / held under each weapon slot, and the shade over it while the next one loads. */
   public updateWeaponCooldowns(cooldowns: WeaponCharges): void {
-    this.weaponsRoot.querySelectorAll<HTMLButtonElement>('[data-projectile]').forEach((button) => {
-      const type = button.dataset.projectile as ArrowType;
-      const charges = cooldowns.charges(type);
-      const count = button.parentElement?.querySelector<HTMLElement>('[data-ammo]');
-      const text = `${charges}/${cooldowns.max(type)}`;
-      if (count && count.textContent !== text) {
-        count.textContent = text;
-      }
+    this.weaponParts.forEach(({ type, count, wait }) => {
+      setText(count, `${cooldowns.charges(type)}/${cooldowns.max(type)}`);
       // Loading the next shot shades the slot, as with one shot, even while others are ready (vortex).
-      const wait = button.querySelector<HTMLElement>('[data-wait]');
-      const height = `${Math.round(cooldowns.remaining(type) * 100)}%`;
-      if (wait && wait.style.height !== height) {
-        wait.style.height = height;
-      }
+      setHeightShare(wait, cooldowns.remaining(type));
     });
   }
 
@@ -274,6 +273,11 @@ export class DomUi {
   public setAllies(allies: ReadonlyArray<{ type: AllyType; label: string }>): void {
     this.alliesRoot.hidden = allies.length === 0;
     this.alliesRoot.innerHTML = allySlots(allies);
+    this.allySlotParts = new Map(allies.map(({ type }) => [type, {
+      slot: this.alliesRoot.querySelector(`[data-ally="${type}"]`),
+      count: this.alliesRoot.querySelector<HTMLElement>(`[data-ally-count="${type}"]`),
+      wait: this.alliesRoot.querySelector<HTMLElement>(`[data-ally-wait="${type}"]`),
+    }]));
     this.shownOrder = undefined;
   }
 
@@ -283,17 +287,11 @@ export class DomUi {
       return;
     }
     view.slots.forEach(({ type, ready, alive, limit, cooldown }) => {
-      const count = this.alliesRoot.querySelector<HTMLElement>(`[data-ally-count="${type}"]`);
-      const text = `${ready} · ${alive}/${limit}`;
-      if (count && count.textContent !== text) {
-        count.textContent = text;
-      }
+      const parts = this.allySlotParts.get(type);
+      setText(parts?.count, `${ready} · ${alive}/${limit}`);
       // Dimmed while none waits in the reserve.
-      this.alliesRoot.querySelector(`[data-ally="${type}"]`)?.classList.toggle('full', ready === 0);
-      const wait = this.alliesRoot.querySelector<HTMLElement>(`[data-ally-wait="${type}"]`);
-      if (wait) {
-        wait.style.height = `${Math.round(cooldown * 100)}%`;
-      }
+      parts?.slot?.classList.toggle('full', ready === 0);
+      setHeightShare(parts?.wait, cooldown);
     });
     if (this.shownOrder !== view.order) {
       this.shownOrder = view.order;

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { GAME_HEIGHT, GAME_WIDTH, MAX_VIEW_SCALE, MAX_VIEW_WIDTH } from '../config';
-import { fitView } from './viewport';
+import { GAME_HEIGHT, GAME_WIDTH, MAX_VIEW_SCALE, MAX_VIEW_WIDTH, VIEW_CULL_MARGIN } from '../config';
+import { clearShownRange, fitView, isShownX, setShownRange } from './viewport';
 
 describe('view fit', () => {
   it('keeps the ~2.14:1 base view and scales it while the window is narrow', () => {
@@ -33,5 +33,17 @@ describe('view fit', () => {
     expect(fit.viewWidth).toBe(2100);
     expect(fit.cssWidth).toBe(Math.floor(2100 * MAX_VIEW_SCALE));
     expect(fitView(1500, GAME_HEIGHT, 2100).viewWidth).toBe(1500);
+  });
+
+  it('counts every x as shown until the battle sets its range, then only the range and its margin', () => {
+    expect(isShownX(99999)).toBe(true);
+    setShownRange(1000, 2000);
+    expect(isShownX(1500)).toBe(true);
+    expect(isShownX(2000 + VIEW_CULL_MARGIN)).toBe(true);
+    expect(isShownX(2001 + VIEW_CULL_MARGIN)).toBe(false);
+    expect(isShownX(999 - VIEW_CULL_MARGIN)).toBe(false);
+    expect(isShownX(900, 50)).toBe(false);
+    clearShownRange();
+    expect(isShownX(-99999)).toBe(true);
   });
 });

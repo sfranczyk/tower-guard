@@ -1,19 +1,16 @@
 import { Container } from 'pixi.js';
-import { ENEMY_ATTACK, HORSE_LEG } from '../../config';
-import { getArcherRig, toArcherLocalAngle } from '../../rendering/archer';
+import { ENEMY_ATTACK } from '../../config';
 import type { AttackStyle } from '../../rendering/attackSwing';
 import { BodyMotion } from '../../systems/bodyMotion';
 import { ManaPool } from '../../systems/healing';
 import { ActiveBuff } from '../../systems/shamanBuffs';
 import type { BodyColors } from '../../rendering/bodyColors';
 import { enemyGibColors } from '../../rendering/enemyBody';
-import { fromBodyAnchor, spriteToWorld, toBodyAnchor, type BodyAnchor } from '../../systems/bodyAnchor';
+import { fromBodyAnchor, toBodyAnchor, type BodyAnchor } from '../../systems/bodyAnchor';
 import { ENEMY_LOOKS, type EnemyLook } from '../../data/enemies';
 import { enemyArchetype, fightsForPlayer } from '../../data/enemyKinds';
-import { BANDAGE_KNEEL_MS } from '../../rendering/bandaging';
 import { mountHealth } from '../../data/enemyTuning';
 import { groundAt } from '../../systems/terrain';
-import { boundsAround } from '../../utils/math';
 import { killerOf, type HitBox } from './enemyTypes';
 import type { Bounds, UnitType, Vec2 } from '../../types';
 import { AfflictionLayer } from '../AfflictionLayer';
@@ -22,12 +19,13 @@ import { EnemyBars } from './EnemyBars';
 import { BuffAura } from './BuffAura';
 import { EnemyBow } from './EnemyBow';
 import { EnemyFigure } from './EnemyFigure';
-import { bodyBounds, headBounds, type BodyShape } from '../../systems/bodyHitShape';
+import { enemyBodyBounds, enemyHeadBounds } from './enemyHitShape';
 import { holdInVortex, liftFromSaddle, pin, pinnedFootPoint, throwInAir, throwOff, walk } from './enemyMotion';
 import { Vitals, applyDamage, applyHeal, unseatRider } from './enemyDamage';
 import { applyEnemyNet, enemyNetState } from './enemyNet';
 import { MountedRider } from './MountedRider';
 import { BannerHold } from './BannerHold';
+import { MedicKneel } from './MedicKneel';
 
 export type { ThrowNet } from '../../systems/bodyMotion';
 export type { EnemyNet, EnemyTarget, HitInfo, RiderOff } from './enemyTypes';
@@ -76,6 +74,8 @@ export default class Enemy extends Container {
   public readonly buff = new ActiveBuff();
   /** Banners: carrying one, or planted beside him while he fights. */
   public readonly banner = new BannerHold();
+  /** The medic's bandaging and kneel (MedicKneel; on every unit, only the medic's AI starts it). */
+  public readonly bandage = new MedicKneel(() => this.isAlive());
   private readonly buffAura = new BuffAura();
   /** Walked off the field (a priest left alone, `escape`): no longer alive for the battle. */
   private escaped = false;
@@ -91,10 +91,6 @@ export default class Enemy extends Container {
     cast?(): void;
     unseated?(): void;
   };
-  /**
-   * Host: a mounted knight's rider leaves the saddle at `x` (his horse killed by `hit`, or he by it, or a vortex pulled
-   * him out); the scene puts him on the ground as its `unhorsed` kind (dead if `off.health` is 0) and returns him.
-   */
   /** MOBA: the last hit took it down; `by` the player it counts for (none: a minion's or nobody's: no gold). */
   public onKilled?: (by: number | undefined) => void;
   /** The player who hit it last (a burn, fall or shatter after his arrow counts as his). */
@@ -106,6 +102,10 @@ export default class Enemy extends Container {
    * goes off when it dies, fireproof, and a blast only knocks it down (EnemyAI/AllyAI.siegeRun, CombatSystem.siegeBlast).
    */
   public siege = false;
+  /**
+   * Host: a mounted knight's rider leaves the saddle at `x` (his horse killed by `hit`, or he by it, or a vortex pulled
+   * him out); the scene puts him on the ground as its `unhorsed` kind (dead if `off.health` is 0) and returns him.
+   */
   public onUnhorsed?: (x: number, hit: HitInfo, off: RiderOff) => Enemy | undefined;
 
   public constructor(
@@ -198,33 +198,6 @@ export default class Enemy extends Container {
   }
 
   /**
-   * Archer: face `angle`, raise the bow, draw, and return true on the frame the arrow is released.
-   * Call every frame while standing in range; call relaxBow() otherwise.
-   */
-  public aimBow(angle: number, realDeltaMs: number): boolean {
-    // Chilled archers draw slower; frozen or caught in a vortex, not at all.
-    const deltaMs = this.afflictions.inVortex ? 0 : realDeltaMs * this.afflictions.timeScale;
-    if (deltaMs === 0) {
-      return false;
-    }
-    this.halt();
-    this.figure.face(Math.cos(angle) < 0 ? -1 : 1);
-    return this.bow.draw(angle, deltaMs, this.buff.drawPace);
-  }
-
-  /** Archer: lower the bow (walking, knocked down, no target). */
-  public relaxBow(realDeltaMs: number): void {
-    this.bow.relax(realDeltaMs * this.afflictions.timeScale);
-  }
-
-  /** Archer: where the arrow is nocked, in world space (matches the drawn bow). */
-  public getBowReleasePoint(): Vec2 {
-    const localAngle = toArcherLocalAngle(this.bow.aimAngle, this.figure.body.rotation, this.figure.facing);
-    const nock = getArcherRig(localAngle, this.bow.tension, this.bow.ready).stringNock;
-    return spriteToWorld(nock, this.figure.transform());
-  }
-
-  /**
    * Applies damage and plays the reaction (enemyDamage.applyDamage); returns the health left. `asSent`: the co-op guest's
    * copy of a hit the host already scaled.
    */
@@ -237,7 +210,7 @@ export default class Enemy extends Container {
       this.onDamaged?.(amount, hit);
       // A medic hit while bandaging breaks it off.
       if (amount > 0) {
-        this.bandaging = false;
+        this.bandage.stop();
       }
       applyDamage(this, amount, hit);
       if (!this.isAlive()) {
@@ -250,20 +223,6 @@ export default class Enemy extends Container {
   /** A vortex arrow hit the rider: pulled out of the saddle, the horse bolts (enemyDamage.unseatRider). */
   public unseat(): Enemy | undefined {
     return unseatRider(this);
-  }
-
-  /** A mounted knight's horse hit in the leg: it stumbles and goes lame for `durationMs` (a fresh one restarts it). */
-  public lame(durationMs: number): void {
-    if (!this.isAlive() || !this.rider) {
-      return;
-    }
-    this.rider.mount.lame(durationMs);
-    this.actions.stagger(HORSE_LEG.stumbleMs);
-  }
-
-  /** Its horse dead, its rider still in the saddle for a moment: the level isn't over until he's on the ground. */
-  public get riderPending(): boolean {
-    return this.rider?.mount.riderPending ?? false;
   }
 
   /** A rider put on the ground with `health` left of his full health (thrown off a horse). */
@@ -449,60 +408,17 @@ export default class Enemy extends Container {
   }
 
   public getPhysicsBounds(): Bounds {
-    const zones = this.rider?.hitZones();
-    if (zones) {
-      return boundsAround(zones.flatMap(({ bounds }) => [{ x: bounds.left, y: bounds.top }, { x: bounds.right, y: bounds.bottom }]), 0);
-    }
-    return bodyBounds(this.shape());
+    return enemyBodyBounds(this);
   }
 
   /** Box around the drawn head (follows bob, lean, scale and falls), in world space; a rider's head on horseback. */
   public getHeadBounds(): Bounds {
-    const zones = this.rider?.hitZones();
-    if (zones) {
-      return zones[0].bounds;
-    }
-    return headBounds(this.shape());
+    return enemyHeadBounds(this);
   }
 
   /** Where it can be hit: head (a headshot) and body; on horseback the rider's head and torso and the horse's body, neck and head. */
   public getHitBoxes(): HitBox[] {
     return this.rider?.hitZones() ?? [{ bounds: this.getHeadBounds(), headshot: true }, { bounds: this.getPhysicsBounds(), headshot: false }];
-  }
-
-  /** How it's drawn now, for its hit shape (systems/bodyHitShape.ts). */
-  private shape(): BodyShape {
-    const { drawn } = this.figure;
-    return { transform: this.figure.transform(), size: this.look.size, pose: drawn?.pose, head: drawn?.head };
-  }
-
-  /** The medic: bandaging now (she kneels), and how far down she is (0 standing … 1 kneeling). */
-  private bandaging = false;
-  private kneel = 0;
-
-  /** The medic kneels to bandage (AllyAI); a hit on her or `stopBandage` gets her up. */
-  public startBandage(): void {
-    this.bandaging = true;
-    this.halt();
-  }
-
-  public stopBandage(): void {
-    this.bandaging = false;
-  }
-
-  public get isBandaging(): boolean {
-    return this.bandaging && this.isAlive();
-  }
-
-  /** Down or getting up: she can't walk until she is on her feet. */
-  public get isKneeling(): boolean {
-    return this.kneel > 0;
-  }
-
-  /** The kneel moves towards down while bandaging, up otherwise (EnemyFigure draws it). */
-  public advanceKneel(deltaMs: number): number {
-    this.kneel = Math.max(0, Math.min(1, this.kneel + (this.isBandaging ? 1 : -1) * deltaMs / BANDAGE_KNEEL_MS));
-    return this.kneel;
   }
 
   /** Turns (standing) to face world x `x`: a soldier or an enemy about to strike one behind it. */

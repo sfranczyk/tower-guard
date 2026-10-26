@@ -128,6 +128,13 @@ export abstract class Scene {
     this.disposers.push(dispose);
   }
 
+  /** Debug console hook (?debug): `window.__towerGuard.scene` is this scene until it exits. */
+  protected exposeForDebug(): void {
+    const page = window as unknown as { __towerGuard?: unknown };
+    page.__towerGuard = { scene: this };
+    this.onExit(() => delete page.__towerGuard);
+  }
+
   protected listenWindow<K extends keyof WindowEventMap>(type: K, handler: (event: WindowEventMap[K]) => void): void {
     window.addEventListener(type, handler);
     this.onExit(() => window.removeEventListener(type, handler));

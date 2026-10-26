@@ -88,7 +88,7 @@ export class MeleeCrowd {
   }
 
   private holdsPlace(unit: Enemy): boolean {
-    return this.engaged.has(unit) || unit.isAttacking || unit.isDown || unit.isPinned || unit.isKneeling
+    return this.engaged.has(unit) || unit.isAttacking || unit.isDown || unit.isPinned || unit.bandage.isKneeling
       || unit.motion.isThrown || unit.afflictions.isFrozen || unit.afflictions.inVortex;
   }
 }

@@ -57,25 +57,6 @@ export const SANDSTORM = tunable('SANDSTORM', 'Sandstorm', {
 }, { meta: { haze: { max: 1 }, farHaze: { max: 1 }, hazeFrom: { max: 2400 } } });
 
 /**
- * Green Meadow scenery (rendering/meadowLayout.ts): gaps between front-row trees (`gapMin`..`gapMax`, px), the chance
- * the next tree stands close (a clump) or after a clearing, the hazier back row (`farScale` of the size, `farHaze`
- * towards the far hills), flowers per 100 px of grass and one rock per `rockEvery` px on average. Read when a level's
- * background is drawn.
- */
-export const MEADOW = tunable('MEADOW', 'Meadow scenery', {
-  gapMin: 55,
-  gapMax: 125,
-  clumpChance: 0.25,
-  clearingChance: 0.12,
-  farGapMin: 38,
-  farGapMax: 95,
-  farScale: 0.62,
-  farHaze: 0.45,
-  flowers: 4,
-  rockEvery: 380,
-}, { meta: { clumpChance: { max: 1 }, clearingChance: { max: 1 }, farScale: { max: 1, step: 0.01 }, farHaze: { max: 1 } } });
-
-/**
  * How often each Green Meadow tree (design lab, tab Trees) stands in the row: relative weights, 0 = never. Read when a
  * level's background is drawn.
  */

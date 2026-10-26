@@ -1,4 +1,5 @@
-import Peer, { type DataConnection } from 'peerjs';
+import type Peer from 'peerjs';
+import type { DataConnection } from 'peerjs';
 import type { NetMessage } from './protocol';
 import { makeRoomCode, peerIdFor } from './roomCode';
 
@@ -185,45 +186,54 @@ const fromConnection = (connection: DataConnection, peer?: Peer): Channel => {
   return channel;
 };
 
+/** PeerJS and its WebRTC shims load only when a room is opened or joined (a separate chunk, not in the first download). */
+const loadPeer = async (): Promise<typeof Peer> => (await import('peerjs')).default;
+
 /** Opens a room under a fresh code (a new one if that code is taken) and takes guests as they connect. */
-const hostPeerRoom = (): Promise<HostedRoom> => new Promise((resolve, reject) => {
-  const attempt = (triesLeft: number): void => {
-    const code = makeRoomCode();
-    const peer = new Peer(peerIdFor(code));
-    let opened = false;
-    peer.on('open', () => {
-      opened = true;
-      const door = guestDoor();
-      peer.on('connection', (connection) => {
-        connection.on('open', () => door.arrive(fromConnection(connection)));
+const hostPeerRoom = async (): Promise<HostedRoom> => {
+  const Peer = await loadPeer();
+  return new Promise((resolve, reject) => {
+    const attempt = (triesLeft: number): void => {
+      const code = makeRoomCode();
+      const peer = new Peer(peerIdFor(code));
+      let opened = false;
+      peer.on('open', () => {
+        opened = true;
+        const door = guestDoor();
+        peer.on('connection', (connection) => {
+          connection.on('open', () => door.arrive(fromConnection(connection)));
+        });
+        resolve({ code, onGuest: door.onGuest, close: () => peer.destroy() });
       });
-      resolve({ code, onGuest: door.onGuest, close: () => peer.destroy() });
+      peer.on('error', (error) => {
+        if (!opened && error.type === 'unavailable-id' && triesLeft > 0) {
+          peer.destroy();
+          attempt(triesLeft - 1);
+        } else if (!opened) {
+          peer.destroy();
+          reject(new Error(`Couldn't open a room (${error.type}).`));
+        }
+      });
+    };
+    attempt(3);
+  });
+};
+
+const joinPeerRoom = async (code: string): Promise<Transport> => {
+  const Peer = await loadPeer();
+  return new Promise((resolve, reject) => {
+    const peer = new Peer();
+    peer.on('open', () => {
+      // Raw strings, JSON-encoded here (absent fields stay absent; the default binary packing turns them into null).
+      const connection = peer.connect(peerIdFor(code), { reliable: true, serialization: 'raw' });
+      connection.on('open', () => resolve(fromConnection(connection, peer)));
     });
     peer.on('error', (error) => {
-      if (!opened && error.type === 'unavailable-id' && triesLeft > 0) {
-        peer.destroy();
-        attempt(triesLeft - 1);
-      } else if (!opened) {
-        peer.destroy();
-        reject(new Error(`Couldn't open a room (${error.type}).`));
-      }
+      peer.destroy();
+      reject(new Error(error.type === 'peer-unavailable' ? 'No room with that code.' : `Couldn't connect (${error.type}).`));
     });
-  };
-  attempt(3);
-});
-
-const joinPeerRoom = (code: string): Promise<Transport> => new Promise((resolve, reject) => {
-  const peer = new Peer();
-  peer.on('open', () => {
-    // Raw strings, JSON-encoded here (absent fields stay absent; the default binary packing turns them into null).
-    const connection = peer.connect(peerIdFor(code), { reliable: true, serialization: 'raw' });
-    connection.on('open', () => resolve(fromConnection(connection, peer)));
   });
-  peer.on('error', (error) => {
-    peer.destroy();
-    reject(new Error(error.type === 'peer-unavailable' ? 'No room with that code.' : `Couldn't connect (${error.type}).`));
-  });
-});
+};
 
 /** Between tabs: one BroadcastChannel per room, the host `'host'` and each guest a random id; the host writes to one guest at a time. */
 interface LocalEnvelope {

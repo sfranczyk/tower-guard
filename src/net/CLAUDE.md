@@ -32,7 +32,7 @@ dialog's "Main menu" leaves the room.
   host time `ht`, packed by `net/snapCodec.ts`); `start` / `end` / `lobby` messages
   around levels. Each guest's `input` drives their own player (`from`; held controls by newest `n`, let go after
   400 ms of silence).
-- **Links** (`net/Transport.ts`): PeerJS's reliable channel (raw strings, JSON-encoded there) plus a pre-negotiated
+- **Links** (`net/Transport.ts`; PeerJS is a lazy chunk, `loadPeer`, fetched when a room opens): PeerJS's reliable channel (raw strings, JSON-encoded there) plus a pre-negotiated
   lossy one (`sendState`: unordered, no retransmits, dropped while 16 KB are still queued) for `state` and held
   `input`, so a lost packet never holds up the next frame. `ping` / `pong` each second both ways; `?debug` shows ping,
   jitter, delay, loss and KB/s in a corner (`scenes/BattleNetReadout.ts`, `DomUi.setNetReadout`).

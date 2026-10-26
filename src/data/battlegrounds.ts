@@ -424,6 +424,4 @@ export const BATTLEGROUNDS: Readonly<Record<BattlegroundId, Battleground>> = {
 };
 
 export const BATTLEGROUND_IDS = Object.keys(BATTLEGROUNDS) as BattlegroundId[];
-export const DEFAULT_BATTLEGROUND: BattlegroundId = 'greenMeadow';
-
 export const aimColorsOf = (battleground: Battleground): AimColors => battleground.aimColors ?? DEFAULT_AIM_COLORS;

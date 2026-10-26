@@ -22,6 +22,7 @@ import { flamesTouch } from './burning';
 import { BOWMAN_CHEST, bowmanBox, type Foe } from './combatGeometry';
 import type { EnemyAIEvents, EnemyAIWorld } from './EnemyAI';
 import { nearestExposedBowman, nearestMeleeTarget } from './targeting';
+import { aimBow, bowReleasePoint, relaxBow } from '../objects/enemy/enemyArchery';
 
 /** The fire dragon aims this far above the bowman's feet. */
 const FIRE_AIM_ABOVE_FEET = 10;
@@ -57,14 +58,14 @@ export class EnemyRanged {
     if (enemy.isDown || !inRange || strayed) {
       const toX = post ?? aimPoint.x;
       enemy.update(deltaMs, { x: toX, y: GROUND_Y }, post === undefined ? 0 : 4);
-      enemy.relaxBow(deltaMs);
+      relaxBow(enemy, deltaMs);
       this.archerAim.delete(enemy);
     } else {
       const speed = bowSpeed(ENEMY_ARROW_POWER);
-      const angle = this.aimAngle(enemy, enemy.getBowReleasePoint(), aimPoint, speed, deltaMs);
-      if (enemy.aimBow(angle, deltaMs)) {
+      const angle = this.aimAngle(enemy, bowReleasePoint(enemy), aimPoint, speed, deltaMs);
+      if (aimBow(enemy, angle, deltaMs)) {
         const spread = (Math.random() * 2 - 1) * ENEMY_ATTACK.archerSpread * this.world.enemyEdge.aimSpread;
-        this.events.enemyShot(enemy.getBowReleasePoint(), (angle) + spread, speed * (0.97 + Math.random() * 0.06), enemy.kind as EnemyType, enemy.power);
+        this.events.enemyShot(bowReleasePoint(enemy), (angle) + spread, speed * (0.97 + Math.random() * 0.06), enemy.kind as EnemyType, enemy.power);
       }
     }
     enemy.updateAnimation(deltaMs, enemy.isMoving());

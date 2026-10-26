@@ -5,7 +5,8 @@
   `index.html`. Game text is English. Accent and backdrop follow the map (`DomUi.setTheme`, battleground `ui`).
 - **HUD** (`Hud.ts`): sits *outside* the canvas (bar above: level progress left, weapons centred;
   status line below); `DomUi.fitCanvas()` scales the canvas into the remaining space. Never place HUD elements over the
-  play field. Keep and bowman health are bars in the world (Tower, `Bowman.setHealthRatio`), not in the HUD. Weapons are square slots (`LOADOUT_SLOTS` = 3,
+  play field. Per-frame HUD writes go through `domWrite.ts` (`setText`, `setHtml`, `setHeightShare`: only on change;
+  slot parts are found once in `setLoadout` / `setAllies`). Keep and bowman health are bars in the world (Tower, `Bowman.setHealthRatio`), not in the HUD. Weapons are square slots (`LOADOUT_SLOTS` = 3,
   `weaponSlots`): icon only (name in the tooltip), key in the corner, shots ready/held underneath; while one loads a shade
   drains downward like the soldiers' pause (`.slot-shade`/`.slot-wait`, `DomUi.updateWeaponCooldowns`; `ARROW_COOLDOWN` / `ARROW_CHARGES` in config/arrows, `systems/arrowCooldowns.ts`, per
   `Player`, checked in `BattlePlayers.update`; while the chosen arrow loads the bow isn't drawn and the aim circles are grey, `canDrawBow` in scenes/PlayerControl); built from the quiver (`DomUi.setLoadout`). Right of them the soldiers' slots (`allySlots`, `ICON_ALLIES`: key, `alive/limit`, a shade for

@@ -11,17 +11,17 @@ import { groundReach, strafeAltitude, streamLength } from '../../systems/dragonS
 import { groundAt } from '../../systems/terrain';
 import { enemyArchetype } from '../../data/enemyKinds';
 import type { Bounds, Vec2 } from '../../types';
-import { drawHealthBar, drawLevelStars } from '../../rendering/healthBar';
-import { boundsAround } from '../../utils/math';
 import { killerOf, type HitBox, type HitInfo } from '../enemy/enemyTypes';
 import { AfflictionLayer, type AfflictionNet } from '../AfflictionLayer';
+import { DragonBars } from './DragonBars';
 import { DragonBow } from './DragonBow';
 import { DragonBreath } from './DragonBreath';
 import { DragonCorpse } from './DragonCorpse';
 import { DragonMotion, type FlightNet } from './DragonMotion';
-import { frameLocalAngle, frameToLocal, frameToWorld, frameWorldAngle, type DragonFrame } from './dragonFrame';
+import { frameAnchor, frameLocalAngle, frameToWorld, frameZoneBounds, resolveFrameAnchor, type DragonFrame } from './dragonFrame';
 import { DRAGON_ARCHER_LOOK, DRAGON_KINDS, type DragonKind, type DragonLook } from './dragonKinds';
 import { worldWidth } from '../../systems/battlefield';
+import { isShownX } from '../../core/viewport';
 
 export type { DragonKind } from './dragonKinds';
 
@@ -33,8 +33,6 @@ const AIM_MAX = 1.35;
 const HIT_FLASH_MS = 120;
 /** The fire dragon breathes only hovering, not flying faster than this share of its transit speed. */
 const BREATHE_MAX_FLIGHT = 0.25;
-/** Health bar under the dragon, in local (unscaled) units. */
-const HEALTH_BAR = { width: 70, height: 8, y: 62 };
 
 /**
  * Flying dragon. The dark dragon archer flies in high, hovers in front of the bowman (systems/dragonFlight),
@@ -57,8 +55,6 @@ export default class DragonEnemy extends Container {
   /** MOBA: as Enemy.power. */
   public power = 1;
   /** MOBA: its team's colour for the health bar (green-to-red otherwise). */
-  public barColor?: number;
-  private stars = 0;
   /** Co-op host: hears about every hit, to replay it on the guest's screen. */
   public netHooks?: { damaged(amount: number, hit?: HitInfo): void };
   public readonly isArcher = false;
@@ -73,8 +69,8 @@ export default class DragonEnemy extends Container {
   private readonly riderArt = new Graphics();
   /** The fire stream, in front of the dragon and untinted by hits. */
   private readonly fireArt = new Graphics();
-  private readonly healthBar = new Graphics();
-  private readonly starArt = new Graphics();
+  /** Its health bar (team colour and level stars in MOBA). */
+  public readonly bars = new DragonBars();
   /** Fire and frost (the dragon archer burns; neither dragon can be frozen, only chilled). */
   public readonly afflictions: AfflictionLayer;
   private readonly look: DragonLook;
@@ -110,8 +106,7 @@ export default class DragonEnemy extends Container {
     this.position.set(x, cruiseAltitude(this.timeMs, this.look.altitude));
     this.zIndex = 1;
     this.afflictions = new AfflictionLayer(kind);
-    this.healthBar.addChild(this.starArt);
-    this.addChild(this.art, this.riderArt, this.afflictions.art, this.fireArt, this.healthBar);
+    this.addChild(this.art, this.riderArt, this.afflictions.art, this.fireArt, this.bars.health);
     this.pose = this.redraw();
     this.drawHealthBar();
   }
@@ -189,7 +184,7 @@ export default class DragonEnemy extends Container {
       if (blast?.breathesFire) {
         this.blownApartAt = hit?.point ?? { x: this.x, y: this.y };
       }
-      this.healthBar.visible = false;
+      this.bars.health.visible = false;
       this.bow.tension = 0;
       this.afflictions.extinguish();
       this.afflictions.thaw();
@@ -352,6 +347,8 @@ export default class DragonEnemy extends Container {
   public updateAnimation(realDeltaMs: number): void {
     this.flashMs = Math.max(0, this.flashMs - realDeltaMs);
     this.afflictions.tick(realDeltaMs);
+    // Off screen it is still posed (its hit zones) but not rendered (isShownX).
+    this.renderable = isShownX(this.x);
     // Chilled: slower wing beats and breath.
     const deltaMs = realDeltaMs * this.afflictions.timeScale;
     if (this.corpse) {
@@ -402,26 +399,21 @@ export default class DragonEnemy extends Container {
   }
 
   private zoneBounds(part: DragonHitZone['part']): Bounds {
-    const zone = dragonHitZones(this.pose).find((candidate) => candidate.part === part)!;
-    return boundsAround(zone.points.map((point) => this.toWorld(point)), zone.padding * DRAGON_SCALE);
+    return frameZoneBounds(this.frame, dragonHitZones(this.pose).find((zone) => zone.part === part)!, DRAGON_SCALE);
   }
 
   /** Every hit zone in world space (see dragonHitZones): rider and dragon head are headshots. */
   public getHitBoxes(): HitBox[] {
-    return dragonHitZones(this.pose).map(({ points, padding, headshot }) => ({
-      bounds: boundsAround(points.map((point) => this.toWorld(point)), padding * DRAGON_SCALE),
-      headshot,
-    }));
+    return dragonHitZones(this.pose).map((zone) => ({ bounds: frameZoneBounds(this.frame, zone, DRAGON_SCALE), headshot: zone.headshot }));
   }
 
-  /** Arrows stick at a local point (stored in BodyAnchor's along/side) and follow the dragon. */
+  /** Arrows stick at a local point and follow the dragon (dragonFrame). */
   public toBodyAnchor(point: Vec2, angle: number): BodyAnchor {
-    const local = frameToLocal(this.frame, point);
-    return { along: local.x, side: local.y, angle: frameLocalAngle(this.frame, angle) };
+    return frameAnchor(this.frame, point, angle);
   }
 
   public resolveBodyAnchor(anchor: BodyAnchor): { position: Vec2; rotation: number } {
-    return { position: this.toWorld({ x: anchor.along, y: anchor.side }), rotation: frameWorldAngle(this.frame, anchor.angle) };
+    return resolveFrameAnchor(this.frame, anchor);
   }
 
   /** Its transforms now (dragonFrame.ts): the sprite's and the art's (moved while the corpse falls). */
@@ -440,7 +432,7 @@ export default class DragonEnemy extends Container {
   /** Draws it facing `facing` (mirrored to face left; squeezed mid-turn); the health bar keeps its size. */
   private applyFacing(): void {
     this.scale.set(this.motion.scaleX * DRAGON_SCALE, DRAGON_SCALE);
-    this.healthBar.scale.set(1 / this.scale.x, 1 / this.scale.y);
+    this.bars.unscale(this.scale.x, this.scale.y);
   }
 
   private redraw(): DragonPose {
@@ -462,19 +454,7 @@ export default class DragonEnemy extends Container {
     return drawDragonWithRider(this.art, this.motion.wingMs, 'archer', DRAGON_ARCHER_LOOK, palette, { aim, tension: this.bow.tension }, undefined, this.motion.glide);
   }
 
-  /** MOBA: its level as stars under the health bar (level − 1). */
-  public setStars(count: number): void {
-    this.stars = count;
-    this.drawHealthBar();
-  }
-
   public drawHealthBar(): void {
-    const { width, height, y } = HEALTH_BAR;
-    this.healthBar.position.set(0, y);
-    const ratio = this.health / this.maxHealth;
-    drawHealthBar(this.healthBar, ratio, width, height, this.barColor !== undefined && ratio > 0.3 ? this.barColor : undefined);
-    if (this.stars > 0) {
-      drawLevelStars(this.starArt, this.stars, height / 2 + 6);
-    }
+    this.bars.draw(this.health / this.maxHealth);
   }
 }

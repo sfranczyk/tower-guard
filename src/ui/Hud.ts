@@ -1,4 +1,5 @@
 import { clockText } from '../scenes/battleText';
+import { setHtml, setText } from './domWrite';
 import { ICON_ENEMY_PIP } from './icons';
 
 export interface HudValues {
@@ -60,7 +61,7 @@ export class Hud {
 
   public update(values: HudValues): void {
     this.updateHealth(values.health);
-    this.level.textContent = `${values.level} / ${values.levelCount}`;
+    setText(this.level, `${values.level} / ${values.levelCount}`);
     const { moba } = values;
     this.purse.hidden = !moba;
     this.enemyCount.hidden = !!moba;
@@ -69,22 +70,20 @@ export class Hud {
       this.levelBar.parentElement!.hidden = true;
       this.clock.hidden = true;
       const text = `<span class="moba-team ${moba.team}">${moba.team === 'blue' ? 'Blue' : 'Red'}</span> <b>${moba.gold}</b> gold · vault ${moba.vault}`;
-      if (this.purse.innerHTML !== text) {
-        this.purse.innerHTML = text;
-      }
+      setHtml(this.purse, text);
       return;
     }
     const survival = values.clockMs !== undefined;
     this.clock.hidden = !survival;
     if (survival) {
       // Survival: the time to dawn instead of the level's progress.
-      this.clock.innerHTML = `${clockText(values.clockMs!)}<small>to dawn</small>`;
-      this.enemyCount.textContent = `${values.defeatedEnemies} defeated`;
+      setHtml(this.clock, `${clockText(values.clockMs!)}<small>to dawn</small>`);
+      setText(this.enemyCount, `${values.defeatedEnemies} defeated`);
       this.pips.hidden = true;
       this.levelBar.parentElement!.hidden = true;
       return;
     }
-    this.enemyCount.textContent = `${values.defeatedEnemies} of ${values.totalEnemies} defeated`;
+    setText(this.enemyCount, `${values.defeatedEnemies} of ${values.totalEnemies} defeated`);
 
     const usePips = values.totalEnemies <= MAX_PIPS;
     this.pips.hidden = !usePips;
@@ -105,14 +104,8 @@ export class Hud {
     if (!health) {
       return;
     }
-    const keep = healthText(health.keep);
-    const bowman = healthText(health.bowman);
-    if (this.keepHealth.textContent !== keep) {
-      this.keepHealth.textContent = keep;
-    }
-    if (this.bowmanHealth.textContent !== bowman) {
-      this.bowmanHealth.textContent = bowman;
-    }
+    setText(this.keepHealth, healthText(health.keep));
+    setText(this.bowmanHealth, healthText(health.bowman));
     this.regenIcon.hidden = !health.regenerating;
   }
 

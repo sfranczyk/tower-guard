@@ -71,8 +71,9 @@ export class BattleLanes {
     const unit = minion.team === 'blue' ? this.deployBlue(kind, power, health) : this.deps.foes.spawn(kind as EnemyType, undefined, minion, health);
     const color = TEAM_BAR_COLORS[minion.team];
     if (unit instanceof DragonEnemy) {
-      unit.barColor = color;
-      unit.setStars(minion.lv - 1);
+      unit.bars.teamColor = color;
+      unit.bars.setStars(minion.lv - 1);
+      unit.drawHealthBar();
     } else {
       unit.siege = siege;
       if (siege) {

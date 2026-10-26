@@ -9,7 +9,9 @@ Its parts:
 - `DragonBreath.ts` (pure, tested): the fire dragon's breath clock, cooldown and fire aim.
 - `DragonMotion.ts`: flight (manoeuvres, side and turn, gusts and hit jolts, wing clock `wingMs`, `tilt`, co-op `fl`).
 - `DragonCorpse.ts`: the death: fall or chunks, the thrown or blown-apart rider, `settled`.
-- `dragonFrame.ts` (pure, tested): sprite/art transforms, local ↔ world points and angles.
+- `dragonFrame.ts` (pure, tested): sprite/art transforms, local ↔ world points and angles, zone boxes
+  (`frameZoneBounds`), stuck-arrow anchors (`frameAnchor`, `resolveFrameAnchor`).
+- `DragonBars.ts` (`dragon.bars`): health bar, MOBA team colour (`teamColor`) and level stars.
 
 ## Behaviour
 - Dragon archer (`dragon`): flies at `DRAGON_ALTITUDE`, hovers `DRAGON_HOVER_OFFSET` in front of the bowman

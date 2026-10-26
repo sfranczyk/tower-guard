@@ -10,10 +10,13 @@ open the one you need:
 - `enemyDamage.ts` (`Vitals` pure, tested): health; `takeDamage` reactions, mounted damage share, unseat, heals.
 - `enemyFall.ts` (pure, tested): `damageReaction`, `blastPush`, death kind, the fall's clock and push.
 - `enemyMotion.ts`: walking to the target, vortex hold, throws, pins, a rider thrown off / lifted from the saddle.
-- `MountedRider.ts`: a mounted knight's horse side: gait clock and pose, mounted animation, horse death, bolting, hit zones.
+- `MountedRider.ts`: a mounted knight's horse side (`enemy.rider`; `lame`, `mount.riderPending`): gait clock and pose, mounted animation, horse death, bolting, hit zones.
 - `Mount.ts`: the horse's health, lame leg, bolting, death state.
 - `EnemyBars.ts`: health, horse and mana bars and their placement.
-- `EnemyBow.ts` (pure, tested): an archer's bow (raise, draw, aim, pause).
+- `EnemyBow.ts` (pure, tested): an archer's bow (raise, draw, aim, pause); `enemyArchery.ts`: `aimBow`, `relaxBow`,
+  `bowReleasePoint` (EnemyRanged, AllyRanged).
+- `enemyHitShape.ts`: `enemyBodyBounds` / `enemyHeadBounds` behind `getPhysicsBounds` / `getHeadBounds`.
+- `MedicKneel.ts`: `enemy.bandage` (start, stop, `isBandaging`, `isKneeling`, `advance`).
 - `BannerHold.ts`: `enemy.banner` (held / planted at `plantX`, `carrySpeed`; `plant`, `lift`).
 - Hit shape: `systems/bodyHitShape.ts` (pure, tested, shared with the bowman): head box on the skull the look draws
   (`HumanoidLook.headHit`), body round the joints of the pose last drawn (`EnemyFigure.drawn`), `separate` cuts the body
@@ -22,7 +25,7 @@ open the one you need:
 
 - **Allies**: the player's soldiers are `Enemy` objects too (`isAllyType(kind)`, `side: 'ally'` in ENEMY_KINDS;
   `UnitType` = `EnemyType | AllyType`): blue health bar (`EnemyBars` `ally`), cheer facing right, `faceTowards(x)`; the medic's
-  `startBandage` / `stopBandage` / `advanceKneel` (body state `'bandage'`; no walking while kneeling).
+  `bandage.start` / `stop` / `advance` (body state `'bandage'`; no walking while kneeling).
 
 ## Behaviour
 - `Enemy.takeDamage(amount, { cause, fromX })` picks the reaction: headshot → `deathStiff`, explosion → `knockback`

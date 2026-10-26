@@ -14,8 +14,6 @@ export type BannerSide = 'player' | 'enemy';
 
 export const BANNER_SIDES: readonly BannerSide[] = ['player', 'enemy'];
 
-export const otherSide = (side: BannerSide): BannerSide => (side === 'player' ? 'enemy' : 'player');
-
 /** Who may carry a banner: soldiers on foot who fight hand to hand, and riders (not archers, bombers, casters, dragons). */
 const CARRIER_ARCHETYPES: readonly EnemyArchetype[] = ['fighter', 'runner', 'heavy', 'grabber', 'cavalry'];
 

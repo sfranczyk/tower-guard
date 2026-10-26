@@ -167,6 +167,4 @@ const designs: TreeDesign[] = [
   },
 ];
 
-export const TREE_DESIGNS: readonly TreeDesign[] = designs;
-
 export const treeDesign = (id: string): TreeDesign => designs.find((design) => design.id === id) ?? designs[0];
