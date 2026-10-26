@@ -8,7 +8,7 @@ const hex = (color: number): string => `#${color.toString(16).padStart(6, '0')}`
  */
 const SKY_ABOVE = 36;
 
-/** MOBA's look (the online room's mode card): a dimmer sky, the sun totally eclipsed with a crown, a comet. */
+/** MOBA's look (the online room's mode card): a dimmer sky, the sun eclipsed to a thin crescent (the diamond ring), a comet. */
 export interface ThumbnailOptions {
   eclipse?: boolean;
 }
@@ -25,14 +25,19 @@ export const mapThumbnail = (battleground: Battleground, options: ThumbnailOptio
   `<svg class="map-thumb" viewBox="0 ${-SKY_ABOVE} 48 ${36 + SKY_ABOVE}" preserveAspectRatio="xMidYMax slice" aria-hidden="true">${thumbnailArt(battleground, options)}</svg>`;
 
 /**
- * Two battlegrounds in one picture, split down the middle: `left`'s left half, `right`'s right half (MOBA practice:
- * day and night at once).
+ * Two battlegrounds in one picture, split on a diagonal (top right to bottom left): `left`'s upper left, `right`'s
+ * lower right (MOBA practice: day and night at once).
  */
 export const splitThumbnail = (left: Battleground, right: Battleground): string => `<svg class="map-thumb" viewBox="0 ${-SKY_ABOVE} 48 ${36 + SKY_ABOVE}" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
+  <defs><clipPath id="split-thumb-night"><path d="M${SPLIT_TOP} ${-SKY_ABOVE}H64V36H${SPLIT_FOOT}Z"/></clipPath></defs>
   ${thumbnailArt(left, {})}
-  <svg x="24" y="${-SKY_ABOVE}" width="24" height="${36 + SKY_ABOVE}" viewBox="24 ${-SKY_ABOVE} 24 ${36 + SKY_ABOVE}">${thumbnailArt(right, {})}</svg>
-  <rect x="23.6" y="${-SKY_ABOVE}" width=".8" height="${36 + SKY_ABOVE}" fill="#fffdf6" opacity=".7"/>
+  <g clip-path="url(#split-thumb-night)">${thumbnailArt(right, {})}</g>
+  <path d="M${SPLIT_TOP} ${-SKY_ABOVE}L${SPLIT_FOOT} 36" stroke="#fffdf6" stroke-width=".8" opacity=".7"/>
 </svg>`;
+
+/** Where the split's diagonal meets the picture's top and foot: it runs through the middle of the scene (24, 18). */
+const SPLIT_FOOT = 12;
+const SPLIT_TOP = 24 + ((24 - SPLIT_FOOT) * (18 + SKY_ABOVE)) / 18;
 
 const thumbnailArt = (battleground: Battleground, { eclipse = false }: ThumbnailOptions): string => {
   const { sky, sun, weather, cloudColor, hills, hillShape, trees, ground, nightCycle } = battleground;
@@ -46,11 +51,18 @@ const thumbnailArt = (battleground: Battleground, { eclipse = false }: Thumbnail
   if (sun) {
     const cx = sun.x < 600 ? 13 : 36;
     const cy = sun.y > 200 ? 20 : 9;
-    parts.push(`<circle cx="${cx}" cy="${cy}" r="5" fill="${hex(sun.color)}"/>`);
     if (eclipse) {
-      // A total eclipse: the moon (dark) covers the sun, its corona glowing round it, and a gold crown sits on top.
-      parts.push(`<circle cx="${cx}" cy="${cy}" r="7.6" fill="#fff4e0" opacity=".35"/><circle cx="${cx}" cy="${cy}" r="5" fill="#1d2440"/>`
-        + `<path d="M${cx - 5} ${cy - 9}V${cy - 13.5}L${cx - 2.5} ${cy - 11}L${cx} ${cy - 14.5}L${cx + 2.5} ${cy - 11}L${cx + 5} ${cy - 13.5}V${cy - 9}Z" fill="#e8b64c" stroke="#fffdf6" stroke-width=".6" stroke-linejoin="round"/>`);
+      // Just before totality, the diamond ring, high in the sky and larger: the moon (unseen, the sky shows through it)
+      // leaves only a thin crescent of the sun, a soft corona round it and one bright bead with a glint on the crescent.
+      const [x, y, r] = [cx, -1, 7];
+      const bead = { x: x - 0.84 * r, y: y + 0.48 * r };
+      parts.push(`<defs><mask id="moba-thumb-eclipse"><circle cx="${x}" cy="${y}" r="${r}" fill="#fff"/><circle cx="${x + 0.12 * r}" cy="${y - 0.07 * r}" r="${0.98 * r}" fill="#000"/></mask></defs>`
+        + `<circle cx="${x}" cy="${y}" r="${1.7 * r}" fill="#fff4e0" opacity=".1"/><circle cx="${x}" cy="${y}" r="${1.3 * r}" fill="#fff4e0" opacity=".14"/>`
+        + `<circle cx="${x}" cy="${y}" r="${r}" fill="#fffbe8" mask="url(#moba-thumb-eclipse)"/>`
+        + `<circle cx="${bead.x}" cy="${bead.y}" r="2.8" fill="#fffbe8" opacity=".4"/><circle cx="${bead.x}" cy="${bead.y}" r="1.3" fill="#fff"/>`
+        + `<path d="M${bead.x - 4.5} ${bead.y}H${bead.x + 4.5}M${bead.x} ${bead.y - 4.5}V${bead.y + 4.5}" stroke="#fff" stroke-width=".45" stroke-linecap="round" opacity=".9"/>`);
+    } else {
+      parts.push(`<circle cx="${cx}" cy="${cy}" r="5" fill="${hex(sun.color)}"/>`);
     }
   }
   if (eclipse) {

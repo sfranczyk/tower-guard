@@ -53,6 +53,29 @@ describe('day cycle', () => {
     expect(daySky(1, 3.75 * MINUTE).moon.x).toBeLessThan(night.moon.x);
   });
 
+  it('lets the sun and moon sink behind the hills for a while past their setting time', () => {
+    const { dayMs, sinkMs } = MOBA_SKY;
+    const setting = daySky(1, dayMs + sinkMs / 2);
+    expect(setting.sun.visible).toBe(true);
+    expect(setting.sun.arc).toBeGreaterThan(1);
+    expect(daySky(1, dayMs + sinkMs + 1).sun.visible).toBe(false);
+    expect(daySky(1, cycleMs() - sinkMs / 2).sun).toMatchObject({ visible: true, x: expect.any(Number) });
+    expect(daySky(1, cycleMs() - sinkMs / 2).sun.arc).toBeLessThan(0);
+    expect(daySky(1, dayMs - sinkMs / 2).moon.visible).toBe(true);
+    expect(daySky(1, cycleMs() + sinkMs / 2).moon).toMatchObject({ visible: true });
+    expect(daySky(1, cycleMs() + sinkMs + 1).moon.visible).toBe(false);
+  });
+
+  it('shows no stars while the sun is up, then brings them out after sunset', () => {
+    const { dayMs, twilightMs, sinkMs, starFadeMs } = MOBA_SKY;
+    expect(daySky(1, 1000).stars).toBe(0);
+    expect(daySky(1, dayMs - twilightMs / 10).stars).toBe(0);
+    expect(daySky(1, dayMs + sinkMs / 2).stars).toBe(0);
+    expect(daySky(1, dayMs + sinkMs + starFadeMs / 2).stars).toBeCloseTo(0.5);
+    expect(daySky(1, dayMs + sinkMs + starFadeMs).stars).toBe(1);
+    expect(daySky(1, cycleMs() - sinkMs).stars).toBe(0);
+  });
+
   it('starts at a full moon, is new after 7 days and full again after 14', () => {
     expect(moonPhase(0)).toBe(0);
     expect(moonLit(moonPhase(0))).toBe(1);

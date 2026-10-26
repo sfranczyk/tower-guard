@@ -133,7 +133,10 @@ export interface DaySkyState {
   /** Today's sunset is red (else only darker). */
   redDusk: boolean;
   stars: number;
-  /** Across the view (0 left .. 1 right) and how far along its arc (0 rising, 0.5 highest, 1 set); hidden at night. */
+  /**
+   * Along its path (1 its rising point over the enemy keep .. 0 its setting point over ours) and how far along its arc
+   * (0 rising, 0.5 highest, 1 set; a little past either end while it sinks, MOBA_SKY.sinkMs); hidden once it has sunk.
+   */
   sun: { x: number; arc: number; visible: boolean };
   moon: { x: number; arc: number; visible: boolean; phase: number };
   /** Which day it is (1 = the first). */
@@ -159,10 +162,16 @@ export const daySky = (seed: number, timeMs: number): DaySkyState => {
   const rising = part === 'sunrise' ? at / twilight : 1;
   const setting = part === 'sunset' ? (at - (dayMs - twilight)) / twilight : 0;
   let light = part === 'night' ? 0 : smoothstep(0, 1, rising) * (1 - smoothstep(0, 1, setting));
-  const night = part === 'night' ? (at - dayMs) / Math.max(1, nightMs) : 0;
-  // Rises over the enemy's side (right), sets over ours.
-  const across = (arc: number): number => 0.86 - 0.72 * arc;
-  const sunArc = Math.min(1, at / dayMs);
+  // Rises over the enemy's side (right), sets over ours; the sun from its last sunk moments before sunrise.
+  const cycle = cycleMs();
+  const sinkMs = Math.max(0, MOBA_SKY.sinkMs);
+  const sunAt = at >= cycle - sinkMs ? at - cycle : at;
+  const sunArc = sunAt / dayMs;
+  const moonAt = at < sinkMs ? at + cycle : at;
+  const moonArc = (moonAt - dayMs) / Math.max(1, nightMs);
+  const fade = Math.max(1, MOBA_SKY.starFadeMs);
+  // Out once the sun has sunk out of sight, gone before it shows again.
+  const dark = Math.min(smoothstep(0, 1, (at - dayMs - sinkMs) / fade), 1 - smoothstep(0, 1, (at - (cycle - sinkMs - fade)) / fade));
   const going = eclipseAt(seed, timeMs);
   let eclipse: DaySkyState['eclipse'];
   if (going) {
@@ -180,9 +189,10 @@ export const daySky = (seed: number, timeMs: number): DaySkyState => {
     dawn: part === 'sunrise' ? Math.sin(Math.PI * rising) : 0,
     dusk: part === 'sunset' ? Math.sin(Math.PI * setting) : 0,
     redDusk: redSunset(seed, time.index),
-    stars: 1 - smoothstep(0, 0.6, light),
-    sun: { x: across(sunArc), arc: sunArc, visible: part !== 'night' },
-    moon: { x: across(night), arc: night, visible: part === 'night', phase: moonPhase(timeMs) },
+    // Never with the sun up, but in an eclipse.
+    stars: eclipse ? Math.max(dark, 1 - smoothstep(0, 0.6, light)) : dark,
+    sun: { x: 1 - sunArc, arc: sunArc, visible: sunAt < dayMs + sinkMs },
+    moon: { x: 1 - moonArc, arc: moonArc, visible: moonAt >= dayMs - sinkMs && moonAt < cycle + sinkMs, phase: moonPhase(timeMs) },
     eclipse,
   };
 };

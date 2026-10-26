@@ -1,6 +1,7 @@
 import { Container, Graphics, Text } from 'pixi.js';
 import { GROUND_Y, MAX_VIEW_WIDTH, VIEW_TOP } from '../config';
 import { ECLIPSE_TITLE, dayTitle, moonLit, moonLitOutline, type DaySkyState } from '../systems/dayCycle';
+import { enemyKeepX, playerKeepX } from '../systems/battlefield';
 import { mixColor } from './clouds';
 import { drawEclipse } from './eclipseArt';
 
@@ -11,6 +12,8 @@ const MOON_TOP_Y = VIEW_TOP + 80;
 const SUN_RADIUS = 56;
 const MOON_RADIUS = 30;
 const STAR_COUNT = 140;
+/** Sun and moon rise and set this far inside the keeps (towards the middle of the field), in plain view. */
+const PATH_INSET = 100;
 /** The day's title: where it starts (behind the hills) and ends (out of the top of the view), its centre's world y. */
 const TITLE_FROM_Y = HORIZON_Y + 40;
 const TITLE_TO_Y = VIEW_TOP - 40;
@@ -43,7 +46,7 @@ const seeded = (seed: number): (() => number) => () => {
  * sunset skies (red or dark), stars, the moon in its phase crossing the night, the sun crossing the day (eclipsed
  * when there is one, rendering/eclipseArt.ts), all behind the hills (`sky`), and the land and clouds tinted by the light
  * (`tint`: the hills, trees, grass and clouds Background hands it). Sun and moon cross the whole field (the camera
- * pans past them); the stars and the titles keep their place in the view. `show(state, viewLeft, viewWidth)` every frame.
+ * pans past them, keep to keep); the stars and the titles keep their place in the view. `show(state, viewLeft, viewWidth)` every frame.
  */
 export class DaySky {
   public readonly sky = new Container();
@@ -75,7 +78,7 @@ export class DaySky {
    */
   private cloudsBaked = false;
 
-  public constructor(private readonly left: number, private readonly right: number) {
+  public constructor(left: number, right: number) {
     const bands = (graphics: Graphics, colors: readonly number[]): Graphics => {
       const height = (GROUND_Y - VIEW_TOP) / colors.length;
       colors.forEach((color, index) => graphics.rect(left, VIEW_TOP + index * height, right - left, height + 1).fill({ color }));
@@ -163,9 +166,10 @@ export class DaySky {
     this.cloudsBaked = true;
   }
 
-  /** World x `share` of the way across the scenery (sun and moon cross the whole field, wherever the camera is). */
+  /** World x `share` of the way from the setting point over our keep (0) to the rising point over the enemy's (1). */
   private acrossField(share: number): number {
-    return this.left + share * (this.right - this.left);
+    const from = playerKeepX() + PATH_INSET;
+    return from + share * (enemyKeepX() - PATH_INSET - from);
   }
 
   /** `title` `rise` of the way up (undefined: hidden): slow out from behind the hills, then on up and out of the view. */
