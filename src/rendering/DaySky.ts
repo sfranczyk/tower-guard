@@ -27,6 +27,8 @@ const SKIES = {
   darkDusk: [0x161c3a, 0x222a50, 0x323c66, 0x46527c, 0x5c6a8e],
 };
 const SUN_COLOR = 0xf8dc9b;
+/** The tint the setting sun turns towards (MOBA_SKY.sunsetRed of the way at most). */
+const SUN_RED_TINT = 0xff8c6c;
 const MOON_COLOR = 0xeef1e4;
 /** What the land and the clouds turn to at full night (a multiply tint), and through a red or dark sunset. */
 const NIGHT_TINT = 0x5c6c96;
@@ -143,6 +145,7 @@ export class DaySky {
     const { eclipse } = state;
     this.sun.visible = state.sun.visible && !eclipse;
     this.sun.position.set(sunX, sunY);
+    this.sun.tint = mixColor(0xffffff, SUN_RED_TINT, state.sunRed);
     this.crescent.visible = state.sun.visible && !!eclipse;
     this.corona.visible = this.crescent.visible;
     if (eclipse && state.sun.visible) {

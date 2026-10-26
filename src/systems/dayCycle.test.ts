@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { MOBA_SKY } from '../config';
-import { cometAt, cycleMs, dayTitle, ordinal, ordinalWord, daySky, dayTime, eclipseAt, eclipsesUntil, moonLit, moonLitOutline, moonPhase, redSunset, segmentNear, sweptNear } from './dayCycle';
+import { cometAt, cycleMs, dayTitle, ordinal, ordinalWord, daySky, dayTime, eclipseAt, eclipsesUntil, moonLit, moonLitOutline, moonPhase, pathX, redSunset, segmentNear, sweptNear } from './dayCycle';
 
 const MINUTE = 60_000;
 
@@ -29,7 +29,7 @@ describe('day cycle', () => {
   it('brightens through the sunrise, stays light all day and is dark at night', () => {
     const lights = [0, 5_000, 10_000, 15_000, 20_000].map((time) => daySky(1, time).light);
     expect(lights).toEqual([...lights].sort((a, b) => a - b));
-    expect(lights[0]).toBe(0);
+    expect(lights[0]).toBeLessThan(0.5);
     expect(daySky(1, MINUTE).light).toBe(1);
     expect(daySky(1, 3 * MINUTE).light).toBe(0);
     expect(daySky(1, 3 * MINUTE).stars).toBe(1);
@@ -37,9 +37,10 @@ describe('day cycle', () => {
   });
 
   it('shows the sunrise sky at sunrise and the sunset sky at sunset only', () => {
-    expect(daySky(1, 10_000).dawn).toBeCloseTo(1);
+    const { dayMs, twilightMs, sinkMs } = MOBA_SKY;
+    expect(daySky(1, (twilightMs - sinkMs) / 2).dawn).toBeCloseTo(1);
     expect(daySky(1, 10_000).dusk).toBe(0);
-    expect(daySky(1, 2.5 * MINUTE - 10_000).dusk).toBeCloseTo(1);
+    expect(daySky(1, dayMs + (sinkMs - twilightMs) / 2).dusk).toBeCloseTo(1);
     expect(daySky(1, MINUTE).dawn + daySky(1, MINUTE).dusk).toBe(0);
   });
 
@@ -74,6 +75,44 @@ describe('day cycle', () => {
     expect(daySky(1, dayMs + sinkMs + starFadeMs / 2).stars).toBeCloseTo(0.5);
     expect(daySky(1, dayMs + sinkMs + starFadeMs).stars).toBe(1);
     expect(daySky(1, cycleMs() - sinkMs).stars).toBe(0);
+  });
+
+  it('keeps the sky lit while the sun shows: full night only once it has sunk, dawn as soon as it starts to come up', () => {
+    const { dayMs, sinkMs } = MOBA_SKY;
+    const sinking = daySky(1, dayMs + sinkMs / 2);
+    expect(sinking.sun.visible).toBe(true);
+    expect(sinking.light).toBeGreaterThan(0);
+    expect(sinking.dusk).toBeGreaterThan(0);
+    expect(daySky(1, dayMs + sinkMs).light).toBe(0);
+    const coming = daySky(1, cycleMs() - sinkMs / 2);
+    expect(coming.light).toBeGreaterThan(0);
+    expect(coming.dawn).toBeGreaterThan(0);
+    expect(daySky(1, cycleMs() - sinkMs - 1).light).toBe(0);
+  });
+
+  it('reddens the setting sun, less on a dark sunset', () => {
+    const { dayMs, sunsetRed } = MOBA_SKY;
+    expect(daySky(1, MINUTE).sunRed).toBe(0);
+    const seeds = [1, 2, 3, 4, 5, 6, 7, 8];
+    const red = seeds.find((seed) => redSunset(seed, 0))!;
+    const dark = seeds.find((seed) => !redSunset(seed, 0))!;
+    expect(daySky(red, dayMs).sunRed).toBeGreaterThan(daySky(red, dayMs - 10_000).sunRed);
+    expect(daySky(red, dayMs).sunRed).toBeGreaterThan(daySky(dark, dayMs).sunRed);
+    expect(daySky(red, dayMs).sunRed).toBeLessThanOrEqual(sunsetRed);
+  });
+
+  it('rises and sets upright on a half ellipse, keeping the same top', () => {
+    expect(pathX(0)).toBe(1);
+    expect(pathX(0.5)).toBeCloseTo(0.5);
+    expect(pathX(1)).toBe(0);
+    // Barely across in the first 5 % of the way, straight up out of the hills.
+    expect(1 - pathX(0.05)).toBeLessThan(0.01);
+  });
+
+  it('shows no moon before the first day', () => {
+    expect(daySky(1, 0).moon.visible).toBe(false);
+    expect(daySky(1, MOBA_SKY.sinkMs / 2).moon.visible).toBe(false);
+    expect(daySky(1, cycleMs() + MOBA_SKY.sinkMs / 2).moon.visible).toBe(true);
   });
 
   it('starts at a full moon, is new after 7 days and full again after 14', () => {
