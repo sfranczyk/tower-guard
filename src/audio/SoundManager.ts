@@ -175,7 +175,7 @@ export class SoundManager {
     return this.current;
   }
 
-  /** Applies and remembers changed sound settings (from the settings drawer). */
+  /** Applies and remembers changed sound settings (from the settings window). */
   public updateSettings(changes: Partial<AudioSettings>): void {
     this.current = normalizeAudioSettings({ ...this.current, ...changes });
     this.applySettings();

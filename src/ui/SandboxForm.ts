@@ -25,7 +25,8 @@ import {
 } from '../data/sandbox';
 import type { EnemyType } from '../types';
 import { ICON_BANNERS, ICON_BOWMAN, ICON_DIFFICULTY, ICON_ENEMIES, ICON_FRIENDLY_FIRE, ICON_KEEP, ICON_SUPPORT, ICON_TRASH } from './icons';
-import { mapThumbnail } from './mapThumbnail';
+import { mapThumbnail, splitThumbnail } from './mapThumbnail';
+import { modeCards } from './modeCards';
 import { numberInput, optionRow } from './optionRows';
 import { panelTop, renderPanel } from './panelLayout';
 import { editQuiverIn } from './quiverEditing';
@@ -50,10 +51,15 @@ export interface SandboxFormCallbacks {
   change(settings: SandboxSettings, level: number): void;
   start(): void;
   back(): void;
+  /** The mode picker's third card: a MOBA match alone (single player only). */
+  mobaPractice(): void;
 }
 
+const MOBA_PRACTICE_TEXT = 'Blue against red on one lane, you alone with your minions against the red ones and their keep. Gold buys upgrades by your keep (press I); day turns to night.';
+
 /**
- * The sandbox setup form. It opens on the mode picker (Battle or Survival, two big cards); then three pages. Rules:
+ * The sandbox setup form. It opens on the mode picker (Battle, Survival or MOBA practice, three big cards; a co-op host
+ * picked the mode with the room and skips it); then three pages. Rules:
  * health, difficulty, friendly fire, banners, support, one per row. Levels: the run is a row of levels (tabs, each with its map and enemy
  * count, plus add and remove); below, the selected level's battleground (map cards) and enemies (a card per type
  * with − / +). Quiver: which arrow goes in each weapon slot
@@ -104,9 +110,9 @@ export class SandboxForm {
     }
   }
 
-  /** Shows the form from its start, the mode picker. */
+  /** Shows the form from its start: the mode picker, or for a co-op host (who picked the mode with the room) the setup. */
   public open(settings: SandboxSettings, multiplayer: boolean): void {
-    this.step = 'mode';
+    this.step = multiplayer ? 'setup' : 'mode';
     this.confirmRemove = undefined;
     this.page = 'rules';
     this.multiplayer = multiplayer;
@@ -118,7 +124,7 @@ export class SandboxForm {
     if (this.confirmRemove !== undefined && this.settings) {
       this.confirmRemove = undefined;
       this.render(this.settings);
-    } else if (this.step === 'setup' && this.settings) {
+    } else if (this.step === 'setup' && this.settings && !this.multiplayer) {
       this.step = 'mode';
       this.render(this.settings);
     } else {
@@ -134,13 +140,20 @@ export class SandboxForm {
       renderPanel(this.root, `
         ${panelTop(back, 'Choose a mode', '', 'Sandbox')}
         <div class="panel-body">
-          <div class="mode-cards">
-            ${RUN_MODES.map((mode) => `<button type="button" class="mode-card" data-pick-mode="${mode}">
-              ${mapThumbnail(BATTLEGROUNDS[battlegroundsFor(mode)[0]])}
-              <strong>${RUN_MODE_LABELS[mode]}</strong>
-              <span>${RUN_MODE_DESCRIPTIONS[mode]}</span>
-            </button>`).join('')}
-          </div>
+          ${modeCards([
+            ...RUN_MODES.map((mode) => ({
+              attribute: `data-pick-mode="${mode}"`,
+              thumbnail: mapThumbnail(BATTLEGROUNDS[battlegroundsFor(mode)[0]]),
+              label: RUN_MODE_LABELS[mode],
+              text: RUN_MODE_DESCRIPTIONS[mode],
+            })),
+            {
+              attribute: 'data-pick-moba',
+              thumbnail: splitThumbnail(BATTLEGROUNDS[battlegroundsFor('battle')[0]], BATTLEGROUNDS[battlegroundsFor('survival')[0]]),
+              label: 'MOBA practice',
+              text: MOBA_PRACTICE_TEXT,
+            },
+          ])}
         </div>`);
       return;
     }
@@ -267,6 +280,10 @@ export class SandboxForm {
     const minutes = target.closest<HTMLButtonElement>('[data-minutes]');
     const survival = settings.mode === 'survival';
     const count = runLevelCount(settings);
+    if (target.closest('[data-pick-moba]')) {
+      this.callbacks.mobaPractice();
+      return;
+    }
     // (The quiver's own clicks are editQuiverIn's.)
     const removeAsk = target.closest<HTMLElement>('[data-level-remove]');
     if (this.confirmRemove !== undefined) {

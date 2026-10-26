@@ -53,7 +53,7 @@ everything under `ctx.root` on each switch. Scenes never touch the DOM: they cal
   `rendering/designs/catalog.ts`; grid scrolls with the wheel.
 - **SoundLabScene** + `ui/SoundLabPanel.ts`: every effect and variant, the theme with a jump to its loop seam.
 - **CoopScene**: the lobby (net/CLAUDE.md).
-- **MOBA** (menu → "Create multiplayer room" → MOBA, or "Practice MOBA alone"; dev `?moba`): `MobaMode.ts` gathers it for GameScene: `BattleLanes` (both keeps'
+- **MOBA** (menu → "Create online room" → MOBA, or the single-player mode picker's "MOBA practice", `handlers.mobaPractice` in SandboxScene; dev `?moba`): `MobaMode.ts` gathers it for GameScene: `BattleLanes` (both keeps'
   minions on one clock, at their team's level: `spawn`; the kamikaze is a siege unit, `Enemy.siege`, bigger: `Enemy.resize`, its blast `kamikazeBlastSize`× in look and reach), `BattleMoba` (gold for last hits, vaults, respawn, regen; host
   or alone) with `MobaUpgrades` (levels bought, their effects), `BattleShop` (I by your keep, `ui/ShopPanel.ts`), `MobaSky` (days, nights,
   eclipses: `Background.daySky`; the eclipse's comet in the world, `strikeComet` after the arrows move pays `MOBA_SKY.cometGold`; ?debug `scene.moba.sky.eclipseSoon()` / `skip(ms)`).

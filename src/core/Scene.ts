@@ -84,17 +84,17 @@ export interface GameSession {
   lobbyEntry?: 'create' | 'join';
   /** Shown once in the co-op lobby (e.g. "The host left"). */
   coopNotice?: string;
-  /** Draw the predicted arrow path while aiming (settings drawer, on by default). */
+  /** Draw the predicted arrow path while aiming (settings window, on by default). */
   showTrajectory: boolean;
-  /** Where this player's keep shows on screen (settings drawer; `right` mirrors the battle, core/keepSide.ts). */
+  /** Where this player's keep shows on screen (settings window; `right` mirrors the battle, core/keepSide.ts). */
   keepSide: KeepSide;
-  /** Draw the aim circles at the drag start too, not just at the bow (settings drawer, on by default). */
+  /** Draw the aim circles at the drag start too, not just at the bow (settings window, on by default). */
   showCursorCircle: boolean;
-  /** Hit visibility: damage numbers over an enemy's head on an arrow hit (settings drawer, on by default). */
+  /** Hit visibility: damage numbers over an enemy's head on an arrow hit (settings window, on by default). */
   showDamageNumbers: boolean;
-  /** Banners: their state in the HUD and markers at the view's edge for a carried one out of view (settings drawer, on). */
+  /** Banners: their state in the HUD and markers at the view's edge for a carried one out of view (settings window, on). */
   bannerMarkers: boolean;
-  /** How many of the latest shots keep their trail (settings drawer, 0 = none, up to MAX_ARROW_TRAILS). */
+  /** How many of the latest shots keep their trail (settings window, 0 = none, up to MAX_ARROW_TRAILS). */
   arrowTrails: number;
 }
 

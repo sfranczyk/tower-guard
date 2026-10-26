@@ -3,16 +3,60 @@ import type { Battleground } from '../data/battlegrounds';
 const hex = (color: number): string => `#${color.toString(16).padStart(6, '0')}`;
 
 /**
+ * The picture is 48×36 with this much more sky above it, cut off (`slice`, bottom-aligned) in a 4:3 box: a taller box
+ * (a mode card stretched to its window) shows more sky instead of cropping the sides.
+ */
+const SKY_ABOVE = 36;
+
+/** MOBA's look (the online room's mode card): a dimmer sky, the sun partly eclipsed, a comet. */
+export interface ThumbnailOptions {
+  eclipse?: boolean;
+}
+
+/**
  * A tiny flat landscape (48×36 SVG) drawn from a battleground's palette, for map pickers: sky bands,
  * the sun, a cloud (or a storm cloud with a bolt), hills or dunes, a tree or cactus and the ground.
  */
-export const mapThumbnail = (battleground: Battleground): string => {
+export const mapThumbnail = (battleground: Battleground, options: ThumbnailOptions = {}): string =>
+  `<svg class="map-thumb" viewBox="0 ${-SKY_ABOVE} 48 ${36 + SKY_ABOVE}" preserveAspectRatio="xMidYMax slice" aria-hidden="true">${thumbnailArt(battleground, options)}</svg>`;
+
+/**
+ * Two battlegrounds in one picture, split down the middle: `left`'s left half, `right`'s right half (MOBA practice:
+ * day and night at once).
+ */
+export const splitThumbnail = (left: Battleground, right: Battleground): string => `<svg class="map-thumb" viewBox="0 ${-SKY_ABOVE} 48 ${36 + SKY_ABOVE}" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
+  ${thumbnailArt(left, {})}
+  <svg x="24" y="${-SKY_ABOVE}" width="24" height="${36 + SKY_ABOVE}" viewBox="24 ${-SKY_ABOVE} 24 ${36 + SKY_ABOVE}">${thumbnailArt(right, {})}</svg>
+  <rect x="23.6" y="${-SKY_ABOVE}" width=".8" height="${36 + SKY_ABOVE}" fill="#fffdf6" opacity=".7"/>
+</svg>`;
+
+const thumbnailArt = (battleground: Battleground, { eclipse = false }: ThumbnailOptions): string => {
   const { sky, sun, weather, cloudColor, hills, hillShape, trees, ground, nightCycle } = battleground;
   const parts: string[] = [];
   const band = 27 / sky.length;
+  parts.push(`<rect x="0" y="${-SKY_ABOVE}" width="48" height="${SKY_ABOVE + 0.5}" fill="${hex(sky[0])}"/>`);
   sky.forEach((color, index) => parts.push(`<rect x="0" y="${index * band}" width="48" height="${band + 0.5}" fill="${hex(color)}"/>`));
+  if (nightCycle && nightCycle.kind !== 'eclipse' && nightCycle.kind !== 'dust') {
+    parts.push('<g fill="#fff"><circle cx="8" cy="-20" r=".5"/><circle cx="27" cy="-9" r=".5"/><circle cx="41" cy="-26" r=".4"/><circle cx="18" cy="-31" r=".4"/></g>');
+  }
   if (sun) {
-    parts.push(`<circle cx="${sun.x < 600 ? 13 : 36}" cy="${sun.y > 200 ? 20 : 9}" r="5" fill="${hex(sun.color)}"/>`);
+    const cx = sun.x < 600 ? 13 : 36;
+    const cy = sun.y > 200 ? 20 : 9;
+    parts.push(`<circle cx="${cx}" cy="${cy}" r="5" fill="${hex(sun.color)}"/>`);
+    if (eclipse) {
+      // The moon, the sky's colour, takes a small bite out of its upper right.
+      parts.push(`<circle cx="${cx + 4.4}" cy="${cy - 3}" r="3.4" fill="${hex(sky[Math.max(0, Math.min(sky.length - 1, Math.floor((cy - 3) / band)))])}"/>`);
+    }
+  }
+  if (eclipse) {
+    // Still day, a little darker than usual.
+    parts.push(`<rect x="0" y="${-SKY_ABOVE}" width="48" height="${SKY_ABOVE + 28}" fill="#1d2440" opacity=".2"/>`);
+    // A comet across the other side of the sky, its tail behind it.
+    const left = !sun || sun.x >= 600;
+    const [x0, x1] = left ? [3, 15] : [45, 33];
+    parts.push(`<path d="M${x0} 3L${x1} 9.5" stroke="#fffdf6" stroke-width="1.6" stroke-linecap="round" opacity=".45"/>`
+      + `<path d="M${(x0 + x1 * 2) / 3} 7.3L${x1} 9.5" stroke="#fffdf6" stroke-width="1.2" stroke-linecap="round" opacity=".8"/>`
+      + `<circle cx="${x1}" cy="9.5" r="1.3" fill="#fff"/>`);
   }
   if (nightCycle?.kind === 'eclipse') {
     parts.push(`<circle cx="34" cy="9" r="6.5" fill="#fff4e0" opacity=".35"/><circle cx="34" cy="9" r="4.6" fill="${hex(nightCycle.moon)}"/>`);
@@ -62,5 +106,5 @@ export const mapThumbnail = (battleground: Battleground): string => {
     parts.push('<g fill="#fff"><circle cx="6" cy="14" r=".8"/><circle cx="18" cy="20" r=".7"/><circle cx="30" cy="15" r=".8"/><circle cx="42" cy="19" r=".7"/></g>');
   }
   parts.push(`<rect x="0" y="28" width="48" height="8" fill="${hex(ground.fill)}"/><rect x="0" y="27.4" width="48" height="1.6" fill="${hex(ground.edge)}"/>`);
-  return `<svg class="map-thumb" viewBox="0 0 48 36" aria-hidden="true">${parts.join('')}</svg>`;
+  return parts.join('');
 };

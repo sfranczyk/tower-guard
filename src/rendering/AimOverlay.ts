@@ -36,7 +36,7 @@ export class AimOverlay extends Graphics {
   }
 
   /**
-   * `showCursor`: also draw the circles at the drag start (settings drawer); the ones at the bow always show.
+   * `showCursor`: also draw the circles at the drag start (settings window); the ones at the bow always show.
    * `unloaded`: the chosen arrow is still loading, the circles are grey.
    */
   public draw(origin: Vec2, aim: AimInput | undefined, trajectory: readonly Vec2[] = [], showCursor = true, unloaded = false): void {

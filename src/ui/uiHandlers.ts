@@ -6,6 +6,7 @@ import type { MobaRules } from '../data/mobaRules';
 import type { SandboxSettings } from '../data/sandbox';
 import type { AllyType, ProjectileType } from '../types';
 import type { KeepSide } from '../core/keepSide';
+import type { RoomMode } from './roomSetup';
 
 /** What the HTML UI reports to the running scene: scenes assign `ui.handlers.*` (DomUi). */
 export interface UiHandlers {
@@ -24,7 +25,7 @@ export interface UiHandlers {
   /** MOBA shop: buy the next level of an upgrade, move `step` vault gold (true: deposit), close it. */
   shopBuy?: (id: string) => void;
   shopVault?: (deposit: boolean, step: number) => void;
-  /** Settings drawer: which side of the screen the player's keep is on. */
+  /** Settings window: which side of the screen the player's keep is on. */
   keepSideChange?: (side: KeepSide) => void;
   shopClose?: () => void;
   /** The pause dialog's "Resume", "Restart level" and "Main menu" buttons. */
@@ -40,14 +41,14 @@ export interface UiHandlers {
   sandboxChange?: (settings: SandboxSettings, level: number) => void;
   sandboxStart?: () => void;
   sandboxBack?: () => void;
-  /** The menu's "Create multiplayer room": the lobby's mode picker (Co-op or MOBA). */
+  /** The menu's "Create online room": the lobby's mode picker (Co-op Battle, Co-op Survival or MOBA). */
   openRoom?: () => void;
   /** The menu's "Join online": the lobby's room code dialog (the room decides the mode). */
   openJoin?: () => void;
-  /** Mode picker: a MOBA match alone (no room). */
+  /** The single-player mode picker: a MOBA match alone (no room). */
   mobaPractice?: () => void;
-  /** Mode picker: open a room in this mode (true: MOBA). */
-  coopHost?: (moba: boolean) => void;
+  /** The online mode picker: open a room in this mode. */
+  coopHost?: (mode: RoomMode) => void;
   /** MOBA host: the room's rules changed (Rules tab). */
   mobaRules?: (rules: MobaRules) => void;
   coopJoin?: (code: string) => void;
@@ -60,12 +61,12 @@ export interface UiHandlers {
   coopAlias?: (alias: string) => void;
   trajectoryChange?: (enabled: boolean) => void;
   cursorCircleChange?: (enabled: boolean) => void;
-  /** Damage numbers over the enemies' heads toggled in the settings drawer. */
+  /** Damage numbers over the enemies' heads toggled in the settings window. */
   damageNumbersChange?: (enabled: boolean) => void;
   bannerMarkersChange?: (enabled: boolean) => void;
-  /** Number of shots that keep their trail (0..3) picked in the settings drawer. */
+  /** Number of shots that keep their trail (0..3) picked in the settings window. */
   arrowTrailsChange?: (count: number) => void;
-  /** A music or effects toggle/volume (0..1) changed in the settings drawer. */
+  /** A music or effects toggle/volume (0..1) changed in the settings window. */
   audioChange?: (changes: Partial<AudioSettings>) => void;
   soundLabPlay?: (id: SoundId, variant?: number) => void;
   soundLabToggleMusic?: () => void;

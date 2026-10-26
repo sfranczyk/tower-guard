@@ -14,9 +14,12 @@ export interface ShopButton {
 /** A row of buttons joined by arrows: each needs the one before it. */
 export type ShopChain = ShopButton[];
 
+/** One place in the shop's grid: an upgrade's chain, then (each a row under it) the chains of the others that need it. */
+export type ShopCell = ShopChain[];
+
 export interface ShopSection {
   title: string;
-  chains: ShopChain[];
+  cells: ShopCell[];
 }
 
 /** What a payer has: the levels and the gold the upgrades of each scope count against. */
@@ -47,22 +50,13 @@ const levelButton = (def: UpgradeDef, level: number, funds: ShopFunds): ShopButt
 /**
  * The shop's tab `tab` (pure, tested): its sections in catalogue order, each upgrade a chain of its levels, followed by
  * the first upgrade that needs it (a bought arrow, then its quick draw); a second one that needs it (Wall breaker after
- * the explosive arrow) starts a chain of its own.
+ * the explosive arrow) is a chain of its own in a row under that one, in the same cell.
  */
 export const shopSections = (tab: ShopTab, funds: ShopFunds): ShopSection[] => {
   const defs = UPGRADES.filter((def) => def.tab === tab);
   const sections: ShopSection[] = [];
   const follower = (def: UpgradeDef): UpgradeDef | undefined => defs.find((candidate) => candidate.requires?.id === def.id);
-  const roots = defs.filter((def) => {
-    const parent = def.requires && defs.find((candidate) => candidate.id === def.requires!.id);
-    return !parent || follower(parent) !== def;
-  });
-  roots.forEach((root) => {
-    let section = sections.find((entry) => entry.title === root.section);
-    if (!section) {
-      section = { title: root.section, chains: [] };
-      sections.push(section);
-    }
+  const chainFrom = (root: UpgradeDef): ShopChain => {
     const chain: ShopChain = [];
     let next: UpgradeDef | undefined = root;
     while (next) {
@@ -72,7 +66,24 @@ export const shopSections = (tab: ShopTab, funds: ShopFunds): ShopSection[] => {
       }
       next = follower(def);
     }
-    section.chains.push(chain);
+    return chain;
+  };
+  // Starts a chain: needs nothing in this tab, or isn't the first that needs its parent.
+  const startsChain = (def: UpgradeDef): boolean => {
+    const parent = def.requires && defs.find((candidate) => candidate.id === def.requires!.id);
+    return !parent || follower(parent) !== def;
+  };
+  const roots = defs.filter((def) => startsChain(def) && !(def.requires && defs.some((candidate) => candidate.id === def.requires!.id)));
+  roots.forEach((root) => {
+    let section = sections.find((entry) => entry.title === root.section);
+    if (!section) {
+      section = { title: root.section, cells: [] };
+      sections.push(section);
+    }
+    const main = chainFrom(root);
+    const ids = new Set(main.map((button) => button.id));
+    const below = defs.filter((def) => startsChain(def) && def.requires && ids.has(def.requires.id)).map(chainFrom);
+    section.cells.push([main, ...below]);
   });
   return sections;
 };

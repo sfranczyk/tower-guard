@@ -267,7 +267,7 @@ export default class Tower extends Container {
     });
   }
 
-  private drawHealthBar(): void {
+  public drawHealthBar(): void {
     drawHealthBar(this.healthBar, this.getHealthRatio(), HEALTH_BAR.width, HEALTH_BAR.height);
   }
 

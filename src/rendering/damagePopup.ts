@@ -30,3 +30,31 @@ export const damagePopupFrame = (ageMs: number, lifeMs: number, rise: number): D
   const alpha = t < 1 - FADE ? 1 : (1 - t) / FADE;
   return { rise: rise * (1 - (1 - t) ** 2), alpha, scale };
 };
+
+/** A popup's box in the popup layer: centre x, width, and its top and bottom y. */
+export interface PopupBox {
+  x: number;
+  width: number;
+  top: number;
+  bottom: number;
+}
+
+/**
+ * Where a new popup `width` × `height` spawned at (`x`, `bottom`) goes so it doesn't cover the ones on screen: lifted
+ * above each it would overlap, `gap` px clear, until it overlaps none (its bottom y). Newer popups rise faster than older
+ * ones (ease-out), so a popup put above another moves away from it.
+ */
+export const stackedPopupBottom = (x: number, bottom: number, width: number, height: number, others: readonly PopupBox[], gap: number): number => {
+  const beside = others.filter((other) => Math.abs(other.x - x) < (other.width + width) / 2);
+  let y = bottom;
+  for (let moved = true; moved;) {
+    moved = false;
+    for (const other of beside) {
+      if (other.bottom > y - height - gap && other.top < y + gap) {
+        y = other.top - gap;
+        moved = true;
+      }
+    }
+  }
+  return y;
+};

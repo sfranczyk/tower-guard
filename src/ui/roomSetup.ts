@@ -1,33 +1,36 @@
 import { BATTLEGROUNDS } from '../data/battlegrounds';
 import { MOBA_RULE_LIMITS, normalizeMobaRules, type MobaNumberRule, type MobaRules } from '../data/mobaRules';
+import { battlegroundsFor, type RunMode } from '../data/sandbox';
 import { ICON_BOWMAN, ICON_FRIENDLY_FIRE, ICON_GOLD, ICON_KEEP, ICON_RESPAWN, ICON_UPGRADES } from './icons';
 import { mapThumbnail } from './mapThumbnail';
+import { modeCards } from './modeCards';
 import { numberInput, optionRow } from './optionRows';
 
-/** The online modes a host can open a room in (the menu's "Create multiplayer room"). */
-export type RoomMode = 'coop' | 'moba';
+/** The online modes a host can open a room in (the menu's "Create online room"): co-op in either run mode, or MOBA. */
+export type RoomMode = RunMode | 'moba';
 
-const ROOM_MODES: ReadonlyArray<{ mode: RoomMode; label: string; map: keyof typeof BATTLEGROUNDS; text: string }> = [
+const ROOM_MODES: ReadonlyArray<{ mode: RoomMode; label: string; text: string }> = [
   {
-    mode: 'coop', label: 'Co-op', map: 'crimsonPass',
-    text: 'Defend the keep together, two to four of you. You set up the battle (rules, levels, quiver) as alone; the others pick their own arrows.',
+    mode: 'battle', label: 'Co-op Battle',
+    text: 'Clear the levels together, two to four of you. You set up the battle (rules, levels, quiver); the others pick their own arrows.',
   },
   {
-    mode: 'moba', label: 'MOBA', map: 'greenMeadow',
+    mode: 'survival', label: 'Co-op Survival',
+    text: 'Hold the keep together until dawn, two to four of you. You set up the night (rules, levels, quiver); the others pick their own arrows.',
+  },
+  {
+    mode: 'moba', label: 'MOBA',
     text: 'Blue against red, up to three a side: minions march down the lane, gold buys upgrades by your keep (press I), the first keep to fall loses.',
   },
 ];
 
-/** The host's mode picker: a big card per mode (as the battle setup's), and a MOBA match alone below. */
-export const roomModeCards = (): string => `
-  <div class="mode-cards">
-    ${ROOM_MODES.map(({ mode, label, map, text }) => `<button type="button" class="mode-card" data-room-mode="${mode}">
-      ${mapThumbnail(BATTLEGROUNDS[map])}
-      <strong>${label}</strong>
-      <span>${text}</span>
-    </button>`).join('')}
-  </div>
-  <button type="button" class="secondary-button small-button room-practice" data-moba-practice>Practice MOBA alone</button>`;
+/** The host's mode picker: a big card per mode, as the single-player setup's (co-op shows the same pictures). */
+export const roomModeCards = (): string => modeCards(ROOM_MODES.map(({ mode, label, text }) => ({
+  attribute: `data-room-mode="${mode}"`,
+  thumbnail: mode === 'moba' ? mapThumbnail(BATTLEGROUNDS.greenMeadow, { eclipse: true }) : mapThumbnail(BATTLEGROUNDS[battlegroundsFor(mode)[0]]),
+  label,
+  text,
+})));
 
 /** The MOBA host's Rules tab: one rule per row (as the battle setup's Rules page). */
 export const mobaRulesPage = (rules: MobaRules): string => `<div class="rules-list">

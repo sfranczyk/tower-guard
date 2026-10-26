@@ -130,7 +130,7 @@ export class BattleDialogs {
   }
 
   /**
-   * The battle's pause dialog (hidden with `undefined`). It lies under the settings drawer and the tuning panel, so
+   * The battle's pause dialog (hidden with `undefined`). It lies under the settings window and the tuning panel, so
    * both stay usable while paused.
    */
   public showPause(pause: PauseView | undefined): void {

@@ -1,6 +1,6 @@
 import { MUSIC_DEFAULT_VOLUME, SOUND_DEFAULT_VOLUME } from '../config';
 
-/** Sound effect and music preferences from the settings drawer (volumes 0..1). */
+/** Sound effect and music preferences from the settings window (volumes 0..1). */
 export interface AudioSettings {
   effectsEnabled: boolean;
   effectsVolume: number;

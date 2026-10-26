@@ -1,5 +1,5 @@
 import type { Team } from '../data/moba';
-import type { ShopButton, ShopSection } from '../data/shopView';
+import type { ShopButton, ShopChain, ShopSection } from '../data/shopView';
 import type { ShopTab } from '../data/upgrades';
 import { MOBA_VAULT_STEPS } from '../config';
 import type { UiHandlers } from './uiHandlers';
@@ -9,7 +9,7 @@ import { ICON_ALLIES, ICON_ENEMIES, ICON_UPGRADES, ICON_WEAPONS } from './icons'
 /** What the MOBA shop shows now (scenes/BattleShop.ts builds it). */
 export interface ShopView {
   team: Team;
-  /** The player's keep shows on the left of the screen (settings drawer: his side, mirrored or not). */
+  /** The player's keep shows on the left of the screen (settings window: his side, mirrored or not). */
   keepOnLeft: boolean;
   gold: number;
   vault: number;
@@ -50,14 +50,16 @@ const buttonHtml = (button: ShopButton): string => {
     + '</button>';
 };
 
+const chainHtml = (chain: ShopChain): string => `<div class="shop-chain">${chain.map(buttonHtml).join('<span class="shop-arrow" aria-hidden="true">→</span>')}</div>`;
+
 /**
- * A section's upgrades two to a row (the panel shows them all without scrolling), one column per level of its longest
- * upgrade, so the levels line up under each other.
+ * A section's upgrades two cells to a row (the panel shows them all without scrolling; a cell can hold a second row,
+ * Wall breaker under the explosive arrow), one column per level of its longest upgrade, so the levels line up under each other.
  */
 const sectionHtml = (section: ShopSection): string => {
-  const steps = Math.max(1, ...section.chains.map((chain) => chain.length));
+  const steps = Math.max(1, ...section.cells.flat().map((chain) => chain.length));
   return `<h3>${escapeHtml(section.title)}</h3><div class="shop-chains steps-${Math.min(3, steps)}">`
-    + section.chains.map((chain) => `<div class="shop-chain">${chain.map(buttonHtml).join('<span class="shop-arrow" aria-hidden="true">→</span>')}</div>`).join('')
+    + section.cells.map((cell) => `<div class="shop-cell">${cell.map(chainHtml).join('')}</div>`).join('')
     + '</div>';
 };
 

@@ -4,7 +4,7 @@ import type { UiHandlers } from './uiHandlers';
 import { queryIn } from './domQuery';
 
 /**
- * The settings drawer's options in three groups: sound (music and effects), HUD (hit visibility, banner markers), view (which side your keep is on) and
+ * The settings window's options in three groups: sound (music and effects), HUD (hit visibility, banner markers), view (which side your keep is on) and
  * aim helpers (arrow trails, trajectory preview, aim cursor helper). Changes go to `handlers.*Change`, the scenes set
  * the shown values (`set*Option`); banner markers show only in a battle with banners (`showBannerMarkersOption`).
  */

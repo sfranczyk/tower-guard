@@ -15,11 +15,12 @@
   (`EndScreenOptions.report`, widens it: `end-wide`) is drawn by pure `endReport.ts` (tabs; Overview: team tiles, a row per
   player, best marked) and `endCharts.ts` (Timeline: SVG line charts per mode; Breakdown: bar lists; Run: a row per level).
 - **Overlays on the canvas** (menu, sandbox/sound panels, end screen, pause dialog `[data-pause]` (`PauseView`: restart button; in the keep the compact quiver editor `compactQuiver` (icon tiles, names in tooltips) left of the buttons) placed under the
-  settings drawer and the tuning panel, settings drawer) are laid out for a canvas at
+  settings window and the tuning panel, settings window) are laid out for a canvas at
   scale 1 and zoom with it (`--ui-scale`, set in `fitCanvas`, `UI_SCALE` limits); the sandbox's buttons stay pinned
   at the bottom of its card.
-- **Sandbox form** (`SandboxForm.ts`): opens on the mode picker (`step 'mode'`: two big cards, Battle / Survival, map +
-  `RUN_MODE_DESCRIPTIONS`); Back/Esc returns there (`DomUi.sandboxBack`). Then three pages (Rules, Levels, Quiver; opens on Rules), no mode switch; the top-bar button steps through them (`NEXT_PAGE`: "Level setup", "Quiver setup") and reads "Start battle" only on Quiver, whose `.quiver-note` says arrows can be changed by pausing in the keep. Levels:
+- **Sandbox form** (`SandboxForm.ts`): opens on the mode picker (`step 'mode'`: three big cards, Battle / Survival, map +
+  `RUN_MODE_DESCRIPTIONS`, and MOBA practice, a day/night `splitThumbnail`, `callbacks.mobaPractice`); Back/Esc returns there (`DomUi.sandboxBack`); a co-op host picked the mode with the room and skips it.
+  **One frame** for the setup and the online room windows (`.panel-card[data-sandbox-form], .coop-card` in index.html: same size in every view and tab, so the top bar never moves; mode cards stretch to fill it, `modeCards.ts`, the picture shows more sky (`SKY_ABOVE`); narrow lobby views sit in its middle). Then three pages (Rules, Levels, Quiver; opens on Rules), no mode switch; the top-bar button steps through them (`NEXT_PAGE`: "Level setup", "Quiver setup") and reads "Start battle" only on Quiver, whose `.quiver-note` says arrows can be changed by pausing in the keep. Levels:
   level tabs (map thumbnail, enemy count, add; "Remove level N" right of the editor head asks first, `removeDialog` over the card, Esc cancels; battle 1–5, survival 1–3), the selected level's battleground (map cards,
   `mapThumbnail.ts`) and enemies (a card per type with − / +); survival levels: time stepper and kind toggles
   (`survivalEditor.ts`). Rules (`rulesPage`, `.option-row`, one per row, each with an `ICON_*` from `icons.ts`): bowman/keep health, difficulty, Friendly fire
@@ -28,17 +29,17 @@
   disabled in survival). Quiver (`quiverPage.ts`): fill the three slots (click a slot then an arrow, or drag:
   `quiverDrag.ts`; editing shared with co-op: `quiverEditing.ts`). HUD in survival: the clock "m:ss to dawn"
   (`HudValues.clockMs`) and the defeated count.
-- **Settings drawer** (handlers in `SceneManager`; menu, and in battle from the pause dialog: "Settings" or I, Esc closes it first): three groups (`.drawer-group`):
+- **Settings window** (`.settings-screen` > `.drawer`, centred over a dimmed screen; handlers in `SceneManager`; menu, and in battle from the pause dialog: "Settings" or I, Esc closes it first): three groups (`.drawer-group`):
   Sound (music, music volume, effects, effects volume; persisted), HUD ("Hit visibility" = damage numbers, on; banner
   markers), Aim helpers (arrow trails 0–3, `DEFAULT_ARROW_TRAILS` = 1; trajectory preview, off; "Aim cursor helper" =
   cursor circle); these live in `ctx.session` for the browser session.
 - `CoopPanel.ts`: the co-op lobby (net/CLAUDE.md); "Your name" (`aliasRow`, join, hosting and joined views; passed on on change, the field keeps focus through redraws). In battle a press of Ctrl shows the names over the bowmen, the next hides them (flipped back in a mirrored view) (`scenes/BattleNameTags.ts`, `objects/bowman/BowmanTags.ts`, which also draws MOBA regeneration's "+" by the health bar). `SoundLabPanel.ts`: the sound test panel.
 - `ShopPanel.ts` (`DomUi.shop`): MOBA's shop over the far side of the canvas (760 px, each section two upgrades to a row,
-  a 3-level section one; a second upgrade needing the same one, Wall breaker, is its own chain), tabs Skills / Keep (the `castle` tab id), a line between the two columns, chained buttons with
+  a 3-level section one; a second upgrade needing the same one, Wall breaker, is a row under it in the same cell, `ShopCell`), tabs Skills / Keep (the `castle` tab id), a line between the two columns, chained buttons with
   the price, details line at the bottom; `handlers.shopBuy` / `shopVault` / `shopClose`. Hud's `moba` purse line.
   The lobby's MOBA team columns: `CoopPanel` `teams`, `handlers.coopTeam`; upgrade icons `ICON_UPGRADES` + arrows/minions.
-- **Menu**: "Start single player" (sandbox), "Create multiplayer room" (`handlers.openRoom` → lobby view `create`: Co-op / MOBA
-  mode cards and "Practice MOBA alone", `ui/roomSetup.ts`), "Join online" (`openJoin` → view `join`: the room code dialog,
+- **Menu**: "Start single player" (sandbox), "Create online room" (`handlers.openRoom` → lobby view `create`: Co-op Battle / Co-op
+  Survival / MOBA mode cards, `RoomMode`, MOBA's picture eclipsed with a comet, `mapThumbnail(…, { eclipse })`; `ui/roomSetup.ts`), "Join online" (`openJoin` → view `join`: the room code dialog,
   either mode). The MOBA host's room has tabs Teams / Rules (`mobaRulesPage`: keep and bowman health, starting gold,
   respawn time, ally kill penalty On/Off chips `data-moba-toggle`; `handlers.mobaRules`; rows shared with the setup's Rules page, `ui/optionRows.ts`).
 - Dev views (animation, design, sound lab) all have "← Menu" in their panel's top-right corner.

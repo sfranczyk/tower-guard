@@ -12,6 +12,7 @@
 - `GameContext` / `GameSession` (in `Scene.ts`): `ctx.session` (sandbox, run, net, playerCount, browser-session settings).
 - `sandboxStorage.ts`: setups in localStorage. `urlState.ts`: the URL flags (`?debug`, `?lab`, …); dev-only ones through `getDevUrlParam`, off in the
   release build (`devTools.ts`, `DEV_TOOLS` from webpack `--env release`).
-- **Keep side** (`keepSide.ts`, tested; settings drawer "Your keep", `session.keepSide`, localStorage): `right` (or `left`
+- **Keep side** (`keepSide.ts`, tested; settings window "Your keep", `session.keepSide`, localStorage): `right` (or `left`
   for a MOBA red player) mirrors the battle: `GameScene.placeWorld` flips `world` and the weather's `screenLayer`,
-  `InputManager` `mirrored` flips pointer x and the walking keys, `heardX` the stereo, DamageNumbers flip their text back.
+  `InputManager` `mirrored` flips pointer x and the walking keys, `heardX` the stereo, DamageNumbers flip their text back, health bars fill from their right end (`setBarsMirrored` in
+  rendering/healthBar.ts; `redrawHealthBars` on a change).

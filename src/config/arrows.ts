@@ -8,16 +8,18 @@ export const AIM_HALO = tunable('AIM_HALO', 'Aim halo', {
   extra: 1,
   alpha: 0.35,
 }, { meta: { alpha: { max: 1 }, extra: { min: 0, max: 4, step: 0.25 } } });
-/** Damage numbers over an enemy's head on an arrow hit (objects/DamageNumbers.ts; settings drawer toggle). */
+/** Damage numbers over an enemy's head on an arrow hit (objects/DamageNumbers.ts; settings window toggle). */
 export const DAMAGE_NUMBERS = tunable('DAMAGE_NUMBERS', 'Damage numbers', {
   lifeMs: 900,
   rise: 36,
   fontSize: 15,
   headshotFontSize: 20,
   aboveHead: 4,
-}, { meta: { lifeMs: { min: 200, max: 3000, step: 50 }, rise: { min: 0, max: 120 } } });
+  /** Popups over the same spot stack: this far (px) apart. */
+  stackGap: 2,
+}, { meta: { stackGap: { min: 0, max: 20 }, lifeMs: { min: 200, max: 3000, step: 50 }, rise: { min: 0, max: 120 } } });
 
-/** How many of the latest shots keep their trail (settings drawer, 0 = no trails, up to MAX_ARROW_TRAILS). */
+/** How many of the latest shots keep their trail (settings window, 0 = no trails, up to MAX_ARROW_TRAILS). */
 export const DEFAULT_ARROW_TRAILS = 1;
 export const MAX_ARROW_TRAILS = 3;
 

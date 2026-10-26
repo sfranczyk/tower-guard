@@ -9,7 +9,7 @@ import { mobaRulesPage, readMobaRules, roomModeCards, type RoomMode } from './ro
 
 /** What the co-op lobby shows. */
 export type CoopView =
-  /** The menu's "Create multiplayer room": pick the room's mode, Co-op or MOBA (with the last error, if any). */
+  /** The menu's "Create online room": pick the room's mode, Co-op or MOBA (with the last error, if any). */
   | { kind: 'create'; error?: string }
   /** The menu's "Join online": a dialog for the room code (co-op or MOBA: the host's room decides). */
   | { kind: 'join'; error?: string }
@@ -43,7 +43,7 @@ const teamsHtml = (teams: LobbyTeams): string => {
 
 export interface CoopPanelCallbacks {
   /** Open a room in this mode (true: MOBA). */
-  host(moba: boolean): void;
+  host(mode: RoomMode): void;
   join(code: string): void;
   /** Host with at least one guest in: on to the battle setup. */
   setup(): void;
@@ -53,8 +53,6 @@ export interface CoopPanelCallbacks {
   loadoutChange(loadout: Loadout): void;
   /** MOBA: this player switches team. */
   teamChange(team: Team): void;
-  /** MOBA: a practice match alone. */
-  practice(): void;
   /** MOBA host: the match's rules were changed on the Rules tab (clamped). */
   rulesChange(rules: MobaRules): void;
   /** The "Your name" field was edited (on leaving it or Enter). */
@@ -100,7 +98,7 @@ export class CoopPanel {
       const mode = target.closest<HTMLElement>('[data-room-mode]')?.dataset.roomMode as RoomMode | undefined;
       const tab = target.closest<HTMLElement>('[data-host-tab]')?.dataset.hostTab as HostTab | undefined;
       if (mode) {
-        callbacks.host(mode === 'moba');
+        callbacks.host(mode);
       } else if (tab && this.view) {
         this.hostTab = tab;
         this.render(this.view);
@@ -108,8 +106,6 @@ export class CoopPanel {
         this.join();
       } else if (target.closest('[data-coop-setup]')) {
         callbacks.setup();
-      } else if (target.closest('[data-moba-practice]')) {
-        callbacks.practice();
       } else if (target.closest('[data-coop-leave]')) {
         callbacks.leave();
       } else if (target.closest<HTMLElement>('[data-moba-toggle]') && this.view?.kind === 'hosting' && this.view.rules) {
@@ -213,9 +209,10 @@ export class CoopPanel {
         leave = 'Leave the room';
         break;
     }
-    // The mode cards, the guest's quiver and the rules need the room of a full card.
-    const rulesShown = view.kind === 'hosting' && view.rules !== undefined && view.code !== undefined && this.hostTab === 'rules';
-    this.root.classList.toggle('coop-wide', view.kind === 'create' || (view.kind === 'joined' && !view.teams) || rulesShown);
+    // The mode cards, the guest's quiver and the MOBA host's tabs (both, so switching them moves nothing) use the frame's
+    // full width; the other views are a column in its middle.
+    const mobaTabs = view.kind === 'hosting' && view.rules !== undefined && view.code !== undefined;
+    this.root.classList.toggle('coop-wide', view.kind === 'create' || (view.kind === 'joined' && !view.teams) || mobaTabs);
     const back = `<button class="secondary-button small-button" data-coop-leave>← ${leave}</button>`;
     const moba = view.kind === 'hosting' ? view.rules !== undefined : view.kind === 'joined' && view.teams !== undefined;
     const title = view.kind === 'create' ? 'Create a room' : view.kind === 'join' ? 'Join online' : moba ? 'MOBA' : 'Co-op';
