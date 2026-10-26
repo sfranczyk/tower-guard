@@ -56,11 +56,7 @@ export class AnimationLabScene extends Scene {
     const { ui } = this.ctx;
     ui.showScreen('animationLab');
     if (SHOW_HITBOX_DEBUG) {
-      // Debug console hook (?debug), like GameScene's.
-      (window as unknown as { __towerGuard?: unknown }).__towerGuard = { scene: this };
-      this.onExit(() => {
-        delete (window as unknown as { __towerGuard?: unknown }).__towerGuard;
-      });
+      this.exposeForDebug();
     }
     this.createBackdrop();
     this.list.mask = this.listMask;

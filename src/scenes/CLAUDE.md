@@ -7,12 +7,13 @@ everything under `ctx.root` on each switch. Scenes never touch the DOM: they cal
   `ctx.session.sandbox` holds the settings, `ctx.session.run` (`RunState`) the level index and health carried between
   levels.
 - **GameScene** plays one level. Hands arrows to `BattleArrows` (launching, shrapnel, enemy arrows, co-op copies,
-  `pruneArrows`, the preview's path), the view to `BattleCamera`, enemies to `BattleEnemies` (waves, spawn, `unhorse`
-  places unhorsed riders, defeated count, O-key hide), the player's soldiers to `BattleAllies` (summon from `ALLIES.spawnX`
+  `pruneArrows`, the preview's path), the view to `BattleView` (aim path, `BattleCamera` follow, mirrored world, `heardX`), the HUD bar and bowmen's bars to
+  `BattleHud`, the field and keeps to `battleKeeps.ts` (`prepareField`, `createKeeps`), enemies to `BattleEnemies` (waves, spawn, `unhorse`
+  places unhorsed riders, defeated count, the player's soldiers to `BattleAllies` (summon from `ALLIES.spawnX`
   beyond the left edge, from the reserve, `order`; keys Z/X/C summon, V cycles the order; only with support on (`supportAllowed`: battle mode, Rules page), none in online co-op yet; each
   level starts with none), bowmen to `BattlePlayers` (creation, per-frame picks/shots/bursts,
-  falls, `status`), co-op setup to `startBattleSync` (`battleSync.ts`), rain/lightning, snow and sand to `BattleWeather`, combat news to
-  `battleCombatEvents.ts`, the end screen's report to `BattleStatsWatch.ts` (host/solo: shots from `BattleArrows.fire`, first hits
+  falls, `status`), co-op setup to `startBattleSync` (`battleSync.ts`), rain/lightning, snow and sand to `BattleWeather`, combat to
+  `battleCombat.ts` (`createBattleCombat`: rules) and `battleCombatEvents.ts`, the end screen's report to `BattleStatsWatch.ts` (host/solo: shots from `BattleArrows.fire`, first hits
   `arrowLanded`, damage from `onDamaged`, kills by sweeping for new deaths; `BattleOutcome` stops it and puts `report` on the
   `EndInfo`, the guest marks its own row), win/loss checks to `BattleOutcome.ts` (`check`, `ended`, guest
   `showGuestEnd`), the end screen to `showLevelEnd` (`levelEndScreen.ts`, text from pure `levelEndInfo`), banners to `BattleBanners` (Banners option, solo: steps `systems/banners.ts`, draws them (`rendering/banner.ts`), edge markers; a captured banner = level cleared, ours lost = defeat), status texts to `battleText.ts` (pure). A
