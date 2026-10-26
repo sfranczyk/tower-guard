@@ -81,7 +81,9 @@ export const MOBA_VAULT_STEPS: readonly number[] = [10, 50, 100];
  * `eclipseDiamond` before and after), cut short when the sun sets. At a random moment of it a comet crosses the field
  * in `cometMs` from `cometHighY` down to `cometLowY` (world y); a player's arrow through it (within `cometRadius`)
  * pays him `cometGold`. Each sunrise the day's number ("The second day of battle"), and each eclipse's start
- * "Eclipse!", rises from behind the hills (and the clouds) and out of the top of the view in `dayTitleMs`.
+ * "Eclipse!", rises from behind the hills (and the clouds) and out of the top of the view in `dayTitleMs`. Sun and moon
+ * rise and set 100 px inside the keeps (rendering/DaySky.ts) and stay `sinkMs` past their time on the horizon to sink
+ * behind the hills; the stars come out over `starFadeMs` once the sun has sunk (and fade before it shows again), else only in an eclipse.
  */
 export const MOBA_SKY = tunable('MOBA_SKY', 'MOBA sky', {
   dayMs: 150000,
@@ -94,10 +96,12 @@ export const MOBA_SKY = tunable('MOBA_SKY', 'MOBA sky', {
   eclipseMs: 90000,
   eclipseTotal: 0.08,
   eclipseDiamond: 0.025,
-  cometMs: 14000,
+  cometMs: 16000,
   cometHighY: -20,
   cometLowY: 90,
   cometRadius: 26,
   cometGold: 100,
-  dayTitleMs: 27000,
+  dayTitleMs: 24000,
+  sinkMs: 10000,
+  starFadeMs: 10000,
 }, { meta: { redSunsetChance: { max: 1, step: 0.05 }, eclipseTotal: { max: 0.5, step: 0.01 }, eclipseDiamond: { max: 0.2, step: 0.005 }, cometHighY: { min: -110, max: 300 }, cometLowY: { min: -110, max: 300 } } });
