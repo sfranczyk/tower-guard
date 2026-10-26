@@ -1,4 +1,7 @@
-import type { Vec2 } from '../../types';
+import type { DragonHitZone } from '../../rendering/dragon';
+import type { BodyAnchor } from '../../systems/bodyAnchor';
+import type { Bounds, Vec2 } from '../../types';
+import { boundsAround } from '../../utils/math';
 
 /**
  * A dragon's two transforms (pure): the sprite's (position, tilt, scale; mirrored, scaleX < 0, while it faces left) and,
@@ -48,3 +51,19 @@ export const frameLocalAngle = (frame: DragonFrame, worldAngle: number): number 
 /** A local angle back to world, the inverse of frameLocalAngle. */
 export const frameWorldAngle = (frame: DragonFrame, localAngle: number): number =>
   frame.scaleX < 0 ? frame.rotation + Math.PI - localAngle : frame.rotation + localAngle;
+
+/** A hit zone's box in world space (`scale`: the zones' padding is in art units). */
+export const frameZoneBounds = (frame: DragonFrame, { points, padding }: DragonHitZone, scale: number): Bounds =>
+  boundsAround(points.map((point) => frameToWorld(frame, point)), padding * scale);
+
+/** Arrows stick at a local point (stored in BodyAnchor's along/side) and follow the dragon. */
+export const frameAnchor = (frame: DragonFrame, point: Vec2, angle: number): BodyAnchor => {
+  const local = frameToLocal(frame, point);
+  return { along: local.x, side: local.y, angle: frameLocalAngle(frame, angle) };
+};
+
+/** Where an anchor is now, the inverse of frameAnchor. */
+export const resolveFrameAnchor = (frame: DragonFrame, anchor: BodyAnchor): { position: Vec2; rotation: number } => ({
+  position: frameToWorld(frame, { x: anchor.along, y: anchor.side }),
+  rotation: frameWorldAngle(frame, anchor.angle),
+});
