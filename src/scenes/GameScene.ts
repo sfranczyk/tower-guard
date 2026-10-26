@@ -44,6 +44,7 @@ import { rollWind, WindShifts } from '../systems/windShift';
 import { PlayerControl, canDrawBow, type Player } from './PlayerControl';
 import { AimOverlay } from '../rendering/AimOverlay';
 import { Background } from '../rendering/Background';
+import { setBarsMirrored } from '../rendering/healthBar';
 import { CombatSystem, type Foe } from '../systems/CombatSystem';
 import { EffectsSystem } from '../systems/EffectsSystem';
 import { DamageNumbers } from '../objects/DamageNumbers';
@@ -501,12 +502,13 @@ export class GameScene extends Scene {
   public exit(): void {
     super.exit();
     this.controls?.destroy();
+    setBarsMirrored(false);
     useBattlefield();
     this.ctx.ui.limitViewWidth();
   }
 
   /** Panned and faded by where it happens relative to the camera (co-op host: the guest hears it too). */
-  /** The battle view is mirrored for this player (settings drawer: his keep on the other side of the screen). */
+  /** The battle view is mirrored for this player (settings window: his keep on the other side of the screen). */
   private get mirrored(): boolean {
     return isMirrored(this.ctx.session.keepSide, this.localPlayer.team === 'red');
   }
@@ -523,6 +525,16 @@ export class GameScene extends Scene {
     this.world.position.set(mirrored ? mirrorX(position.x, viewWidth()) : position.x, position.y);
     this.screenLayer.scale.x = mirrored ? -1 : 1;
     this.screenLayer.x = mirrored ? viewWidth() : 0;
+    if (setBarsMirrored(mirrored)) {
+      this.redrawHealthBars();
+    }
+  }
+
+  /** The view was just mirrored or unmirrored: the bars drawn so far fill from the other end now (bowmen redraw theirs every frame). */
+  private redrawHealthBars(): void {
+    [...this.enemies, ...this.allies, ...(this.moba?.allyFliers ?? [])].forEach((foe) => foe.drawHealthBar());
+    this.playerTower.drawHealthBar();
+    this.enemyTower.drawHealthBar();
   }
 
   /** `heardBy`: a sound for that player alone (the others get `soundFor`'s stand-in, here and on the guests). */

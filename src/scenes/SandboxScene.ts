@@ -37,7 +37,14 @@ export class SandboxScene extends Scene {
     ui.handlers.sandboxStart = () => this.startRun();
     // Co-op host: back to the lobby (the guests stay connected).
     ui.handlers.sandboxBack = () => this.ctx.goTo(this.ctx.session.net ? 'coop' : 'menu');
+    // The mode picker's MOBA practice: a match alone, straight in (no setup; the rules are the defaults).
+    ui.handlers.mobaPractice = () => {
+      session.moba = true;
+      session.run = newRun(session.sandbox, session.playerCount, true);
+      this.ctx.goTo('game');
+    };
     this.onExit(() => {
+      ui.handlers.mobaPractice = undefined;
       ui.handlers.sandboxChange = undefined;
       ui.handlers.sandboxStart = undefined;
       ui.handlers.sandboxBack = undefined;

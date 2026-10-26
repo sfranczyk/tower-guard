@@ -14,7 +14,7 @@ export interface BattleBannersDeps {
   units(): readonly Enemy[];
   /** The view's left edge and width in the world (edge markers). */
   view(): { left: number; width: number };
-  /** Banner markers (settings drawer): the HUD line and the edge markers. */
+  /** Banner markers (settings window): the HUD line and the edge markers. */
   markers(): boolean;
   /** A status line for what happened to a banner. */
   status(text: string): void;

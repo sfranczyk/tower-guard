@@ -1,5 +1,5 @@
 import { Graphics } from 'pixi.js';
-import { drawHealthBar, drawLevelStars } from '../../rendering/healthBar';
+import { barFillX, drawHealthBar, drawLevelStars } from '../../rendering/healthBar';
 
 /** Health bar size and placement in container space (the container is drawn at 2/3 scale): just under the feet. */
 const HEALTH_BAR = { width: 30, height: 4, belowFeet: 15 };
@@ -59,7 +59,7 @@ export class EnemyBars {
     const top = HEALTH_BAR.height / 2 + 1 + MANA_BAR.gap;
     this.mana.clear()
       .rect(-width / 2 - 1, top, width + 2, MANA_BAR.height + 2).fill({ color: 0x1b1a20, alpha: 0.85 })
-      .rect(-width / 2, top + 1, width * ratio, MANA_BAR.height).fill({ color: drained ? MANA_BAR.drainedColor : MANA_BAR.color });
+      .rect(barFillX(width, width * ratio), top + 1, width * ratio, MANA_BAR.height).fill({ color: drained ? MANA_BAR.drainedColor : MANA_BAR.color });
   }
 
   /** Keeps the bars under the feet (standing, mounted, lying or thrown: they go where the enemy goes). */

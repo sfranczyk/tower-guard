@@ -68,7 +68,7 @@ export class SceneManager {
       ui.setTuningOpen(!ui.isTuningOpen);
       setUrlParam(TUNE_PARAM, ui.isTuningOpen ? '' : null);
     };
-    // The settings drawer works wherever it's opened (menu or game).
+    // The settings window works wherever it's opened (menu or game).
     ui.handlers.trajectoryChange = (enabled) => {
       this.ctx.session.showTrajectory = enabled;
     };

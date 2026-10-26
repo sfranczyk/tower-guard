@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { damageLabel, damagePopupFrame, shownDamage, showsDamageNumber } from './damagePopup';
+import { damageLabel, damagePopupFrame, shownDamage, showsDamageNumber, stackedPopupBottom } from './damagePopup';
 
 describe('damage popup', () => {
   it('labels whole points, at least 1, nothing for no damage', () => {
@@ -35,5 +35,20 @@ describe('shownDamage', () => {
     expect(shownDamage(Number.MAX_SAFE_INTEGER, 25)).toBe(25);
     expect(shownDamage(Number.MAX_SAFE_INTEGER * 0.6, 25)).toBe(25);
     expect(shownDamage(30, 10)).toBe(30);
+  });
+});
+
+describe('stackedPopupBottom', () => {
+  it('stays put with nothing in the way', () => {
+    expect(stackedPopupBottom(100, 50, 30, 20, [], 2)).toBe(50);
+    // Beside it, or well above it: not in the way.
+    expect(stackedPopupBottom(100, 50, 30, 20, [{ x: 160, width: 30, top: 30, bottom: 50 }, { x: 100, width: 30, top: -40, bottom: -20 }], 2)).toBe(50);
+  });
+
+  it('goes above the popups it would cover, one after another', () => {
+    const first = { x: 100, width: 30, top: 30, bottom: 50 };
+    expect(stackedPopupBottom(105, 50, 30, 20, [first], 2)).toBe(28);
+    const second = { x: 100, width: 30, top: 8, bottom: 28 };
+    expect(stackedPopupBottom(100, 50, 30, 20, [second, first], 2)).toBe(6);
   });
 });

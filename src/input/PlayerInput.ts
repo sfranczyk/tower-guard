@@ -21,7 +21,7 @@ export interface PlayerInput {
   takeBurst(): boolean;
   /** A weapon picked since the last call. */
   takeProjectile(): ProjectileType | undefined;
-  /** Drops the current draw (e.g. the settings drawer opened). */
+  /** Drops the current draw (e.g. the settings window opened). */
   cancelAim(): void;
   destroy(): void;
 }

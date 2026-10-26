@@ -468,7 +468,7 @@ export default class DragonEnemy extends Container {
     this.drawHealthBar();
   }
 
-  private drawHealthBar(): void {
+  public drawHealthBar(): void {
     const { width, height, y } = HEALTH_BAR;
     this.healthBar.position.set(0, y);
     const ratio = this.health / this.maxHealth;

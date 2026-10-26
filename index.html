@@ -46,8 +46,8 @@
         /* Dev tuning panel (?tune, ui/TuningPanel.ts): a side panel over the canvas's right edge, collapsible to a tab. */
         .tuning-panel { position: absolute; top: 8px; right: 8px; bottom: 8px; z-index: 20; width: 300px; display: flex; flex-direction: column; gap: 8px; padding: 12px 12px 10px; border-radius: 16px; background: var(--panel); color: var(--ink); line-height: 1.3; font-size: 13px; box-shadow: 0 5px 0 var(--panel-edge), 0 18px 40px rgba(0, 0, 0, .3); }
         .tuning-panel[hidden] { display: none; }
-        /* The settings drawer covers it (the drawer lives in #ui-root, under the panel's z-index otherwise). */
-        .stage:has(.drawer:not([hidden])) .tuning-panel { z-index: 5; }
+        /* The settings window covers it (the drawer lives in #ui-root, under the panel's z-index otherwise). */
+        .stage:has(.settings-screen:not([hidden])) .tuning-panel { z-index: 5; }
         .tuning-panel.collapsed { bottom: auto; width: auto; padding: 0; background: none; box-shadow: none; }
         .tuning-panel.collapsed > :not(.tuning-tab), .tuning-panel:not(.collapsed) > .tuning-tab { display: none; }
         .tuning-tab { padding: 8px 12px; border-radius: 12px; background: var(--panel); color: var(--ink); font-family: var(--display); font-weight: 600; font-size: 15px; box-shadow: 0 4px 0 var(--panel-edge), 0 8px 14px rgba(0, 0, 0, .2); }
@@ -74,8 +74,8 @@
         .shop-chain { display: grid; grid-template-columns: minmax(0, 1fr) 14px minmax(0, 1fr) 14px minmax(0, 1fr); align-items: stretch; gap: 4px; margin-bottom: 6px; }
         .shop-chains.steps-3 { grid-template-columns: minmax(0, 1fr); }
         /* A line between the two columns of upgrades (in the middle of the column gap, unbroken down the rows). */
-        .shop-chains:not(.steps-3) .shop-chain:nth-child(odd) { position: relative; }
-        .shop-chains:not(.steps-3) .shop-chain:nth-child(odd)::after { content: ''; position: absolute; top: 0; bottom: -6px; right: -8px; width: 2px; border-radius: 1px; background: var(--panel-edge); }
+        .shop-chains:not(.steps-3) .shop-cell:nth-child(odd) { position: relative; }
+        .shop-chains:not(.steps-3) .shop-cell:nth-child(odd)::after { content: ''; position: absolute; top: 0; bottom: -6px; right: -8px; width: 2px; border-radius: 1px; background: var(--panel-edge); }
         .shop-chains.steps-2 .shop-chain { grid-template-columns: minmax(0, 1fr) 14px minmax(0, 1fr); }
         .shop-chains.steps-1 .shop-chain { grid-template-columns: minmax(0, 1fr); }
         .shop-arrow { align-self: center; text-align: center; color: var(--ink-soft); font-weight: 700; }
@@ -198,8 +198,10 @@
         .weapon:has(.empty) .weapon-ammo { background: transparent; box-shadow: none; color: color-mix(in srgb, var(--panel) 55%, transparent); }
         .status-banner { max-width: 100%; padding: 6px 22px; border-radius: 999px; background: var(--panel); color: var(--ink); font-family: var(--display); font-weight: 500; font-size: 14px; box-shadow: 0 3px 0 var(--panel-edge); text-align: center; }
 
-        /* ---------- Settings drawer ---------- */
-        .drawer { position: absolute; top: 14px; right: 14px; display: flex; flex-direction: column; width: min(320px, calc(100% - 28px)); max-height: calc(100% - 28px); padding: 18px 20px 20px; border-radius: 20px; background: var(--panel); color: var(--ink); box-shadow: 0 6px 0 var(--panel-edge), 0 22px 50px rgba(0, 0, 0, .3); pointer-events: auto; }
+        /* ---------- Settings window ---------- */
+        /* A centred window over the dimmed screen (menu, or the battle's pause dialog under it). */
+        .settings-screen { z-index: 12; }
+        .drawer { box-sizing: border-box; display: flex; flex-direction: column; width: min(420px, calc(100% - 28px)); max-height: calc(100% - 28px); padding: 18px 20px 20px; border-radius: 20px; background: var(--panel); color: var(--ink); box-shadow: 0 6px 0 var(--panel-edge), 0 22px 50px rgba(0, 0, 0, .3); pointer-events: auto; }
         .drawer-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
         .drawer-body { flex: 1; min-height: 0; overflow-y: auto; margin: 0 -8px; padding: 0 8px 4px; }
         .drawer h2 { font-family: var(--display); font-weight: 600; font-size: 22px; }
@@ -224,17 +226,22 @@
         .panel-actions { display: flex; gap: 10px; }
         .panel-actions:empty { display: none; }
         .panel-actions .primary-button { padding: 9px 18px; font-size: 17px; }
-        .panel-body { flex: 1; min-height: 0; overflow-y: auto; margin: 0 -24px; padding: 12px 24px 20px; border-top: 2px solid var(--panel-edge); }
+        .panel-body { flex: 1; min-height: 0; overflow-y: auto; margin: 0 -24px; padding: 12px 24px 24px; border-top: 2px solid var(--panel-edge); }
+        /* One frame for the setup and the online room windows: the same size in every view and tab, so the top bar
+           (back, title, actions) never moves; the pages fill it (mode cards stretch, short views sit in its middle). */
+        .panel-card[data-sandbox-form], .coop-card { width: min(780px, calc(100% - 28px)); height: min(660px, calc(100% - 28px)); }
+        .panel-body:has(> .mode-cards) { display: flex; flex-direction: column; }
         /* Sandbox setup: levels as tabs, the selected level's map cards and enemy steppers. */
-        /* One height for every page (and the mode picker), so the top bar and tabs stay put when switching. */
-        .panel-card[data-sandbox-form] { width: min(780px, calc(100% - 28px)); height: min(660px, calc(100% - 28px)); }
         .panel-card select, .panel-card input[type="number"] { min-width: 0; padding: 5px 8px; border: 0; border-radius: 9px; background: var(--panel-sunk); color: var(--ink); font-family: var(--display); font-weight: 500; font-size: 15px; box-shadow: inset 0 2px 0 rgba(0, 0, 0, .06); }
         .sandbox-head { display: flex; flex-shrink: 0; padding-bottom: 10px; }
         /* The mode picker: two big cards, a map, the name and what the mode is. */
-        .mode-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding: 4px 0; }
+        /* The cards fill the window's height; their pictures, names and texts line up across them (subgrid rows). */
+        .mode-cards { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(var(--mode-count, 2), minmax(0, 1fr)); grid-template-rows: minmax(0, 1fr) auto auto; column-gap: 16px; padding: 4px 0; }
+        .mode-cards .mode-card { grid-row: span 3; display: grid; grid-template-rows: subgrid; align-items: start; }
         .mode-card { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; padding: 14px; border-radius: 18px; background: var(--panel-sunk); color: var(--ink); text-align: left; box-shadow: 0 4px 0 var(--panel-edge); outline: 3px solid transparent; outline-offset: 1px; transition: transform .08s ease, outline-color .15s ease; pointer-events: auto; }
         .mode-card:hover { outline-color: var(--gold); transform: translateY(-2px); }
-        .mode-card .map-thumb { width: 100%; height: auto; aspect-ratio: 4 / 3; border-radius: 12px; }
+        /* The picture takes the card's spare height (more sky, mapThumbnail), so the cards fill the window. */
+        .mode-card .map-thumb { width: 100%; height: 100%; min-height: 0; border-radius: 12px; }
         .mode-card strong { font-family: var(--display); font-weight: 600; font-size: 24px; }
         .mode-card span { color: var(--ink-soft); font-size: 14px; line-height: 1.4; }
         /* The Rules page: one rule per row, name and hint left, control right. */
@@ -358,9 +365,12 @@
         .end-screen.viewing { background: none; pointer-events: none; }
         .end-screen.viewing .end-card { display: none; }
         .end-screen.viewing .end-back { display: block; }
-        .coop-card { width: min(420px, calc(100% - 28px)); text-align: center; }
+        .coop-card { text-align: center; }
         .coop-card .panel-title { text-align: left; }
-        .coop-card.coop-wide { width: min(760px, calc(100% - 28px)); }
+        /* The narrow views (join, the room code, joining): a column in the middle of the frame. */
+        .coop-card:not(.coop-wide) .coop-body > * { width: 100%; max-width: 440px; align-self: center; }
+        .coop-card:not(.coop-wide) .coop-body > :first-child { margin-top: auto; }
+        .coop-card:not(.coop-wide) .coop-body > :last-child { margin-bottom: auto; }
         /* MOBA lobby (ui/CoopPanel.ts): the two teams side by side. */
         .coop-teams { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; text-align: left; }
         .coop-team { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; padding: 10px 12px; border-radius: 12px; background: var(--panel-sunk); border-top: 5px solid #5fb4ff; }
@@ -379,7 +389,6 @@
         .coop-join input { flex: 1; min-width: 0; padding: 9px 12px; border: 0; border-radius: 12px; background: var(--panel-sunk); color: var(--ink); font-family: var(--display); font-weight: 600; font-size: 18px; letter-spacing: .12em; text-transform: uppercase; box-shadow: inset 0 2px 0 rgba(0, 0, 0, .06); }
         .coop-card .rules-list { text-align: left; }
         .room-tabs { justify-content: center; }
-        .room-practice { align-self: center; }
         .coop-alias { display: flex; align-items: center; gap: 10px; font-family: var(--display); font-weight: 600; font-size: 15px; }
         .coop-alias input { flex: 1; min-width: 0; max-width: 260px; padding: 7px 12px; border: 0; border-radius: 12px; background: var(--panel-sunk); color: var(--ink); font-family: var(--display); font-weight: 600; font-size: 16px; box-shadow: inset 0 2px 0 rgba(0, 0, 0, .06); }
         .coop-code { padding: 10px; border-radius: 14px; background: var(--panel-sunk); font-family: var(--display); font-weight: 700; font-size: 34px; letter-spacing: .2em; }

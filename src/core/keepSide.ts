@@ -1,5 +1,5 @@
 /**
- * Where the player's own keep shows on screen (settings drawer, kept in this browser): left as drawn, or right, which
+ * Where the player's own keep shows on screen (settings window, kept in this browser): left as drawn, or right, which
  * mirrors the whole battle view, the mouse and the walking keys (GameScene). In MOBA a red player's keep is the right
  * one in the world, so for them "left" is the mirrored view.
  */

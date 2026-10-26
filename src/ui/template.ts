@@ -5,7 +5,7 @@ import { ICON_ALLIES, ICON_BOWMAN, ICON_KEEP, ICON_LEVEL, ICON_ORDERS, ICON_UPGR
 /**
  * Static DOM markup. Elements are looked up by their data-* attributes in DomUi.
  * The HUD bars sit above and below the canvas so they never cover the play field;
- * the overlay (menus, settings drawer, end screen) is drawn on top of the canvas.
+ * the overlay (menus, settings window, end screen) is drawn on top of the canvas.
  */
 export const OVERLAY_TEMPLATE = `
       <section class="screen menu-screen" data-menu>
@@ -14,7 +14,7 @@ export const OVERLAY_TEMPLATE = `
           <p class="tagline">Hold the keep. Read the wind. Loose the arrow.</p>
           <div class="menu-card">
             <button class="primary-button" data-start>Start single player <span class="key-hint">Space</span></button>
-            <button class="secondary-button" data-open-room>Create multiplayer room</button>
+            <button class="secondary-button" data-open-room>Create online room</button>
             <button class="secondary-button" data-open-join>Join online</button>
             <button class="secondary-button" data-menu-settings>Settings</button>
             <button class="dev-toggle" data-dev-toggle aria-expanded="false">Dev tools ▾</button>
@@ -46,7 +46,8 @@ export const OVERLAY_TEMPLATE = `
           </div>
         </div>
       </section>
-      <div class="drawer" data-drawer hidden>
+      <section class="screen panel-screen settings-screen" data-drawer hidden>
+      <div class="drawer">
         <div class="drawer-header"><h2>Settings</h2><button class="round-button" data-close-options aria-label="Close settings">×</button></div>
         <div class="drawer-body">
         <h3 class="drawer-group">Sound</h3>
@@ -69,6 +70,7 @@ export const OVERLAY_TEMPLATE = `
         <label class="field toggle-field" title="The aim circles at the drag start too, not just at the bow"><span>Aim cursor helper</span><input data-cursor-circle type="checkbox"></label>
         </div>
       </div>
+      </section>
       <section class="screen panel-screen" data-sound-lab hidden>
         <div class="panel-card sound-lab-card" data-sound-lab-panel></div>
       </section>

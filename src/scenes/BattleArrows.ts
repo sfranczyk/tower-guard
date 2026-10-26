@@ -33,7 +33,7 @@ export interface BattleArrowsDeps {
   arrowPower?(owner: number, type: ProjectileType): number | undefined;
   /** MOBA: × on the damage of `owner`'s arrows of `type` to a keep (the shop's Wall breaker). */
   keepPower?(owner: number, type: ProjectileType): number | undefined;
-  /** How many of the latest shots keep their trail (settings drawer). */
+  /** How many of the latest shots keep their trail (settings window). */
   arrowTrails(): number;
   /** A player loosed an arrow (host or solo: the end screen's shots). */
   fired?(owner: number, type: ProjectileType): void;

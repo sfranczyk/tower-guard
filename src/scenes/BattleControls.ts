@@ -24,7 +24,7 @@ export interface BattleControlsDeps {
   soldiers: BattleAllies;
   /** The camera's left edge (world x), for mapping the mouse to the world. */
   cameraX: () => number;
-  /** The battle view is mirrored (settings drawer, core/keepSide.ts). */
+  /** The battle view is mirrored (settings window, core/keepSide.ts). */
   mirrored: () => boolean;
   hostSync: () => HostSync | undefined;
   guestSync: () => GuestSync | undefined;
@@ -37,7 +37,7 @@ export interface BattleControlsDeps {
   /** The enemy keep's health now (a restarted level keeps its damage). */
   enemyKeepHealth: () => number;
   onKeyDown: (handler: (event: KeyboardEvent) => void) => void;
-  /** MOBA: the shop, which I opens by the keep instead of the settings drawer (Esc closes it). */
+  /** MOBA: the shop, which I opens by the keep instead of the settings window (Esc closes it). */
   shop?: { readonly open: boolean; toggle(): void; close(): void };
   /** MOBA: Esc opens a menu over the running battle (nothing pauses), and the quiver is always what was bought. */
   moba: boolean;
@@ -46,7 +46,7 @@ export interface BattleControlsDeps {
 
 /**
  * What the local player commands in a level besides the bow: the keyboard and mouse (`LocalInput`), the HUD's and pause
- * dialog's handlers, Esc pause (co-op: the host decides, on both screens), the settings drawer, "Restart level", the
+ * dialog's handlers, Esc pause (co-op: the host decides, on both screens), the settings window, "Restart level", the
  * quiver in the keep, and summoning and ordering the soldiers.
  */
 export class BattleControls {
@@ -246,7 +246,7 @@ export class BattleControls {
         }
         return;
       }
-      // I: MOBA's shop (the settings drawer is the gear button's).
+      // I: MOBA's shop (the settings window is the gear button's).
       if (event.code === 'KeyI' && this.deps.shop && !this.paused && !ended) {
         this.deps.shop.toggle();
       }
@@ -337,7 +337,7 @@ export class BattleControls {
     this.deps.ctx.ui.setStatus(`Soldiers: ${ALLY_ORDER_LABELS[this.deps.soldiers.cycleOrder()]}`);
   }
 
-  /** The settings drawer opens from the pause dialog only (its button or I while paused); Esc closes it first. */
+  /** The settings window opens from the pause dialog only (its button or I while paused); Esc closes it first. */
   private toggleOptions(): void {
     if (this.paused || this.optionsVisible) {
       this.setOptionsVisible(!this.optionsVisible);

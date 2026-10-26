@@ -63,7 +63,7 @@ export type { UiHandlers } from './uiHandlers';
 
 /**
  * HTML around and over the canvas. Lays out [HUD top][canvas + overlay][HUD bottom], scales the
- * canvas to the space left by the HUD, and owns menus, settings drawer and end screen.
+ * canvas to the space left by the HUD, and owns menus, settings window and end screen.
  */
 export class DomUi {
   public readonly handlers: UiHandlers = {};
@@ -123,17 +123,17 @@ export class DomUi {
       change: (settings, level) => this.handlers.sandboxChange?.(settings, level),
       start: () => this.handlers.sandboxStart?.(),
       back: () => this.handlers.sandboxBack?.(),
+      mobaPractice: () => this.handlers.mobaPractice?.(),
     });
     this.coopScreen = this.query('[data-coop]');
     this.coopPanel = new CoopPanel(this.query('[data-coop-panel]'), {
-      host: (moba) => this.handlers.coopHost?.(moba),
+      host: (mode) => this.handlers.coopHost?.(mode),
       join: (code) => this.handlers.coopJoin?.(code),
       setup: () => this.handlers.coopSetup?.(),
       leave: () => this.handlers.coopLeave?.(),
       loadoutChange: (loadout) => this.handlers.coopLoadout?.(loadout),
       teamChange: (team) => this.handlers.coopTeam?.(team),
       aliasChange: (alias) => this.handlers.coopAlias?.(alias),
-      practice: () => this.handlers.mobaPractice?.(),
       rulesChange: (rules) => this.handlers.mobaRules?.(rules),
     });
     this.soundLabScreen = this.query('[data-sound-lab]');
@@ -193,7 +193,7 @@ export class DomUi {
     this.showScreen('menu');
   }
 
-  /** Shows one screen and hides the others, including the end screen and settings drawer. */
+  /** Shows one screen and hides the others, including the end screen and settings window. */
   public showScreen(screen: UiScreen): void {
     this.menuScreen.hidden = screen !== 'menu';
     this.sandboxScreen.hidden = screen !== 'sandbox';

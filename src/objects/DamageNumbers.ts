@@ -1,6 +1,6 @@
 import { Container, Graphics, Text } from 'pixi.js';
 import { DAMAGE_NUMBERS } from '../config';
-import { damageLabel, damagePopupFrame, showsDamageNumber } from '../rendering/damagePopup';
+import { damageLabel, damagePopupFrame, showsDamageNumber, stackedPopupBottom } from '../rendering/damagePopup';
 import type { HitInfo } from './enemy/enemyTypes';
 
 const FONT = 'Fredoka, ui-rounded, system-ui, sans-serif';
@@ -14,13 +14,14 @@ const OUTLINE = 0x1b1a20;
 const GOLD_COLOR = 0xffc93c;
 const GOLD_LOST_COLOR = 0xff6b5a;
 const COIN_RADIUS = 8;
-/** Numbers from hits close together spread sideways this far (px) so they don't sit on each other. */
-const JITTER_X = 8;
 
 interface Popup {
   view: Container;
   x: number;
   y: number;
+  /** Its size at scale 1, for stacking. */
+  width: number;
+  height: number;
   ageMs: number;
 }
 
@@ -29,7 +30,7 @@ const coin = (): Graphics => new Graphics()
   .circle(0, -COIN_RADIUS - 2, COIN_RADIUS).fill(0xf2b417).stroke({ color: OUTLINE, width: 2 })
   .circle(0, -COIN_RADIUS - 2, COIN_RADIUS - 3.5).stroke({ color: 0xffe07a, width: 1.5 });
 
-/** How much each arrow hit takes off, rising over the enemy's head and fading (on/off: settings drawer). */
+/** How much each arrow hit takes off, rising over the enemy's head and fading (on/off: settings window). */
 export class DamageNumbers {
   private readonly layer = new Container();
   private readonly popups: Popup[] = [];
@@ -47,7 +48,7 @@ export class DamageNumbers {
       return;
     }
     const headshot = hit?.cause === 'headshot';
-    this.spawn(this.label(label, headshot ? DAMAGE_NUMBERS.headshotFontSize : DAMAGE_NUMBERS.fontSize, headshot ? HEADSHOT_COLOR : COLOR), this.topOf(foe), true);
+    this.spawn(this.label(label, headshot ? DAMAGE_NUMBERS.headshotFontSize : DAMAGE_NUMBERS.fontSize, headshot ? HEADSHOT_COLOR : COLOR), this.topOf(foe));
   }
 
   /** A player's bowman lost `amount` health: a blue number over his head. */
@@ -56,7 +57,7 @@ export class DamageNumbers {
     if (!label || !this.enabled() || !bowman.parent) {
       return;
     }
-    this.spawn(this.label(label, DAMAGE_NUMBERS.fontSize, PLAYER_HIT_COLOR), this.topOf(bowman), true);
+    this.spawn(this.label(label, DAMAGE_NUMBERS.fontSize, PLAYER_HIT_COLOR), this.topOf(bowman));
   }
 
   /** MOBA: gold won (or lost) by a last hit, with a coin, rising over where the victim fell (always shown, for the player it is for). */
@@ -67,14 +68,14 @@ export class DamageNumbers {
     const text = this.label(`${delta > 0 ? '+' : '−'}${Math.abs(Math.round(delta))}`, DAMAGE_NUMBERS.headshotFontSize, delta > 0 ? GOLD_COLOR : GOLD_LOST_COLOR);
     const view = new Container();
     const icon = coin();
-    // The coin and the number side by side, centred together.
+    // The number, then the coin on its right ("+5 ●"), centred together.
     const gap = 3;
-    const width = COIN_RADIUS * 2 + gap + text.width;
-    icon.x = -width / 2 + COIN_RADIUS;
+    const width = text.width + gap + COIN_RADIUS * 2;
     text.anchor.set(0, 1);
-    text.x = icon.x + COIN_RADIUS + gap;
-    view.addChild(icon, text);
-    this.spawn(view, at, false);
+    text.x = -width / 2;
+    icon.x = width / 2 - COIN_RADIUS;
+    view.addChild(text, icon);
+    this.spawn(view, at);
   }
 
   private label(text: string, fontSize: number, fill: number): Text {
@@ -92,8 +93,15 @@ export class DamageNumbers {
     return this.layer.toLocal({ x: bounds.x + bounds.width / 2, y: bounds.y });
   }
 
-  private spawn(view: Container, at: { x: number; y: number }, jitter: boolean): void {
-    const popup = { view, x: at.x + (jitter ? (Math.random() * 2 - 1) * JITTER_X : 0), y: at.y - DAMAGE_NUMBERS.aboveHead, ageMs: 0 };
+  /** Over `at`, lifted above the popups there it would cover (a killing blow's number and its gold stack up). */
+  private spawn(view: Container, at: { x: number; y: number }): void {
+    const { width, height } = view.getLocalBounds();
+    const others = this.popups.map((other) => {
+      const bottom = other.view.y;
+      return { x: other.x, width: other.width, top: bottom - other.height, bottom };
+    });
+    const y = stackedPopupBottom(at.x, at.y - DAMAGE_NUMBERS.aboveHead, width, height, others, DAMAGE_NUMBERS.stackGap);
+    const popup = { view, x: at.x, y, width, height, ageMs: 0 };
     this.popups.push(popup);
     this.layer.addChild(view);
     this.place(popup);

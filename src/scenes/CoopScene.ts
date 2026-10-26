@@ -18,7 +18,7 @@ import type { CoopView } from '../ui/DomUi';
 import type { LobbyTeams } from '../ui/CoopPanel';
 
 /**
- * The online lobby, opened from the menu's "Create multiplayer room" (pick Co-op or MOBA, then the room opens and its
+ * The online lobby, opened from the menu's "Create online room" (pick Co-op or MOBA, then the room opens and its
  * code is passed on) or "Join online" (a room code; the host's room decides the mode). Co-op: up to three guests, the
  * host then sets up the battle (SandboxScene) and starts it. MOBA: teams, and the host's Rules tab, then the match.
  * The guests wait here until the host's `start` arrives.
@@ -38,8 +38,12 @@ export class CoopScene extends Scene {
     new Background(this.backdrop, BATTLEGROUNDS.greenMeadow, BACKDROP_WIDTH);
     this.ctx.root.addChild(this.backdrop);
 
-    ui.handlers.coopHost = (moba) => {
-      session.moba = moba;
+    ui.handlers.coopHost = (mode) => {
+      session.moba = mode === 'moba';
+      // Co-op: the setup opens on the picked mode (no mode picker of its own).
+      if (mode !== 'moba') {
+        session.sandbox = { ...session.sandbox, mode };
+      }
       void this.host();
     };
     ui.handlers.coopJoin = (code) => void this.join(code);
@@ -48,10 +52,6 @@ export class CoopScene extends Scene {
     ui.handlers.coopLeave = () => this.leave();
     ui.handlers.coopLoadout = (loadout) => this.pickLoadout(loadout);
     ui.handlers.coopTeam = (team) => pickTeam(session, team);
-    ui.handlers.mobaPractice = () => {
-      session.moba = true;
-      this.startMoba();
-    };
     ui.handlers.mobaRules = (rules) => this.changeRules(rules);
     ui.handlers.coopAlias = (alias) => {
       this.alias = normalizeAlias(alias);
@@ -68,7 +68,6 @@ export class CoopScene extends Scene {
       ui.handlers.coopLeave = undefined;
       ui.handlers.coopLoadout = undefined;
       ui.handlers.coopTeam = undefined;
-      ui.handlers.mobaPractice = undefined;
       ui.handlers.mobaRules = undefined;
       ui.handlers.coopAlias = undefined;
       setRoomListener(undefined);
