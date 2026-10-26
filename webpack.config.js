@@ -11,7 +11,8 @@ module.exports = (env = {}) => ({
     filename: '[name].[contenthash].js',
     clean: true,
   },
-  devtool: process.env.NODE_ENV === 'production' ? false : 'source-map',
+  // The production page ships no source maps; local and /dev/ builds keep them for debugging.
+  devtool: env.release ? false : 'source-map',
   module: {
     rules: [
       {
