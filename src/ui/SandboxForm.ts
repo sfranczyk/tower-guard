@@ -25,7 +25,7 @@ import {
 } from '../data/sandbox';
 import type { EnemyType } from '../types';
 import { ICON_BANNERS, ICON_BOWMAN, ICON_DIFFICULTY, ICON_ENEMIES, ICON_FRIENDLY_FIRE, ICON_KEEP, ICON_SUPPORT, ICON_TRASH } from './icons';
-import { mapThumbnail, splitThumbnail } from './mapThumbnail';
+import { mapThumbnail, splitThumbnail, squareThumbnail } from './mapThumbnail';
 import { modeCards } from './modeCards';
 import { numberInput, optionRow } from './optionRows';
 import { panelTop, renderPanel } from './panelLayout';
@@ -69,8 +69,8 @@ export class SandboxForm {
   private settings?: SandboxSettings;
   /** The level being edited. */
   private selected = 0;
-  /** The mode picker first, then the setup of the picked mode. */
-  private step: 'mode' | 'setup' = 'mode';
+  /** The mode picker first, then the setup of the picked mode ("more": the Additional modes list, from the picker). */
+  private step: 'mode' | 'more' | 'setup' = 'mode';
   private page: SandboxPage = 'rules';
   /** Played by more than one bowman: friendly fire is the co-op setting (`friendlyFireOn`). */
   private multiplayer = false;
@@ -124,7 +124,7 @@ export class SandboxForm {
     if (this.confirmRemove !== undefined && this.settings) {
       this.confirmRemove = undefined;
       this.render(this.settings);
-    } else if (this.step === 'setup' && this.settings && !this.multiplayer) {
+    } else if ((this.step === 'setup' && !this.multiplayer || this.step === 'more') && this.settings) {
       this.step = 'mode';
       this.render(this.settings);
     } else {
@@ -140,20 +140,25 @@ export class SandboxForm {
       renderPanel(this.root, `
         ${panelTop(back, 'Choose a mode', '', 'Sandbox')}
         <div class="panel-body">
-          ${modeCards([
-            ...RUN_MODES.map((mode) => ({
-              attribute: `data-pick-mode="${mode}"`,
-              thumbnail: mapThumbnail(BATTLEGROUNDS[battlegroundsFor(mode)[0]]),
-              label: RUN_MODE_LABELS[mode],
-              text: RUN_MODE_DESCRIPTIONS[mode],
-            })),
-            {
-              attribute: 'data-pick-moba',
-              thumbnail: splitThumbnail(BATTLEGROUNDS[battlegroundsFor('battle')[0]], BATTLEGROUNDS[battlegroundsFor('survival')[0]]),
-              label: 'MOBA practice',
-              text: MOBA_PRACTICE_TEXT,
-            },
-          ])}
+          ${modeCards(RUN_MODES.map((mode) => ({
+            attribute: `data-pick-mode="${mode}"`,
+            thumbnail: squareThumbnail(BATTLEGROUNDS[battlegroundsFor(mode)[0]]),
+            label: RUN_MODE_LABELS[mode],
+            text: RUN_MODE_DESCRIPTIONS[mode],
+          })), '<div class="mode-footer"><button type="button" class="secondary-button" data-more-modes>Additional modes</button></div>')}
+        </div>`);
+      return;
+    }
+    if (this.step === 'more') {
+      renderPanel(this.root, `
+        ${panelTop(back, 'Additional modes', '', 'Sandbox')}
+        <div class="panel-body">
+          <div class="mode-list">
+            <button type="button" class="mode-list-item" data-pick-moba>
+              ${splitThumbnail(BATTLEGROUNDS[battlegroundsFor('battle')[0]], BATTLEGROUNDS[battlegroundsFor('survival')[0]])}
+              <span><strong>MOBA Practice Mode</strong><span>${MOBA_PRACTICE_TEXT}</span></span>
+            </button>
+          </div>
         </div>`);
       return;
     }
@@ -282,6 +287,11 @@ export class SandboxForm {
     const count = runLevelCount(settings);
     if (target.closest('[data-pick-moba]')) {
       this.callbacks.mobaPractice();
+      return;
+    }
+    if (target.closest('[data-more-modes]')) {
+      this.step = 'more';
+      this.render(settings);
       return;
     }
     // (The quiver's own clicks are editQuiverIn's.)

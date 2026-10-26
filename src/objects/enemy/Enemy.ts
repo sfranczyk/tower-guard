@@ -274,7 +274,8 @@ export default class Enemy extends Container {
   }
 
   public applyHitReaction(pushX: number): void {
-    if (!this.isAlive() || this.figure.fall || this.afflictions.isFrozen) {
+    // A lane kamikaze keeps running through hits: it takes the damage and the arrows stick, but it isn't staggered.
+    if (!this.isAlive() || this.figure.fall || this.afflictions.isFrozen || this.siege) {
       return;
     }
     this.actions.stagger(120);
